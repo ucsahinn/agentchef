@@ -600,6 +600,7 @@ TEMPLATE_ROOT="$REPO_ROOT/templates/codex"
 install_file "$TEMPLATE_ROOT/AGENTS.md" "$CODEX_HOME_DIR/AGENTS.md"
 install_codex_config "$TEMPLATE_ROOT/config.unix.toml" "$CODEX_HOME_DIR/config.toml"
 install_file "$TEMPLATE_ROOT/codex-profile.mjs" "$CODEX_HOME_DIR/codex-profile.mjs"
+install_file "$TEMPLATE_ROOT/serena-pool.mjs" "$CODEX_HOME_DIR/serena-pool.mjs"
 install_file "$TEMPLATE_ROOT/rules/default.rules" "$CODEX_HOME_DIR/rules/default.rules"
 
 for file in "$TEMPLATE_ROOT"/agents/*.toml; do

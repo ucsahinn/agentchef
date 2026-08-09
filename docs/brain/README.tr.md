@@ -22,6 +22,7 @@ Kesin hedefi inceledikten sonra apply çalıştırın:
 ```powershell
 npm.cmd run brain -- init --target C:\path\to\CodexChefBrain --apply --json
 npm.cmd run brain -- status --target C:\path\to\CodexChefBrain --json
+npm.cmd run brain -- audit --target C:\path\to\CodexChefBrain --json
 npm.cmd run brain -- permissions --target C:\path\to\CodexChefBrain --json
 npm.cmd run brain -- uri --target C:\path\to\CodexChefBrain --note 10-command-center/dashboard.md --json
 ```
@@ -47,6 +48,12 @@ kimliğiyle sınırlıdır, boyut bütçesi vardır ve varsayılan olarak restri
 archive ile runtime içeriğini dışarıda bırakır.
 `uri` yalnız mevcut Markdown veya Canvas notu için percent-encoded
 `obsidian://open` değeri üretir; uygulama başlatmaz ve yazmaz.
+
+`audit` de salt-okunurdur. Obsidian tarz? Markdown ba?lant?lar?n? mevcut
+Markdown ve Canvas dosyalar?na g?re ??zer, eksik hedefleri bildirir, gelen
+ili?kisi olmayan kanonik notlar? tan?mlar ve frontmatter i?indeki `updated`
+zaman damgas? 30 g?nl?k pencereden eski notlar? i?aretler. Yaln?z yol ve
+metadata raporlar; not g?vdelerini yazd?rmaz.
 
 ## Sınır
 

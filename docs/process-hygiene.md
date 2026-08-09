@@ -2,11 +2,13 @@
 
 [English](process-hygiene.md) | [Türkçe](process-hygiene.tr.md)
 
-Each Codex session owns its own local stdio MCP servers. A launcher such as
+Each Codex session owns its own local stdio MCP bridge. A launcher such as
 `npx` or `uvx` can add several Node, Python, shell, or browser helper processes
 for one logical MCP instance. With five or six concurrent sessions, enabling
-every local MCP in every window multiplies those trees even when most windows
-do not use the tools.
+every direct local MCP in every window multiplies those trees even when most
+windows do not use the tools. Serena is handled differently: each client gets
+a tiny bridge, while one loopback-only manager shares one backend per canonical
+project and starts it only after an allowlisted semantic tool call.
 
 Codex Chef keeps the capabilities and changes when they start:
 
@@ -14,9 +16,14 @@ Codex Chef keeps the capabilities and changes when they start:
   and `serena`.
 - `codex --profile full` enables all seven bundled local stdio MCPs for one
   capability-heavy primary session.
-- `codex --profile multi-session` disables all seven local stdio MCPs for a
-  secondary session. Agents, skills, remote OpenAI docs, built-in memories,
-  hooks, and apps remain available.
+- `codex --profile multi-session` keeps the Serena bridge enabled for a
+  secondary session but disables the other six eager local stdio MCPs. Agents,
+  skills, remote OpenAI docs, built-in memories, hooks, and apps remain
+  available.
+- A Serena manager uses a project key derived from the canonical root and the
+  pinned source. Same-root clients reuse one backend; different worktrees get
+  isolated backends only when used. Calls are serialized per backend, and the
+  manager stops only children it launched after 15 minutes of inactivity.
 - A disabled MCP block stays configured. You can re-enable it with a profile or
   a deliberate config override; no capability definition is removed.
 

@@ -192,6 +192,14 @@ replacement requires the explicit force path and a backup.
 The generated `full` and `multi-session` profiles retain the installed local
 MCP transport definitions and change only their enabled state, so selecting a
 profile cannot turn a local MCP entry into an incomplete command definition.
+Serena is the exception to eager per-session process ownership: its installed
+stdio bridge is lightweight and uses a local bearer token held only under the
+user's Codex home. The bridge binds its manager and pinned Serena children to
+`127.0.0.1`, exposes only the reviewed read/navigation allowlist, starts a
+backend only after an allowlisted tool call, serializes calls per project, and
+reclaims only children it started after an idle TTL. It does not expose a LAN
+listener, persist request content, or allow a project to select another
+client's backend.
 The interactive command center inspects this state before a full install. It
 does not silently reinstall an already current setup or present managed drift as
 a clean first install; current setups become a no-op, while drift is directed to

@@ -11,6 +11,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const modulePath = path.join(root, "scripts/lib/brain-foundation.mjs");
 const templateRoot = path.join(root, "templates/brain");
 const manifestPath = path.join(root, "manifests/brain-vault.json");
+const auditSchemaPath = path.join(root, "schemas/brain-audit.schema.json");
 
 const canonicalTwenty = [
   ".codex-chef-brain.json",
@@ -208,7 +209,49 @@ Missing an ID.
   assert.ok(invalid.errors.some((message) => /invalid\.md.*id/i.test(message)));
 });
 
+test("audit correlates canonical notes, flags stale context, and reports broken Brain links", async () => {
+  const { applyBrainPlan, auditBrainVault, buildBrainPlan } = await loadFoundation();
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-brain-audit-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  applyBrainPlan(buildBrainPlan({ templateRoot, target }));
+
+  fs.writeFileSync(path.join(target, "30-projects", "audit-sample.md"), `---
+brain_schema: "codex-chef.brain-note.v1"
+id: "brn_55555555-5555-4555-8555-555555555555"
+type: "project"
+title: "Audit sample"
+project_id: "audit-sample"
+status: "active"
+privacy: "local"
+confidence: "confirmed"
+retention: "project"
+created: "2026-01-01T00:00:00.000Z"
+updated: "2026-01-02T00:00:00.000Z"
+source_refs: ["local:test"]
+---
+
+# Audit sample
+[[../10-command-center/system-map.canvas|System map]]
+[[README|Project index]]
+
+[[audit-sample|Current context]]
+[[../80-memory/missing-context|Missing context]]
+`, "utf8");
+
+  const report = auditBrainVault({ target, now: "2026-08-10T00:00:00.000Z", staleAfterDays: 30 });
+
+  assert.equal(report.schemaVersion, "codex-chef.brain-audit.v1");
+  assert.equal(report.ok, false);
+  assert.ok(report.notes.total > 0);
+  assert.ok(report.freshness.stale.some((entry) => entry.relativePath === "30-projects/audit-sample.md"));
+  assert.ok(report.relationships.resolvedLinks.some((entry) => entry.from === "30-projects/audit-sample.md" && entry.to === "30-projects/audit-sample.md"));
+  assert.ok(report.relationships.resolvedLinks.some((entry) => entry.from === "30-projects/audit-sample.md" && entry.to === "10-command-center/system-map.canvas"));
+  assert.ok(report.relationships.resolvedLinks.some((entry) => entry.from === "30-projects/audit-sample.md" && entry.to === "30-projects/README.md"));
+  assert.ok(report.relationships.brokenLinks.some((entry) => entry.from === "30-projects/audit-sample.md" && entry.target === "../80-memory/missing-context"));
+});
+
 test("unsafe broad targets are rejected", async () => {
+
   const { assertSafeBrainTarget, validateBrainVault } = await loadFoundation();
 
   assert.throws(() => assertSafeBrainTarget(path.parse(process.cwd()).root), /filesystem root/i);
@@ -218,6 +261,16 @@ test("unsafe broad targets are rejected", async () => {
   assert.throws(() => validateBrainVault(os.homedir()), /user profile root/i);
 });
 
+
+test("Brain correlation audit publishes a machine-readable report schema", () => {
+  assert.equal(fs.existsSync(auditSchemaPath), true, "Brain audit schema must exist.");
+  const schema = JSON.parse(fs.readFileSync(auditSchemaPath, "utf8"));
+  assert.equal(schema.$id, "https://codex-chef.dev/schemas/brain-audit.schema.json");
+  assert.equal(schema.type, "object");
+  assert.ok(schema.required.includes("notes"));
+  assert.ok(schema.required.includes("freshness"));
+  assert.ok(schema.required.includes("relationships"));
+});
 test("a second apply is idempotent and creates nothing", async () => {
   const { applyBrainPlan, buildBrainPlan } = await loadFoundation();
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-brain-idempotent-"));

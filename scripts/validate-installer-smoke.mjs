@@ -190,7 +190,8 @@ function assertBundledMcpProfiles(codexHome, label) {
     for (const serverName of bundledLocalServers) {
       const block = profileRootBlock(profile, serverName);
       if (!block) fail(`${label} ${profileName} profile is missing ${serverName}.`);
-      if (!new RegExp(`^\\s*enabled\\s*=\\s*${enabled}$`, "m").test(block)) {
+      const expectedEnabled = serverName === "serena" ? true : enabled;
+      if (!new RegExp(`^\\s*enabled\\s*=\\s*${expectedEnabled}$`, "m").test(block)) {
         fail(`${label} ${profileName} profile has the wrong enabled state for ${serverName}.`);
       }
       if (!/^\s*command\s*=/m.test(block)) {

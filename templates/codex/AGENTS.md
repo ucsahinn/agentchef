@@ -60,7 +60,8 @@
 
 ## Multi-Session Process Hygiene
 
-- Use the balanced base for ordinary work, `--profile full` for one primary session that needs every bundled local stdio MCP, and `--profile multi-session` for secondary concurrent sessions.
+- Use the balanced base for ordinary work and `--profile full` only for a primary session that needs every bundled local stdio MCP. `--profile multi-session` keeps the lightweight Serena bridge enabled while parking the other eager local helpers.
+- Do not enable or launch raw Serena directly from agents. The managed Serena bridge starts no Serena/LSP at session startup, reuses one backend for the same canonical project, creates a separate backend only for a genuinely different project/worktree, and reclaims only its own idle child after its TTL.
 - Disabling a local MCP in a profile parks its launcher without removing its definition; agents, skills, remote OpenAI docs, built-in memories, hooks, and apps stay available.
 - Audit Codex/MCP ownership before cleanup. Active Codex descendants, recent unowned trees, PID-reused processes, and unrelated Node/Python runtimes must never be cleanup candidates.
 - Manual stale cleanup requires the exact preview/apply path `npm run chef -- --processes --cleanup-stale [--apply]`. Do not broaden it to name-based process killing.

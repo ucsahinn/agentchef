@@ -14,8 +14,9 @@ Start with a preview so the first real write is never a surprise.
 - Optional: Gitleaks for stronger pre-commit and pre-push scanning.
 - Optional on Windows: `winget` and current Windows 11 for the best native
   sandbox path.
-- `uvx` if you keep the default Serena semantic-code MCP enabled. Without
-  `uvx`, disable Serena or expect the status board to report its setup note.
+- `uvx` for the pinned Serena backend. The installed bridge itself is Node-based
+  and starts without `uvx`; `uvx` is needed only when semantic navigation is
+  actually requested.
 
 ## PowerShell Install
 
@@ -52,9 +53,13 @@ Thinking, Serena, or their launch details.
 
 Default-enabled MCPs still have launcher prerequisites. Node/npx-backed MCPs
 start after Node can download their pinned packages. Serena is default-enabled
-for semantic code navigation, but it needs `uvx` and the pinned git source. If a
-fresh machine does not have that launcher, either install `uvx` or set
-`mcp_servers.serena.enabled = false` before expecting `/mcp` to show it live.
+through `serena-pool.mjs`, a local bridge installed beside `config.toml`. It
+starts no Serena or language server at Codex startup. On the first allowlisted
+semantic tool call it starts one pinned, loopback-only backend for that
+canonical project; same-project sessions reuse it, while separate worktrees
+remain isolated. The bridge uses an owner-only local token and an isolated UV
+cache under the Codex home, never in project source or config. If `uvx` is
+missing, only that first semantic call fails; install `uvx` or disable Serena.
 
 Install after the preview is correct:
 

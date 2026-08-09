@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   applyBackupPlan,
+  auditBrainVault,
   applyBrainPlan,
   applyCapturePlan,
   applyRestorePlan,
@@ -25,7 +26,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateRoot = path.join(root, "templates", "brain");
-const ACTIONS = new Set(["init", "status", "doctor", "permissions", "capture", "retrieve", "uri", "backup", "restore"]);
+const ACTIONS = new Set(["init", "status", "doctor", "permissions", "audit", "capture", "retrieve", "uri", "backup", "restore"]);
 
 function parseArgs(argv) {
   let action = "init";
@@ -98,6 +99,7 @@ function usage() {
 
 Usage:
   node scripts/brain-cli.mjs init --target PATH --preview|--apply [--json]
+  node scripts/brain-cli.mjs audit --target PATH [--json]
   node scripts/brain-cli.mjs status --target PATH [--json]
   node scripts/brain-cli.mjs permissions --target PATH [--json]
   node scripts/brain-cli.mjs capture --target PATH --input candidate.json --preview|--apply [--json]
@@ -135,6 +137,12 @@ function execute(options) {
     const result = inspectWindowsBrainPermissions(target);
     print(result, options.json);
     if (result.supported && !result.ok) process.exitCode = 1;
+    return;
+  }
+  if (options.action === "audit") {
+    const result = auditBrainVault({ target });
+    print(result, options.json);
+    if (!result.ok) process.exitCode = 1;
     return;
   }
   if (options.action === "init") {

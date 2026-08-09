@@ -633,6 +633,7 @@ $TemplateRoot = Join-Path $RepoRoot "templates\codex"
 Install-File -Source (Join-Path $TemplateRoot "AGENTS.md") -Destination (Join-Path $CodexHome "AGENTS.md")
 Install-CodexConfig -Source (Join-Path $TemplateRoot "config.windows.toml") -Destination (Join-Path $CodexHome "config.toml")
 Install-File -Source (Join-Path $TemplateRoot "codex-profile.mjs") -Destination (Join-Path $CodexHome "codex-profile.mjs")
+Install-File -Source (Join-Path $TemplateRoot "serena-pool.mjs") -Destination (Join-Path $CodexHome "serena-pool.mjs")
 Install-File -Source (Join-Path $TemplateRoot "rules\default.rules") -Destination (Join-Path $CodexHome "rules\default.rules")
 
 Get-ChildItem -Path (Join-Path $TemplateRoot "agents") -Filter "*.toml" | ForEach-Object {

@@ -141,11 +141,26 @@ test("CLI exposes a read-only Windows Brain permission audit", () => {
   assert.deepEqual(snapshotVault(target), before);
 });
 
+test("CLI exposes a read-only Brain correlation audit", () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-audit-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  assert.equal(run(["init", "--target", target, "--apply", "--json"]).status, 0);
+  const before = snapshotVault(target);
+  const audited = run(["audit", "--target", target, "--json"]);
+  assert.equal(audited.status, 0, audited.stderr);
+  const report = JSON.parse(audited.stdout);
+  assert.equal(report.schemaVersion, "codex-chef.brain-audit.v1");
+  assert.equal(report.target, target);
+  assert.equal(Array.isArray(report.freshness.stale), true);
+  assert.deepEqual(snapshotVault(target), before);
+});
+
 test("Brain documentation names the supported CLI and Control 0.3.0 boundary", () => {
   const documentation = [
     "templates/brain/README.md",
     "docs/brain/README.md",
     "docs/brain/README.tr.md",
+
     "plugins/codex-chef-workflows/skills/codex-chef-brain/SKILL.md",
     "plugins/codex-chef-workflows/skills/codex-chef-brain/references/brain-protocol.md"
   ];
@@ -159,6 +174,11 @@ test("Brain documentation names the supported CLI and Control 0.3.0 boundary", (
   for (const relativePath of documentation.slice(0, 4)) {
     const content = fs.readFileSync(path.join(root, relativePath), "utf8");
     assert.match(content, /npm\.cmd run brain -- status --target/i, `${relativePath} must direct users to the supported Brain status command.`);
+  }
+
+  for (const relativePath of documentation.slice(0, 4)) {
+    const content = fs.readFileSync(path.join(root, relativePath), "utf8");
+    assert.match(content, /npm\.cmd run brain -- audit --target/i, `${relativePath} must document the supported Brain correlation audit.`);
   }
 
   for (const relativePath of documentation.slice(1)) {

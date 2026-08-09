@@ -432,6 +432,85 @@ export function applyRestorePlan(plan) {
   return { backupId: plan.backupId, restored, rollbackBackupId };
 }
 
+function listCanonicalBrainNotes(root) {
+  const notes = [];
+  for (const absolute of walkVaultContent(root)) {
+    const relativePath = toPosix(path.relative(root, absolute));
+    if (!relativePath.endsWith(".md") || relativePath.startsWith("templates/")) continue;
+    const parsed = parseFlatFrontmatter(fs.readFileSync(absolute, "utf8"));
+    if (!parsed || parsed.data.brain_schema !== "codex-chef.brain-note.v1") continue;
+    notes.push({
+      relativePath,
+      data: parsed.data,
+      body: parsed.body
+    });
+  }
+  return notes.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+}
+
+function resolveBrainLink(fromPath, rawTarget, knownPaths) {
+  const normalized = path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), rawTarget));
+  if (normalized === ".." || normalized.startsWith("../") || path.posix.isAbsolute(normalized)) return null;
+  for (const candidate of [normalized, `${normalized}.md`, `${normalized}.canvas`]) {
+    if (knownPaths.has(candidate)) return candidate;
+  }
+  return null;
+}
+
+export function auditBrainVault({ target, now = new Date().toISOString(), staleAfterDays = 30 } = {}) {
+  const root = assertSafeBrainTarget(target);
+  if (!Number.isInteger(staleAfterDays) || staleAfterDays < 1 || staleAfterDays > 3660) {
+    throw new RangeError("staleAfterDays must be an integer between 1 and 3660.");
+  }
+  const asOf = new Date(now);
+  if (!Number.isFinite(asOf.getTime())) throw new TypeError("now must be a valid ISO timestamp.");
+
+  const validation = validateBrainVault(root);
+  const notes = listCanonicalBrainNotes(root);
+  const notePaths = new Set(notes.map((note) => note.relativePath));
+  const linkTargets = new Set(walkVaultContent(root).filter((absolute) => /\.(?:md|canvas)$/i.test(absolute)).map((absolute) => toPosix(path.relative(root, absolute))));
+  const incoming = new Map(notes.map((note) => [note.relativePath, 0]));
+  const resolvedLinks = [];
+  const brokenLinks = [];
+  const stale = [];
+
+  for (const note of notes) {
+    const updatedAt = Date.parse(note.data.updated);
+    const ageDays = Number.isFinite(updatedAt) ? Math.floor(Math.max(0, asOf.getTime() - updatedAt) / 86_400_000) : null;
+    if (ageDays !== null && ageDays > staleAfterDays) {
+      stale.push({ relativePath: note.relativePath, updated: note.data.updated, ageDays });
+    }
+    for (const match of note.body.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)) {
+      const target = match[1].trim();
+      if (!target) continue;
+      const resolved = resolveBrainLink(note.relativePath, target, linkTargets);
+      if (!resolved) {
+        brokenLinks.push({ from: note.relativePath, target });
+        continue;
+      }
+      incoming.set(resolved, (incoming.get(resolved) || 0) + 1);
+      resolvedLinks.push({ from: note.relativePath, to: resolved });
+    }
+  }
+
+  const orphanNotes = notes
+    .filter((note) => incoming.get(note.relativePath) === 0)
+    .map((note) => note.relativePath);
+  const projectIds = [...new Set(notes.map((note) => note.data.project_id).filter((projectId) => typeof projectId === "string"))].sort();
+
+  return {
+    schemaVersion: "codex-chef.brain-audit.v1",
+    ok: validation.ok && brokenLinks.length === 0,
+    target: root,
+    asOf: asOf.toISOString(),
+    staleAfterDays,
+    errors: validation.errors,
+    notes: { total: notes.length, projectIds },
+    freshness: { stale },
+    relationships: { resolvedLinks, brokenLinks, orphanNotes }
+  };
+}
+
 export function validateBrainVault(target) {
   const root = assertSafeBrainTarget(target);
   const errors = [];

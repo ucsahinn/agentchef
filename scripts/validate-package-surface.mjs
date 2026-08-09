@@ -239,6 +239,7 @@ if (result.error) {
     "scripts/tests/process-hygiene.test.mjs",
     "manifests/install-plan.json",
     "catalog/mcp-servers.json",
+    "templates/codex/serena-pool.mjs",
     "plugins/codex-chef-workflows/hooks/process-hygiene.json",
     "plugins/codex-chef-workflows/scripts/codex-process-hygiene.mjs",
     "templates/codex/profiles/ci.config.toml",
@@ -246,6 +247,7 @@ if (result.error) {
     "templates/codex/profiles/full.config.toml",
     "templates/codex/profiles/multi-session.config.toml",
     "templates/codex/profiles/offline.config.toml",
+    "scripts/tests/serena-pool.test.mjs",
     "scripts/validate-codex-config-compat.mjs",
     "templates/codex/profiles/review.config.toml",
     "templates/codex/profiles/token-safe.config.toml"

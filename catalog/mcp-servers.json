@@ -87,18 +87,18 @@
       "category": "code-intelligence",
       "transport": "stdio",
       "defaultEnabled": true,
-      "command": "uvx",
+      "command": "node",
       "auth": "none",
       "setupKind": "tooling",
-      "setupHint": "Requires uvx and the pinned Serena git source; disable if uvx is unavailable.",
+      "setupHint": "A lightweight managed bridge starts at session setup; it starts the pinned uvx Serena backend only when a read-only semantic tool is actually called.",
       "approval": "prompt",
       "enabledTools": ["activate_project", "get_current_config", "initial_instructions", "list_memories", "read_memory", "search_for_pattern", "find_symbol", "find_declaration", "find_implementations", "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"],
       "toolApprovals": {"activate_project":"approve", "get_current_config":"approve", "initial_instructions":"approve", "list_memories":"approve", "read_memory":"approve", "search_for_pattern":"approve", "find_symbol":"approve", "find_declaration":"approve", "find_implementations":"approve", "find_referencing_symbols":"approve", "get_symbols_overview":"approve", "get_diagnostics_for_file":"approve"},
       "risk": "medium",
       "sourceUrl": "https://github.com/oraios/serena",
       "sourceRef": "22c135a881aaf17485e54ef0ccaedeaf51a202c0",
-      "defaultReason": "Semantic local code navigation; only read/navigation tools are allowlisted and symbol edits stay prompt-gated.",
-      "notes": "Semantic code navigation. Disable if uvx is unavailable."
+      "defaultReason": "Semantic navigation remains available without eagerly creating one Serena/LSP tree per Codex client; only read/navigation tools are allowlisted.",
+      "notes": "Project-keyed lazy Serena pool. Same project reuses one backend; separate worktrees receive isolated backends when used."
     },
     {
       "name": "memory",

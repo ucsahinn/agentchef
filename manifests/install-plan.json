@@ -5,6 +5,7 @@
     "default": [
       "codex-agents-md",
       "codex-config",
+      "codex-serena-pool",
       "codex-rules",
       "codex-agents",
       "codex-profiles",
@@ -26,6 +27,7 @@
     "all": [
       "codex-agents-md",
       "codex-config",
+      "codex-serena-pool",
       "codex-rules",
       "codex-agents",
       "codex-profiles",
@@ -73,6 +75,18 @@
       "backup": true,
       "risk": "medium",
       "conflictPolicy": "Canonical template plus user-owned overlay: existing model, profile, approval, sandbox, project trust, and unrelated MCP values are preserved outside Force. Codex Chef-managed agent/MCP safety tables are synchronized explicitly; Force replaces the file only after backup."
+    },
+    {
+      "id": "codex-serena-pool",
+      "kind": "copy-file",
+      "summary": "Install the lazy project-keyed Serena pool bridge.",
+      "source": "templates/codex/serena-pool.mjs",
+      "destination": "${CODEX_HOME}/serena-pool.mjs",
+      "platforms": ["windows", "unix"],
+      "collision": "skip-unless-force-backup-before-replace",
+      "backup": true,
+      "risk": "medium",
+      "conflictPolicy": "The bridge is local-only, starts no Serena/LSP until an allowlisted semantic tool is used, and never stores a token in repository content or config."
     },
     {
       "id": "codex-rules",

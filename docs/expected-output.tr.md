@@ -16,8 +16,8 @@ Platform: windows
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 20 | 1 | InstallSkills
-default | 19 | 0 | none
+all | 21 | 1 | InstallSkills
+default | 20 | 0 | none
 ```
 
 ```text

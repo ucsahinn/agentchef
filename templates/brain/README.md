@@ -15,3 +15,9 @@ Codex Chef Brain is a user-owned local Markdown vault for reviewed project knowl
 Start at `10-command-center/dashboard.md`. Keep unprocessed captures in `00-inbox`, project context in `30-projects`, formal decisions in `60-decisions`, and compact continuity notes in `80-memory`. Canvas files in `10-command-center` provide visual navigation only; they do not store Control runtime state.
 
 Do not store credentials, raw environment dumps, runtime databases, or unbounded transcripts. Durable writes require preview and user review. From the Codex Chef source directory on Windows, run `npm.cmd run brain -- status --target <vault> --json` after setup and permission changes to verify content and ACL status.
+
+## Denetim / Audit
+
+Korelasyon, k?r?k ba?lant?, ba?s?z kanonik not ve tazelik raporu i?in kaynak dizininde `npm.cmd run brain -- audit --target <vault> --json` ?al??t?r. Bu komut salt-okunurdur ve not g?vdelerini terminale yazd?rmaz.
+
+Run `npm.cmd run brain -- audit --target <vault> --json` from the source directory for a read-only correlation, broken-link, orphan-note, and freshness report. It never prints note bodies to the terminal.

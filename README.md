@@ -85,12 +85,15 @@ marketplace plugin is installed and a new Codex session is started.
 
 MCP connects Codex to documentation, browsers, semantic code navigation,
 memory, and codebase graph reads. The balanced base enables the remote
-`openaiDeveloperDocs` server plus local `context7` and `serena`; the other five
-local stdio servers (`sequential-thinking`, `playwright`, `chrome-devtools`,
-`memory`, and `codebase-memory`) stay configured but off so every concurrent
-Codex window does not eagerly duplicate their Node/Python helper trees. Use the `full`
-profile for one capability-heavy primary session and `multi-session` for
-low-process secondary sessions. Account, database, production, and
+`openaiDeveloperDocs` server plus local `context7` and a lightweight Serena
+bridge. The bridge starts no Serena/LSP at session startup: the same canonical
+project shares one lazy backend, while a distinct worktree gets its own only
+when semantic navigation is actually used. The other five local stdio servers
+(`sequential-thinking`, `playwright`, `chrome-devtools`, `memory`, and
+`codebase-memory`) stay configured but off so concurrent Codex windows do not
+eagerly duplicate their Node/Python helper trees. Use the `full` profile for
+one capability-heavy primary session and `multi-session` for low-process
+secondary sessions. Account, database, production, and
 broad-filesystem connectors remain off until you deliberately enable them.
 
 [See every MCP, prerequisite, and access boundary →](docs/mcp-catalog.md)

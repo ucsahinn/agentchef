@@ -32,6 +32,8 @@ handoff.
    `securityStatus.ok`; never treat content-only success as a secure vault.
 8. Use `permissions` for the standalone read-only ACL report. It must never
    change an ACL, create a probe file, or expose raw identities and descriptors.
+10. Use the read-only `audit` command to check correlation, broken Markdown or Canvas
+    links, orphan canonical notes, and freshness without loading note bodies into terminal output.
 9. For Obsidian navigation, generate only a read-only `uri` for an existing
    Markdown or Canvas note. Never use `new`, `append`, `overwrite`, or auto-launch.
 
@@ -44,6 +46,7 @@ npm.cmd run brain -- init --target <vault> --preview --json
 npm.cmd run brain -- init --target <vault> --apply --json
 npm.cmd run brain -- status --target <vault> --json
 npm.cmd run brain -- permissions --target <vault> --json
+npm.cmd run brain -- audit --target <vault> --json
 npm.cmd run brain -- capture --target <vault> --input <candidate.json> --preview --json
 npm.cmd run brain -- retrieve --target <vault> --project <id> --query <text> --json
 npm.cmd run brain -- uri --target <vault> --note <relative-note.md> --json
@@ -80,6 +83,7 @@ npm.cmd run test:brain
 npm.cmd run validate:brain
 npm.cmd run validate:plugin-skills
 npm.cmd run brain -- status --target <vault> --json
+npm.cmd run brain -- audit --target <vault> --json
 ```
 
 For repository-wide changes, finish with `npm.cmd run check`.

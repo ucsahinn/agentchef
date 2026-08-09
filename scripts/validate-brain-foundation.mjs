@@ -13,6 +13,7 @@ const requiredFiles = [
   "schemas/brain-context-pack.schema.json",
   "schemas/brain-note.schema.json",
   "schemas/brain-operation-plan.schema.json",
+  "schemas/brain-audit.schema.json",
   "manifests/brain-vault.json",
   "scripts/lib/brain-foundation.mjs",
   "scripts/lib/brain-permissions-windows.mjs",

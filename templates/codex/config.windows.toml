@@ -245,11 +245,11 @@ approval_mode = "prompt"
 
 [mcp_servers.serena]
 enabled = true
-command = "uvx"
-args = ["--from", "git+https://github.com/oraios/serena.git@22c135a881aaf17485e54ef0ccaedeaf51a202c0", "serena", "start-mcp-server", "--context", "codex"]
+command = "powershell.exe"
+args = ["-NoProfile", "-NonInteractive", "-Command", "$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }; & node (Join-Path $codexHome 'serena-pool.mjs') bridge"]
 default_tools_approval_mode = "prompt"
 enabled_tools = ["activate_project", "get_current_config", "initial_instructions", "list_memories", "read_memory", "search_for_pattern", "find_symbol", "find_declaration", "find_implementations", "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"]
-startup_timeout_sec = 90
+startup_timeout_sec = 10
 tool_timeout_sec = 180
 
 [mcp_servers.serena.tools.activate_project]

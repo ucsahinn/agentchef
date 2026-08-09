@@ -22,6 +22,7 @@ Apply only after reviewing the exact target:
 ```powershell
 npm.cmd run brain -- init --target C:\path\to\CodexChefBrain --apply --json
 npm.cmd run brain -- status --target C:\path\to\CodexChefBrain --json
+npm.cmd run brain -- audit --target C:\path\to\CodexChefBrain --json
 npm.cmd run brain -- permissions --target C:\path\to\CodexChefBrain --json
 npm.cmd run brain -- uri --target C:\path\to\CodexChefBrain --note 10-command-center/dashboard.md --json
 ```
@@ -46,6 +47,12 @@ Capture, backup, and restore are also preview-first. Retrieval is local,
 lexical, exact-project scoped, bounded, and excludes restricted/archive/runtime
 content by default. `uri` only produces a percent-encoded `obsidian://open`
 value for an existing Markdown or Canvas note; it never launches or writes.
+
+`audit` is also read-only. It resolves Obsidian-style Markdown links against
+existing Markdown and Canvas files, reports missing targets, identifies
+canonical notes without an inbound relationship, and flags notes whose
+frontmatter `updated` timestamp is older than the configured 30-day window.
+It reports paths and metadata only; it never emits note bodies.
 
 ## Boundary
 

@@ -1,6 +1,7 @@
 # Full local MCP profile.
 # Use for one primary session that needs every bundled local MCP capability.
-# The normal balanced config keeps overlapping local servers available but off.
+# Serena stays project-shared through its lazy bridge; the other local helpers
+# in this profile remain eager per session.
 
 [mcp_servers.context7]
 enabled = true

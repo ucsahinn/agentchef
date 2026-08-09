@@ -174,6 +174,7 @@ const codebaseMemoryCacheLaunchers = {
   "templates/codex/config.windows.toml": "set npm_config_cache=%LOCALAPPDATA%\\\\codex-chef\\\\npm-cache\\\\codebase-memory && npx.cmd -y codebase-memory-mcp@0.8.1",
   "templates/codex/config.unix.toml": 'npm_config_cache=\\"${XDG_CACHE_HOME:-$HOME/.cache}/codex-chef/codebase-memory\\" exec npx -y codebase-memory-mcp@0.8.1'
 };
+const serenaPoolScript = "templates/codex/serena-pool.mjs";
 
 if (!codebaseMemory) {
   fail("MCP catalog must include codebase-memory.");
@@ -207,9 +208,10 @@ for (const [profileFile, expectedEnabled] of [
       fail(`${profileFile} is missing [mcp_servers.${name}]`);
       continue;
     }
+    const expectedForServer = name === "serena" ? true : expectedEnabled;
     const enabled = readTomlValue(block, "enabled");
-    if (enabled !== String(expectedEnabled)) {
-      fail(`${profileFile} must set ${name} enabled=${expectedEnabled}`);
+    if (enabled !== String(expectedForServer)) {
+      fail(`${profileFile} must set ${name} enabled=${expectedForServer}`);
     }
   }
 }
@@ -219,6 +221,18 @@ for (const server of catalog.servers || []) {
   const block = offlineBlocks.get(server.name);
   if (!block) fail(`offline.config.toml is missing [mcp_servers.${server.name}]`);
   else if (readTomlValue(block, "enabled") !== "false") fail(`offline.config.toml must set ${server.name} enabled=false`);
+}
+
+if (!fs.existsSync(path.join(root, serenaPoolScript))) {
+  fail(`${serenaPoolScript} must exist for the managed Serena bridge.`);
+} else {
+  const poolSource = read(serenaPoolScript);
+  if (!poolSource.includes("22c135a881aaf17485e54ef0ccaedeaf51a202c0")) {
+    fail(`${serenaPoolScript} must keep the Serena source pinned to the catalog commit.`);
+  }
+  if (!poolSource.includes('host: "127.0.0.1"')) {
+    fail(`${serenaPoolScript} must bind its manager and child endpoints to loopback.`);
+  }
 }
 
 if (!supabase) {
@@ -328,13 +342,16 @@ for (const configFile of configFiles) {
     const approval = unquote(readTomlValue(block, "default_tools_approval_mode"));
     if (configFile.endsWith("config.windows.toml") && unquote(readTomlValue(block, "command")) === "cmd.exe") {
       const launcherArgs = parseInlineStringArray(readTomlValue(block, "args"));
+      const launcherArgsRaw = readTomlValue(block, "args") || "";
+      const isSerenaBridge = server.name === "serena";
       if (
         launcherArgs[0] !== "/d"
         || launcherArgs[1] !== "/s"
         || launcherArgs[2] !== "/c"
-        || (server.name !== "codebase-memory" && launcherArgs[3] !== "npx.cmd")
+        || (!isSerenaBridge && server.name !== "codebase-memory" && launcherArgs[3] !== "npx.cmd")
+        || (isSerenaBridge && (!launcherArgsRaw.includes("serena-pool.mjs") || !launcherArgsRaw.includes("bridge")))
       ) {
-        fail(`${configFile} ${server.name} must disable cmd AutoRun and invoke npx.cmd explicitly with /d /s /c.`);
+        fail(`${configFile} ${server.name} must use the approved /d /s /c launcher shape.`);
       }
       const launcherEnv = readTomlValue(block, "env") || "";
       if (!/NoDefaultCurrentDirectoryInExePath\s*=\s*"1"/.test(launcherEnv)) {
@@ -379,9 +396,12 @@ for (const configFile of configFiles) {
     if (server.package && !block.includes(server.package)) {
       fail(`${configFile} package drift for ${server.name}: expected ${server.package}`);
     }
-    if (server.sourceRef && !block.includes(server.sourceRef)) {
-      fail(`${configFile} sourceRef drift for ${server.name}: expected ${server.sourceRef}`);
-    }
+      if (server.sourceRef && server.name !== "serena" && !block.includes(server.sourceRef)) {
+        fail(`${configFile} sourceRef drift for ${server.name}: expected ${server.sourceRef}`);
+      }
+      if (server.name === "serena" && !block.includes("serena-pool.mjs")) {
+        fail(`${configFile} Serena must use the managed serena-pool bridge.`);
+      }
     if (server.risk === "critical" && enabled !== "false") {
       fail(`${configFile} must keep critical MCP disabled: ${server.name}`);
     }

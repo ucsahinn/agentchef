@@ -10,7 +10,9 @@ boundary.
 Codex Chef knows about 16 MCP servers. The balanced starter enables three:
 remote `openaiDeveloperDocs` plus local `context7` and `serena`. Five additional
 local stdio helpers remain defined but disabled, preserving capability without
-eagerly starting their Node/Python trees in every concurrent session. Eight
+eagerly starting their Node/Python trees in every concurrent session. Serena
+uses a lightweight bridge instead of a direct `uvx` stdio child, so it creates
+no Serena/LSP tree until a semantic tool is actually called. Eight
 account, database, or broad-filesystem connectors stay off until you
 deliberately need them.
 
@@ -29,7 +31,7 @@ deliberately need them.
 | --- | --- | --- | --- |
 | [`openaiDeveloperDocs`](https://developers.openai.com/mcp) | On | Current OpenAI developer documentation | Nothing extra |
 | [`context7`](https://github.com/upstash/context7) | On | Current library and framework docs | Node/npx and first-run network access |
-| [`serena`](https://github.com/oraios/serena) | On | Symbol-aware code navigation in unfamiliar repositories | `uvx` and the pinned Serena source |
+| [`serena`](https://github.com/oraios/serena) | On | Symbol-aware code navigation in unfamiliar repositories | Lightweight local bridge; `uvx` and the pinned source only on first semantic call |
 | [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Off | Breaking a complex task into clear steps | Node/npx and first-run network access |
 | [`playwright`](https://github.com/microsoft/playwright-mcp) | Off | Browser snapshots, screenshots, console and prompt-gated network evidence in an isolated, non-persistent profile | Node/npx and local browser control |
 | [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Off | Chrome inspection and UI diagnostics | Node/npx and an isolated Chrome bridge |
@@ -38,10 +40,12 @@ deliberately need them.
 
 Use `codex --profile full` for one primary session that needs every bundled
 local MCP. Start secondary concurrent windows with
-`codex --profile multi-session`; that profile disables all seven local stdio
-servers while leaving agents, skills, remote OpenAI docs, built-in memories,
-hooks, and apps available. Profiles layer over the base config, so disabling a
-server does not delete its definition.
+`codex --profile multi-session`; that profile keeps the lightweight Serena
+bridge but parks the other six eager local stdio servers while leaving agents,
+skills, remote OpenAI docs, built-in memories, hooks, and apps available. The
+bridge shares one loopback-only backend for the same canonical project and
+creates a separate backend for a distinct worktree only on demand. Profiles
+layer over the base config, so disabling a server does not delete its definition.
 
 Use `codex --profile offline` only when you explicitly want every
 Chef-managed MCP transport disabled. It is an optional fallback profile, not a
@@ -52,9 +56,9 @@ Browser navigation, memory writes, indexing, symbol edits, and similar actions
 are not silently approved just because the server is enabled. The templates
 allowlist reviewed read tools and keep the wider actions prompted or disabled.
 
-If `uvx` is missing, Serena will not start. That is a local prerequisite, not a
-reason to weaken the rest of the setup; install the prerequisite separately or
-disable Serena until you need it.
+If `uvx` is missing, the bridge still starts and reports only the first Serena
+tool call as unavailable. That is a local prerequisite, not a reason to weaken
+the rest of the setup; install it separately or disable Serena until needed.
 
 ## Off Until You Need Them
 
