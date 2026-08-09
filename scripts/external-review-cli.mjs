@@ -25,7 +25,7 @@ const SECRET_PATTERNS = [
   ["Docker registry auth", /"auth"\s*:\s*"[A-Za-z0-9+/=]{12,}"/i],
   ["Slack token", /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],
   ["JWT", /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/],
-  ["connection string", /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp|amqps|mssql):\/\/[^\s"'`]+/i]
+  ["connection string", /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp|amqps|mssql):\/\/[^\s"'`{}$]+@[^\s"'`{}$]+/i]
 ];
 
 function fail(message, code = "EXTERNAL_REVIEW_ERROR") {
@@ -196,35 +196,55 @@ function looksBinary(buffer) {
 
 function isCredentialPlaceholderOrReference(value) {
   const normalized = String(value || "").trim();
-  return /^(?:(?:your|example|sample|placeholder|replace|change[-_]?me|not[-_]|sentinel|redacted)(?:[-_ ][A-Za-z0-9.]+)*|x{8,}|0{12,}|\$\{[A-Za-z0-9_]+\}|\{\{[^{}]+\}\}|<[^<>]+>)$/i.test(normalized)
-    || /^(?:process\.env\.[A-Za-z0-9_]+|deno\.env\.get\(["'][A-Za-z0-9_]+["']\)|bun\.env\.[A-Za-z0-9_]+|import\.meta\.env\.[A-Za-z0-9_]+|os\.(?:environ(?:\.get\(["'][A-Za-z0-9_]+["']\)|\[['"][A-Za-z0-9_]+['"]\]?)|getenv\(["'][A-Za-z0-9_]+["']\))|std::env::var\(["'][A-Za-z0-9_]+["']\)|environment\.getenvironmentvariable\(["'][A-Za-z0-9_]+["']\)|system\.getenv\(["'][A-Za-z0-9_]+["']\)|env\[['"][A-Za-z0-9_]+['"]\]?|\$env:[A-Za-z0-9_]+|%[A-Za-z0-9_]+%);?$/i.test(normalized);
+  return /^(?:(?:your|example|sample|placeholder|replace|change[-_]?me|not[-_]|sentinel|redacted)(?:[-_ ][A-Za-z0-9.]+)*|x{8,}|0{12,}|\$\{[A-Za-z0-9_]+\}|\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}|\{\{[^{}]+\}\}|<[^<>]+>)$/i.test(normalized)
+    || /^(?:process\.env\.[A-Za-z0-9_]+|deno\.env\.get\(["'][A-Za-z0-9_]+["']\)|bun\.env\.[A-Za-z0-9_]+|import\.meta\.env\.[A-Za-z0-9_]+|os\.(?:environ(?:\.get\(["'][A-Za-z0-9_]+["']\)|\[['"][A-Za-z0-9_]+['"]\]?)|getenv\(["'][A-Za-z0-9_]+["']\))|std::env::var\(["'][A-Za-z0-9_]+["']\)|environment\.getenvironmentvariable\(["'][A-Za-z0-9_]+["']\)|system\.getenv\(["'][A-Za-z0-9_]+["']\)|env\[['"][A-Za-z0-9_]+['"]\]?|\$env:[A-Za-z0-9_]+|%[A-Za-z0-9_]+%|crypto\.randomUUID\(\)|[A-Za-z_$][A-Za-z0-9_$]*(?:\.(?:substring|substr|slice|replace|trim|toString)\([^()\r\n]*\))+)[,;]?$/i.test(normalized);
 }
 
-export function scanSecrets(text) {
+function isNamedTestFixturePlaceholder(value, relativePath) {
+  const normalized = String(value || "").trim();
+  const isTestFile = /(?:^|\/)(?:[^/]+\.(?:test|spec)|test-[^/]+)\.[A-Za-z0-9]+$/i.test(relativePath || "");
+  return isTestFile && /^(?:test|mock|fixture|fake|dummy)(?:[-_ ][A-Za-z0-9.!]+)*$/i.test(normalized);
+}
+
+function isExecutableSourcePath(relativePath) {
+  return /\.(?:[cm]?[jt]sx?|py|rb|php|java|kt|go|rs|cs|c(?:pp)?|h|sh|bash|zsh|fish|ps[md]1|lua|swift|scala)$/i.test(relativePath || "");
+}
+
+export function scanSecrets(text, relativePath = "") {
   const findings = [];
+  const sourceCode = isExecutableSourcePath(relativePath);
   for (const [name, pattern] of SECRET_PATTERNS) {
     if (pattern.test(text)) findings.push(name);
   }
   const hardcodedFallback = /(?<![-A-Za-z0-9_"'])(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*[^\r\n]*?(?:\|\||\?\?|\bor\b)\s*(?:(["'])([^"'\r\n]{12,})\3|([^\s;,\r\n]{12,}))/gi;
-  if (hardcodedFallback.test(text)) findings.push("generic credential assignment");
+  for (const match of text.matchAll(hardcodedFallback)) {
+    const fallbackValue = String(match[4] || match[5] || "").trim();
+    if (isNamedTestFixturePlaceholder(fallbackValue, relativePath)) continue;
+    if (sourceCode && !match[3]) continue;
+    findings.push("generic credential assignment");
+    break;
+  }
   const genericAssignments = /(?<![-A-Za-z0-9_"'])(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*(?:(["'])([^"'\r\n]{12,})\3|([^\s,;}\]]{12,}))/gi;
   for (const match of text.matchAll(genericAssignments)) {
+    if (sourceCode && !match[3]) continue;
     const value = String(match[4] || match[5] || "").trim();
-    if (isCredentialPlaceholderOrReference(value)) continue;
+    if (isCredentialPlaceholderOrReference(value) || isNamedTestFixturePlaceholder(value, relativePath)) continue;
     if (!findings.includes("generic credential assignment")) {
       findings.push("generic credential assignment");
     }
     break;
   }
-  const lineAssignments = /^\s*(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*(.+?)\s*$/gim;
-  for (const match of text.matchAll(lineAssignments)) {
-    const value = String(match[3] || "").trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
-    if (value.length < 12) continue;
-    if (isCredentialPlaceholderOrReference(value)) continue;
-    if (!findings.includes("generic credential assignment")) {
-      findings.push("generic credential assignment");
+  if (!sourceCode) {
+    const lineAssignments = /^\s*(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*(.+?)\s*$/gim;
+    for (const match of text.matchAll(lineAssignments)) {
+      const value = String(match[3] || "").trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
+      if (value.length < 12) continue;
+      if (isCredentialPlaceholderOrReference(value) || isNamedTestFixturePlaceholder(value, relativePath)) continue;
+      if (!findings.includes("generic credential assignment")) {
+        findings.push("generic credential assignment");
+      }
+      break;
     }
-    break;
   }
   const yamlBlockAssignment = /^\s*(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*:\s*[|>][+-]?\s*(?:#.*)?$/gim;
   if (yamlBlockAssignment.test(text) && !findings.includes("generic credential assignment")) {
@@ -294,7 +314,7 @@ export function buildPackPlan({ target, out, maxPartBytes = DEFAULT_PART_BYTES }
       continue;
     }
     const text = buffer.toString("utf8");
-    const secrets = scanSecrets(text);
+    const secrets = scanSecrets(text, relative);
     if (secrets.length > 0) {
       fail(`Secret-like content blocked in ${relative}: ${secrets.join(", ")}`, "SECRET_DETECTED");
     }

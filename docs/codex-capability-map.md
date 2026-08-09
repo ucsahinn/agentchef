@@ -22,8 +22,8 @@ Official references:
 | `AGENTS.md` | Durable repo/global working agreements | Installed as reviewed global guidance with repo-local precedence | `npm run validate` |
 | `config.toml` | Models, sandbox, approvals, MCP, features, profiles | Conservative workspace-write sandbox and on-request approvals | `npm run validate:mcp` |
 | Rules | Narrow command approval defaults | Verification commands only; destructive/publish actions stay gated | `npm run validate:content` |
-| Skills | Reusable workflows with progressive disclosure | Commit-pinned curated installs plus nine local plugin skills, including authorized reconstruction, evidence-backed SEO, and traceable deep research | `npm run verify:skills` |
-| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with nine skills and one exact, trust-gated SessionEnd process hook; no bundled MCP/apps | `npm run validate` |
+| Skills | Reusable workflows with progressive disclosure | Commit-pinned curated installs plus eleven local plugin skills, including GPT Pro context/handoff, authorized reconstruction, evidence-backed SEO, and traceable deep research | `npm run verify:skills` |
+| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with eleven skills and one exact, trust-gated SessionEnd process hook; no bundled MCP/apps | `npm run validate` |
 | MCP/connectors | Live docs, browser, code navigation, external systems | Three balanced defaults; optional local stdio helpers and authenticated connectors disabled | `npm run validate:mcp` |
 | Subagents | Delegated evidence-heavy specialist work | Twenty-one reviewed specialist agents with sandboxed role files | `npm run validate:agents` |
 | Doctor/status | No-write health and drift summary | Repo-only by default; optional global existence checks | `npm run codex:doctor` |
@@ -186,9 +186,10 @@ This repo follows that split:
 - Curated public and first-party skills stay in `catalog/skills.json`.
 - Installable skills must have reviewed `package`, `skill`, `sourceUrl`,
   `license`, `risk`, and `lastChecked` fields.
-- The local plugin exposes nine workflows, including the enterprise operator,
-  zero-network offline diagram triplet, explicit-only Fetch, evidence-backed
-  `$seo`, traceable `$evidence-research`, and context budget planning.
+- The local plugin exposes eleven workflows, including GPT Pro context and
+  manifest-bound handoff, the enterprise operator, zero-network offline diagram
+  triplet, explicit-only Fetch, evidence-backed `$seo`, traceable
+  `$evidence-research`, and context budget planning.
 - One exact `SessionEnd` process-hygiene hook is separately reviewed and
   trust-gated. Other plugin hooks, MCP servers, and apps remain absent.
 

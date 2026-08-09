@@ -1,0 +1,7 @@
+interface:
+  display_name: "GPT Pro Handoff"
+  short_description: "Frame and verify a deep GPT Pro code review."
+  default_prompt: "Use $gptpro-handoff to write a review-ID-bound GPT Pro prompt for this decision and verify any returned report against the live repository."
+
+policy:
+  allow_implicit_invocation: true

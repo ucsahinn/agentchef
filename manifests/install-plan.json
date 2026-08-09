@@ -15,6 +15,8 @@
       "adaptive-agent-routing-direct-skill",
       "codex-chef-brain-direct-skill",
       "external-review-workflow-direct-skill",
+      "gptpro-direct-skill",
+      "gptpro-handoff-direct-skill",
       "fetch-direct-skill",
       "seo-direct-skill",
       "evidence-research-direct-skill",
@@ -34,6 +36,8 @@
       "adaptive-agent-routing-direct-skill",
       "codex-chef-brain-direct-skill",
       "external-review-workflow-direct-skill",
+      "gptpro-direct-skill",
+      "gptpro-handoff-direct-skill",
       "fetch-direct-skill",
       "seo-direct-skill",
       "evidence-research-direct-skill",
@@ -177,6 +181,30 @@
       "backup": true,
       "risk": "medium",
       "conflictPolicy": "The external review workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+    },
+    {
+      "id": "gptpro-direct-skill",
+      "kind": "copy-directory",
+      "summary": "Install the GPT Pro Project context workflow for direct invocation.",
+      "source": "plugins/codex-chef-workflows/skills/gptpro",
+      "destination": "${AGENTS_HOME}/skills/gptpro",
+      "platforms": ["windows", "unix"],
+      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
+      "backup": true,
+      "risk": "medium",
+      "conflictPolicy": "The GPT Pro context workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+    },
+    {
+      "id": "gptpro-handoff-direct-skill",
+      "kind": "copy-directory",
+      "summary": "Install the manifest-bound GPT Pro handoff workflow for direct invocation.",
+      "source": "plugins/codex-chef-workflows/skills/gptpro-handoff",
+      "destination": "${AGENTS_HOME}/skills/gptpro-handoff",
+      "platforms": ["windows", "unix"],
+      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
+      "backup": true,
+      "risk": "medium",
+      "conflictPolicy": "The GPT Pro handoff workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "fetch-direct-skill",

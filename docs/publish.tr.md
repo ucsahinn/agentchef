@@ -2,7 +2,7 @@
 
 Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamayı bozma: önce doğrula, exact diff’i incele, ardından açık onayla commit, tag veya release oluştur.
 
-Yayın adayı temel sürümü: **v0.5.66**.
+Yayın adayı temel sürümü: **v0.5.67**.
 
 ## Commit Veya Push Öncesi
 

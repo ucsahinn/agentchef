@@ -14,10 +14,10 @@ ayrı gösterir.
 
 Resmi Codex kaynağı: [Skill oluşturma](https://developers.openai.com/codex/skills)
 
-## 🍱 Repo İle Gelen Dokuz Workflow
+## 🍱 Repo İle Gelen On Bir Workflow
 
 Bu skill'ler Codex Chef plugin'inin içindedir ve repo ile birlikte gelir.
-Installer dokuz workflow'un tamamını aynı canonical kaynaktan
+Installer on bir workflow'un tamamını aynı canonical kaynaktan
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
 `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
 <hedef>` ve `$evidence-research <soru>` gibi çağrılar doğrudan çalışır. Fetch
@@ -36,6 +36,8 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | [`context-budget-planner`](../plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
 | [`adaptive-agent-routing`](../plugins/codex-chef-workflows/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
 | [`external-review-workflow`](../plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
+| [`gptpro`](../plugins/codex-chef-workflows/skills/gptpro/SKILL.md) | Taze external-review snapshot'ını yükleme yapmadan architecture-aware GPT Pro Project metin bağlamına dönüştürmek için. |
+| [`gptpro-handoff`](../plugins/codex-chef-workflows/skills/gptpro-handoff/SKILL.md) | Review-ID-bound GPT Pro prompt'u yazmak ve dönen raporu implementation öncesinde doğrulamak için. |
 | [`fetch`](../plugins/codex-chef-workflows/skills/fetch/SKILL.md) | Yetkili bir referans siteyi gerçek browser kanıtıyla yeniden kurmak, responsive etkileşimleri doğrulamak ve credential ya da server içi mantık kopyalamadan bütün fidelity farklarını raporlamak için. |
 | [`seo`](../plugins/codex-chef-workflows/skills/seo/SKILL.md) | Ranking veya indexing kanıtı uydurmadan teknik SEO, rendering, structured data, content intent, uluslararası/lokal SEO, performans ve ölçüm işlerini audit etmek, uygulamak ve doğrulamak için. |
 | [`evidence-research`](../plugins/codex-chef-workflows/skills/evidence-research/SKILL.md) | Karar sorusunu çerçevelemek, güncel kaynakları arayıp değerlendirmek, claim'leri izlenebilir tutmak, görüş ayrılıklarını ve belirsizliği açıklamak, yeniden üretilebilir araştırma paketi hazırlamak için. |
@@ -104,7 +106,7 @@ listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçenekle
 ## “Katalogda Var” Ne Demek?
 
 - Katalog kaydı incelenmiş metadata'dır; skill'in kurulu olduğunu kanıtlamaz.
-- Bundled skill bu repodaki plugin'in içinde yaşar. Dokuz bundled workflow'un
+- Bundled skill bu repodaki plugin'in içinde yaşar. On bir bundled workflow'un
   tamamı, repoda ikinci bir canonical kaynak oluşturmadan yönetilen direct
   skill olarak da senkronize edilir.
 - `install: true` kaydı full install profiline uygun demektir.

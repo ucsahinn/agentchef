@@ -207,7 +207,7 @@ Installers upsert only the `codex-chef-workflows` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing
 marketplace file is invalid, unreadable, or not a JSON object.
 
-The managed installer synchronizes all nine canonical local workflow
+The managed installer synchronizes all eleven canonical local workflow
 directories to `AGENTS_HOME/skills/<name>`, so direct invocation does not
 depend on plugin installation. A durable per-skill ownership marker
 distinguishes Chef-managed or exact legacy content from a foreign collision.

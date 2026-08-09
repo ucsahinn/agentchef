@@ -2,7 +2,7 @@
 
 Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrulandıktan ve account-level değişiklik açıkça onaylandıktan sonra manuel uygula.
 
-Yayın adayı temel sürümü: **v0.5.66**.
+Yayın adayı temel sürümü: **v0.5.67**.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
@@ -72,11 +72,11 @@ doğrulandı fakat account-level ayara henüz yüklenmedi.
 
 ## Release Metadata
 
-v0.5.66 için:
+v0.5.67 için:
 
 ```text
-Title: Codex Chef v0.5.66
-Tag: v0.5.66
+Title: Codex Chef v0.5.67
+Tag: v0.5.67
 Notes: tmp/release-notes-current.md
 ```
 

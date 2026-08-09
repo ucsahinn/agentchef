@@ -2,6 +2,17 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.67 - 2026-08-10
+
+Codex Chef 0.5.67, bir depoyu otomatik yükleme veya çalıştırma yetkisi vermeden, manuel yönetilen bir GPT Pro Project için eksiksiz ve incelemeye bağlı şekilde hazırlayan yolu ekler.
+
+### Neler Değişti?
+
+- Plugin içinden ve Chef-managed doğrudan skill kurulumu ile kullanılabilen `gptpro` ve `gptpro-handoff` workflow'ları eklendi.
+- Taze, secret-safe review snapshot'tan deterministik teslim paketleri üretilir: tek convenience ZIP, subsystem ZIP'leri, adlandırılmış metin bundle'ları ve doğrudan yüklenebilir metin fallback'i.
+- Eski kaynak, değiştirilmiş Project talimatı, review-ID yeniden bağlama, ZIP değişikliği, beklenmeyen arşiv, kaynak kaçışı ve güvenilmeyen dönen rapor durumlarında fail-closed davranır.
+- İngilizce ve Türkçe GPT Pro context/returned-report istekleri en dar owner'a yönlendirilir; installer, runtime, CLI, paketleme ve dokümantasyon sözleşmeleri uçtan uca doğrulanır.
+
 ## v0.5.66 - 2026-08-08
 
 Codex Chef 0.5.66, buyuk yerel Codex rollout gecmisi olan makinelerde rutin Update akisini daha guvenilir hale getirir.

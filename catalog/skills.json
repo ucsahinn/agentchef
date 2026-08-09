@@ -50,6 +50,22 @@
       "reason": "Bundled local plugin skill for secret-safe external review packaging, manual handoff, snapshot freshness checks, and structured finding verification without automatic upload, with direct invocation."
     },
     {
+      "name": "gptpro",
+      "category": "code-review",
+      "install": false,
+      "directInstall": true,
+      "directTarget": "${AGENTS_HOME}/skills/gptpro",
+      "reason": "Bundled local plugin skill for preparing secret-safe, architecture-aware GPT Pro Project context from a fresh Codex Chef external-review snapshot without automatic upload."
+    },
+    {
+      "name": "gptpro-handoff",
+      "category": "code-review",
+      "install": false,
+      "directInstall": true,
+      "directTarget": "${AGENTS_HOME}/skills/gptpro-handoff",
+      "reason": "Bundled local plugin skill for authoring a manifest-bound GPT Pro review prompt and verifying its returned report against the live repository before implementation."
+    },
+    {
       "name": "adaptive-agent-routing",
       "category": "context-engineering",
       "install": false,

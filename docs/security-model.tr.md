@@ -213,7 +213,7 @@ Installer'lar yalniz `codex-chef-workflows` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.
 
-Yonetilen installer dokuz canonical lokal workflow dizininin tamamını
+Yonetilen installer on bir canonical lokal workflow dizininin tamamını
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder; böylece direct invocation
 plugin kurulumuna bağlı kalmaz. Skill başına kalıcı ownership marker,
 Chef-managed veya exact legacy içeriği foreign collision'dan ayırır. Foreign

@@ -72,3 +72,10 @@ npm run chef -- review verify --target <repo> --manifest <manifest> --report <js
 
 Preview is the default. Applying a handoff still requires an explicit command,
 and any real upload remains outside this repository's automatic workflow.
+
+## GPT Pro Project Review
+
+The bundled `gptpro` and `gptpro-handoff` skills build on that same review ID:
+the first creates text bundles for a manually managed GPT Pro Project, and the
+second writes a bounded prompt plus verifies a returned report. Neither skill
+chooses a provider, opens a browser, or uploads source files.

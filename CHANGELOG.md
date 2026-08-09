@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.5.67 - 2026-08-10
+
+- Add bundled and direct-installable `gptpro` and `gptpro-handoff` workflows for manual GPT Pro Project context delivery and manifest-bound returned-report verification.
+- Produce a deterministic convenience ZIP, subsystem ZIPs, and directly uploadable text fallback from a fresh, secret-safe external-review snapshot; reject stale source, modified instructions, rebinding, archive mutation, and unexpected archive artifacts.
+- Route GPT Pro context and returned-report intents to their narrow workflow owners in English and Turkish, and keep install-plan, runtime, CLI, documentation, package-surface, and installer contracts synchronized.
+- Make Chef CLI skill-count smoke expectations derive from the catalog so managed direct-skill growth cannot leave release checks stale.
+
 ## 0.5.66 - 2026-08-08
 
 - Keep routine Update applies bounded by replacing the full CI suite with an update-integrity gate that covers repository, installer, plan, MCP, approval, agent, routing, and package contracts.

@@ -42,7 +42,7 @@ private machine, credentials, sessions, or local memory.
 | Explore | What you will find |
 | --- | --- |
 | [🤖 See all 21 agents](docs/agents.md) | The specialist roles, what each one owns, and when delegation is actually useful. |
-| [🧩 Browse the skill catalog](docs/skills.md) | Nine bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
+| [🧩 Browse the skill catalog](docs/skills.md) | Eleven bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
 | [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The balanced three-server default, optional local capabilities, eight gated connectors, and their process/access boundaries. |
 | [📜 Read the installed working agreement](templates/codex/AGENTS.md) | The user-wide defaults installed as `~/.codex/AGENTS.md`; a repository-local `AGENTS.md` still has precedence. |
 | [🛡️ Read the security model](docs/security-model.md) | Preview-first changes, backups, approval gates, secret handling, and the actions Codex Chef deliberately leaves to you. |
@@ -72,7 +72,7 @@ continue to win where they should.
 
 Skills teach Codex how to handle a focused job. Codex sees a short description
 first and loads the full instructions only when the task matches. Codex Chef
-ships nine local plugin workflows and offers fifteen reviewed skills through the
+ships eleven local plugin workflows and offers fifteen reviewed skills through the
 full install profile. Every local workflow is synchronized as a managed direct
 skill, so calls such as `$adaptive-agent-routing`, `$context-budget-planner`,
 `$fetch`, `$seo`, and `$evidence-research` work without a separate plugin

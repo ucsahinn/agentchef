@@ -78,7 +78,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair modu, zaten Codex setup'i olan makineler icindir. Codex Chef'in
 yonettigi global guidance, rule, agent/profile dosyalari, bundled plugin,
-dokuz yönetilen direct lokal workflow, eksik config bloklari ve local plugin
+on bir yönetilen direct lokal workflow, eksik config bloklari ve local plugin
 marketplace kaydi icin once no-write plan verir, sonra istenirse backup alarak
 onarir. Baska marketplace plugin'lerini korur ve user skill'lerini silmez;
 fazla veya duplicate global skill'leri cleanup adayi olarak raporlar.
@@ -244,7 +244,7 @@ Kullanışlı parametreler:
 - `-All`: Codex template'lerini, yerel Codex Chef plugin'ini, uzman ajanları,
   profilleri, kuralları ve doğrulanmış public/first-party skill'leri kurar.
   Global Git config'i değiştirmez.
-- Her varsayılan yönetilen kurulum, dokuz lokal workflow'un canonical
+- Her varsayılan yönetilen kurulum, on bir lokal workflow'un canonical
   kaynaklarını `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
   `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
   <hedef>` ve `$evidence-research <soru>` gibi çağrılar plugin kurulmadan

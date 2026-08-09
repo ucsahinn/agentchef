@@ -79,7 +79,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair mode is for machines that already have a Codex setup. It previews or
 applies backup-backed reconciliation for Codex Chef-managed guidance, rules,
-agent/profile files, the bundled plugin, all nine managed direct local
+agent/profile files, the bundled plugin, all eleven managed direct local
 workflows, missing config blocks, and the local plugin marketplace entry. It
 preserves unrelated marketplace plugins and never deletes user skills; extra
 or duplicate global skills are reported as cleanup candidates. If the
@@ -247,7 +247,7 @@ Useful switches:
 - `-All`: install Codex templates, the local Codex Chef plugin, specialist
   agents, profiles, rules, and verified public/first-party skills. It does not
   change global Git config.
-- Every default managed install synchronizes all nine canonical local workflow
+- Every default managed install synchronizes all eleven canonical local workflow
   sources to `AGENTS_HOME/skills/<name>`. This makes direct calls such as
   `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
   <target>`, and `$evidence-research <question>` available without installing

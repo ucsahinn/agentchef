@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "bundles": [
+    {
+      "name": "core",
+      "description": "domain logic and shared invariants",
+      "include": ["packages/core/**", "src/domain/**"]
+    },
+    {
+      "name": "db",
+      "description": "database architecture only: schema and forward migrations",
+      "include": ["prisma/**", "supabase/migrations/**", "docs/data-model.md"]
+    },
+    {
+      "name": "docs",
+      "description": "architecture, decisions, and conventions",
+      "include": ["README.md", "AGENTS.md", "docs/**", "adrs/**"]
+    }
+  ]
+}

@@ -585,8 +585,8 @@ if (fs.existsSync(skillCatalog)) {
   if (!String(catalog.skillsCliIntegrity || "").startsWith("sha512-")) {
     failures.push("Public skill catalog must pin the Skills CLI registry integrity.");
   }
-  if (skills.length !== 55) {
-    failures.push(`Public skill catalog contract expects 55 entries; found ${skills.length}.`);
+  if (skills.length !== 57) {
+    failures.push(`Public skill catalog contract expects 57 entries; found ${skills.length}.`);
   }
   if (skills.filter((skill) => skill.install === true).length !== 15) {
     failures.push("Public skill catalog contract expects 15 full-install skills.");
@@ -680,8 +680,8 @@ if (fs.existsSync(bundledSkillsDir)) {
     .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(bundledSkillsDir, entry.name, "SKILL.md")))
     .map((entry) => entry.name)
     .sort();
-  if (bundledSkills.length !== 9) {
-    failures.push(`Public bundled workflow contract expects 9 skills; found ${bundledSkills.length}.`);
+  if (bundledSkills.length !== 11) {
+    failures.push(`Public bundled workflow contract expects 11 skills; found ${bundledSkills.length}.`);
   }
   for (const doc of ["docs/skills.md", "docs/skills.tr.md"]) {
     if (!fs.existsSync(path.join(root, doc))) continue;

@@ -1,0 +1,7 @@
+interface:
+  display_name: "GPT Pro Project Context"
+  short_description: "Prepare safe architecture-aware files for GPT Pro."
+  default_prompt: "Use $gptpro to prepare this repository as a safe, fresh, architecture-aware GPT Pro Project context without uploading anything."
+
+policy:
+  allow_implicit_invocation: true

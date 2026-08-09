@@ -23,6 +23,8 @@ Agent roles inherit the active profile. Omitted model and reasoning fields are i
 - `seo-web-quality`: `google_seo_auditor`, `performance_auditor`, or `frontend_verifier` according to evidence needed.
 - `docs-and-adrs`: `docs_author` or `devex_auditor` for independent documentation and onboarding checks.
 - `external-deep-review`: `code_reviewer`, with `security_auditor` or `test_verifier` only when separable; use `external-review-workflow` for a manual, hash-pinned, zero-upload handoff.
+- `gptpro-project-context`: use `gptpro` to create a fresh, hash-bound GPT Pro context delivery; ZIP upload remains manual and text bundles remain the fallback.
+- `gptpro-report-verification`: use `gptpro-handoff` to validate a returned GPT Pro report against the live worktree before implementation.
 - `starter-health`: `codex_doctor` and optionally `test_verifier` for setup drift and runtime checks.
 
 Other specialists remain available when their bounded role fits: `mcp_integrator`, `product_strategist`, `spec_author`, `qa_lead`, `performance_auditor`, `docs_author`, `design_reviewer`, `devex_auditor`, `frontend_verifier`, `security_auditor`, and `release_verifier`.

@@ -215,6 +215,76 @@ test("secret-like tracked content fails closed", () => {
     assert.deepEqual(scanSecrets(reference), [], reference);
   }
   assert.deepEqual(
+    scanSecrets("password: ${{ secrets.GITHUB_TOKEN }}"),
+    [],
+    "GitHub Actions secret expressions are references, not credential values"
+  );
+  assert.deepEqual(
+    scanSecrets("password: ${{ secrets.GITHUB_TOKEN }}-fallback-value"),
+    ["generic credential assignment"],
+    "GitHub Actions secret expressions must not allow a hardcoded fallback"
+  );
+  assert.deepEqual(
+    scanSecrets("$dbUrl = \"postgresql://postgres:{0}@db.{1}.supabase.co:5432/postgres\" -f $password, $projectRef"),
+    [],
+    "connection-string format templates are not credential values"
+  );
+  assert.deepEqual(
+    scanSecrets("const token = authHeader.substring(7)"),
+    [],
+    "credentials derived from a request header are not hardcoded values"
+  );
+  assert.deepEqual(
+    scanSecrets("password: crypto.randomUUID()"),
+    [],
+    "credentials generated at runtime are not hardcoded values"
+  );
+  assert.deepEqual(
+    scanSecrets("password: crypto.randomUUID(),"),
+    [],
+    "runtime credential expressions remain safe in object literals"
+  );
+  assert.deepEqual(
+    scanSecrets("const token = request.headers.get('authorization');", "route.ts"),
+    [],
+    "runtime source expressions are not treated as hardcoded credentials"
+  );
+  assert.deepEqual(
+    scanSecrets("const token = accessToken || sessionRef.current?.access_token || null;", "route.ts"),
+    [],
+    "dynamic source fallback expressions are not treated as hardcoded credentials"
+  );
+  assert.deepEqual(
+    scanSecrets(`const token = process.env.API_TOKEN || "${["hardcoded", "fallback", "credential"].join("-")}";`, "route.ts"),
+    ["generic credential assignment"],
+    "hardcoded source fallbacks remain blocked"
+  );
+  assert.deepEqual(
+    scanSecrets("password: correct horse battery staple", "settings.yaml"),
+    ["generic credential assignment"],
+    "configuration values remain subject to strict credential scanning"
+  );
+  assert.deepEqual(
+    scanSecrets(`${"access_"}token: "${["test", "expired", "token"].join("-")}"`, "api-client.test.ts"),
+    [],
+    "named credential fixtures are safe only in test files"
+  );
+  assert.deepEqual(
+    scanSecrets(`${"access_"}token: "${["test", "expired", "token"].join("-")}"`, "settings.yaml"),
+    ["generic credential assignment"],
+    "named credential fixtures remain blocked outside test files"
+  );
+  assert.deepEqual(
+    scanSecrets(`${"access_"}token: "${["expired", "token"].join("-")}"`, "api-client.test.ts"),
+    ["generic credential assignment"],
+    "test fixture values must carry an explicit safe prefix"
+  );
+  assert.deepEqual(
+    scanSecrets(`${"pass"}word: "${"test-Aa!234567890"}"`, "password-policy.test.ts"),
+    [],
+    "named test password fixtures may satisfy a special-character password policy"
+  );
+  assert.deepEqual(
     scanSecrets(`${"to"}ken = process.env.API_TOKEN || "${["hardcoded", "fallback", "credential"].join("-")}"`),
     ["generic credential assignment"]
   );

@@ -75,3 +75,10 @@ npm run chef -- review verify --target <repo> --manifest <manifest> --report <js
 
 Varsayılan davranış ön izlemedir. Handoff'u gerçekten uygulamak için açık bir
 komut gerekir; gerçek bir upload ise bu reponun otomatik akışının dışındadır.
+
+## GPT Pro Project Review
+
+Hazır gelen `gptpro` ve `gptpro-handoff` aynı review ID üzerine kurulur: ilki
+manuel yönetilen GPT Pro Project için metin bundle'ları üretir, ikincisi ise
+sınırları belirli prompt'u yazar ve dönen raporu doğrular. Hiçbiri provider
+seçmez, browser açmaz veya kaynak dosya yüklemez.

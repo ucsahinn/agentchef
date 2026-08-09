@@ -15,6 +15,8 @@ const expectedBundledSkills = new Set([
   "evidence-research",
   "external-review-workflow",
   "fetch",
+  "gptpro",
+  "gptpro-handoff",
   "offline-diagram-triplet",
   "seo"
 ]);

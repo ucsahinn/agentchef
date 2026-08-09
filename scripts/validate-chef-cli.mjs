@@ -15,6 +15,12 @@ import { writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
 const failures = [];
+const skillCatalog = JSON.parse(read("catalog/skills.json"));
+const skillCounts = {
+  upstream: skillCatalog.skills.filter((skill) => skill.install === true).length,
+  direct: skillCatalog.skills.filter((skill) => skill.directInstall === true).length
+};
+skillCounts.total = skillCounts.upstream + skillCounts.direct;
 
 function fail(message) {
   failures.push(message);
@@ -1414,9 +1420,9 @@ const skillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-skills
 try {
   runCliSmoke("skills-status-empty", ["--skills", "--details", "--plain", "--no-log"], [
     "Installation status",
-    "0 of 24 Chef-managed skills ready",
-    "24 missing",
-    "Upstream: 0/15 ready. Bundled/direct: 0/9 ready.",
+    `${0} of ${skillCounts.total} Chef-managed skills ready`,
+    `${skillCounts.total} missing`,
+    `Upstream: 0/${skillCounts.upstream} ready. Bundled/direct: 0/${skillCounts.direct} ready.`,
     "0 invalid"
   ], {
     env: {
@@ -1435,10 +1441,10 @@ try {
   });
   fs.rmSync(path.join(invalidEnv.CODEX_HOME, "skills", "systematic-debugging"), { recursive: true, force: true });
   runCliSmoke("skills-status-invalid", ["--skills", "--details", "--plain", "--no-log"], [
-    "22 of 24 Chef-managed skills ready",
+    `${skillCounts.total - 2} of ${skillCounts.total} Chef-managed skills ready`,
     "1 missing",
     "1 invalid",
-    "Upstream: 13/15 ready. Bundled/direct: 9/9 ready.",
+    `Upstream: ${skillCounts.upstream - 2}/${skillCounts.upstream} ready. Bundled/direct: ${skillCounts.direct}/${skillCounts.direct} ready.`,
     "Invalid installation"
   ], {
     env: invalidEnv
@@ -1499,8 +1505,8 @@ try {
   const readySkillStatusEnv = createCuratedSkillFixture(readySkillStatusRoot);
   runCliSmoke("skills", ["--skills", "--details", "--plain", "--no-log"], [
     "Skill status & catalog",
-    "24 Codex Chef-managed skills:",
-    "15 commit-pinned upstream",
+    `${skillCounts.total} Codex Chef-managed skills:`,
+    `${skillCounts.upstream} commit-pinned upstream`,
     "bundled/direct.",
     "How skill activation works",
     "Installed skills do not run by themselves",
@@ -1514,8 +1520,8 @@ try {
     maxVisualWidth: 72
   });
   runCliSmoke("skills-narrow", ["--skills", "--plain", "--no-log"], [
-    "24 Codex Chef-managed skills",
-    "24 of 24 Chef-managed skills ready"
+    `${skillCounts.total} Codex Chef-managed skills`,
+    `${skillCounts.total} of ${skillCounts.total} Chef-managed skills ready`
   ], {
     env: { ...readySkillStatusEnv, COLUMNS: "72" },
     maxVisualWidth: 72

@@ -2,6 +2,17 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.67 - 2026-08-10
+
+Codex Chef 0.5.67 adds a complete, review-bound path for bringing a repository to a manually managed GPT Pro Project without granting automatic upload or execution authority.
+
+### What Changed
+
+- Adds bundled `gptpro` and `gptpro-handoff` workflows, available through the plugin and Chef-managed direct-skill installation.
+- Builds deterministic delivery packages from a fresh secret-safe review snapshot: one convenience ZIP, subsystem ZIPs, named text bundles, and a directly uploadable text fallback.
+- Fails closed on stale source, altered Project instructions, review-ID rebinding, ZIP mutation, unexpected archives, source escapes, and untrusted returned reports.
+- Routes English and Turkish GPT Pro context and returned-report requests to their narrow owners, and verifies installer, runtime, CLI, packaging, and documentation contracts end to end.
+
 ## v0.5.66 - 2026-08-08
 
 Codex Chef 0.5.66 makes routine Update reliable on machines with a large local Codex rollout history.

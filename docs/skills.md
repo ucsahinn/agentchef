@@ -14,10 +14,10 @@ reference.
 
 Official Codex reference: [Build skills](https://developers.openai.com/codex/skills)
 
-## 🍱 Nine Bundled Workflows
+## 🍱 Eleven Bundled Workflows
 
 These live in the Codex Chef plugin and travel with the repository. The
-installer synchronizes all nine from that same canonical source to
+installer synchronizes all eleven from that same canonical source to
 `AGENTS_HOME/skills/<name>`, so every workflow can be called directly. Examples
 include `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`,
 `$seo <target>`, and `$evidence-research <question>`. Fetch remains
@@ -36,6 +36,8 @@ install or enable it. To use namespaced calls such as
 | [`context-budget-planner`](../plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
 | [`adaptive-agent-routing`](../plugins/codex-chef-workflows/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
 | [`external-review-workflow`](../plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
+| [`gptpro`](../plugins/codex-chef-workflows/skills/gptpro/SKILL.md) | Export a fresh external-review snapshot as architecture-aware GPT Pro Project text context without uploading it. |
+| [`gptpro-handoff`](../plugins/codex-chef-workflows/skills/gptpro-handoff/SKILL.md) | Write a review-ID-bound GPT Pro prompt and verify its returned report before implementation. |
 | [`fetch`](../plugins/codex-chef-workflows/skills/fetch/SKILL.md) | Reconstruct an authorized reference site from browser evidence, verify responsive interactions, and report every fidelity gap without copying credentials or server internals. |
 | [`seo`](../plugins/codex-chef-workflows/skills/seo/SKILL.md) | Audit, implement, and verify technical, rendering, structured-data, content-intent, international, local, performance, and measurement work without inventing rankings or indexing evidence. |
 | [`evidence-research`](../plugins/codex-chef-workflows/skills/evidence-research/SKILL.md) | Frame decision questions, search and appraise current sources, trace claims, explain disagreement and uncertainty, and package reproducible research. |
@@ -104,7 +106,7 @@ upstream options intentionally kept out of the default skill list.
 ## What “Cataloged” Does And Does Not Mean
 
 - A catalog entry is reviewed metadata, not proof that the skill is installed.
-- A bundled skill lives in this repository's plugin. All nine bundled
+- A bundled skill lives in this repository's plugin. All eleven bundled
   workflows are also synchronized as managed direct skills without creating a
   second canonical source in the repository.
 - An `install: true` entry is eligible for the full install profile.
