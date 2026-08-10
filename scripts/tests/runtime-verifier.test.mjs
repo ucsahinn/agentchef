@@ -27,6 +27,16 @@ function installFixture(codexHome, agentsHome) {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 }
 
+function verifyOffline(codexHome, agentsHome) {
+  return run(process.execPath, [
+    "scripts/verify-install-runtime.mjs",
+    "--json",
+    "--offline",
+    "--codex-home", codexHome,
+    "--agents-home", agentsHome
+  ]);
+}
+
 function writeEmptyMcpCodex(binDir, codexHome) {
   const escapedHome = fs.realpathSync.native(codexHome).replaceAll("\\", "\\\\");
   if (process.platform === "win32") {
@@ -181,6 +191,81 @@ test("installed profile launcher applies MCP enablement through Codex config ove
     for (const name of ["openaiDeveloperDocs", "context7", "serena", "github", "supabase"]) {
       assert.ok(offlineArgs.includes(`mcp_servers.${name}.enabled=false`), `offline profile must disable ${name}`);
     }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("runtime verifier fails when the installed Serena pool launcher is missing", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-missing-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    installFixture(codexHome, agentsHome);
+    fs.rmSync(path.join(codexHome, "serena-pool.mjs"));
+
+    const result = verifyOffline(codexHome, agentsHome);
+    const report = JSON.parse(result.stdout);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    assert.match(report.failures.join("\n"), /serena-pool\.mjs/i);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("runtime verifier fails when the installed Serena pool launcher drifts", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-drift-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    installFixture(codexHome, agentsHome);
+    fs.appendFileSync(path.join(codexHome, "serena-pool.mjs"), "\n// drift fixture\n", "utf8");
+
+    const result = verifyOffline(codexHome, agentsHome);
+    const report = JSON.parse(result.stdout);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    assert.match(report.failures.join("\n"), /serena-pool\.mjs/i);
+    assert.match(report.failures.join("\n"), /drifted from source/i);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("runtime verifier rejects a linked Serena pool launcher", (context) => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-link-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    installFixture(codexHome, agentsHome);
+    const target = path.join(codexHome, "serena-pool.mjs");
+    const outside = path.join(fixtureRoot, "outside-serena-pool.mjs");
+    fs.copyFileSync(target, outside);
+    fs.rmSync(target);
+    try {
+      fs.symlinkSync(outside, target, "file");
+    } catch (error) {
+      if (["EPERM", "EACCES", "ENOTSUP"].includes(error?.code)) {
+        const realCodexHome = path.join(fixtureRoot, "real-codex-home");
+        fs.renameSync(codexHome, realCodexHome);
+        try {
+          fs.symlinkSync(realCodexHome, codexHome, process.platform === "win32" ? "junction" : "dir");
+        } catch (junctionError) {
+          if (["EPERM", "EACCES", "ENOTSUP"].includes(junctionError?.code)) {
+            context.skip(`File and directory link creation are unavailable: ${error.code}/${junctionError.code}`);
+            return;
+          }
+          throw junctionError;
+        }
+      } else {
+        throw error;
+      }
+    }
+
+    const result = verifyOffline(codexHome, agentsHome);
+    const report = JSON.parse(result.stdout);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    assert.match(report.failures.join("\n"), /unsafe managed path/i);
+    assert.match(report.failures.join("\n"), /serena-pool\.mjs/i);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

@@ -71,6 +71,26 @@ test("malformed write-capable options fail before creating an accidental target"
   assert.equal(fs.existsSync(accidental), false, "malformed value flags must not create a --json target");
 });
 
+test("repair preview rejects every write-capable companion flag", () => {
+  const incompatibleArgs = [
+    ["--preview", "--apply"],
+    ["--preview", "--no-backup"],
+    ["--preview", "--prune-managed-plugin-extras"],
+    ["--preview", "--migrate-legacy-profile-pins"],
+    ["--preview", "--adopt-fetch-skill"],
+    ["--preview", "--adopt-direct-skill", "seo"]
+  ];
+
+  for (const flags of incompatibleArgs) {
+    const report = assertJsonUsageError(
+      "scripts/repair-install.mjs",
+      ["--json", ...flags],
+      "repair-install"
+    );
+    assert.match(report.error.message, /--preview cannot be combined with write-capable options/);
+  }
+});
+
 test("shared error sanitizer redacts paths, secret shapes, and terminal controls", () => {
   const mixedCaseRoot = process.platform === "win32"
     ? root.replace(/[A-Za-z]/, (letter) => letter === letter.toLowerCase() ? letter.toUpperCase() : letter.toLowerCase())

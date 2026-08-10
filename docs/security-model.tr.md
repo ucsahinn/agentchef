@@ -17,12 +17,16 @@ için tasarlandı.
   destructive ve open-world tool'lari kapali tutar.
 - Global command rule'ları dar kapsamlıdır ve read-only discovery ile lokal
   verification komutlarına ağırlık verir.
-- `npm run build`, `npm run check`, `npm run validate`, `npm run dev` ve
-  `npm run codex:status` gibi incelenmis lokal dogrulama script'leri
-  auto-approved olur. Rastgele repository-controlled `npm run ...` script'leri
-  unmatched kalir; cleanup, deploy, publish, release, migration, dependency ve
-  destructive script adlari prompt ister. Cunku package script'leri mevcut repo
-  icinden arbitrary shell code calistirabilir.
+- Alışıldık build, test, check, validate, dev ve status adları dahil, repo
+  tarafından kontrol edilen her `npm run ...` komutu onay ister; çünkü arkasında
+  çalışacak shell kodunu repo belirler. Tam olarak tanımlanmış read-only npm
+  incelemeleri (`ls`, `outdated`, `view`) ile script çalıştırmayan, incelenmiş
+  paket dry-run komutu izinli kalır.
+- Fetch, branch/tag/remote değişiklikleri, config yazma, stage, commit, push,
+  reset, checkout ve restore gibi Git mutasyonları onay ister. Status/diff/log/show,
+  `branch --show-current`/`--list`, `remote get-url`, `tag --list` ve izin
+  listesindeki config anahtarı okumaları gibi tam read-only incelemeler izinli
+  kalır.
 - `token-safe.config.toml` skill, agent, MCP server, memory, hook veya app
   kapatmadan verbosity, default reasoning, compaction threshold ve tool-output
   boyutunu dusurur.
@@ -183,6 +187,14 @@ guard, profile ve skill operation'ını listeler. `npm run plan:install` bu
 manifestten sadece okunabilir bir plan üretir; kullanıcı-global Codex, Agents
 veya Git dosyalarına yazmaz.
 
+Seçilen manifest profili operasyon seçimi ve sırası için normatiftir. Üretilen
+profiller, sahiplik işareti yazımları, kurulu plugin cache yenilemesi ve Unix
+hook izin adımı bu sözleşmede açık operasyonlardır. Planlayıcı, install/repair
+preflight'ları, repair dosya yürütümü ve runtime drift kontrolleri resolved
+action ledger'ı tüketir. Platform installer'ları açık PowerShell ve shell
+yürütme kodunu korur; semantic parity validator ve davranışsal smoke testleri
+bu yolları contract ile karşılaştırır, böylece manifest normative kalır.
+
 Plan çıktısında her operation için target path, collision policy, backup
 beklentisi, platform ve risk seviyesi görünür. High-risk operation'lar explicit
 flag ister; örneğin Git guard'ları `--install-git-guards`, skill kurulumu
@@ -197,7 +209,9 @@ Canonical template ile kullaniciya ait overlay ayri trust domain'leridir.
 Normal merge/repair model/profil secimini, approval ve sandbox ayarlarini,
 project trust kayitlarini, ozel MCP'leri ve ilgisiz marketplace kayitlarini
 korur. Chef-managed agent/MCP guvenlik tablolari dogrulanmaya devam eder;
-toplu replacement acik force yolu ve backup gerektirir.
+tekil dosya değişimi açık force yolu ve backup gerektirir. Force ve update,
+yönetilen dizinlerde kaynakta sahip olunan girdileri senkronlar ve ilgisiz ek
+dosyaları korur; iki mod da dizini topluca silme yetkisi vermez.
 Etkileşimli komuta merkezi tam kurulumdan önce bu durumu inceler. Zaten güncel
 bir kurulumu sessizce yeniden kurmaz ve yönetilen drift'i temiz bir ilk kurulum
 gibi göstermez; güncel kurulum işlem yapmadan sonlanır, drift ise açık ve yedekli
@@ -227,9 +241,11 @@ Marketplace kaydi, current Codex schema'nin istedigi marketplace root'u icinde
 kalan `AGENTS_HOME/plugins/sources/codex-chef-workflows` yonetilen aynasini
 kullanir. Bu kayıt plugin'i keşfedilebilir yapar; kurmaz veya etkinleştirmez.
 Namespace'li plugin kullanımı explicit plugin kurulumu ve yeni oturum gerektirir.
-Marketplace JSON, direct-skill ownership ve mevcut path component'lerinin tamamı
-herhangi bir managed write öncesinde preflight edilir. Configured home dışına
-kaçan symlink veya junction descendant'ları fail-closed davranır.
+Marketplace JSON, platform launcher'ı, `serena-pool.mjs`, kopyalanan/üretilen
+profiller, direct-skill ownership, seçilen bütün kaynaklar ve mevcut hedef yol
+bileşenlerinin tamamı herhangi bir managed write öncesinde preflight edilir.
+Configured home dışına kaçan symlink veya junction descendant'ları fail-closed
+davranır.
 
 ## Repair Modu
 
@@ -237,9 +253,17 @@ kaçan symlink veya junction descendant'ları fail-closed davranır.
 repair/reconcile yoludur. `--apply` olmadan read-only calisir ve managed drift,
 eksik config bloklari, marketplace drift'i, managed plugin icindeki ekstra
 dosyalar, curated olmayan skill'ler ve duplicate skill adlarini raporlar.
-`--apply` ile sadece Codex Chef'in yonettigi dosyalari backup alip onarir, eksik
-config bloklarini merge eder ve baska marketplace plugin'lerini koruyarak Codex
+`--apply` ile Serena köprüsü dahil yalnızca Codex Chef'in yönettiği dosyaları
+backup alıp onarır, eksik config bloklarini merge eder ve baska marketplace plugin'lerini koruyarak Codex
 Chef marketplace kaydini yeniler.
+
+`--no-backup` yalnızca çözümlenen operasyonun bütünü yeni dosya oluşturuyorsa ve
+seçilen hedeflerin tamamı yoksa kabul edilir. Mevcut bir hedef, birleştirme,
+değiştirme, silme, budama, sahiplenme, cache yenileme veya global mutasyon varsa
+ön kontrol ilk yazmadan önce akışı reddeder.
+
+Acik apply yetkisi verildiginde CLI managed bir hedefi backup alip replace
+edebilir; preview bunu asla yapmaz.
 
 Repair modu user skill'lerini silmez. Ekstra global skill'ler ve duplicate skill
 adlari cleanup adayi olarak raporlanir; cunku Codex'in initial skill-list
@@ -257,9 +281,9 @@ opsiyonel global Git guard'lari disarida birakir. Apply
 modu tracked veya staged degisiklikleri durdurur, ilgisiz untracked dosyalari korur ve sonra `git pull --ff-only` calistirir. Yeni commit cekilirse
 updated tree uzerinden fresh preview basar ve durur. Repo zaten guncelse
 managed refresh oncesi lokal validation calistirir, sonra scoped managed Codex
-Chef dosyalarini backup alan installer uzerinden yeniler. Bu refresh, managed
-Codex Chef plugin dizini dahil scoped managed hedefleri backup alip replace
-edebilir. Publish, unscoped cleanup, curated global skill kurma, opsiyonel
+Chef dosyalarini backup alan installer uzerinden yeniler. Bu refresh kaynakta
+sahip olunan dosyaları senkronlar, ilgisiz dizin eklerini korur ve daha önce
+kurulmuş eski plugin cache'ini yerinde yeniler. Publish, unscoped cleanup, curated global skill kurma, opsiyonel
 global Git guard kurma, user skill silme, credential rotate veya
 account/database/broad-filesystem connector enable etmez.
 
@@ -300,8 +324,7 @@ object inspection'i kapsar. Sunlari prompt'a baglar:
 - global skill installation
 - package publishing
 - GitHub API operations; credential material basabilen auth status/token komutlari dahil
-- reviewed lokal verification allowlist disindaki rastgele repository-controlled
-  `npm run ...` script execution
+- repo tarafından kontrol edilen bütün `npm run ...` script çalıştırmaları
 - broad `git config` value-dump komutlari ve raw, unredacted `gitleaks dir`
 - git commit, push, reset, checkout ve restore
 - repair apply ve managed plugin pruning
@@ -342,7 +365,26 @@ Operasyon sözleşmesi:
 ## Git Hijyeni
 
 Global Git guard'ları opsiyoneldir çünkü kullanıcının global Git default'larını
-değiştirir. Kurulursa:
+değiştirir. İnceleme, yazmadan mevcut ve önerilen durumu gösterir. İki yönetilen
+dosyadan ya da iki Git config anahtarından birinde yabancı durum varsa apply
+güvenli biçimde durur. Operatör yalnızca tam çakışmayı `AdoptGitIgnore`,
+`AdoptGitHook`, `AdoptGitExcludesFile` veya `AdoptGitHooksPath` ile inceleyip
+sahiplenmelidir; Bash installer aynı adların kebab-case biçimini kullanır. Bir
+sahiplenme diğerini kapsamaz.
+
+Apply, ilk Git-guard değişikliğinden önce iki dosya ile iki anahtarın önceki
+durumunu `codex-chef.global-git-guards-receipt@1` tipli makbuzuna aynen yazar.
+Makbuz; bulunmayan dosya ve anahtarları ayırt eder, dosya byte'larını ve modlarını
+korur, birden çok anahtar değerini sırasıyla saklar ve apply sonrası beklenen
+dosya hash'lerini, Unix modlarını ve anahtar değerlerini bağlar. İşlenen bir hata
+tüm işlemi geri alır. Restore önce şemayı, kayıtlı home'u, tam izin listesini,
+boyutu, yolları ve bağlantı güvenliğini doğrular. Mevcut durum apply sonrası
+bağla eşleşmiyorsa hiçbir şey yazmaz; yalnızca eşleşiyorsa her yüzeyi aynen
+geri yükler veya kaldırır. Installer makbuz yoluyla tam `manage-global-git-guards.mjs
+restore` komutunu yazdırır. Bu makbuz bilinçli olarak
+`codex-chef.backup.v1` arşivlerinden ayrıdır.
+
+Kurulursa:
 
 - bariz local secret ve build-output path'lerini ignore eder
 - Gitleaks varsa çalıştırır

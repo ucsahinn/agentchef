@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findProblemRules } from "./lib/approval-rules.mjs";
+import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { platformCommand } from "./lib/platform-command.mjs";
 import {
@@ -254,6 +255,16 @@ function pushMissing(failures, label, expected, actual) {
   return missing;
 }
 
+function runtimeInstallContract() {
+  return resolveInstallContract({
+    root,
+    platform: process.platform === "win32" ? "windows" : "unix",
+    codexHome: options.codexHome,
+    agentsHome: options.agentsHome,
+    home: os.homedir()
+  });
+}
+
 function inspectInstalledFiles(failures) {
   const agentsCatalog = readJson("catalog/agents.json");
   const mcpCatalog = readJson("catalog/mcp-servers.json");
@@ -262,20 +273,16 @@ function inspectInstalledFiles(failures) {
 
   const configPath = path.join(options.codexHome, "config.toml");
   const agentsDir = path.join(options.codexHome, "agents");
-  const rulesPath = path.join(options.codexHome, "rules", "default.rules");
-  const globalAgentsPath = path.join(options.codexHome, "AGENTS.md");
-  const marketplacePath = path.join(options.agentsHome, "plugins", "marketplace.json");
-  const pluginPath = path.join(options.codexHome, "plugins", "codex-chef-workflows");
-  const marketplacePluginPath = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
+  const contract = runtimeInstallContract();
+  const actionByComponent = new Map(contract.operations.map((action) => [action.componentId, action]));
+  const marketplacePath = actionByComponent.get("plugin-marketplace").destination;
+  const pluginPath = actionByComponent.get("codex-plugin").destination;
+  const marketplacePluginPath = actionByComponent.get("codex-plugin-marketplace-source").destination;
   const directSkills = readJson("catalog/skills.json").skills.filter((skill) => skill.directInstall === true);
 
-  const requiredFiles = [
-    globalAgentsPath,
-    configPath,
-    rulesPath,
-    marketplacePath,
-    ...directSkills.map((skill) => path.join(options.agentsHome, "skills", skill.name, ".codex-chef-managed.json"))
-  ];
+  const requiredFiles = contract.operations
+    .filter((action) => ["copy-file", "generate-mcp-profile", "write-ownership-marker", "write-marketplace"].includes(action.kind))
+    .map((action) => action.destination);
   for (const target of [...requiredFiles, pluginPath, marketplacePluginPath]) {
     try {
       assertManagedTargetPath(target, [options.codexHome, options.agentsHome]);
@@ -467,61 +474,45 @@ function inspectManagedFileDrift(failures) {
     }
   }
 
-  compareFile("templates/codex/AGENTS.md", path.join(options.codexHome, "AGENTS.md"));
-  compareFile("templates/codex/codex-profile.mjs", path.join(options.codexHome, "codex-profile.mjs"));
-  compareRulesBaseline("templates/codex/rules/default.rules", path.join(options.codexHome, "rules", "default.rules"));
-
-  for (const file of listFilesRecursive(path.join(root, "templates", "codex", "agents"))) {
-    compareFile(
-      posixPath(path.join("templates", "codex", "agents", file)),
-      path.join(options.codexHome, "agents", file)
-    );
-  }
-
-  for (const file of listFilesRecursive(path.join(root, "templates", "codex", "profiles"))) {
-    const sourceRel = posixPath(path.join("templates", "codex", "profiles", file));
-    const targetPath = path.join(options.codexHome, file);
-    if (["full.config.toml", "multi-session.config.toml", "offline.config.toml"].includes(file)) {
-      compareGeneratedMcpProfile(sourceRel, targetPath);
-    } else {
-      compareFile(sourceRel, targetPath);
+  const contract = runtimeInstallContract();
+  const pluginMirrors = [];
+  for (const action of contract.operations) {
+    if (action.id === "codex-config" || ["write-ownership-marker", "write-marketplace", "refresh-plugin-cache"].includes(action.kind)) {
+      continue;
+    }
+    if (action.kind === "copy-file") {
+      if (action.id === "codex-rules") compareRulesBaseline(action.source, action.destination);
+      else compareFile(action.source, action.destination);
+      continue;
+    }
+    if (action.kind === "generate-mcp-profile") {
+      compareGeneratedMcpProfile(action.source, action.destination);
+      continue;
+    }
+    if (action.kind === "copy-directory") {
+      const sourceRoot = path.join(root, action.source);
+      const sourceFiles = listFilesRecursive(sourceRoot, { rejectLinks: true });
+      for (const file of sourceFiles) {
+        compareFile(posixPath(path.join(action.source, file)), path.join(action.destination, file));
+      }
+      if (["codex-plugin", "codex-plugin-marketplace-source"].includes(action.componentId)) {
+        pluginMirrors.push({ target: action.destination, sourceFiles: new Set(sourceFiles) });
+      }
     }
   }
 
-  const pluginSourceRel = "plugins/codex-chef-workflows";
-  const pluginSource = path.join(root, pluginSourceRel);
-  const pluginTarget = path.join(options.codexHome, "plugins", "codex-chef-workflows");
-  const marketplacePluginTarget = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
-  const pluginSourceFiles = listFilesRecursive(pluginSource, { rejectLinks: true });
-  const pluginSourceSet = new Set(pluginSourceFiles);
-
-  for (const file of pluginSourceFiles) {
-    compareFile(posixPath(path.join(pluginSourceRel, file)), path.join(pluginTarget, file));
-    compareFile(posixPath(path.join(pluginSourceRel, file)), path.join(marketplacePluginTarget, file));
-  }
-
-  const directSkills = readJson("catalog/skills.json").skills.filter((skill) => skill.directInstall === true);
-  for (const skill of directSkills) {
-    const sourceRel = `plugins/codex-chef-workflows/skills/${skill.name}`;
-    const source = path.join(root, sourceRel);
-    const target = path.join(options.agentsHome, "skills", skill.name);
-    for (const file of listFilesRecursive(source)) {
-      compareFile(posixPath(path.join(sourceRel, file)), path.join(target, file));
-    }
-  }
-
-  for (const mirrorTarget of [pluginTarget, marketplacePluginTarget]) {
+  for (const mirror of pluginMirrors) {
     let mirrorFiles = [];
     try {
-      assertManagedTargetPath(mirrorTarget, [options.codexHome, options.agentsHome]);
-      mirrorFiles = listFilesRecursive(mirrorTarget, { rejectLinks: true });
+      assertManagedTargetPath(mirror.target, [options.codexHome, options.agentsHome]);
+      mirrorFiles = listFilesRecursive(mirror.target, { rejectLinks: true });
     } catch (error) {
       failures.push(error.message);
       continue;
     }
     for (const file of mirrorFiles) {
-      if (!pluginSourceSet.has(file)) {
-        const extraPath = path.join(mirrorTarget, file);
+      if (!mirror.sourceFiles.has(file)) {
+        const extraPath = path.join(mirror.target, file);
         extra.push(redact(extraPath));
         failures.push(`Installed managed plugin mirror has an extra file not present in source: ${redact(extraPath)}`);
       }

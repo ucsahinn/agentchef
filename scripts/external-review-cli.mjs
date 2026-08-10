@@ -15,7 +15,7 @@ const MANIFEST_NAME = "external-review-manifest.json";
 const DEFAULT_PART_BYTES = 500_000;
 const MAX_FILE_BYTES = 1_000_000;
 const SECRET_PATTERNS = [
-  ["private key", /-----BEGIN (?:(?:ENCRYPTED |RSA |EC |OPENSSH |DSA )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----/],
+  ["private key", /-----BEGIN ((?:(?:ENCRYPTED |RSA |EC |OPENSSH |DSA )?PRIVATE KEY|PGP PRIVATE KEY BLOCK))-----\r?\n[A-Za-z0-9+/=\r\n]{32,}\r?\n-----END \1-----/],
   ["OpenAI API key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/],
   ["GitHub token", /\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{30,}\b/],
   ["GitHub fine-grained token", /\bgithub_pat_[A-Za-z0-9_]{20,}\b/],
@@ -183,6 +183,10 @@ function isSensitivePath(relativePath) {
     || normalized.startsWith(".config/gcloud/")
     || normalized.includes("/.config/gcloud/")
   ) return true;
+  if ([
+    "templates/codex/profiles/multi-session.config.toml",
+    "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"
+  ].includes(normalized)) return false;
   if ([".npmrc", ".pypirc", ".netrc", ".git-credentials"].includes(base)) return true;
   if (/^\.env(?:\.|$)/.test(base) && !/\.(?:example|sample|template)$/.test(base)) return true;
   if (/(?:^|[-_.])(?:credential|credentials|secret|secrets|cookie|cookies|session|sessions|auth-state)(?:[-_.]|$)/.test(base)) return true;
@@ -196,7 +200,7 @@ function looksBinary(buffer) {
 
 function isCredentialPlaceholderOrReference(value) {
   const normalized = String(value || "").trim();
-  return /^(?:(?:your|example|sample|placeholder|replace|change[-_]?me|not[-_]|sentinel|redacted)(?:[-_ ][A-Za-z0-9.]+)*|x{8,}|0{12,}|\$\{[A-Za-z0-9_]+\}|\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}|\{\{[^{}]+\}\}|<[^<>]+>)$/i.test(normalized)
+  return /^(?:(?:your|example|sample|placeholder|replace|change[-_]?me|not[-_]|sentinel|redacted)(?:[-_ ][A-Za-z0-9.]+)*|x{8,}|0{12,}|\$\{[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*\}|\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}|\{\{[^{}]+\}\}|<[^<>]+>)$/i.test(normalized)
     || /^(?:process\.env\.[A-Za-z0-9_]+|deno\.env\.get\(["'][A-Za-z0-9_]+["']\)|bun\.env\.[A-Za-z0-9_]+|import\.meta\.env\.[A-Za-z0-9_]+|os\.(?:environ(?:\.get\(["'][A-Za-z0-9_]+["']\)|\[['"][A-Za-z0-9_]+['"]\]?)|getenv\(["'][A-Za-z0-9_]+["']\))|std::env::var\(["'][A-Za-z0-9_]+["']\)|environment\.getenvironmentvariable\(["'][A-Za-z0-9_]+["']\)|system\.getenv\(["'][A-Za-z0-9_]+["']\)|env\[['"][A-Za-z0-9_]+['"]\]?|\$env:[A-Za-z0-9_]+|%[A-Za-z0-9_]+%|crypto\.randomUUID\(\)|[A-Za-z_$][A-Za-z0-9_$]*(?:\.(?:substring|substr|slice|replace|trim|toString)\([^()\r\n]*\))+)[,;]?$/i.test(normalized);
 }
 
@@ -207,7 +211,7 @@ function isNamedTestFixturePlaceholder(value, relativePath) {
 }
 
 function isExecutableSourcePath(relativePath) {
-  return /\.(?:[cm]?[jt]sx?|py|rb|php|java|kt|go|rs|cs|c(?:pp)?|h|sh|bash|zsh|fish|ps[md]1|lua|swift|scala)$/i.test(relativePath || "");
+  return /\.(?:[cm]?[jt]sx?|py|rb|php|java|kt|go|rs|cs|c(?:pp)?|h|sh|bash|zsh|fish|ps(?:1|m1|d1)|lua|swift|scala)$/i.test(relativePath || "");
 }
 
 export function scanSecrets(text, relativePath = "") {

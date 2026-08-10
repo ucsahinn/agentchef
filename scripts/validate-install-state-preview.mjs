@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
 
 const manifest = readJson("manifests/install-plan.json");
@@ -12,7 +14,17 @@ const schema = readJson("schemas/install-state-preview.schema.json");
 const skillsLock = readJson("catalog/skills-lock.json");
 const operationById = new Map((manifest.operations || []).map((operation) => [operation.id, operation]));
 const lockedSkillByName = new Map((skillsLock.entries || []).map((entry) => [entry.name, entry]));
-const allowedKinds = new Set(["copy-file", "copy-directory", "write-marketplace", "git-config", "skill-install"]);
+const allowedKinds = new Set([
+  "copy-file",
+  "copy-directory",
+  "generate-mcp-profile",
+  "write-ownership-marker",
+  "write-marketplace",
+  "refresh-plugin-cache",
+  "git-config",
+  "chmod",
+  "skill-install"
+]);
 const allowedManifestKinds = new Set([...allowedKinds, "copy-glob"]);
 const allowedRisks = new Set(["low", "medium", "high"]);
 
@@ -114,6 +126,13 @@ function validateSchemaDocument() {
   }
   if (schema.properties?.dryRunOnly?.const !== true) {
     fail("Install-state preview schema must define dryRunOnly const true");
+  }
+  if (schema.properties?.operations?.items?.additionalProperties !== false) {
+    fail("Install-state preview operation schema must reject undeclared semantics");
+  }
+  const schemaKinds = new Set(schema.properties?.operations?.items?.properties?.kind?.enum || []);
+  for (const kind of allowedKinds) {
+    if (!schemaKinds.has(kind)) fail(`Install-state preview schema is missing operation kind: ${kind}`);
   }
 }
 
@@ -225,7 +244,7 @@ function validatePlan(plan, label, expected = {}) {
 
   const operationIds = new Set();
   for (const operation of plan.operations) {
-    validateOperation(operation, label, selected);
+    validateOperation(operation, label, selected, plan.options?.noBackup === true);
     if (operationIds.has(operation.id)) fail(`${label} repeats operation id: ${operation.id}`);
     operationIds.add(operation.id);
   }
@@ -235,6 +254,10 @@ function validatePlan(plan, label, expected = {}) {
     if (highRisk.length > 0) {
       fail(`${label} should not include high-risk operations without optional install flags`);
     }
+  }
+  if (expected.selectedIds
+    && JSON.stringify(plan.selectedComponentIds) !== JSON.stringify(expected.selectedIds)) {
+    fail(`${label} selectedComponentIds must preserve exact manifest profile order`);
   }
 }
 
@@ -277,12 +300,13 @@ function validateOptions(options, label, expected) {
   }
 }
 
-function validateOperation(operation, label, selected) {
+function validateOperation(operation, label, selected, noBackupRequested) {
   if (!isObject(operation)) {
     fail(`${label} operation must be object`);
     return;
   }
-  for (const key of ["id", "componentId", "kind", "summary", "risk", "collision", "conflictPolicy", "selectedBy"]) {
+  const manifestOperation = operationById.get(operation.componentId);
+  for (const key of ["id", "componentId", "kind", "summary", "risk", "collision", "conflictPolicy", "selectedBy", "noBackupPolicy"]) {
     if (!nonEmptyString(operation[key])) fail(`${label} operation ${operation.id || "(unknown)"} ${key} must be non-empty string`);
   }
   for (const key of ["backup", "force", "wouldMutateGlobalState"]) {
@@ -291,12 +315,31 @@ function validateOperation(operation, label, selected) {
   if (operation.wouldMutateGlobalState !== true) {
     fail(`${label} operation ${operation.id} must mark wouldMutateGlobalState=true`);
   }
+  if (!["backup-before-existing-mutation", "creation-only", "incompatible", "not-applicable"].includes(operation.noBackupPolicy)) {
+    fail(`${label} operation ${operation.id} has invalid noBackupPolicy: ${operation.noBackupPolicy}`);
+  }
+  const noBackupIncompatible = noBackupRequested
+    && ["git-config", "refresh-plugin-cache", "chmod"].includes(manifestOperation?.kind);
+  if (noBackupIncompatible) {
+    if (operation.noBackupPolicy !== "incompatible") {
+      fail(`${label} operation ${operation.id} must reject no-backup execution`);
+    }
+  } else if (operation.backup === true) {
+    const expectedPolicy = noBackupRequested ? "creation-only" : "backup-before-existing-mutation";
+    if (operation.noBackupPolicy !== expectedPolicy) {
+      fail(`${label} backup-managed operation ${operation.id} must use ${expectedPolicy}`);
+    }
+  } else {
+    const expectedPolicy = "not-applicable";
+    if (operation.noBackupPolicy !== expectedPolicy) {
+      fail(`${label} operation ${operation.id} without backup must use noBackupPolicy=${expectedPolicy}`);
+    }
+  }
   if (!allowedKinds.has(operation.kind)) fail(`${label} operation ${operation.id} has invalid kind: ${operation.kind}`);
   if (!allowedRisks.has(operation.risk)) fail(`${label} operation ${operation.id} has invalid risk: ${operation.risk}`);
   if (!operationById.has(operation.componentId)) fail(`${label} operation ${operation.id} references unknown componentId: ${operation.componentId}`);
   if (selected && !selected.has(operation.componentId)) fail(`${label} operation ${operation.id} componentId is not selected: ${operation.componentId}`);
 
-  const manifestOperation = operationById.get(operation.componentId);
   if (operation.risk === "high") {
     if (!manifestOperation?.requiresFlag) {
       fail(`${label} high-risk operation ${operation.id} must map to a manifest operation with requiresFlag`);
@@ -306,9 +349,16 @@ function validateOperation(operation, label, selected) {
     }
   }
 
-  if (operation.kind === "copy-file" || operation.kind === "copy-directory") {
+  if (["copy-file", "copy-directory", "write-ownership-marker", "generate-mcp-profile"].includes(operation.kind)) {
     if (!nonEmptyString(operation.source)) fail(`${label} ${operation.id} must include source`);
     if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
+  }
+  if (operation.kind === "generate-mcp-profile" && !nonEmptyString(operation.configSource)) {
+    fail(`${label} ${operation.id} must include configSource`);
+  }
+  if (operation.kind === "write-ownership-marker"
+    && !operation.destination.endsWith(".codex-chef-managed.json")) {
+    fail(`${label} ${operation.id} must target a Codex Chef ownership marker`);
   }
   if (operation.kind === "write-marketplace") {
     if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
@@ -317,6 +367,18 @@ function validateOperation(operation, label, selected) {
   if (operation.kind === "git-config") {
     if (!nonEmptyString(operation.key)) fail(`${label} ${operation.id} must include key`);
     if (!nonEmptyString(operation.value)) fail(`${label} ${operation.id} must include value`);
+  }
+  if (operation.kind === "refresh-plugin-cache") {
+    if (!nonEmptyString(operation.source) || !nonEmptyString(operation.destination)) {
+      fail(`${label} ${operation.id} must include cache source and destination`);
+    }
+    if (operation.pluginId !== "codex-chef-workflows@codex-chef") {
+      fail(`${label} ${operation.id} must declare the managed plugin id`);
+    }
+  }
+  if (operation.kind === "chmod") {
+    if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
+    if (operation.mode !== "+x") fail(`${label} ${operation.id} must use mode +x`);
   }
   if (operation.kind === "skill-install") {
     if (!nonEmptyString(operation.command)) fail(`${label} ${operation.id} must include command`);
@@ -359,6 +421,7 @@ if (operationList && (!operationList.includes("codex-config") || !operationList.
 
 validatePlan(runPlan(["--json"], "Default plan"), "Default plan", {
   noHighRisk: true,
+  selectedIds: manifest.profiles.default,
   options: {
     all: false,
     installSkills: false,
@@ -369,6 +432,7 @@ validatePlan(runPlan(["--json"], "Default plan"), "Default plan", {
 });
 
 validatePlan(runPlan(["--all", "--json"], "All plan"), "All plan", {
+  selectedIds: manifest.profiles.all,
   options: {
     all: true,
     installSkills: true,
@@ -377,6 +441,7 @@ validatePlan(runPlan(["--all", "--json"], "All plan"), "All plan", {
 });
 
 validatePlan(runPlan(["--all", "--force", "--no-backup", "--json"], "All force no-backup plan"), "All force no-backup plan", {
+  selectedIds: manifest.profiles.all,
   options: {
     all: true,
     force: true,
@@ -386,6 +451,7 @@ validatePlan(runPlan(["--all", "--force", "--no-backup", "--json"], "All force n
 
 validatePlan(runPlan(["--platform", "unix", "--all", "--json"], "Unix all plan"), "Unix all plan", {
   platform: "unix",
+  selectedIds: manifest.profiles.all,
   options: {
     all: true
   }
@@ -407,6 +473,73 @@ if (redactedPlan) {
     if (!String(redactedPlan.target?.[key] || "").startsWith("${HOME}")) {
       fail(`Redacted all plan target.${key} must use HOME placeholder`);
     }
+  }
+}
+
+const externalCwdPlanner = spawnSync(process.execPath, [path.join(root, "scripts", "plan-install.mjs"), "--json"], {
+  cwd: os.tmpdir(),
+  encoding: "utf8"
+});
+if (externalCwdPlanner.status !== 0) {
+  fail(`Planner must resolve repository sources independently of cwd: ${externalCwdPlanner.stderr || externalCwdPlanner.stdout}`);
+}
+
+const semanticPlan = runPlan(["--platform", "unix", "--install-git-guards", "--json"], "Semantic side-effect plan");
+if (semanticPlan) {
+  const generatedNames = semanticPlan.operations
+    .filter((operation) => operation.kind === "generate-mcp-profile")
+    .map((operation) => path.basename(operation.destination));
+  if (JSON.stringify(generatedNames) !== JSON.stringify([
+    "full.config.toml",
+    "multi-session.config.toml",
+    "offline.config.toml"
+  ])) {
+    fail("Semantic side-effect plan must generate the three managed MCP profiles in manifest order");
+  }
+  if (!semanticPlan.operations.some((operation) => operation.id === "codex-profile-launcher")) {
+    fail("Semantic side-effect plan must include the codex-profile launcher");
+  }
+  if (!semanticPlan.operations.some((operation) => operation.kind === "write-ownership-marker")) {
+    fail("Semantic side-effect plan must include direct-skill ownership marker writes");
+  }
+  const marketplace = semanticPlan.operations.find((operation) => operation.id === "plugin-marketplace");
+  if (!marketplace?.pluginTarget?.includes("/plugins/sources/codex-chef-workflows")) {
+    fail("Semantic side-effect plan marketplace target must use AGENTS_HOME plugin sources");
+  }
+  if (!semanticPlan.operations.some((operation) => operation.kind === "refresh-plugin-cache")) {
+    fail("Semantic side-effect plan must include installed plugin cache refresh");
+  }
+  if (!semanticPlan.operations.some((operation) => operation.kind === "chmod" && operation.mode === "+x")) {
+    fail("Semantic side-effect plan must include Unix hook executable mode action");
+  }
+  for (const [id, adoptionFlag] of [
+    ["git-ignore-global", "AdoptGitIgnore"],
+    ["git-pre-commit-hook", "AdoptGitHook"],
+    ["git-config-excludesfile", "AdoptGitExcludesFile"],
+    ["git-config-hooks-path", "AdoptGitHooksPath"]
+  ]) {
+    const operation = semanticPlan.operations.find((entry) => entry.id === id);
+    if (operation?.adoptionFlag !== adoptionFlag
+      || operation?.stateBackup !== "codex-chef.global-git-guards-receipt@1"
+      || operation?.backup !== true) {
+      fail(`Semantic side-effect plan ${id} must expose narrow adoption and exact prior-state backup`);
+    }
+  }
+}
+
+const allWithGitGuards = runPlan(
+  ["--platform", "unix", "--all", "--install-git-guards", "--json"],
+  "All plus Git guards plan"
+);
+if (allWithGitGuards) {
+  const expected = [...manifest.profiles.all];
+  const curatedIndex = expected.indexOf("curated-skills");
+  const gitGuardIds = manifest.operations
+    .filter((operation) => operation.requiresFlag === "InstallGitGuards" && operation.platforms.includes("unix"))
+    .map((operation) => operation.id);
+  expected.splice(curatedIndex, 0, ...gitGuardIds);
+  if (JSON.stringify(allWithGitGuards.selectedComponentIds) !== JSON.stringify(expected)) {
+    fail("All plus Git guards plan must insert Git guards after cache refresh and keep curated skills last");
   }
 }
 

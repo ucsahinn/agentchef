@@ -10,6 +10,10 @@ param(
   [switch]$AdoptSeoSkill,
   [switch]$AdoptEvidenceResearchSkill,
   [string[]]$AdoptDirectSkill = @(),
+  [switch]$AdoptGitIgnore,
+  [switch]$AdoptGitHook,
+  [switch]$AdoptGitExcludesFile,
+  [switch]$AdoptGitHooksPath,
   [switch]$NoBackup,
   [switch]$Interactive,
   [switch]$PlainOutput
@@ -24,6 +28,10 @@ $SkippedExistingCount = 0
 
 if ($All) {
   $InstallSkills = $true
+}
+
+if (($AdoptGitIgnore -or $AdoptGitHook -or $AdoptGitExcludesFile -or $AdoptGitHooksPath) -and -not $InstallGitGuards) {
+  throw "Git guard adoption switches require -InstallGitGuards."
 }
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -217,6 +225,70 @@ function Invoke-InstallTargetPreflight {
   if ($LASTEXITCODE -notin @(0, 2)) {
     throw "Plugin marketplace preflight failed before any managed write: $MarketplacePath"
   }
+}
+
+function Invoke-InstallerSafetyPreflight {
+  $SafetyHelper = Join-Path $RepoRoot "scripts\lib\installer-safety-preflight.mjs"
+  $SafetyArgs = @(
+    $SafetyHelper,
+    "--codex-home",
+    $CodexHome,
+    "--agents-home",
+    $AgentsHome
+  )
+  if ($NoBackup) { $SafetyArgs += "--no-backup" }
+  if ($WhatIfPreference) { $SafetyArgs += "--dry-run" }
+  if ($InstallSkills) { $SafetyArgs += "--install-skills" }
+  if ($InstallGitGuards) {
+    $SafetyArgs += @("--install-git-guards", "--home", $HOME)
+    if ($AdoptGitIgnore) { $SafetyArgs += "--adopt-git-ignore" }
+    if ($AdoptGitHook) { $SafetyArgs += "--adopt-git-hook" }
+    if ($AdoptGitExcludesFile) { $SafetyArgs += "--adopt-git-excludes-file" }
+    if ($AdoptGitHooksPath) { $SafetyArgs += "--adopt-git-hooks-path" }
+  }
+  if (
+    $AdoptFetchSkill -or
+    $AdoptSeoSkill -or
+    $AdoptEvidenceResearchSkill -or
+    $AdoptDirectSkill.Count -gt 0 -or
+    $AdoptGitIgnore -or
+    $AdoptGitHook -or
+    $AdoptGitExcludesFile -or
+    $AdoptGitHooksPath
+  ) {
+    $SafetyArgs += "--adoption-requested"
+  }
+  & node @SafetyArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Installer safety preflight rejected this run; no-backup is creation-only and Git guard conflicts require explicit adoption."
+  }
+}
+
+function Get-GlobalGitGuardArgs {
+  param(
+    [Parameter(Mandatory=$true)][ValidateSet("preview", "apply", "restore")][string]$Command,
+    [string]$ReceiptPath
+  )
+  $Helper = Join-Path $RepoRoot "scripts\manage-global-git-guards.mjs"
+  $GuardArgs = @($Helper, $Command, "--home", $HOME)
+  if (-not [string]::IsNullOrWhiteSpace($env:GIT_CONFIG_GLOBAL)) {
+    $GuardArgs += @("--git-config-global", $env:GIT_CONFIG_GLOBAL)
+  }
+  if ($Command -ne "restore") {
+    $GuardArgs += @(
+      "--ignore-source", (Join-Path $RepoRoot "templates\git\.gitignore_global"),
+      "--hook-source", (Join-Path $RepoRoot "templates\git\pre-commit")
+    )
+    if ($AdoptGitIgnore) { $GuardArgs += @("--adopt-file", "gitignore-global") }
+    if ($AdoptGitHook) { $GuardArgs += @("--adopt-file", "pre-commit-hook") }
+    if ($AdoptGitExcludesFile) { $GuardArgs += @("--adopt-key", "core.excludesfile") }
+    if ($AdoptGitHooksPath) { $GuardArgs += @("--adopt-key", "core.hooksPath") }
+  }
+  if (-not [string]::IsNullOrWhiteSpace($ReceiptPath)) {
+    $GuardArgs += @("--receipt", $ReceiptPath)
+  }
+  $GuardArgs += "--json"
+  return $GuardArgs
 }
 
 function Get-ManagedDirectSkills {
@@ -539,48 +611,27 @@ function Install-Directory {
   )
 
   Assert-ManagedWriteTarget $Destination
-  if ((Test-Path -LiteralPath $Destination) -and -not $Force) {
-    Ensure-Dir (Split-Path -Parent $Destination)
-    Backup-Target $Destination
-    Assert-ManagedDirectoryTarget $Destination
-    $changed = Invoke-Change -Target $Destination -Action "Sync managed directory files from $Source" -ScriptBlock {
-      $sourceFull = [System.IO.Path]::GetFullPath($Source).TrimEnd([char[]]@('\', '/'))
-      $destinationFull = [System.IO.Path]::GetFullPath($Destination)
-      Get-ChildItem -LiteralPath $Source -Recurse -File -Force | ForEach-Object {
-        $fileFull = [System.IO.Path]::GetFullPath($_.FullName)
-        $relative = $fileFull.Substring($sourceFull.Length).TrimStart([char[]]@('\', '/'))
-        $target = [System.IO.Path]::Combine($destinationFull, $relative)
-        Assert-ManagedWriteTarget $target
-        $targetParent = Split-Path -Parent $target
-        if ($targetParent) {
-          Assert-ManagedWriteTarget $targetParent
-          [System.IO.Directory]::CreateDirectory($targetParent) | Out-Null
-        }
-        Assert-ManagedWriteTarget $target
-        [System.IO.File]::Copy($_.FullName, $target, $true)
-      }
-    }
-    if ($changed) {
-      Write-Action -Status "synced directory" -Message $Destination
-    }
-    return
-  }
-
-  Ensure-Dir (Split-Path -Parent $Destination)
   Backup-Target $Destination
+  Ensure-Dir $Destination
   Assert-ManagedDirectoryTarget $Destination
-  if (Test-Path -LiteralPath $Destination) {
-    Invoke-Change -Target $Destination -Action "Replace existing managed directory" -ScriptBlock {
-      Assert-ManagedWriteTarget $Destination
-      Remove-Item -LiteralPath $Destination -Recurse -Force
-    } | Out-Null
-  }
-  $changed = Invoke-Change -Target $Destination -Action "Install directory from $Source" -ScriptBlock {
-    Assert-ManagedWriteTarget $Destination
-    Copy-Item -LiteralPath $Source -Destination $Destination -Recurse -Force
+  $changed = Invoke-Change -Target $Destination -Action "Sync source-owned files from $Source while preserving unrelated extras" -ScriptBlock {
+    $sourceFull = [System.IO.Path]::GetFullPath($Source).TrimEnd([char[]]@('\', '/'))
+    $destinationFull = [System.IO.Path]::GetFullPath($Destination)
+    Get-ChildItem -LiteralPath $Source -Recurse -File -Force | ForEach-Object {
+      $fileFull = [System.IO.Path]::GetFullPath($_.FullName)
+      $relative = $fileFull.Substring($sourceFull.Length).TrimStart([char[]]@('\', '/'))
+      $target = [System.IO.Path]::Combine($destinationFull, $relative)
+      Assert-ManagedWriteTarget $target
+      $targetParent = Split-Path -Parent $target
+      if ($targetParent) {
+        Assert-ManagedWriteTarget $targetParent
+        [System.IO.Directory]::CreateDirectory($targetParent) | Out-Null
+      }
+      [System.IO.File]::Copy($_.FullName, $target, $true)
+    }
   }
   if ($changed) {
-    Write-Action -Status "installed" -Message $Destination
+    Write-Action -Status "synced directory" -Message $Destination
   }
 }
 
@@ -590,7 +641,7 @@ Write-Note "Agents home: $AgentsHome"
 if ($Update) {
   Write-Note "Mode: update managed targets after backup; preserve user config and synchronize Codex Chef tables"
 } elseif ($Force) {
-  Write-Note "Mode: replace managed targets after backup"
+  Write-Note "Mode: refresh source-owned managed targets after backup; preserve unrelated directory extras"
 } else {
   Write-Note "Mode: preserve existing files; merge missing config blocks"
 }
@@ -619,6 +670,7 @@ if ($Interactive) {
   }
 }
 
+Invoke-InstallerSafetyPreflight
 Invoke-PreflightValidators
 Invoke-InstallTargetPreflight
 
@@ -699,7 +751,7 @@ if ($marketplaceCheckExit -eq 2) {
 
 $PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
 $PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
-if (-not $WhatIfPreference) {
+if (-not $WhatIfPreference -and -not $NoBackup) {
   $PluginRefreshArgs += "--apply"
 }
 & node @PluginRefreshArgs
@@ -709,33 +761,28 @@ if ($LASTEXITCODE -ne 0) {
 
 if ($InstallGitGuards) {
   Write-Section "Optional Git guards"
-  $GitIgnoreSource = Join-Path $RepoRoot "templates\git\.gitignore_global"
-  $GitIgnoreTarget = Join-Path $HOME ".gitignore_global"
-  $HooksDir = Join-Path $HOME ".githooks"
-  $HookTarget = Join-Path $HooksDir "pre-commit"
-
-  Install-File -Source $GitIgnoreSource -Destination $GitIgnoreTarget
-  Ensure-Dir $HooksDir
-  Install-File -Source (Join-Path $RepoRoot "templates\git\pre-commit") -Destination $HookTarget
-
-  $configuredExcludes = Invoke-Change -Target "global Git config core.excludesfile" -Action "Set to $GitIgnoreTarget" -ScriptBlock {
-      git config --global core.excludesfile $GitIgnoreTarget
-    }
-  if ($configuredExcludes) {
+  if ($WhatIfPreference) {
+    $GitGuardArgs = Get-GlobalGitGuardArgs -Command "preview"
+    $GitGuardOutput = (& node @GitGuardArgs | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
-      throw "git config core.excludesfile failed with code $LASTEXITCODE"
+      throw "Global Git guard preview failed with code $LASTEXITCODE`: $GitGuardOutput"
     }
-  }
-  $configuredHooks = Invoke-Change -Target "global Git config core.hooksPath" -Action "Set to $HooksDir" -ScriptBlock {
-      git config --global core.hooksPath $HooksDir
-    }
-  if ($configuredHooks) {
+    Write-Host $GitGuardOutput
+    Write-Action -Status "previewed" -Message "global Git guard files, adoption decisions, and config changes"
+  } else {
+    $GitGuardReceipt = "$BackupRoot-git-guards.json"
+    Ensure-Dir (Split-Path -Parent $GitGuardReceipt)
+    $GitGuardArgs = Get-GlobalGitGuardArgs -Command "apply" -ReceiptPath $GitGuardReceipt
+    $GitGuardOutput = (& node @GitGuardArgs | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
-      throw "git config core.hooksPath failed with code $LASTEXITCODE"
+      throw "Global Git guard transaction failed with code $LASTEXITCODE`: $GitGuardOutput"
     }
-  }
-  if ($configuredExcludes -and $configuredHooks) {
-    Write-Action -Status "configured" -Message "global Git excludesfile and hooksPath"
+    Write-Host $GitGuardOutput
+    Write-Action -Status "configured" -Message "global Git guard files and config transaction"
+    Write-Note "Git guard receipt: $GitGuardReceipt"
+    $RestoreArgs = Get-GlobalGitGuardArgs -Command "restore" -ReceiptPath $GitGuardReceipt
+    $RestoreDisplay = ($RestoreArgs | ForEach-Object { '"' + $_.Replace('"', '`"') + '"' }) -join ' '
+    Write-Note "Restore with: node $RestoreDisplay"
   }
 }
 

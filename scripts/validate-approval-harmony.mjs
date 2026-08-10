@@ -104,69 +104,22 @@ function assertExecDecision(label, commandTokens, expectedDecision) {
 
 inspectTemplateRules();
 
-for (const script of [
-  "test",
-  "lint",
-  "typecheck",
-  "build",
-  "check",
-  "validate",
-  "dev",
-  "start",
-  "serve",
-  "watch",
-  "preview",
-  "ui:smoke",
-  "codex:status",
-  "codex:status:all",
-  "chef:status",
-  "chef:diagnostics",
-  "chef:processes",
-  "plan:install",
-  "token:audit"
-]) {
-  assertContains(`npm.cmd run ${script} allow`, `prefix_rule(pattern = ["npm.cmd", "run", "${script}"], decision = "allow")`);
-  assertContains(`npm run ${script} allow`, `prefix_rule(pattern = ["npm", "run", "${script}"], decision = "allow")`);
-}
-
-for (const script of [
-  "validate:docs",
-  "validate:doc-locales",
-  "validate:locales",
-  "validate:kb-locales",
-  "validate:workflow",
-  "validate:content",
-  "validate:install-plan",
-  "validate:install-state",
-  "validate:installer",
-  "validate:installer-smoke",
-  "validate:agents",
-  "validate:agent-corpus",
-  "validate:mcp",
-  "validate:approval-harmony",
-  "validate:doctor",
-  "validate:status",
-  "validate:routing",
-  "validate:repair",
-  "validate:diagram",
-  "validate:plugin-skills",
-  "validate:chef-cli",
-  "validate:tokens",
-  "validate:package-surface",
-  "validate:release",
-  "release:notes:check",
-  "verify:skills",
-  "verify:skills:online",
-  "verify:install:runtime",
-  "scan:supply-chain",
-  "audit:security",
-  "codex:doctor",
-  "codex:routing",
-  "chef:backups"
-]) {
-  assertContains(`npm.cmd run ${script} allow`, `prefix_rule(pattern = ["npm.cmd", "run", "${script}"], decision = "allow")`);
-  assertContains(`npm run ${script} allow`, `prefix_rule(pattern = ["npm", "run", "${script}"], decision = "allow")`);
-}
+assertContains(
+  "npm.cmd run prompt",
+  'prefix_rule(pattern = ["npm.cmd", "run"], decision = "prompt"'
+);
+assertContains(
+  "npm run prompt",
+  'prefix_rule(pattern = ["npm", "run"], decision = "prompt"'
+);
+assertContains(
+  "npm.cmd test prompt",
+  'prefix_rule(pattern = ["npm.cmd", "test"], decision = "prompt"'
+);
+assertContains(
+  "npm.cmd audit prompt",
+  'prefix_rule(pattern = ["npm.cmd", "audit"], decision = "prompt"'
+);
 
 for (const script of [
   "clean",
@@ -197,20 +150,31 @@ const matrix = [
   ["read-only PowerShell wrapper single-token command", ["powershell.exe", "-Command", "Get-Content -LiteralPath package.json"], ["allow", "no-match"]],
   ["git rev-parse", ["git", "rev-parse", "HEAD"], "allow"],
   ["git cat-file", ["git", "cat-file", "-t", "HEAD"], "allow"],
+  ["git branch show-current", ["git", "branch", "--show-current"], "allow"],
+  ["git branch list", ["git", "branch", "--list"], "allow"],
+  ["git remote get-url", ["git", "remote", "get-url", "origin"], "allow"],
+  ["git tag list", ["git", "tag", "--list"], "allow"],
+  ["git branch delete", ["git", "branch", "-D", "obsolete"], "prompt"],
+  ["git remote add", ["git", "remote", "add", "backup", "https://example.invalid/repo.git"], "prompt"],
+  ["git tag delete", ["git", "tag", "-d", "v0.0.0"], "prompt"],
+  ["git fetch", ["git", "fetch"], "prompt"],
   ["npm pack dry-run", ["npm.cmd", "pack", "--dry-run", "--json", "--ignore-scripts"], "allow"],
-  ["npm build", ["npm.cmd", "run", "build"], "allow"],
-  ["npm check", ["npm.cmd", "run", "check"], "allow"],
-  ["npm package-surface", ["npm.cmd", "run", "validate:package-surface"], "allow"],
-  ["npm release notes check", ["npm.cmd", "run", "release:notes:check"], "allow"],
-  ["npm online skill verify", ["npm.cmd", "run", "verify:skills:online"], "allow"],
-  ["npm runtime verify", ["npm.cmd", "run", "verify:install:runtime"], "allow"],
-  ["npm security audit script", ["npm.cmd", "run", "audit:security"], "allow"],
-  ["npm repair preview", ["npm.cmd", "run", "repair:install", "--", "--preview", "--json", "--redact-paths"], "allow"],
+  ["npm audit fix", ["npm.cmd", "audit", "fix"], "prompt"],
+  ["npm build", ["npm.cmd", "run", "build"], "prompt"],
+  ["npm check", ["npm.cmd", "run", "check"], "prompt"],
+  ["npm package-surface", ["npm.cmd", "run", "validate:package-surface"], "prompt"],
+  ["npm release notes check", ["npm.cmd", "run", "release:notes:check"], "prompt"],
+  ["npm online skill verify", ["npm.cmd", "run", "verify:skills:online"], "prompt"],
+  ["npm runtime verify", ["npm.cmd", "run", "verify:install:runtime"], "prompt"],
+  ["npm security audit script", ["npm.cmd", "run", "audit:security"], "prompt"],
+  ["npm repair preview", ["npm.cmd", "run", "repair:install", "--", "--preview", "--json", "--redact-paths"], "prompt"],
   ["npm clean", ["npm.cmd", "run", "clean"], "prompt"],
   ["npm deploy", ["npm.cmd", "run", "deploy"], "prompt"],
   ["npm repair apply", ["npm.cmd", "run", "repair:install", "--", "--apply"], "prompt"],
   ["npm repair prune", ["npm.cmd", "run", "repair:install", "--", "--prune-managed-plugin-extras"], "prompt"],
-  ["npm arbitrary script", ["npm.cmd", "run", "postinstall"], "no-match"],
+  ["npm arbitrary script", ["npm.cmd", "run", "postinstall"], "prompt"],
+  ["npm Unix arbitrary script", ["npm", "run", "postinstall"], "prompt"],
+  ["npm test lifecycle", ["npm.cmd", "test"], "prompt"],
   ["codex mcp list", ["codex.cmd", "mcp", "list"], "allow"],
   ["codex doctor json", ["codex.cmd", "doctor", "--json"], "allow"],
   ["codex execpolicy check", ["codex.cmd", "execpolicy", "check", "--rules", "templates/codex/rules/default.rules", "git", "status"], "allow"],
@@ -241,7 +205,9 @@ let matrixRan = false;
 if (!commandExistsOnPath(codexCommand())) {
   warn(`Skipped execpolicy matrix because Codex CLI could not run: ${codexCommand()} was not found on PATH.`);
 } else {
-  matrixRan = matrix.some(([label, commandTokens, expected]) => assertExecDecision(label, commandTokens, expected));
+  for (const [label, commandTokens, expected] of matrix) {
+    matrixRan = assertExecDecision(label, commandTokens, expected) || matrixRan;
+  }
 }
 
 if (!matrixRan && process.env.CODEX_CHEF_REQUIRE_CODEX === "1") {

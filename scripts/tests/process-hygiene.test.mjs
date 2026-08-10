@@ -66,7 +66,7 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
 
   assert.deepEqual(localMcp.filter((name) => base.get(name)), ["context7", "serena"]);
   assert.deepEqual(localMcp.filter((name) => full.get(name)), localMcp);
-  assert.deepEqual(localMcp.filter((name) => multiSession.get(name)), []);
+  assert.deepEqual(localMcp.filter((name) => multiSession.get(name)), ["serena"]);
   assert.equal([...offline.values()].every((enabled) => enabled === false), true);
 });
 

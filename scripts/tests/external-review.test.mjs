@@ -185,13 +185,28 @@ test("secret-like tracked content fails closed", () => {
   fs.writeFileSync(path.join(repo, "leak.txt"), `token=${"gh"}${"p_"}abcdefghijklmnopqrstuvwxyz1234567890\n`);
   git(repo, ["add", "leak.txt"]);
   assert.throws(() => buildPackPlan({ target: repo, out }), /Secret-like content blocked/);
-  assert.deepEqual(scanSecrets(`-----BEGIN ${"PRIVATE"} KEY-----`), ["private key"]);
+  assert.deepEqual(
+    scanSecrets(`-----BEGIN ${"PRIVATE"} KEY-----`),
+    [],
+    "PEM format markers without key material are not private keys"
+  );
+  assert.deepEqual(
+    scanSecrets(
+      `-----BEGIN ${"PRIVATE"} KEY-----\n`
+      + `${"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo="}\n`
+      + `-----END ${"PRIVATE"} KEY-----`
+    ),
+    ["private key"],
+    "complete PEM blocks with key-shaped material remain blocked"
+  );
   assert.deepEqual(
     scanSecrets(
       `${"github_"}pat_abcdefghijklmnopqrstuvwxyz123456 `
       + `${"postgres:"}//sentinel-user:sentinel-password@example.invalid/database `
       + `${"eyJabcdefghijk"}.abcdefghijklmnop.abcdefghijklmnop `
-      + `-----BEGIN ${"ENCRYPTED PRIVATE"} KEY-----`
+      + `-----BEGIN ${"ENCRYPTED PRIVATE"} KEY-----\n`
+      + `${"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo="}\n`
+      + `-----END ${"ENCRYPTED PRIVATE"} KEY-----`
     ),
     ["private key", "GitHub fine-grained token", "JWT", "connection string"]
   );
@@ -305,6 +320,97 @@ test("generic credential assignments are blocked from the complete pack", () => 
   );
 });
 
+test("PowerShell runtime credential assignments remain packable while literals stay blocked", () => {
+  const runtimeFixture = fixture();
+  fs.writeFileSync(
+    path.join(runtimeFixture.repo, "agent.ps1"),
+    "$credential = [PSCredential]::new($UserName, $securePassword)\n",
+    "utf8"
+  );
+  git(runtimeFixture.repo, ["add", "agent.ps1"]);
+  const runtimePlan = buildPackPlan({ target: runtimeFixture.repo, out: runtimeFixture.out });
+  assert.equal(runtimePlan.manifest.files.some((file) => file.path === "agent.ps1"), true);
+
+  const literalFixture = fixture();
+  const literalValue = ["actual", "credential", "value", "123456789"].join("-");
+  fs.writeFileSync(
+    path.join(literalFixture.repo, "agent.ps1"),
+    `$credential = "${literalValue}"\n`,
+    "utf8"
+  );
+  git(literalFixture.repo, ["add", "agent.ps1"]);
+  assert.throws(
+    () => buildPackPlan({ target: literalFixture.repo, out: literalFixture.out }),
+    /Secret-like content blocked.*generic credential assignment/
+  );
+});
+
+test("source template credential references remain packable", () => {
+  const { repo, out } = fixture();
+  fs.writeFileSync(
+    path.join(repo, "samples.mjs"),
+    "const rendered = `\"Password\"=\"${sampleValues.registryPassword}\"`;\n",
+    "utf8"
+  );
+  git(repo, ["add", "samples.mjs"]);
+  const plan = buildPackPlan({ target: repo, out });
+  assert.equal(plan.manifest.files.some((file) => file.path === "samples.mjs"), true);
+});
+
+test("public multi-session profile source is not classified as session state", () => {
+  const { repo, out } = fixture();
+  const profilePath = path.join(repo, "templates", "codex", "profiles", "multi-session.config.toml");
+  const decisionPath = path.join(
+    repo,
+    "docs",
+    "decisions",
+    "003-capability-preserving-multi-session-process-hygiene.md"
+  );
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.mkdirSync(path.dirname(decisionPath), { recursive: true });
+  fs.writeFileSync(profilePath, "[features]\nmanaged_serena = true\n", "utf8");
+  fs.writeFileSync(decisionPath, "# Public multi-session design decision\n", "utf8");
+  git(repo, [
+    "add",
+    "templates/codex/profiles/multi-session.config.toml",
+    "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"
+  ]);
+
+  const plan = buildPackPlan({ target: repo, out });
+  assert.equal(
+    plan.manifest.files.some((file) => file.path === "templates/codex/profiles/multi-session.config.toml"),
+    true
+  );
+  assert.equal(
+    plan.manifest.files.some(
+      (file) => file.path === "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"
+    ),
+    true
+  );
+});
+
+test("session state artifacts remain excluded from review packs", () => {
+  const { repo, out } = fixture();
+  const sessionPath = path.join(repo, "state", "session-index.md");
+  const misleadingSessionPath = path.join(repo, "state", "multi-session.config.toml");
+  fs.mkdirSync(path.dirname(sessionPath), { recursive: true });
+  fs.writeFileSync(sessionPath, "private session state\n", "utf8");
+  fs.writeFileSync(misleadingSessionPath, "private session state\n", "utf8");
+  git(repo, ["add", "state/session-index.md", "state/multi-session.config.toml"]);
+
+  const plan = buildPackPlan({ target: repo, out });
+  assert.equal(
+    plan.manifest.excluded.some((file) => file.path === "state/session-index.md" && file.reason === "sensitive-path"),
+    true
+  );
+  assert.equal(
+    plan.manifest.excluded.some(
+      (file) => file.path === "state/multi-session.config.toml" && file.reason === "sensitive-path"
+    ),
+    true
+  );
+});
+
 test("common credential forms are excluded or blocked through the complete pack", () => {
   const npmFixture = fixture();
   const npmToken = `${"npm_"}abcdefghijklmnopqrstuvwxyz1234567890`;
@@ -322,7 +428,12 @@ test("common credential forms are excluded or blocked through the complete pack"
     ["fallback.js", `export const ${"to"}ken = process.env.API_TOKEN || "${["hardcoded", "fallback", "credential"].join("-")}";\n`],
     ["settings.yaml", `${"pass"}word: ${["correct", "horse", "battery", "staple"].join(" ")}\n`],
     ["settings-block.yaml", `${"pass"}word: |\n  ${["correct", "horse", "battery", "staple"].join(" ")}\n`],
-    ["pgp.txt", `-----BEGIN ${"PGP PRIVATE KEY BLOCK"}-----\nplaceholder-body\n`]
+    [
+      "pgp.txt",
+      `-----BEGIN ${"PGP PRIVATE KEY BLOCK"}-----\n`
+      + `${"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo="}\n`
+      + `-----END ${"PGP PRIVATE KEY BLOCK"}-----\n`
+    ]
   ];
   for (const [name, content] of blockedCases) {
     const blockedFixture = fixture();

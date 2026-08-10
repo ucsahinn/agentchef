@@ -43,6 +43,11 @@ node scripts/plan-install.mjs --list-operations
 The summary keeps normal previews short; the JSON and full human plan list
 managed targets, optional global Git changes, curated skill commands, collision
 policy, backup behavior, and risk level.
+The selected manifest profile is the normative operation contract used by the
+planner and installers. Its ordered operations include copied files, generated
+`full`/`multi-session`/`offline` profiles, direct-skill ownership markers,
+installed-plugin cache refresh, and the Unix hook-permission step instead of
+leaving those mutations as undocumented installer behavior.
 The profile operation includes `development.config.toml`,
 `review.config.toml`, `ci.config.toml`, `token-safe.config.toml`,
 `full.config.toml`, and `multi-session.config.toml`.
@@ -85,7 +90,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 Repair mode is for machines that already have a Codex setup. It previews or
 applies backup-backed reconciliation for Codex Chef-managed guidance, rules,
 agent/profile files, the bundled plugin, all eleven managed direct local
-workflows, missing config blocks, and the local plugin marketplace entry. It
+workflows, `serena-pool.mjs`, missing config blocks, and the local plugin
+marketplace entry. The launcher, Serena bridge, generated/copied profiles,
+ownership markers, marketplace, and every other selected source and target are
+preflighted before the first managed write; a missing, linked, or unsafe path
+fails closed. It
 preserves unrelated marketplace plugins and never deletes user skills; extra
 or duplicate global skills are reported as cleanup candidates. If the
 namespaced Codex Chef plugin is already installed, preview reports a stale
@@ -108,8 +117,10 @@ install dry-run evidence. Apply mode requires a clean worktree and runs
 prints a fresh preview, runs the bounded update-integrity validation and managed refresh, then
 verifies installed-runtime parity. If the repo is already current, apply refreshes managed
 files through the backup-backed update mode. The broad `npm run check` suite remains a CI/release
-gate; Update does not make routine users wait for installer-smoke scenarios. Update replaces Codex Chef-owned files, synchronizes
-managed config tables, and preserves user-owned `config.toml` settings. It does not install curated global skills
+gate; Update does not make routine users wait for installer-smoke scenarios.
+Update synchronizes source-owned files after backup and preserves unrelated
+extras in managed directories. It also synchronizes managed config tables and
+preserves user-owned `config.toml` settings. It does not install curated global skills
 or optional global Git guards; use `--install --apply` or `--skills --apply`
 when you want those explicit surfaces. An already-installed namespaced Codex
 Chef plugin is refreshed and version-verified after its managed source is
@@ -297,9 +308,15 @@ Useful switches:
   `install-pinned-skill.mjs` command with `--adopt-existing`.
 - `-InstallGitGuards`: install global Git ignore, global pre-commit hook, and
   set `core.excludesfile` plus `core.hooksPath`. This is intentionally separate
-  because it affects every Git repository for the current user.
-- `-Force`: overwrite managed Codex files after creating backups. Use this for
-  deliberate upgrades only after reviewing `-WhatIf`; without it, existing
+  because it affects every Git repository for the current user. Existing
+  foreign file or key state fails closed unless the exact conflict is adopted
+  with `-AdoptGitIgnore`, `-AdoptGitHook`, `-AdoptGitExcludesFile`, or
+  `-AdoptGitHooksPath`. Each switch grants authority only for its named file or
+  key; it does not adopt the other three surfaces.
+- `-Force`: after creating backups, replace managed individual files and
+  synchronize only source-owned entries in managed directories. Unrelated
+  directory extras are preserved. Use this for deliberate upgrades only after
+  reviewing `-WhatIf`; without it, existing
   `config.toml` is backed up and receives only missing Codex Chef blocks, while
   existing agent files and rules are skipped. The personal plugin marketplace
   file is not replaced; only the Codex Chef entry is added or updated after
@@ -307,9 +324,10 @@ Useful switches:
 - `-Repair`: repair an existing setup with the shared repair engine. With
   `-WhatIf`, it prints a no-write repair plan. Without `-WhatIf`, it backs up
   and repairs managed drift. It does not delete user skills.
-- `-NoBackup`: skip optional managed-file backups. Not recommended. It never
-  disables the mandatory safety backup for a pinned-skill upgrade or explicit
-  pinned-skill adoption.
+- `-NoBackup`: compatibility switch accepted only for a fully creation-only
+  apply into empty targets. If any selected action would merge, replace,
+  delete, prune, adopt, refresh a cache, change global Git state, or touch an
+  existing managed target, preflight rejects the run before the first write.
 - `-WhatIf`: preview file, Git, and skill operations without changing the real
   setup.
 - `-Interactive`: ask before using custom Codex/Agents home values and before
@@ -347,13 +365,21 @@ Useful flags:
 - `--adopt-direct-skill=<name>`: adopt another cataloged foreign direct target
   after review.
 - `--install-git-guards`: opt in to global Git ignore and hook settings.
-- `--force`: replace managed targets after backup; without it, existing
+- `--adopt-git-ignore`, `--adopt-git-hook`,
+  `--adopt-git-excludes-file`, and `--adopt-git-hooks-path`: grant adoption
+  authority for exactly one conflicting Git-guard file or key. Unselected
+  foreign state still fails closed.
+- `--force`: after backup, replace managed individual files and synchronize
+  only source-owned directory entries while preserving unrelated extras;
+  without it, existing
   `config.toml` is merged and other existing managed files are skipped. The
   personal plugin marketplace file is not replaced; only the Codex Chef entry
   is added or updated after backup and unrelated plugin entries are preserved.
 - `--repair`: preview or apply backup-backed repair for an existing global
   Codex setup. Use it with `--dry-run` for a no-write plan.
-- `--no-backup`
+- `--no-backup`: creation-only compatibility mode. It fails before any write
+  when an existing target or any merge, replacement, deletion, adoption,
+  cache refresh, or global mutation is selected.
 - `--dry-run`
 - `--plain-output`: use ASCII status markers.
 - `--interactive`: guided macOS/Linux/WSL setup with the same path, skills, force,
@@ -380,7 +406,8 @@ existing machine configuration as a user-owned overlay. Normal install and
 repair preserve the user's model and reasoning choice, approval and sandbox
 settings, project trust entries, custom MCP servers, and unrelated personal
 plugin marketplace entries. Chef-managed agent/MCP safety tables are merged
-and validated; `--force` remains the explicit replacement boundary. This keeps
+and validated; `--force` remains the explicit backup-backed synchronization
+boundary and never authorizes removal of unrelated directory extras. This keeps
 the package global and reusable without turning one machine's profile or trust
 state into a distributable default.
 
@@ -407,9 +434,30 @@ The installer backs up managed targets before replacing them:
 - both managed plugin mirrors
 - all managed direct-skill directories and ownership markers
 
-Directory replacement is allowed only under the managed Codex or Agents home.
-Before any write, the installer rejects symlink or junction components below
-those roots so a managed-looking path cannot escape to another directory.
+Managed directory updates synchronize source-owned entries and preserve
+unrelated extras. A destructive prune remains a separate, explicit,
+backup-backed operation. Before any write, the installer rejects symlink or
+junction components below the configured homes so a managed-looking path
+cannot escape to another directory.
+
+Global Git guards use a separate typed recovery receipt because their two files
+and two Git config keys are outside the ordinary managed-file archive. Before
+mutation, apply records the exact prior bytes, file mode, presence/absence, and
+ordered key values in `codex-chef.global-git-guards-receipt@1`. It also binds
+the expected managed file hashes, Unix modes, and Git config values produced by
+apply. If apply fails, the transaction rolls back from that receipt. Keep the receipt and use the
+exact restore command printed by the installer; the underlying form is:
+
+```bash
+node scripts/manage-global-git-guards.mjs restore --home <home> --receipt <receipt-path> --json
+```
+
+Restore validates the receipt schema, recorded home, exact two-file/two-key
+allowlist, size, paths, and link safety before restoring prior values or
+removing targets that were previously absent. Restore refuses to write if a
+managed file, mode, or key changed after apply, so later user edits are not
+clobbered and the original repository templates are not needed. It is intentionally separate
+from the `codex-chef.backup.v1` archive flow.
 
 ## Post-Install Checks
 
@@ -437,7 +485,8 @@ intentionally included curated skills and optional Git guards.
 
 `npm run verify:install:runtime` is read-only. It checks the installed
 `~/.codex` and `~/.agents` targets, checks managed agent, rule, profile, and
-plugin files for source drift, then runs Codex CLI checks with `CODEX_HOME`
+plugin files plus the installed `serena-pool.mjs` bridge for source drift, then
+runs Codex CLI checks with `CODEX_HOME`
 explicitly pointed at the installed target. If the ambient shell is reading a
 sandbox or alternate `CODEX_HOME`, the verifier reports that drift as a warning
 while still proving whether the installed target exposes the expected MCP
@@ -485,10 +534,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 If repair is clean, continue with the normal install command. Existing
 `config.toml` is backed up and merged; existing user tables are preserved.
 Other existing managed files are skipped unless you use `-Force` / `--force`
-after reviewing the preview. The personal plugin marketplace keeps unrelated
+after reviewing the preview. Force replaces only managed individual files and
+synchronizes source-owned directory entries; unrelated extras remain. The
+personal plugin marketplace keeps unrelated
 entries and receives only the Codex Chef entry upsert after backup. When managed
 drift exists, `-Repair` / `--repair` is the safer first step before force
-replacement.
+synchronization.
 
 ## Rollback
 

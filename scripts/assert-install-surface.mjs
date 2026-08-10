@@ -1,78 +1,28 @@
 #!/usr/bin/env node
-import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
-import { markerFileName } from "./manage-direct-skill-target.mjs";
-
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(scriptDir, "..");
-
-function listSourceFiles(directory) {
-  const files = [];
-  const stat = fs.lstatSync(directory);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) {
-    throw new Error(`Install source must be a real directory: ${directory}`);
-  }
-  const pending = [directory];
-  while (pending.length > 0) {
-    const current = pending.pop();
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const absolute = path.join(current, entry.name);
-      const entryStat = fs.lstatSync(absolute);
-      if (entryStat.isSymbolicLink()) {
-        throw new Error(`Install source tree must not contain links: ${absolute}`);
-      }
-      if (entryStat.isDirectory()) pending.push(absolute);
-      else if (entryStat.isFile()) files.push(path.relative(directory, absolute));
-      else throw new Error(`Install source tree contains an unsupported entry: ${absolute}`);
-    }
-  }
-  return files.sort();
-}
+import { resolveInstallContract } from "./lib/install-contract.mjs";
 
 export function assertInstallSurface(codexHome, agentsHome) {
   const codexRoot = path.resolve(codexHome);
   const agentsRoot = path.resolve(agentsHome);
-  const codexTargets = [
-    path.join(codexRoot, "AGENTS.md"),
-    path.join(codexRoot, "config.toml"),
-    path.join(codexRoot, "rules", "default.rules")
-  ];
-
-  for (const file of listSourceFiles(path.join(root, "templates", "codex", "agents"))) {
-    codexTargets.push(path.join(codexRoot, "agents", file));
+  const contract = resolveInstallContract({
+    platform: process.platform === "win32" ? "windows" : "unix",
+    codexHome: codexRoot,
+    agentsHome: agentsRoot,
+    home: os.homedir()
+  });
+  const codexTargets = contract.preflightTargets.filter((target) =>
+    path.relative(codexRoot, path.resolve(target)).split(path.sep)[0] !== ".."
+  );
+  const agentsTargets = contract.preflightTargets.filter((target) =>
+    path.relative(agentsRoot, path.resolve(target)).split(path.sep)[0] !== ".."
+  );
+  for (const target of contract.preflightTargets) {
+    assertManagedTargetPath(target, [codexRoot, agentsRoot]);
   }
-  for (const file of listSourceFiles(path.join(root, "templates", "codex", "profiles"))) {
-    codexTargets.push(path.join(codexRoot, file));
-  }
-
-  const pluginSource = path.join(root, "plugins", "codex-chef-workflows");
-  const pluginFiles = listSourceFiles(pluginSource);
-  for (const file of pluginFiles) {
-    codexTargets.push(path.join(codexRoot, "plugins", "codex-chef-workflows", file));
-  }
-
-  const agentsTargets = [
-    path.join(agentsRoot, "plugins", "marketplace.json")
-  ];
-  for (const file of pluginFiles) {
-    agentsTargets.push(path.join(agentsRoot, "plugins", "sources", "codex-chef-workflows", file));
-  }
-
-  const skills = JSON.parse(fs.readFileSync(path.join(root, "catalog", "skills.json"), "utf8"))
-    .skills
-    .filter((skill) => skill.directInstall === true);
-  for (const skill of skills) {
-    const source = path.join(pluginSource, "skills", skill.name);
-    for (const file of listSourceFiles(source)) {
-      agentsTargets.push(path.join(agentsRoot, "skills", skill.name, file));
-    }
-    agentsTargets.push(path.join(agentsRoot, "skills", skill.name, markerFileName));
-  }
-
-  for (const target of codexTargets) assertManagedTargetPath(target, [codexRoot]);
-  for (const target of agentsTargets) assertManagedTargetPath(target, [agentsRoot]);
   return { codexTargets: codexTargets.length, agentsTargets: agentsTargets.length };
 }
 

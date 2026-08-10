@@ -111,7 +111,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "additionalProperties": true,
+        "additionalProperties": false,
         "required": [
           "id",
           "componentId",
@@ -121,6 +121,7 @@
           "collision",
           "conflictPolicy",
           "backup",
+          "noBackupPolicy",
           "force",
           "wouldMutateGlobalState",
           "selectedBy"
@@ -135,7 +136,17 @@
             "minLength": 1
           },
           "kind": {
-            "enum": ["copy-file", "copy-directory", "write-marketplace", "git-config", "skill-install"]
+            "enum": [
+              "copy-file",
+              "copy-directory",
+              "generate-mcp-profile",
+              "write-ownership-marker",
+              "write-marketplace",
+              "refresh-plugin-cache",
+              "git-config",
+              "chmod",
+              "skill-install"
+            ]
           },
           "summary": {
             "type": "string",
@@ -155,6 +166,15 @@
           "backup": {
             "type": "boolean"
           },
+          "noBackupPolicy": {
+            "enum": ["backup-before-existing-mutation", "creation-only", "incompatible", "not-applicable"]
+          },
+          "adoptionFlag": {
+            "enum": ["AdoptGitIgnore", "AdoptGitHook", "AdoptGitExcludesFile", "AdoptGitHooksPath"]
+          },
+          "stateBackup": {
+            "const": "codex-chef.global-git-guards-receipt@1"
+          },
           "force": {
             "type": "boolean"
           },
@@ -162,6 +182,44 @@
             "const": true
           },
           "selectedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1
+          },
+          "configSource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pluginTarget": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pluginId": {
+            "const": "codex-chef-workflows@codex-chef"
+          },
+          "mode": {
+            "const": "+x"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "command": {
             "type": "string",
             "minLength": 1
           }

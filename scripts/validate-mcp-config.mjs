@@ -60,6 +60,24 @@ function parseToolApprovalBlocks(text) {
   return approvals;
 }
 
+function parseTomlTable(text, tableName) {
+  const lines = text.split(/\r?\n/);
+  const heading = `[${tableName}]`;
+  const values = [];
+  let collecting = false;
+
+  for (const line of lines) {
+    if (line.trim() === heading) {
+      collecting = true;
+      continue;
+    }
+    if (collecting && /^\s*\[/.test(line)) break;
+    if (collecting) values.push(line);
+  }
+
+  return collecting ? `${values.join("\n")}\n` : null;
+}
+
 function readTomlValue(block, key) {
   const match = block.match(new RegExp(`^${key}\\s*=\\s*(.+)$`, "m"));
   if (!match) return null;
@@ -322,8 +340,20 @@ for (const configFile of configFiles) {
     }
   }
 
-  if (!/\[apps\._default\][\s\S]*?\ndefault_tools_approval_mode\s*=\s*"prompt"/.test(text)) {
-    fail(`${configFile} apps._default must set default_tools_approval_mode = "prompt".`);
+  const appsDefault = parseTomlTable(text, "apps._default");
+  if (!appsDefault) {
+    fail(`${configFile} must define [apps._default].`);
+  } else {
+    for (const [key, expected] of [
+      ["enabled", "false"],
+      ["destructive_enabled", "false"],
+      ["open_world_enabled", "false"],
+      ["default_tools_approval_mode", '"prompt"']
+    ]) {
+      if (readTomlValue(appsDefault, key) !== expected) {
+        fail(`${configFile} apps._default must set ${key} = ${expected}.`);
+      }
+    }
   }
 
   for (const name of catalogNames) {

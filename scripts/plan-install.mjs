@@ -7,8 +7,12 @@ import {
   emitCliError,
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
+import {
+  repositoryRoot,
+  resolveInstallContract
+} from "./lib/install-contract.mjs";
 
-const root = path.resolve(process.cwd());
+const root = repositoryRoot;
 const manifestPath = path.join(root, "manifests", "install-plan.json");
 
 function parseArgs(argv) {
@@ -154,150 +158,6 @@ function createDiscovery(options) {
   };
 }
 
-function normalizeTargetPath(value, platform) {
-  let normalized = String(value);
-  if (platform !== "windows") {
-    return normalized.replace(/[\\/]+/g, "/");
-  }
-
-  normalized = normalized.replace(/\//g, "\\");
-  if (normalized.startsWith("\\\\?\\")) {
-    return `\\\\?\\${normalized.slice(4).replace(/\\+/g, "\\")}`;
-  }
-  if (normalized.startsWith("\\\\")) {
-    return `\\\\${normalized.slice(2).replace(/\\+/g, "\\")}`;
-  }
-  return normalized.replace(/\\+/g, "\\");
-}
-
-function joinTargetPath(platform, ...segments) {
-  return normalizeTargetPath(segments.filter(Boolean).join(platform === "windows" ? "\\" : "/"), platform);
-}
-
-function resolveVars(value, options) {
-  return normalizeTargetPath(String(value)
-    .replaceAll("${CODEX_HOME}", options.codexHome)
-    .replaceAll("${AGENTS_HOME}", options.agentsHome)
-    .replaceAll("${HOME}", options.home)
-    .replaceAll("${REPO_ROOT}", root), options.platform);
-}
-
-function resolveSource(operation, options) {
-  if (operation.sourceByPlatform) {
-    return operation.sourceByPlatform[options.platform];
-  }
-  return operation.source;
-}
-
-function expandGlob(relativeGlob) {
-  const normalized = relativeGlob.replace(/\\/g, "/");
-  const marker = "/*";
-  const markerIndex = normalized.lastIndexOf(marker);
-  if (markerIndex === -1) {
-    return [normalized];
-  }
-
-  const dir = normalized.slice(0, markerIndex);
-  const suffix = normalized.slice(markerIndex + marker.length);
-  const absoluteDir = path.join(root, dir);
-  if (!fs.existsSync(absoluteDir)) {
-    return [];
-  }
-
-  return fs.readdirSync(absoluteDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(suffix))
-    .map((entry) => `${dir}/${entry.name}`)
-    .sort();
-}
-
-function includeOperation(operation, options) {
-  if (!operation.platforms.includes(options.platform)) return false;
-  if (operation.requiresFlag === "InstallSkills") return options.installSkills;
-  if (operation.requiresFlag === "InstallGitGuards") return options.installGitGuards;
-  return true;
-}
-
-function skillOperations(operation, options) {
-  const catalog = readJson(path.join(root, operation.catalog));
-  return (catalog.skills || [])
-    .filter((skill) => skill.install === true)
-    .map((skill) => ({
-      id: `${operation.id}:${skill.name}`,
-      componentId: operation.id,
-      kind: "skill-install",
-      summary: `Install commit-pinned curated skill ${skill.name}`,
-      command: skill.fullDepth
-        ? `node scripts/install-pinned-skill.mjs --package ${skill.package} --commit ${skill.commit} --skill ${skill.skill} --cli-version ${catalog.skillsCliVersion} --full-depth`
-        : `node scripts/install-pinned-skill.mjs --package ${skill.package} --commit ${skill.commit} --skill ${skill.skill} --cli-version ${catalog.skillsCliVersion}`,
-      source: skill.source,
-      sourceUrl: skill.sourceUrl,
-      risk: operation.risk,
-      collision: operation.collision,
-      conflictPolicy: operation.conflictPolicy,
-      backup: operation.backup,
-      force: options.force,
-      wouldMutateGlobalState: true,
-      selectedBy: options.all ? "--all" : "--install-skills"
-    }));
-}
-
-function expandOperation(operation, options) {
-  const common = {
-    componentId: operation.id,
-    summary: operation.summary,
-    risk: operation.risk,
-    collision: operation.collision,
-    conflictPolicy: operation.conflictPolicy,
-    backup: operation.backup && !options.noBackup,
-    force: options.force,
-    wouldMutateGlobalState: true,
-    selectedBy: operation.requiresFlag || "default"
-  };
-
-  if (operation.kind === "skill-install") {
-    return skillOperations(operation, options);
-  }
-
-  if (operation.kind === "copy-glob") {
-    return expandGlob(operation.sourceGlob).map((source) => ({
-      ...common,
-      id: `${operation.id}:${path.basename(source)}`,
-      kind: "copy-file",
-      source,
-      destination: joinTargetPath(options.platform, resolveVars(operation.destinationDir, options), path.basename(source))
-    }));
-  }
-
-  if (operation.kind === "git-config") {
-    return [{
-      ...common,
-      id: operation.id,
-      kind: operation.kind,
-      key: operation.key,
-      value: resolveVars(operation.value, options)
-    }];
-  }
-
-  if (operation.kind === "write-marketplace") {
-    return [{
-      ...common,
-      id: operation.id,
-      kind: operation.kind,
-      destination: resolveVars(operation.destination, options),
-      pluginTarget: resolveVars("${CODEX_HOME}/plugins/codex-chef-workflows", options)
-    }];
-  }
-
-  const source = resolveSource(operation, options);
-  return [{
-    ...common,
-    id: operation.id,
-    kind: operation.kind,
-    source,
-    destination: resolveVars(operation.destination, options)
-  }];
-}
-
 function createPlan(options) {
   const manifest = readJson(manifestPath);
   const packageJson = readJson(path.join(root, "package.json"));
@@ -309,9 +169,15 @@ function createPlan(options) {
         home: "${HOME}"
       }
     : options;
-  const selected = manifest.operations.filter((operation) => includeOperation(operation, options));
-  const skipped = manifest.operations.filter((operation) => !includeOperation(operation, options));
-  const operations = selected.flatMap((operation) => expandOperation(operation, outputOptions));
+  const contract = resolveInstallContract({
+    ...options,
+    ...outputOptions,
+    manifest,
+    root
+  });
+  const selected = contract.selectedComponents;
+  const skipped = contract.skippedComponents;
+  const operations = contract.operations;
 
   return {
     schemaVersion: "codex-chef.install-state-preview.v1",
@@ -358,18 +224,32 @@ function printPlan(plan) {
     console.log(`[${operation.kind}] ${operation.id}`);
     if (operation.kind === "git-config") {
       console.log(`  command: git config --global ${operation.key} ${operation.value}`);
+    } else if (operation.kind === "chmod") {
+      console.log(`  command: chmod ${operation.mode} ${operation.destination}`);
     } else if (operation.kind === "skill-install") {
       console.log(`  command: ${operation.command}`);
       console.log(`  source: ${operation.source}`);
     } else if (operation.kind === "write-marketplace") {
       console.log(`  target: ${operation.destination}`);
       console.log(`  plugin target: ${operation.pluginTarget}`);
+    } else if (operation.kind === "refresh-plugin-cache") {
+      console.log(`  plugin: ${operation.pluginId}`);
+      console.log(`  source: ${operation.source}`);
+      console.log(`  cache root: ${operation.destination}`);
+    } else if (operation.kind === "generate-mcp-profile") {
+      console.log(`  template: ${operation.source}`);
+      console.log(`  config source: ${operation.configSource}`);
+      console.log(`  target: ${operation.destination}`);
+    } else if (operation.kind === "write-ownership-marker") {
+      console.log(`  source skill: ${operation.source}`);
+      console.log(`  marker: ${operation.destination}`);
     } else {
       console.log(`  source: ${operation.source}`);
       console.log(`  target: ${operation.destination}`);
     }
     console.log(`  collision: ${operation.collision}`);
     console.log(`  backup: ${operation.backup ? "yes" : "no"}`);
+    console.log(`  no-backup policy: ${operation.noBackupPolicy}`);
     console.log(`  force: ${operation.force ? "yes" : "no"}`);
     console.log(`  risk: ${operation.risk}`);
     console.log(`  selected by: ${operation.selectedBy}`);

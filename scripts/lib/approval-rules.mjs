@@ -79,6 +79,20 @@ function isBroadNpmRunPrefix(pattern) {
   return samePattern(pattern, ["npm", "run"]) || samePattern(pattern, ["npm.cmd", "run"]);
 }
 
+function isRepositoryControlledNpmAllow(pattern) {
+  const executable = (pattern[0] || "").toLowerCase();
+  if (executable !== "npm" && executable !== "npm.cmd") return false;
+  const command = (pattern[1] || "").toLowerCase();
+  return command === "run" || command === "test" || command === "audit";
+}
+
+function isMutableGitFamilyAllow(pattern) {
+  return samePattern(pattern, ["git", "branch"])
+    || samePattern(pattern, ["git", "remote"])
+    || samePattern(pattern, ["git", "tag"])
+    || samePattern(pattern, ["git", "fetch"]);
+}
+
 function isDestructiveAllow(pattern) {
   const destructiveCommands = new Set([
     "Remove-Item",
@@ -110,6 +124,8 @@ export function classifyRule(rule) {
     if (isGitConfigValueDumpAllow(pattern)) return "broad git config value dumps can expose credential-bearing config and must not be auto-allowed";
     if (isPowerShellCommandPrefix(pattern)) return "broad PowerShell wrapper allow would permit arbitrary shell actions";
     if (isBroadNpmRunPrefix(pattern)) return "broad npm run allow would permit arbitrary repository scripts";
+    if (isRepositoryControlledNpmAllow(pattern)) return "repository-controlled npm scripts and audit mutation must not be auto-allowed";
+    if (isMutableGitFamilyAllow(pattern)) return "mutable Git command family must not be broadly auto-allowed";
     if (isDestructiveAllow(pattern)) return "destructive or external-write command must not be auto-allowed";
   }
 
@@ -118,7 +134,6 @@ export function classifyRule(rule) {
     if (isBroadNpxPrefix(pattern)) return "broad npx prompt shadows exact MCP and skill helper allow rules";
     if (isBroadGitConfigPrefix(pattern)) return "broad git config prompt shadows exact read-only config allow rules";
     if (isPowerShellCommandPrefix(pattern)) return "broad PowerShell wrapper prompt shadows exact read-only PowerShell allow rules";
-    if (isBroadNpmRunPrefix(pattern)) return "broad npm run prompt shadows exact local verification allow rules";
   }
 
   return null;

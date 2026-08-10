@@ -2,14 +2,25 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, "manifests", "install-plan.json");
 const schemaPath = path.join(root, "schemas", "install-plan.schema.json");
 const skillsPath = path.join(root, "catalog", "skills.json");
 const failures = [];
 
-const allowedKinds = new Set(["copy-file", "copy-directory", "copy-glob", "write-marketplace", "git-config", "skill-install"]);
+const allowedKinds = new Set([
+  "copy-file",
+  "copy-directory",
+  "copy-glob",
+  "generate-mcp-profile",
+  "write-marketplace",
+  "refresh-plugin-cache",
+  "git-config",
+  "chmod",
+  "skill-install"
+]);
 const allowedFlags = new Set(["InstallSkills", "InstallGitGuards"]);
 const allowedPlatforms = new Set(["windows", "unix"]);
 const allowedRisks = new Set(["low", "medium", "high"]);
@@ -142,8 +153,11 @@ function validatePlanOutputSmoke() {
     const backupManaged = plan?.operations?.filter(
       (operation) => operation.kind !== "skill-install" && operation.collision.includes("backup")
     ) || [];
-    if (plan && backupManaged.some((operation) => operation.backup !== false)) {
-      fail("Install plan --no-backup smoke must mark backup-managed operations as backup=false");
+    if (plan && backupManaged.some((operation) => operation.backup !== true)) {
+      fail("Install plan --no-backup must preserve mandatory backup metadata for existing mutations");
+    }
+    if (plan && backupManaged.some((operation) => operation.noBackupPolicy !== "creation-only")) {
+      fail("Install plan --no-backup must limit backup-managed operations to creation-only eligibility");
     }
     const curatedSkills = plan?.operations?.filter((operation) => operation.kind === "skill-install") || [];
     if (plan && curatedSkills.some((operation) => operation.backup !== true)) {
@@ -272,6 +286,16 @@ for (const operation of manifest.operations || []) {
     validateDestinationPath(operation, "destinationDir", operation.destinationDir);
   }
 
+  if (operation.kind === "generate-mcp-profile") {
+    if (!Array.isArray(operation.sources) || operation.sources.length === 0) {
+      fail(`Operation ${operation.id} must declare generated MCP profile sources`);
+    } else {
+      for (const source of operation.sources) validateSourcePath(operation, "sources", source);
+    }
+    validateDestinationPath(operation, "destinationDir", operation.destinationDir);
+    validateDestinationPath(operation, "configSource", operation.configSource);
+  }
+
   if (operation.kind === "skill-install") {
     validateSourcePath(operation, "catalog", operation.catalog);
     validateSourcePath(operation, "lock", operation.lock);
@@ -279,6 +303,7 @@ for (const operation of manifest.operations || []) {
 
   if (operation.kind === "write-marketplace") {
     validateDestinationPath(operation, "destination", operation.destination);
+    validateDestinationPath(operation, "pluginTarget", operation.pluginTarget);
     if (operation.id === "plugin-marketplace") {
       if (operation.collision !== "upsert-entry-with-backup") {
         fail("plugin-marketplace must use upsert-entry-with-backup collision policy.");
@@ -294,6 +319,22 @@ for (const operation of manifest.operations || []) {
       fail(`Operation ${operation.id} must declare git config key and value`);
     } else {
       validateDestinationPath(operation, "value", operation.value);
+    }
+  }
+
+  if (operation.kind === "refresh-plugin-cache") {
+    validateDestinationPath(operation, "source", operation.source);
+    validateDestinationPath(operation, "destination", operation.destination);
+    if (operation.pluginId !== "codex-chef-workflows@codex-chef") {
+      fail(`Operation ${operation.id} must declare the managed Codex Chef plugin id`);
+    }
+  }
+
+  if (operation.kind === "chmod") {
+    validateDestinationPath(operation, "destination", operation.destination);
+    if (operation.mode !== "+x") fail(`Operation ${operation.id} must declare mode +x`);
+    if (!operation.platforms?.includes("unix") || operation.platforms?.includes("windows")) {
+      fail(`Operation ${operation.id} chmod must be Unix-only`);
     }
   }
 }
@@ -328,6 +369,78 @@ for (const [profileId, operationIdsForProfile] of Object.entries(manifest.profil
 
 if (!manifest.profiles?.default || !manifest.profiles?.all) {
   fail("Install plan manifest must declare default and all profiles");
+}
+
+const requiredOrderedDefaultIds = [
+  "codex-agents-md",
+  "codex-config",
+  "codex-profile-launcher",
+  "codex-serena-pool",
+  "codex-rules",
+  "codex-agents",
+  "codex-profiles",
+  "codex-mcp-profiles"
+];
+if (JSON.stringify(manifest.profiles?.default?.slice(0, requiredOrderedDefaultIds.length))
+  !== JSON.stringify(requiredOrderedDefaultIds)) {
+  fail("Default install profile must declare launcher and profile actions in installer order");
+}
+
+const generatedProfiles = manifest.operations?.find((operation) => operation.id === "codex-mcp-profiles");
+if (generatedProfiles?.kind !== "generate-mcp-profile"
+  || JSON.stringify(generatedProfiles?.sources) !== JSON.stringify([
+    "templates/codex/profiles/full.config.toml",
+    "templates/codex/profiles/multi-session.config.toml",
+    "templates/codex/profiles/offline.config.toml"
+  ])) {
+  fail("full, multi-session, and offline profiles must be modeled as generated MCP profiles");
+}
+
+const marketplaceOperation = manifest.operations?.find((operation) => operation.id === "plugin-marketplace");
+if (marketplaceOperation?.pluginTarget !== "${AGENTS_HOME}/plugins/sources/codex-chef-workflows") {
+  fail("plugin-marketplace pluginTarget must stay under AGENTS_HOME marketplace sources");
+}
+
+for (const operation of manifest.operations?.filter((entry) => entry.id.endsWith("-direct-skill")) || []) {
+  if (operation.ownershipMarker !== `${operation.destination}/.codex-chef-managed.json`) {
+    fail(`Direct skill ${operation.id} must declare its explicit ownership marker action`);
+  }
+}
+
+for (const requiredId of ["installed-plugin-cache-refresh", "git-pre-commit-hook-executable"]) {
+  if (!operationIds.has(requiredId)) fail(`Install plan is missing explicit side-effect operation: ${requiredId}`);
+}
+
+const gitGuardAdoptionFlags = new Map([
+  ["git-ignore-global", "AdoptGitIgnore"],
+  ["git-pre-commit-hook", "AdoptGitHook"],
+  ["git-config-excludesfile", "AdoptGitExcludesFile"],
+  ["git-config-hooks-path", "AdoptGitHooksPath"]
+]);
+for (const [operationId, adoptionFlag] of gitGuardAdoptionFlags) {
+  const operation = manifest.operations?.find((entry) => entry.id === operationId);
+  if (operation?.adoptionFlag !== adoptionFlag) {
+    fail(`Git guard ${operationId} must require its narrow adoption flag ${adoptionFlag}`);
+  }
+  if (operation?.stateBackup !== "codex-chef.global-git-guards-receipt@1" || operation?.backup !== true) {
+    fail(`Git guard ${operationId} must require an exact prior-state receipt before mutation`);
+  }
+}
+
+const operationOrder = manifest.operations.map((operation) => operation.id);
+const normativeOptionalOrder = [
+  "installed-plugin-cache-refresh",
+  "git-ignore-global",
+  "git-pre-commit-hook",
+  "git-pre-commit-hook-executable",
+  "git-config-excludesfile",
+  "git-config-hooks-path",
+  "curated-skills"
+];
+const optionalIndexes = normativeOptionalOrder.map((id) => operationOrder.indexOf(id));
+if (optionalIndexes.some((index) => index < 0)
+  || optionalIndexes.some((index, position) => position > 0 && index <= optionalIndexes[position - 1])) {
+  fail("Manifest optional operation order must keep Git guards after cache refresh and curated skills last");
 }
 
 for (const skill of skillsCatalog?.skills?.filter((entry) => entry.directInstall === true) || []) {

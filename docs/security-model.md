@@ -18,12 +18,15 @@ Codex safety model.
   a reviewed app-specific override changes them.
 - Global command rules are narrow and biased toward read-only discovery and
   local verification.
-- Reviewed local verification scripts such as `npm run build`, `npm run check`,
-  `npm run validate`, `npm run dev`, and `npm run codex:status` are
-  auto-approved. Arbitrary repository-controlled `npm run ...` scripts stay
-  unmatched, and cleanup, deploy, publish, release, migration, dependency, and
-  destructive script names prompt because package scripts can run arbitrary
-  shell code from the current repository.
+- Every repository-controlled `npm run ...` command prompts, including familiar
+  build, test, check, validate, dev, and status script names, because the
+  repository controls the shell code behind them. Exact read-only npm
+  inspections (`ls`, `outdated`, `view`) and the reviewed no-script package
+  dry-run remain allowed.
+- Git mutations such as fetch, branch/tag/remote changes, config writes, staging,
+  commit, push, reset, checkout, and restore prompt. Exact read-only inspections
+  such as status/diff/log/show, `branch --show-current`/`--list`, `remote
+  get-url`, `tag --list`, and allowlisted config-key reads remain allowed.
 - `token-safe.config.toml` reduces verbosity, default reasoning, compaction
   threshold, and tool-output size without disabling skills, agents, MCP
   servers, memory, hooks, or apps.
@@ -179,6 +182,13 @@ delegation. Automatic role selection never overrides the user's active profile.
 backup expectation, required flags, and collision policy for each operation.
 `node scripts/plan-install.mjs --all --json` prints this plan without invoking
 installers or mutating global state.
+The selected manifest profile is normative for operation selection and order.
+Generated profiles, ownership-marker writes, installed-plugin cache refresh,
+and the Unix hook-permission step are explicit operations in that contract; the
+planner, install/repair preflights, repair file execution, and runtime drift
+checks consume its resolved action ledger. Platform installers keep explicit
+PowerShell and shell execution code; semantic parity validation and behavioral
+smokes compare those paths with the contract so the manifest remains normative.
 
 The manifest intentionally keeps ECC-inspired improvements narrow: plan/apply
 separation and collision metadata are allowed; broad external config, MCP,
@@ -188,7 +198,9 @@ The canonical template and user-owned overlay are separate trust domains.
 Normal merge/repair preserves model/profile choice, approval and sandbox
 settings, project trust, custom MCPs, and unrelated marketplace entries.
 Chef-managed agent/MCP safety tables remain validated, while wholesale
-replacement requires the explicit force path and a backup.
+file replacement requires the explicit force path and a backup. Force and
+update synchronize source-owned entries in managed directories and preserve
+unrelated extras; neither mode authorizes wholesale directory deletion.
 The generated `full` and `multi-session` profiles retain the installed local
 MCP transport definitions and change only their enabled state, so selecting a
 profile cannot turn a local MCP entry into an incomplete command definition.
@@ -229,10 +241,11 @@ The marketplace entry points to a managed mirror under
 `AGENTS_HOME/plugins/sources/codex-chef-workflows`, which always stays inside
 the marketplace root required by the current Codex schema. This registration
 makes the plugin discoverable, not installed or enabled; namespaced plugin use
-requires an explicit plugin install and a new session. Marketplace JSON,
-direct-skill ownership, and every existing path component are preflighted
-before installers write any managed file. Linked or junctioned descendants
-that escape the configured homes fail closed.
+requires an explicit plugin install and a new session. Marketplace JSON, the
+platform launcher, `serena-pool.mjs`, copied/generated profiles, direct-skill
+ownership, every selected source, and every existing target path component are
+preflighted before installers write any managed file. Linked or junctioned
+descendants that escape the configured homes fail closed.
 
 After that explicit first plugin install, installer, repair, and update applies
 inspect the installed plugin version through the targeted `CODEX_HOME`. They
@@ -248,10 +261,17 @@ claiming runtime parity.
 have a global Codex setup. Without `--apply`, it is read-only and reports
 managed drift, missing config blocks, marketplace drift, extra managed plugin
 files, non-curated skills, and duplicate skill names. With `--apply`, it backs
-up and repairs only Codex Chef-managed files, merges missing config blocks, and
+up and repairs only Codex Chef-managed files, including the Serena bridge,
+merges missing config blocks, and
 updates the Codex Chef marketplace entry while preserving unrelated marketplace
-plugins. It also reports or refreshes stale versioned cache state only for an
+plugins. With explicit apply authority, the CLI may backup and replace a
+managed target; preview never does so. It also reports or refreshes stale versioned cache state only for an
 already-installed Codex Chef plugin.
+
+`--no-backup` is accepted only when the complete resolved operation is
+creation-only and all selected targets are absent. Any existing target, merge,
+replacement, deletion, prune, adoption, cache refresh, or global mutation makes
+preflight reject the run before its first write.
 
 Repair mode does not delete user skills. Extra global skills and duplicate
 skill names are cleanup candidates because they can pressure Codex's initial
@@ -271,9 +291,9 @@ changes while preserving unrelated untracked files, then
 runs `git pull --ff-only`. If new commits are pulled, it prints a fresh preview
 from the updated tree and stops. If the repository is already current, it runs
 local validation before the managed refresh, then refreshes scoped managed
-Codex Chef files through the backup-backed installer. That refresh may backup
-and replace scoped managed targets, including the managed Codex Chef plugin
-directory, and refreshes an already-installed stale plugin cache in place. It
+Codex Chef files through the backup-backed installer. That refresh synchronizes
+source-owned files, preserves unrelated directory extras, and refreshes an
+already-installed stale plugin cache in place. It
 does not install the plugin for users who have not opted in or publish. It does
 not perform unscoped cleanup, install curated
 global skills, install optional global Git guards, delete user skills, rotate
@@ -317,8 +337,7 @@ inspection. It prompts for:
 - package publishing
 - GitHub API operations, including auth status/token commands that can expose
   credential material
-- arbitrary repository-controlled `npm run ...` script execution outside the
-  reviewed local verification allowlist
+- every repository-controlled `npm run ...` script execution
 - broad `git config` value-dump commands and raw, unredacted `gitleaks dir`
 - git commit, push, reset, checkout, and restore
 - repair apply and managed plugin pruning
@@ -358,6 +377,24 @@ Operational contract:
 ## Git Hygiene
 
 Global Git guards are optional because they modify the user's Git defaults.
+Inspection reports current and proposed state without writing. Apply fails
+closed when either managed file or either Git config key contains foreign state.
+The operator must review and adopt only the exact conflict with
+`AdoptGitIgnore`, `AdoptGitHook`, `AdoptGitExcludesFile`, or
+`AdoptGitHooksPath` (the Bash installer uses the corresponding kebab-case
+flags); one adoption never implies another.
+
+Before the first Git-guard mutation, apply persists the exact prior two-file and
+two-key state in a typed `codex-chef.global-git-guards-receipt@1` receipt. The
+receipt distinguishes absent files/keys, preserves exact file bytes and modes,
+preserves ordered multi-values, and binds the expected post-apply file hashes,
+Unix modes, and key values. A handled failure rolls the transaction back.
+Restore validates the schema, recorded home, exact allowlist, size, paths, and
+link safety, then refuses to write unless the current state still matches that
+post-apply binding. Only then does it restore or unset each surface exactly. The installer
+prints the receipt path and exact `manage-global-git-guards.mjs restore`
+command; this receipt is deliberately separate from `codex-chef.backup.v1`.
+
 When installed, they:
 
 - keep obvious local secret and build-output paths ignored

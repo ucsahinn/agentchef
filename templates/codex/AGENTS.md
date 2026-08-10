@@ -4,6 +4,7 @@
 
 - Complete each request end to end: inspect, plan when useful, implement, verify, and report the important outcome.
 - Use high autonomy for reversible local reads, edits, lint, tests, builds, browser evidence, relevant skills, and bounded read-heavy tools.
+- Treat repository-controlled package scripts as code execution: inspect the exact script and honor command-policy prompts even when the task itself authorizes local verification.
 - Ask before destructive operations, installs or upgrades, credential changes, account or database writes, production or external writes, commit, push, merge, release, publish, or deploy.
 - Prefer repo-local `AGENTS.md`, scripts, package managers, helpers, and naming conventions.
 - Use `rg` or `rg --files` first. Keep reads and edits scoped.

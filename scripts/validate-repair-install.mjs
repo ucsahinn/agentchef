@@ -235,7 +235,7 @@ if (externalCwdPlan) {
   if (externalCwdPlan.schemaVersion !== "codex-chef.repair.v1") {
     fail("repair plan from external cwd must still resolve source files from the repair script location.");
   }
-  if (externalCwdPlan.managedFiles?.expected < 30 || !externalCwdPlan.actions?.some((action) => String(action.id || "").startsWith("codex-agent:"))) {
+  if (externalCwdPlan.managedFiles?.expected < 30 || !externalCwdPlan.actions?.some((action) => String(action.id || "").startsWith("codex-agents:"))) {
     fail("repair plan from external cwd must still find managed Codex Chef source files.");
   }
 }

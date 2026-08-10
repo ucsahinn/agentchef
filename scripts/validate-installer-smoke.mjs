@@ -34,6 +34,9 @@ function runInstaller(codexHome, agentsHome, extraArgs = [], {
   };
 
   if (process.platform === "win32") {
+    const fixtureStateRoot = path.dirname(codexHome);
+    env.LOCALAPPDATA = path.join(fixtureStateRoot, ".local-app-data");
+    env.PSModuleAnalysisCachePath = path.join(fixtureStateRoot, ".powershell-module-analysis-cache");
     return spawnSync("powershell.exe", [
       "-NoProfile",
       "-ExecutionPolicy",
@@ -332,6 +335,406 @@ function assertRunOk(result, label) {
 
 function progress(label) {
   process.stdout.write(`[installer-smoke] ${label}\n`);
+}
+
+function assertHomeContainsOnly(home, allowedTopLevel, label) {
+  if (!fs.existsSync(home)) return;
+  const allowed = new Set(allowedTopLevel);
+  const entries = fs.readdirSync(home).sort();
+  const unexpected = entries.filter((entry) => !allowed.has(entry) && entry !== "tmp");
+  if (unexpected.length > 0) {
+    fail(`${label} performed managed writes before failing: ${unexpected.join(", ")}`);
+  }
+  const tempRoot = path.join(home, "tmp");
+  if (fs.existsSync(tempRoot)) {
+    const tempEntries = fs.readdirSync(tempRoot).sort();
+    const arg0Root = path.join(tempRoot, "arg0");
+    if (
+      process.platform !== "win32"
+      || tempEntries.join(",") !== "arg0"
+      || !fs.lstatSync(arg0Root).isDirectory()
+      || fs.readdirSync(arg0Root).length !== 0
+    ) {
+      fail(`${label} created an unexpected temp footprint before failing.`);
+    }
+  }
+}
+
+function expectInstallerFailure(result, label) {
+  if (result.error) {
+    fail(`${label} could not run: ${result.error.message}`);
+  } else if (result.status === 0) {
+    fail(`${label} must fail closed.`);
+  }
+  return `${result.stdout || ""}\n${result.stderr || ""}`;
+}
+
+function runSafetyPreflight(codexHome, agentsHome, extraArgs = [], extraEnv = {}) {
+  return spawnSync(process.execPath, [
+    "scripts/lib/installer-safety-preflight.mjs",
+    "--codex-home",
+    codexHome,
+    "--agents-home",
+    agentsHome,
+    ...extraArgs
+  ], {
+    cwd: root,
+    env: { ...process.env, ...extraEnv },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+    windowsHide: true
+  });
+}
+
+function assertNoBackupInventoryGate() {
+  const scenarios = [
+    {
+      name: "existing managed directory under force/update semantics",
+      prepare: ({ codexHome }) => ensureDir(path.join(codexHome, "plugins", "codex-chef-workflows")),
+      args: []
+    },
+    {
+      name: "existing marketplace",
+      prepare: ({ agentsHome }) => {
+        const target = path.join(agentsHome, "plugins", "marketplace.json");
+        ensureDir(path.dirname(target));
+        fs.writeFileSync(target, "{}\n", "utf8");
+      },
+      args: []
+    },
+    {
+      name: "existing plugin cache",
+      prepare: ({ codexHome }) => ensureDir(path.join(codexHome, "plugins", "cache")),
+      args: []
+    },
+    {
+      name: "curated skill mutation",
+      prepare: () => {},
+      args: ["--install-skills"]
+    },
+    {
+      name: "direct skill adoption",
+      prepare: () => {},
+      args: ["--adoption-requested"]
+    }
+  ];
+  for (const scenario of scenarios) {
+    const fixtureSlug = scenario.name.replace(/[^a-z0-9-]+/gi, "-");
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef No Backup [${fixtureSlug}] #-`));
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    scenario.prepare({ codexHome, agentsHome, fixtureRoot });
+    const result = runSafetyPreflight(codexHome, agentsHome, ["--no-backup", ...scenario.args]);
+    const output = expectInstallerFailure(result, `No-backup ${scenario.name} preflight`);
+    assertIncludes(output, "creation-only", `No-backup ${scenario.name} preflight`);
+  }
+
+  const gitRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef No Backup [git-global] #-"));
+  const gitHome = path.join(gitRoot, "home");
+  const globalConfig = path.join(gitRoot, "global.gitconfig");
+  ensureDir(gitHome);
+  const gitResult = runSafetyPreflight(
+    path.join(gitRoot, ".codex"),
+    path.join(gitRoot, ".agents"),
+    ["--no-backup", "--install-git-guards", "--home", gitHome],
+    { HOME: gitHome, USERPROFILE: gitHome, GIT_CONFIG_GLOBAL: globalConfig }
+  );
+  const gitOutput = expectInstallerFailure(gitResult, "No-backup global Git setting preflight");
+  assertIncludes(gitOutput, "creation-only", "No-backup global Git setting preflight");
+}
+
+function runGitGuardAdoptionScenario() {
+  progress("Git guard narrow adoption receipt and restore");
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Git Guard Adoption #-"));
+  const home = path.join(fixtureRoot, "home");
+  const codexHome = path.join(fixtureRoot, ".codex");
+  const agentsHome = path.join(fixtureRoot, ".agents");
+  const globalConfig = path.join(fixtureRoot, "global.gitconfig");
+  const ignorePath = path.join(home, ".gitignore_global");
+  const hookPath = path.join(home, ".githooks", "pre-commit");
+  ensureDir(path.dirname(hookPath));
+  const foreignIgnore = "# foreign ignore must be restorable\n";
+  const foreignHook = "#!/bin/sh\necho foreign hook\n";
+  fs.writeFileSync(ignorePath, foreignIgnore, "utf8");
+  fs.writeFileSync(hookPath, foreignHook, "utf8");
+
+  const gitEnv = {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+    GIT_CONFIG_GLOBAL: globalConfig,
+    GIT_CONFIG_NOSYSTEM: "1"
+  };
+  const runGit = (args) => spawnSync("git", args, {
+    env: gitEnv,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  for (const [key, value] of [
+    ["core.excludesfile", path.join(fixtureRoot, "foreign-ignore-a")],
+    ["core.excludesfile", path.join(fixtureRoot, "foreign-ignore-b")],
+    ["core.hooksPath", path.join(fixtureRoot, "foreign-hooks")]
+  ]) {
+    assertRunOk(
+      runGit(["config", "--global", "--no-includes", "--add", key, value]),
+      `Git guard fixture config ${key}`
+    );
+  }
+  const priorValues = (key) => assertRunOk(
+    runGit(["config", "--global", "--no-includes", "--get-all", key]),
+    `Git guard fixture read ${key}`
+  ).trim().split(/\r?\n/).filter(Boolean);
+  const expectedPriorExcludes = priorValues("core.excludesfile");
+  const expectedPriorHooks = priorValues("core.hooksPath");
+
+  const gitGuardsArg = process.platform === "win32" ? "-InstallGitGuards" : "--install-git-guards";
+  const adoptionArgs = process.platform === "win32"
+    ? ["-AdoptGitIgnore", "-AdoptGitHook", "-AdoptGitExcludesFile", "-AdoptGitHooksPath"]
+    : ["--adopt-git-ignore", "--adopt-git-hook", "--adopt-git-excludes-file", "--adopt-git-hooks-path"];
+  const extraEnv = process.platform === "win32" ? envWithoutCodexCli() : {};
+  if (process.platform === "win32") {
+    const gitLookup = spawnSync("where.exe", ["git.exe"], { encoding: "utf8", windowsHide: true });
+    const gitExecutable = (gitLookup.stdout || "").split(/\r?\n/).find(Boolean);
+    if (gitExecutable) {
+      extraEnv.Path = [extraEnv.Path, path.dirname(gitExecutable)].filter(Boolean).join(path.delimiter);
+    }
+  }
+  const output = assertRunOk(
+    runInstaller(codexHome, agentsHome, [gitGuardsArg, ...adoptionArgs], {
+      extraEnv: { ...extraEnv, ...gitEnv }
+    }),
+    "Installer Git guard adoption smoke"
+  );
+  assertIncludes(output, "receipt", "Installer Git guard adoption smoke");
+  if (read(ignorePath) !== read(path.join(root, "templates", "git", ".gitignore_global"))) {
+    fail("Installer Git guard adoption must write the canonical ignore file.");
+  }
+  if (read(hookPath) !== read(path.join(root, "templates", "git", "pre-commit"))) {
+    fail("Installer Git guard adoption must write the canonical hook file.");
+  }
+  const receiptRoot = path.join(codexHome, "backups");
+  const receipts = fs.existsSync(receiptRoot)
+    ? fs.readdirSync(receiptRoot).filter((name) => name.endsWith("-git-guards.json"))
+    : [];
+  if (receipts.length !== 1) {
+    fail(`Installer Git guard adoption must create exactly one typed receipt; found ${receipts.length}.`);
+    return;
+  }
+  const receiptPath = path.join(receiptRoot, receipts[0]);
+  const restore = spawnSync(process.execPath, [
+    path.join(root, "scripts", "manage-global-git-guards.mjs"),
+    "restore",
+    "--home", home,
+    "--git-config-global", globalConfig,
+    "--receipt", receiptPath,
+    "--json"
+  ], {
+    cwd: root,
+    env: gitEnv,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+    timeout: 30000
+  });
+  assertRunOk(restore, "Installer Git guard receipt restore");
+  if (read(ignorePath) !== foreignIgnore || read(hookPath) !== foreignHook) {
+    fail("Installer Git guard restore must recover exact prior file bytes.");
+  }
+  if (
+    JSON.stringify(priorValues("core.excludesfile")) !== JSON.stringify(expectedPriorExcludes)
+    || JSON.stringify(priorValues("core.hooksPath")) !== JSON.stringify(expectedPriorHooks)
+  ) {
+    fail("Installer Git guard restore must recover exact ordered prior Git config values.");
+  }
+}
+
+function runInstallerSafetyScenarios() {
+  const noBackupArg = process.platform === "win32" ? "-NoBackup" : "--no-backup";
+  const forceArg = process.platform === "win32" ? "-Force" : "--force";
+  const updateArg = process.platform === "win32" ? "-Update" : "--update";
+  const gitGuardsArg = process.platform === "win32" ? "-InstallGitGuards" : "--install-git-guards";
+  const safetyEnv = process.platform === "win32" ? envWithoutCodexCli() : {};
+  if (process.platform === "win32") {
+    const gitLookup = spawnSync("where.exe", ["git.exe"], { encoding: "utf8", windowsHide: true });
+    const gitExecutable = (gitLookup.stdout || "").split(/\r?\n/).find(Boolean);
+    if (gitExecutable) {
+      safetyEnv.Path = [safetyEnv.Path, path.dirname(gitExecutable)].filter(Boolean).join(path.delimiter);
+    }
+  }
+  const runSafetyInstaller = (codexHome, agentsHome, args = [], options = {}) =>
+    runInstaller(codexHome, agentsHome, args, {
+      ...options,
+      extraEnv: {
+        ...safetyEnv,
+        ...(options.extraEnv || {})
+      }
+    });
+
+  progress("no-backup creation-only install");
+  const creationRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [creation] #-"));
+  const creationCodexHome = path.join(creationRoot, ".codex");
+  const creationAgentsHome = path.join(creationRoot, ".agents");
+  const creationOutput = assertRunOk(
+    runSafetyInstaller(creationCodexHome, creationAgentsHome, [noBackupArg]),
+    "Installer no-backup creation-only smoke"
+  );
+  assertInstalledBaseline(creationCodexHome, creationAgentsHome, "Installer no-backup creation-only smoke");
+  assertDefaultBoundaries(creationOutput, "Installer no-backup creation-only smoke");
+
+  progress("no-backup existing-target rejection");
+  const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [no-backup-existing] #-"));
+  const existingCodexHome = path.join(existingRoot, ".codex");
+  const existingAgentsHome = path.join(existingRoot, ".agents");
+  ensureDir(existingCodexHome);
+  const existingConfig = "model = \"user-owned\"\n";
+  fs.writeFileSync(path.join(existingCodexHome, "config.toml"), existingConfig, "utf8");
+  const existingOutput = expectInstallerFailure(
+    runSafetyInstaller(existingCodexHome, existingAgentsHome, [noBackupArg]),
+    "Installer no-backup existing-target smoke"
+  );
+  assertIncludes(existingOutput, "creation-only", "Installer no-backup existing-target smoke");
+  if (read(path.join(existingCodexHome, "config.toml")) !== existingConfig) {
+    fail("Installer no-backup rejection must preserve the existing target byte-for-byte.");
+  }
+  assertHomeContainsOnly(existingCodexHome, ["config.toml"], "Installer no-backup existing-target smoke");
+  if (fs.existsSync(existingAgentsHome)) {
+    fail("Installer no-backup existing-target smoke must fail before creating AGENTS_HOME.");
+  }
+
+  progress("force and update preserve unrelated directory files");
+  const extraPlugin = path.join(creationCodexHome, "plugins", "codex-chef-workflows", "user-extra.txt");
+  const extraMarketplacePlugin = path.join(creationAgentsHome, "plugins", "sources", "codex-chef-workflows", "user-extra.txt");
+  const extraDirectSkill = path.join(creationAgentsHome, "skills", "fetch", "user-extra.txt");
+  for (const target of [extraPlugin, extraMarketplacePlugin, extraDirectSkill]) {
+    fs.writeFileSync(target, "must survive force and update\n", "utf8");
+  }
+  assertRunOk(
+    runSafetyInstaller(creationCodexHome, creationAgentsHome, [forceArg]),
+    "Installer force extra-file preservation smoke"
+  );
+  for (const target of [extraPlugin, extraMarketplacePlugin, extraDirectSkill]) {
+    if (!fs.existsSync(target)) fail(`Installer force mode removed an unrelated directory file: ${target}`);
+  }
+  assertRunOk(
+    runSafetyInstaller(creationCodexHome, creationAgentsHome, [updateArg]),
+    "Installer update extra-file preservation smoke"
+  );
+  for (const target of [extraPlugin, extraMarketplacePlugin, extraDirectSkill]) {
+    if (!fs.existsSync(target)) fail(`Installer update mode removed an unrelated directory file: ${target}`);
+  }
+
+  for (const leaf of ["codex-profile.mjs", "serena-pool.mjs", "full.config.toml"]) {
+    progress(`preflight unsafe leaf ${leaf}`);
+    const leafRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef Install Safety [${leaf}] #-`));
+    const leafCodexHome = path.join(leafRoot, ".codex");
+    const leafAgentsHome = path.join(leafRoot, ".agents");
+    const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef Install Safety [${leaf}-external] #-`));
+    ensureDir(leafCodexHome);
+    fs.writeFileSync(path.join(externalRoot, "sentinel.txt"), "unchanged\n", "utf8");
+    fs.symlinkSync(externalRoot, path.join(leafCodexHome, leaf), process.platform === "win32" ? "junction" : "dir");
+    expectInstallerFailure(
+      runSafetyInstaller(leafCodexHome, leafAgentsHome, [forceArg]),
+      `Installer unsafe ${leaf} preflight smoke`
+    );
+    assertHomeContainsOnly(leafCodexHome, [leaf], `Installer unsafe ${leaf} preflight smoke`);
+    if (fs.existsSync(leafAgentsHome)) {
+      fail(`Installer unsafe ${leaf} preflight must fail before creating AGENTS_HOME.`);
+    }
+    if (fs.readdirSync(externalRoot).sort().join(",") !== "sentinel.txt") {
+      fail(`Installer unsafe ${leaf} preflight wrote through the linked leaf.`);
+    }
+  }
+
+  progress("Git guard ownership conflict rejection");
+  const guardsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [git-guards] #-"));
+  const guardsHome = path.join(guardsRoot, "home");
+  const guardsCodexHome = path.join(guardsRoot, ".codex");
+  const guardsAgentsHome = path.join(guardsRoot, ".agents");
+  const globalConfig = path.join(guardsRoot, "global.gitconfig");
+  ensureDir(guardsHome);
+  const foreignIgnore = "# foreign user guard\n";
+  fs.writeFileSync(path.join(guardsHome, ".gitignore_global"), foreignIgnore, "utf8");
+  fs.writeFileSync(
+    globalConfig,
+    `[core]\n\texcludesfile = ${path.join(guardsRoot, "foreign-ignore").replaceAll("\\", "/")}\n\thooksPath = ${path.join(guardsRoot, "foreign-hooks").replaceAll("\\", "/")}\n`,
+    "utf8"
+  );
+  const guardOutput = expectInstallerFailure(
+    runSafetyInstaller(guardsCodexHome, guardsAgentsHome, [gitGuardsArg], {
+      extraEnv: {
+        HOME: guardsHome,
+        USERPROFILE: guardsHome,
+        GIT_CONFIG_GLOBAL: globalConfig
+      }
+    }),
+    "Installer Git guard conflict smoke"
+  );
+  assertIncludes(guardOutput, "Git guard", "Installer Git guard conflict smoke");
+  if (fs.existsSync(guardsCodexHome) || fs.existsSync(guardsAgentsHome)) {
+    fail("Installer Git guard conflict must fail before writing either managed home.");
+  }
+  if (read(path.join(guardsHome, ".gitignore_global")) !== foreignIgnore) {
+    fail("Installer Git guard conflict must preserve the foreign guard file byte-for-byte.");
+  }
+}
+
+if (process.argv.includes("--git-guard-adoption")) {
+  runGitGuardAdoptionScenario();
+  if (failures.length > 0) {
+    console.error("Installer Git guard adoption smoke validation failed:");
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exit(1);
+  }
+  console.log("Installer Git guard adoption receipt and restore validation passed.");
+  process.exit(0);
+}
+
+if (process.argv.includes("--safety-contract")) {
+  const powershellInstaller = read(path.join(root, "scripts", "install.ps1"));
+  const shellInstaller = read(path.join(root, "scripts", "install.sh"));
+  const safetyHelper = read(path.join(root, "scripts", "lib", "installer-safety-preflight.mjs"));
+  if (/Remove-Item\s+-LiteralPath\s+\$Destination\s+-Recurse/i.test(powershellInstaller)) {
+    fail("PowerShell force/update must not remove a managed destination tree.");
+  }
+  if (/\brm\s+-rf\s+"?\$1"?/i.test(shellInstaller)) {
+    fail("Shell force/update must not remove a managed destination tree.");
+  }
+  for (const [label, source] of [["PowerShell", powershellInstaller], ["shell", shellInstaller]]) {
+    if (!source.includes("creation-only")) {
+      fail(`${label} installer must expose the no-backup creation-only gate.`);
+    }
+    if (!source.includes("installer-safety-preflight.mjs")) {
+      fail(`${label} installer must run the complete leaf and Git-guard ownership preflight.`);
+    }
+  }
+  if (!safetyHelper.includes('import { resolveInstallContract } from "./install-contract.mjs"')) {
+    fail("Installer safety preflight must derive its selected targets from the authoritative install contract.");
+  }
+  if (/function\s+collectInstallTargets\s*\(/.test(safetyHelper)) {
+    fail("Installer safety preflight must not maintain a second manual install-target inventory.");
+  }
+  assertNoBackupInventoryGate();
+  if (failures.length > 0) {
+    console.error("Installer safety contract validation failed:");
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exit(1);
+  }
+  console.log("Installer safety contract validation passed.");
+  process.exit(0);
+}
+
+if (process.argv.includes("--safety")) {
+  runInstallerSafetyScenarios();
+  runGitGuardAdoptionScenario();
+  if (failures.length > 0) {
+    console.error("Installer safety smoke validation failed:");
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exit(1);
+  }
+  console.log("Installer safety smoke validation passed.");
+  process.exit(0);
 }
 
 function initializeCuratedSkillInstallerFixture() {

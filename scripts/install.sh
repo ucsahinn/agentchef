@@ -11,6 +11,10 @@ ADOPT_FETCH_SKILL=0
 ADOPT_SEO_SKILL=0
 ADOPT_EVIDENCE_RESEARCH_SKILL=0
 ADOPT_DIRECT_SKILLS=" "
+ADOPT_GIT_IGNORE=0
+ADOPT_GIT_HOOK=0
+ADOPT_GIT_EXCLUDES_FILE=0
+ADOPT_GIT_HOOKS_PATH=0
 NO_BACKUP=0
 DRY_RUN=0
 PLAIN_OUTPUT=0
@@ -28,6 +32,10 @@ for arg in "$@"; do
     --adopt-fetch-skill) ADOPT_FETCH_SKILL=1 ;;
     --adopt-seo-skill) ADOPT_SEO_SKILL=1 ;;
     --adopt-evidence-research-skill) ADOPT_EVIDENCE_RESEARCH_SKILL=1 ;;
+    --adopt-git-ignore) ADOPT_GIT_IGNORE=1 ;;
+    --adopt-git-hook) ADOPT_GIT_HOOK=1 ;;
+    --adopt-git-excludes-file) ADOPT_GIT_EXCLUDES_FILE=1 ;;
+    --adopt-git-hooks-path) ADOPT_GIT_HOOKS_PATH=1 ;;
     --adopt-direct-skill=*)
       direct_skill_name="${arg#*=}"
       if [ "$direct_skill_name" = "" ]; then
@@ -49,6 +57,16 @@ done
 
 if [ "$ALL" -eq 1 ]; then
   INSTALL_SKILLS=1
+fi
+
+if [ "$INSTALL_GIT_GUARDS" -ne 1 ] && {
+  [ "$ADOPT_GIT_IGNORE" -eq 1 ] ||
+  [ "$ADOPT_GIT_HOOK" -eq 1 ] ||
+  [ "$ADOPT_GIT_EXCLUDES_FILE" -eq 1 ] ||
+  [ "$ADOPT_GIT_HOOKS_PATH" -eq 1 ];
+}; then
+  echo "Git guard adoption flags require --install-git-guards." >&2
+  exit 2
 fi
 
 require_command() {
@@ -259,6 +277,34 @@ preflight_install_targets() {
   fi
 }
 
+installer_safety_preflight() {
+  local safety_args=(
+    "$REPO_ROOT/scripts/lib/installer-safety-preflight.mjs"
+    "--codex-home" "$CODEX_HOME_DIR"
+    "--agents-home" "$AGENTS_HOME_DIR"
+  )
+  if [ "$NO_BACKUP" -eq 1 ]; then safety_args+=("--no-backup"); fi
+  if [ "$DRY_RUN" -eq 1 ]; then safety_args+=("--dry-run"); fi
+  if [ "$INSTALL_SKILLS" -eq 1 ]; then safety_args+=("--install-skills"); fi
+  if [ "$INSTALL_GIT_GUARDS" -eq 1 ]; then
+    safety_args+=("--install-git-guards" "--home" "$HOME")
+    if [ "$ADOPT_GIT_IGNORE" -eq 1 ]; then safety_args+=("--adopt-git-ignore"); fi
+    if [ "$ADOPT_GIT_HOOK" -eq 1 ]; then safety_args+=("--adopt-git-hook"); fi
+    if [ "$ADOPT_GIT_EXCLUDES_FILE" -eq 1 ]; then safety_args+=("--adopt-git-excludes-file"); fi
+    if [ "$ADOPT_GIT_HOOKS_PATH" -eq 1 ]; then safety_args+=("--adopt-git-hooks-path"); fi
+  fi
+  if [ "$ADOPT_FETCH_SKILL" -eq 1 ] || [ "$ADOPT_SEO_SKILL" -eq 1 ] || \
+     [ "$ADOPT_EVIDENCE_RESEARCH_SKILL" -eq 1 ] || [ "$ADOPT_DIRECT_SKILLS" != " " ] || \
+     [ "$ADOPT_GIT_IGNORE" -eq 1 ] || [ "$ADOPT_GIT_HOOK" -eq 1 ] || \
+     [ "$ADOPT_GIT_EXCLUDES_FILE" -eq 1 ] || [ "$ADOPT_GIT_HOOKS_PATH" -eq 1 ]; then
+    safety_args+=("--adoption-requested")
+  fi
+  if ! node "${safety_args[@]}"; then
+    echo "Installer safety preflight rejected this run; no-backup is creation-only and Git guard conflicts require explicit adoption." >&2
+    exit 1
+  fi
+}
+
 if [ "$INTERACTIVE" -eq 1 ]; then
   section "Guided setup"
   note "Press Enter to accept the safe default shown in brackets."
@@ -381,24 +427,12 @@ managed_copy_file() {
   cp "$source" "$destination"
 }
 
-managed_copy_tree() {
-  local source="$1"
-  local destination="$2"
-  assert_managed_write_target "$destination"
-  cp -R "$source" "$destination"
-}
-
 managed_backup_copy() {
   local source="$1"
   local destination="$2"
   assert_managed_write_target "$source"
   assert_managed_write_target "$destination"
   cp -R "$source" "$destination"
-}
-
-managed_remove_tree() {
-  assert_managed_write_target "$1"
-  rm -rf "$1"
 }
 
 ensure_dir() {
@@ -517,36 +551,16 @@ install_directory() {
   local source="$1"
   local destination="$2"
   assert_managed_write_target "$destination"
-  if [ -e "$destination" ] && [ "$FORCE" -ne 1 ]; then
-    ensure_dir "$(dirname "$destination")"
-    backup_target "$destination"
-    assert_managed_directory_target "$destination"
-    if run_change "$destination" "sync managed directory files from $source" true; then
-      (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
-        rel="${rel#./}"
-        ensure_dir "$(dirname "$destination/$rel")"
-        managed_copy_file "$source/$rel" "$destination/$rel"
-      done
-      action "synced directory" "$destination"
-    fi
-    return
-  fi
-  ensure_dir "$(dirname "$destination")"
   backup_target "$destination"
+  ensure_dir "$destination"
   assert_managed_directory_target "$destination"
-  if [ -e "$destination" ]; then
-    if ! run_change "$destination" "replace existing managed directory" managed_remove_tree "$destination"; then
-      if [ "$DRY_RUN" -ne 1 ]; then
-        echo "Failed to replace existing managed directory: $destination" >&2
-        exit 1
-      fi
-    fi
-  fi
-  if run_change "$destination" "install directory from $source" managed_copy_tree "$source" "$destination"; then
-    action "installed" "$destination"
-  elif [ "$DRY_RUN" -ne 1 ]; then
-    echo "Failed to install directory from $source to $destination" >&2
-    exit 1
+  if run_change "$destination" "sync source-owned files from $source while preserving unrelated extras" true; then
+    (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
+      rel="${rel#./}"
+      ensure_dir "$(dirname "$destination/$rel")"
+      managed_copy_file "$source/$rel" "$destination/$rel"
+    done
+    action "synced directory" "$destination"
   fi
 }
 
@@ -556,7 +570,7 @@ note "Agents home: $AGENTS_HOME_DIR"
 if [ "$UPDATE" -eq 1 ]; then
   note "Mode: update managed targets after backup; preserve user config and synchronize Codex Chef tables"
 elif [ "$FORCE" -eq 1 ]; then
-  note "Mode: replace managed targets after backup"
+  note "Mode: refresh source-owned managed targets after backup; preserve unrelated directory extras"
 else
   note "Mode: preserve existing files; merge missing config blocks"
 fi
@@ -586,6 +600,7 @@ if [ "$INTERACTIVE" -eq 1 ]; then
   fi
 fi
 
+installer_safety_preflight
 run_preflight_validators
 preflight_install_targets
 
@@ -678,7 +693,7 @@ fi
 
 PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
 PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
-if [ "$DRY_RUN" -ne 1 ]; then
+if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
   PLUGIN_REFRESH_ARGS+=("--apply")
 fi
 if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
@@ -688,19 +703,65 @@ fi
 
 if [ "$INSTALL_GIT_GUARDS" -eq 1 ]; then
   section "Optional Git guards"
-  GITIGNORE_TARGET="$HOME/.gitignore_global"
-  HOOKS_DIR="$HOME/.githooks"
-  install_file "$REPO_ROOT/templates/git/.gitignore_global" "$GITIGNORE_TARGET"
-  ensure_dir "$HOOKS_DIR"
-  install_file "$REPO_ROOT/templates/git/pre-commit" "$HOOKS_DIR/pre-commit"
-  run_change "$HOOKS_DIR/pre-commit" "mark hook executable" chmod +x "$HOOKS_DIR/pre-commit" || true
+  GIT_GUARD_HELPER="$REPO_ROOT/scripts/manage-global-git-guards.mjs"
+  GIT_GUARD_COMMAND="apply"
+  if [ "$DRY_RUN" -eq 1 ]; then GIT_GUARD_COMMAND="preview"; fi
+  GIT_GUARD_ARGS=(
+    "$GIT_GUARD_HELPER"
+    "$GIT_GUARD_COMMAND"
+    "--home" "$HOME"
+    "--ignore-source" "$REPO_ROOT/templates/git/.gitignore_global"
+    "--hook-source" "$REPO_ROOT/templates/git/pre-commit"
+  )
+  if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then
+    GIT_GUARD_ARGS+=("--git-config-global" "$GIT_CONFIG_GLOBAL")
+  fi
+  if [ "$ADOPT_GIT_IGNORE" -eq 1 ]; then GIT_GUARD_ARGS+=("--adopt-file" "gitignore-global"); fi
+  if [ "$ADOPT_GIT_HOOK" -eq 1 ]; then GIT_GUARD_ARGS+=("--adopt-file" "pre-commit-hook"); fi
+  if [ "$ADOPT_GIT_EXCLUDES_FILE" -eq 1 ]; then GIT_GUARD_ARGS+=("--adopt-key" "core.excludesfile"); fi
+  if [ "$ADOPT_GIT_HOOKS_PATH" -eq 1 ]; then GIT_GUARD_ARGS+=("--adopt-key" "core.hooksPath"); fi
+  if [ "$DRY_RUN" -ne 1 ]; then
+    GIT_GUARD_RECEIPT="${BACKUP_ROOT}-git-guards.json"
+    ensure_dir "$CODEX_HOME_DIR/backups"
+    GIT_GUARD_ARGS+=("--receipt" "$GIT_GUARD_RECEIPT")
+  fi
+  GIT_GUARD_ARGS+=("--json")
+  if ! GIT_GUARD_OUTPUT="$(node "${GIT_GUARD_ARGS[@]}")"; then
+    echo "$GIT_GUARD_OUTPUT" >&2
+    echo "Global Git guard transaction failed; managed Git state was rolled back." >&2
+    exit 1
+  fi
+  echo "$GIT_GUARD_OUTPUT"
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "Would set global Git config core.excludesfile: $GITIGNORE_TARGET"
-    echo "Would set global Git config core.hooksPath: $HOOKS_DIR"
+    action "previewed" "global Git guard files, adoption decisions, and config changes"
   else
-    git config --global core.excludesfile "$GITIGNORE_TARGET"
-    git config --global core.hooksPath "$HOOKS_DIR"
-    action "configured" "global Git excludesfile and hooksPath"
+    if ! chmod +x "$HOME/.githooks/pre-commit"; then
+      RESTORE_ARGS=(
+        "$GIT_GUARD_HELPER"
+        "restore"
+        "--home" "$HOME"
+        "--receipt" "$GIT_GUARD_RECEIPT"
+        "--json"
+      )
+      if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then
+        RESTORE_ARGS+=("--git-config-global" "$GIT_CONFIG_GLOBAL")
+      fi
+      if ! node "${RESTORE_ARGS[@]}"; then
+        echo "Global Git hook chmod failed and receipt rollback also failed: $GIT_GUARD_RECEIPT" >&2
+        exit 1
+      fi
+      echo "Global Git hook chmod failed; receipt rollback restored the prior Git guard state." >&2
+      exit 1
+    fi
+    action "configured" "global Git guard files and config transaction"
+    note "Git guard receipt: $GIT_GUARD_RECEIPT"
+    RESTORE_HINT_ARGS=("node" "$GIT_GUARD_HELPER" "restore" "--home" "$HOME")
+    if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then
+      RESTORE_HINT_ARGS+=("--git-config-global" "$GIT_CONFIG_GLOBAL")
+    fi
+    RESTORE_HINT_ARGS+=("--receipt" "$GIT_GUARD_RECEIPT" "--json")
+    printf -v RESTORE_HINT '%q ' "${RESTORE_HINT_ARGS[@]}"
+    note "Restore with: ${RESTORE_HINT% }"
   fi
 fi
 

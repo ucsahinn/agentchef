@@ -2,9 +2,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { inspectMarketplaceEntry, writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
+import { resolveInstallContract } from "./lib/install-contract.mjs";
+import { inspectInstallerSafety } from "./lib/installer-safety-preflight.mjs";
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifests", "install-plan.json"), "utf8"));
@@ -16,6 +19,8 @@ const pinnedSkillActivation = fs.readFileSync(path.join(root, "scripts", "lib", 
 const marketplaceHelper = fs.readFileSync(path.join(root, "scripts", "upsert-marketplace-entry.mjs"), "utf8");
 const pluginRefreshHelper = fs.readFileSync(path.join(root, "scripts", "refresh-installed-plugin.mjs"), "utf8");
 const repairHelper = fs.readFileSync(path.join(root, "scripts", "repair-install.mjs"), "utf8");
+const runtimeVerifier = fs.readFileSync(path.join(root, "scripts", "verify-install-runtime.mjs"), "utf8");
+const safetyPreflight = fs.readFileSync(path.join(root, "scripts", "lib", "installer-safety-preflight.mjs"), "utf8");
 
 function fail(message) {
   failures.push(message);
@@ -29,6 +34,18 @@ function requireRegex(text, pattern, label) {
   if (!pattern.test(text)) fail(`${label} missing pattern: ${pattern}`);
 }
 
+function requireOrderedText(text, snippets, label) {
+  let cursor = -1;
+  for (const snippet of snippets) {
+    const index = text.indexOf(snippet, cursor + 1);
+    if (index < 0) {
+      fail(`${label} missing ordered snippet: ${snippet}`);
+      return;
+    }
+    cursor = index;
+  }
+}
+
 function operation(id) {
   return manifest.operations.find((item) => item.id === id);
 }
@@ -36,7 +53,7 @@ function operation(id) {
 function runMarketplaceHelperSmokes() {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-marketplace-"));
   const marketplacePath = path.join(fixtureRoot, "agents", "plugins", "marketplace.json");
-  const pluginTarget = path.join(fixtureRoot, "codex", "plugins", "codex-chef-workflows");
+  const pluginTarget = path.join(fixtureRoot, "agents", "plugins", "sources", "codex-chef-workflows");
   const expectedPluginSource = `./${path.relative(fixtureRoot, pluginTarget).replaceAll(path.sep, "/")}`;
   fs.mkdirSync(path.dirname(marketplacePath), { recursive: true });
 
@@ -149,13 +166,19 @@ for (const id of manifest.profiles.all || []) {
 const requiredOperations = [
   "codex-agents-md",
   "codex-config",
+  "codex-profile-launcher",
+  "codex-serena-pool",
   "codex-rules",
   "codex-agents",
   "codex-profiles",
+  "codex-mcp-profiles",
   "codex-plugin",
+  "codex-plugin-marketplace-source",
   "plugin-marketplace",
+  "installed-plugin-cache-refresh",
   "git-ignore-global",
   "git-pre-commit-hook",
+  "git-pre-commit-hook-executable",
   "git-config-excludesfile",
   "git-config-hooks-path",
   "curated-skills"
@@ -182,6 +205,10 @@ for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall ==
 requireText(ps, "[switch]$All", "PowerShell installer");
 requireText(ps, "[switch]$InstallSkills", "PowerShell installer");
 requireText(ps, "[switch]$InstallGitGuards", "PowerShell installer");
+requireText(ps, "[switch]$AdoptGitIgnore", "PowerShell installer");
+requireText(ps, "[switch]$AdoptGitHook", "PowerShell installer");
+requireText(ps, "[switch]$AdoptGitExcludesFile", "PowerShell installer");
+requireText(ps, "[switch]$AdoptGitHooksPath", "PowerShell installer");
 requireText(ps, "[switch]$Force", "PowerShell installer");
 requireText(ps, "[switch]$Repair", "PowerShell installer");
 requireText(ps, "[switch]$NoBackup", "PowerShell installer");
@@ -193,7 +220,7 @@ requireText(ps, "AGENTS_HOME", "PowerShell installer");
 requireText(ps, "Backup-Target", "PowerShell installer");
 requireText(ps, "Assert-ManagedDirectoryTarget", "PowerShell installer");
 requireText(ps, "assert-install-surface.mjs", "PowerShell installer");
-requireText(ps, "Sync managed directory files from", "PowerShell installer");
+requireText(ps, "Sync source-owned files from", "PowerShell installer");
 requireText(ps, "synced directory", "PowerShell installer");
 requireText(ps, "Install-CodexConfig", "PowerShell installer");
 requireText(ps, "merge-codex-config.mjs", "PowerShell installer");
@@ -228,6 +255,8 @@ requireText(ps, "Upsert Codex Chef plugin marketplace entry", "PowerShell instal
 requireText(ps, "Cannot update plugin marketplace because it is invalid or unreadable", "PowerShell installer");
 requireText(ps, "refresh-installed-plugin.mjs", "PowerShell installer");
 requireText(ps, "Refresh installed Codex Chef plugin cache", "PowerShell installer");
+requireText(ps, "manage-global-git-guards.mjs", "PowerShell installer");
+requireText(ps, "-git-guards.json", "PowerShell installer");
 requireText(ps, "successful dry run or install", "PowerShell installer");
 requireRegex(ps, /exit\s+0\s*$/m, "PowerShell installer");
 requireText(ps, "templates\\git\\.gitignore_global", "PowerShell installer");
@@ -257,6 +286,10 @@ requireText(sh, "ALL=0", "Bash installer");
 requireText(sh, "FORCE=0", "Bash installer");
 requireText(sh, "REPAIR=0", "Bash installer");
 requireText(sh, "--adopt-direct-skill=", "Bash installer");
+requireText(sh, "--adopt-git-ignore", "Bash installer");
+requireText(sh, "--adopt-git-hook", "Bash installer");
+requireText(sh, "--adopt-git-excludes-file", "Bash installer");
+requireText(sh, "--adopt-git-hooks-path", "Bash installer");
 requireText(sh, "direct_skill_names", "Bash installer");
 requireText(sh, "NO_BACKUP=0", "Bash installer");
 requireText(sh, "DRY_RUN=0", "Bash installer");
@@ -272,7 +305,7 @@ requireText(sh, "AGENTS_HOME_DIR", "Bash installer");
 requireText(sh, "backup_target", "Bash installer");
 requireText(sh, "assert_managed_directory_target", "Bash installer");
 requireText(sh, "assert-install-surface.mjs", "Bash installer");
-requireText(sh, "sync managed directory files from", "Bash installer");
+requireText(sh, "sync source-owned files from", "Bash installer");
 requireText(sh, "synced directory", "Bash installer");
 requireText(sh, "install_codex_config", "Bash installer");
 requireText(sh, "merge-codex-config.mjs", "Bash installer");
@@ -306,8 +339,15 @@ requireText(sh, "Would upsert Codex Chef plugin marketplace entry", "Bash instal
 requireText(sh, "Cannot update plugin marketplace because it is invalid or unreadable", "Bash installer");
 requireText(sh, "refresh-installed-plugin.mjs", "Bash installer");
 requireText(sh, "Refresh installed Codex Chef plugin cache", "Bash installer");
+requireText(sh, "manage-global-git-guards.mjs", "Bash installer");
+requireText(sh, "-git-guards.json", "Bash installer");
 requireText(sh, "Backup failed; refusing to replace managed target without a backup", "Bash installer");
-requireText(sh, "Failed to replace existing managed directory", "Bash installer");
+if (/rm\s+-rf|Remove-Item[^\n]*-Recurse/i.test(`${ps}\n${sh}`)) {
+  fail("Installers must not tree-replace managed directories during force or update.");
+}
+if (/git\s+config\s+--global/i.test(`${ps}\n${sh}`)) {
+  fail("Installers must route global Git guard mutations through the typed transaction helper.");
+}
 requireText(sh, "templates/git/.gitignore_global", "Bash installer");
 requireText(sh, "templates/git/pre-commit", "Bash installer");
 requireText(sh, "core.excludesfile", "Bash installer");
@@ -415,8 +455,147 @@ requireText(pluginRefreshHelper, '["plugin", "list", "--json"]', "Installed plug
 requireText(pluginRefreshHelper, '["plugin", "add", PLUGIN_ID, "--json"]', "Installed plugin refresh helper");
 requireText(pluginRefreshHelper, 'status: "not-installed"', "Installed plugin refresh helper");
 requireText(repairHelper, 'import { PLUGIN_ID, refreshInstalledPlugin } from "./refresh-installed-plugin.mjs"', "Repair helper");
-requireText(repairHelper, "pluginRefresh = refreshInstalledPlugin", "Repair helper");
+requireText(repairHelper, "pluginRefresh = noBackupPluginRefresh || refreshInstalledPlugin", "Repair helper");
+for (const [surface, label] of [
+  [repairHelper, "Repair helper"],
+  [runtimeVerifier, "Runtime verifier"],
+  [safetyPreflight, "Installer safety preflight"]
+]) {
+  requireText(surface, "resolveInstallContract", label);
+  requireText(surface, "contract.operations", label);
+}
 runMarketplaceHelperSmokes();
+
+function validateResolvedInstallContract() {
+  const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract");
+  const codexHome = path.join(fixtureRoot, "codex");
+  const agentsHome = path.join(fixtureRoot, "agents");
+  const contract = resolveInstallContract({
+    platform: "windows",
+    codexHome,
+    agentsHome,
+    home: fixtureRoot
+  });
+  const safety = inspectInstallerSafety({
+    codexHome,
+    agentsHome,
+    home: fixtureRoot
+  });
+  const semanticLedger = contract.operations.map((action) => ({
+    id: action.id,
+    kind: action.kind,
+    destination: action.destination ?? null,
+    key: action.key ?? null,
+    backup: action.backup
+  }));
+  if (JSON.stringify(safety.contract.actions) !== JSON.stringify(semanticLedger)) {
+    fail("Installer preflight operation ledger must exactly match resolved IDs, kinds, destinations, keys, backup semantics, and order.");
+  }
+  if (JSON.stringify(contract.selectedComponents.map((operation) => operation.id))
+    !== JSON.stringify(manifest.profiles.default)) {
+    fail("Resolved default installer components must preserve exact manifest profile order.");
+  }
+
+  const actionById = new Map(contract.operations.map((action) => [action.id, action]));
+  if (actionById.get("codex-profile-launcher")?.destination !== path.join(codexHome, "codex-profile.mjs")) {
+    fail("Resolved installer contract must target the Codex profile launcher.");
+  }
+  if (actionById.get("codex-serena-pool")?.destination !== path.join(codexHome, "serena-pool.mjs")) {
+    fail("Resolved installer contract must target the Serena pool launcher.");
+  }
+  const generatedNames = contract.operations
+    .filter((action) => action.kind === "generate-mcp-profile")
+    .map((action) => path.basename(action.destination));
+  if (JSON.stringify(generatedNames) !== JSON.stringify([
+    "full.config.toml",
+    "multi-session.config.toml",
+    "offline.config.toml"
+  ])) {
+    fail("Resolved installer contract must generate the three MCP profiles in manifest order.");
+  }
+  const copiedProfiles = contract.operations
+    .filter((action) => action.componentId === "codex-profiles")
+    .map((action) => path.basename(action.destination));
+  if (copiedProfiles.some((name) => generatedNames.includes(name))) {
+    fail("Generated MCP profiles must not also be modeled as plain copies.");
+  }
+  const markerActions = contract.operations.filter((action) => action.kind === "write-ownership-marker");
+  if (markerActions.length !== skillCatalog.skills.filter((skill) => skill.directInstall === true).length) {
+    fail("Resolved installer contract must include one ownership-marker action per direct skill.");
+  }
+  if (!contract.operations.some((action) => action.kind === "refresh-plugin-cache")) {
+    fail("Resolved installer contract must include installed plugin cache refresh.");
+  }
+  for (const expectedSource of [
+    path.join(root, "templates", "codex", "codex-profile.mjs"),
+    path.join(root, "templates", "codex", "serena-pool.mjs"),
+    path.join(root, "templates", "codex", "profiles", "multi-session.config.toml")
+  ]) {
+    if (!contract.sourcePreflight.includes(expectedSource)) {
+      fail(`Manifest-derived source preflight is missing artifact: ${expectedSource}`);
+    }
+  }
+  const brokenManifest = structuredClone(manifest);
+  brokenManifest.operations.find((operation) => operation.id === "codex-profile-launcher").source
+    = "templates/codex/missing-codex-profile.mjs";
+  try {
+    resolveInstallContract({
+      manifest: brokenManifest,
+      platform: "windows",
+      codexHome,
+      agentsHome,
+      home: fixtureRoot
+    });
+    fail("Manifest-derived source preflight must fail before writes when a selected source is missing.");
+  } catch (error) {
+    if (!/source file is missing/i.test(error.message)) {
+      fail(`Missing selected source produced unexpected preflight error: ${error.message}`);
+    }
+  }
+  for (const expectedTarget of [
+    path.join(codexHome, "codex-profile.mjs"),
+    path.join(codexHome, "serena-pool.mjs"),
+    path.join(codexHome, "full.config.toml"),
+    path.join(codexHome, "multi-session.config.toml"),
+    path.join(codexHome, "offline.config.toml"),
+    ...markerActions.map((action) => action.destination)
+  ]) {
+    if (!contract.preflightTargets.includes(expectedTarget)) {
+      fail(`Manifest-derived preflight inventory is missing target: ${expectedTarget}`);
+    }
+  }
+
+  requireOrderedText(ps, [
+    '"AGENTS.md")',
+    '"config.windows.toml")',
+    '"codex-profile.mjs")',
+    '"serena-pool.mjs")',
+    '"rules\\default.rules")',
+    '"agents") -Filter "*.toml"',
+    '"profiles") -Filter "*.toml"',
+    "Install-Directory -Source $PluginSource -Destination $PluginTarget",
+    "Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget",
+    "Install-Directory -Source $DirectSource -Destination $DirectTarget",
+    "Upsert Codex Chef plugin marketplace entry",
+    "Refresh installed Codex Chef plugin cache"
+  ], "PowerShell installer operation order");
+  requireOrderedText(sh, [
+    'AGENTS.md"',
+    'config.unix.toml"',
+    'codex-profile.mjs"',
+    'serena-pool.mjs"',
+    'rules/default.rules"',
+    '/agents/*.toml',
+    '/profiles/*.toml',
+    'install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"',
+    'install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"',
+    'install_directory "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET"',
+    "Would upsert Codex Chef plugin marketplace entry",
+    "Refresh installed Codex Chef plugin cache"
+  ], "Bash installer operation order");
+}
+
+validateResolvedInstallContract();
 
 function validatePortabilityContracts() {
   const ignoredDirectories = new Set([
@@ -463,6 +642,7 @@ function validatePortabilityContracts() {
     /\/home\/[^/"'`\s]+/g
   ];
   const forbiddenLocalIdentifiers = new RegExp(`\\b(?:${["ula", "sc"].join("")}|${["mit", "nick"].join("")})\\b`, "gi");
+  const genericHomeRegexLiteral = ["/ho", "me/i"].join("");
 
   for (const file of walkTextFiles(root)) {
     const relativePath = path.relative(root, file).split(path.sep).join("/");
@@ -471,6 +651,10 @@ function validatePortabilityContracts() {
     for (const pattern of personalPathPatterns) {
       pattern.lastIndex = 0;
       for (const match of text.matchAll(pattern)) {
+        if (match[0] === genericHomeRegexLiteral
+          && text.slice(match.index, match.index + match[0].length) === genericHomeRegexLiteral) {
+          continue;
+        }
         fail(`${relativePath} contains a machine/user-specific absolute path: ${match[0]}`);
       }
     }

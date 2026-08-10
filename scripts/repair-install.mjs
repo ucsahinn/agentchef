@@ -5,11 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findProblemRules, significantRulesLines } from "./lib/approval-rules.mjs";
+import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { assertManagedTargetPath, isPathInside } from "./lib/managed-path-safety.mjs";
 import {
   inspectDirectSkillTarget,
   isDirectSkillStateAdoptable,
-  markerFileName,
   writeDirectSkillMarker
 } from "./manage-direct-skill-target.mjs";
 import { inspectMarketplaceEntry, writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
@@ -32,6 +32,7 @@ installCliErrorBoundary({
 
 const options = {
   apply: false,
+  explicitPreview: false,
   json: false,
   noBackup: false,
   adoptFetchSkill: false,
@@ -50,7 +51,7 @@ for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
   if (arg === "--apply") options.apply = true;
   else if (arg === "--preview") {
-    // Explicit dry-run alias for operator copy-paste flows; preview is the default mode.
+    options.explicitPreview = true;
   }
   else if (arg === "--json") options.json = true;
   else if (arg === "--no-backup") options.noBackup = true;
@@ -84,6 +85,22 @@ for (let index = 0; index < args.length; index += 1) {
 
 if (!["windows", "unix"].includes(options.platform)) {
   throw new CliUsageError(`Unsupported platform: ${options.platform}`);
+}
+
+if (
+  options.explicitPreview
+  && (
+    options.apply
+    || options.noBackup
+    || options.adoptFetchSkill
+    || options.adoptSeoSkill
+    || options.adoptEvidenceResearchSkill
+    || options.adoptDirectSkills.size > 0
+    || options.pruneManagedPluginExtras
+    || options.migrateLegacyProfilePins
+  )
+) {
+  throw new CliUsageError("--preview cannot be combined with write-capable options.");
 }
 
 function printHelp() {
@@ -444,147 +461,97 @@ function repairRulesFile(sourceRel, targetPath, id) {
   };
 }
 
-function repairManagedFiles() {
-  const entries = [];
-  const generatedProfiles = [];
-  entries.push({
-    id: "codex-agents-md",
-    source: "templates/codex/AGENTS.md",
-    target: path.join(options.codexHome, "AGENTS.md")
-  });
-  entries.push({
-    id: "codex-profile-launcher",
-    source: "templates/codex/codex-profile.mjs",
-    target: path.join(options.codexHome, "codex-profile.mjs")
-  });
-  const rulesEntry = {
-    id: "codex-rules",
-    source: "templates/codex/rules/default.rules",
-    target: path.join(options.codexHome, "rules", "default.rules")
-  };
-
-  for (const file of listFilesRecursive(path.join(root, "templates", "codex", "agents"))) {
-    entries.push({
-      id: `codex-agent:${file}`,
-      source: toPosix(path.join("templates", "codex", "agents", file)),
-      target: path.join(options.codexHome, "agents", file)
-    });
-  }
-
-  for (const file of listFilesRecursive(path.join(root, "templates", "codex", "profiles"))) {
-    if (["full.config.toml", "multi-session.config.toml", "offline.config.toml"].includes(file)) {
-      generatedProfiles.push({
-        id: `codex-profile:${file}`,
-        source: toPosix(path.join("templates", "codex", "profiles", file)),
-        target: path.join(options.codexHome, file)
-      });
-      continue;
-    }
-    entries.push({
-      id: `codex-profile:${file}`,
-      source: toPosix(path.join("templates", "codex", "profiles", file)),
-      target: path.join(options.codexHome, file)
-    });
-  }
-
-  const pluginSourceRoot = path.join(root, "plugins", "codex-chef-workflows");
-  const pluginTargetRoot = path.join(options.codexHome, "plugins", "codex-chef-workflows");
-  const pluginSourceFiles = listFilesRecursive(pluginSourceRoot, { rejectLinks: true });
-  for (const file of pluginSourceFiles) {
-    entries.push({
-      id: `codex-plugin:${file}`,
-      source: toPosix(path.join("plugins", "codex-chef-workflows", file)),
-      target: path.join(pluginTargetRoot, file)
-    });
-  }
-  const marketplacePluginTargetRoot = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
-  for (const file of pluginSourceFiles) {
-    entries.push({
-      id: `marketplace-plugin-source:${file}`,
-      source: toPosix(path.join("plugins", "codex-chef-workflows", file)),
-      target: path.join(marketplacePluginTargetRoot, file)
-    });
-  }
-  for (const directSkill of directSkills) {
-    const sourceRoot = path.join(pluginSourceRoot, "skills", directSkill.name);
-    const targetRoot = path.join(options.agentsHome, "skills", directSkill.name);
-    for (const file of listFilesRecursive(sourceRoot)) {
-      entries.push({
-        id: `direct-skill:${directSkill.name}:${file}`,
-        source: toPosix(path.join("plugins", "codex-chef-workflows", "skills", directSkill.name, file)),
-        target: path.join(targetRoot, file)
-      });
-    }
-  }
-
-  for (const entry of entries) assertManagedTarget(entry.target);
-  assertManagedTarget(rulesEntry.target);
-
+function repairManagedFiles(contract) {
   let current = 0;
   let planned = 0;
   let applied = 0;
   const changed = [];
-  for (const entry of entries) {
-    const result = repairFile(entry.source, entry.target, entry.id);
+
+  function account(result) {
     if (result.status === "current") current += 1;
     else if (result.status === "planned") planned += 1;
     else if (result.status === "applied") applied += 1;
     if (result.status !== "current") changed.push(result);
   }
-  for (const profile of generatedProfiles) {
-    const result = repairGeneratedMcpProfile(profile.source, profile.target, profile.id);
-    if (result.status === "current") current += 1;
-    else if (result.status === "planned") planned += 1;
-    else if (result.status === "applied") applied += 1;
-    if (result.status !== "current") changed.push(result);
-  }
-  for (const directSkill of directSkills) {
-    const sourceRoot = path.join(pluginSourceRoot, "skills", directSkill.name);
-    const targetRoot = path.join(options.agentsHome, "skills", directSkill.name);
-    const markerPath = path.join(targetRoot, markerFileName);
-    const markerWasCurrent = inspectDirectSkillTarget(sourceRoot, targetRoot).status === "managed";
-    if (!markerWasCurrent) {
+
+  const pluginMirrors = [];
+  let expected = 0;
+  for (const action of contract.operations) {
+    if (action.id === "codex-config") {
+      config = runConfigMerge();
+      expected += 1;
+      if (config.status === "current") current += 1;
+      else if (config.status === "planned") planned += 1;
+      else if (config.status === "applied") applied += 1;
+      continue;
+    }
+    if (action.kind === "copy-file") {
+      const result = action.id === "codex-rules"
+        ? repairRulesFile(action.source, action.destination, action.id)
+        : repairFile(action.source, action.destination, action.id);
+      expected += 1;
+      account(result);
+      continue;
+    }
+    if (action.kind === "generate-mcp-profile") {
+      expected += 1;
+      account(repairGeneratedMcpProfile(action.source, action.destination, action.id));
+      continue;
+    }
+    if (action.kind === "copy-directory") {
+      const sourceRoot = path.join(root, action.source);
+      const sourceFiles = listFilesRecursive(sourceRoot, { rejectLinks: true });
+      if (["codex-plugin", "codex-plugin-marketplace-source"].includes(action.componentId)) {
+        pluginMirrors.push({
+          id: action.componentId,
+          root: action.destination,
+          sourceFiles: new Set(sourceFiles)
+        });
+      }
+      for (const file of sourceFiles) {
+        expected += 1;
+        account(repairFile(
+          toPosix(path.join(action.source, file)),
+          path.join(action.destination, file),
+          `${action.id}:${file}`
+        ));
+      }
+      continue;
+    }
+    if (action.kind === "write-ownership-marker") {
+      expected += 1;
+      const targetRoot = path.dirname(action.destination);
+      const skillName = path.basename(targetRoot);
+      const directSkill = directSkills.find((entry) => entry.name === skillName);
+      if (!directSkill) throw new Error(`Resolved ownership marker has no matching direct skill: ${action.id}`);
+      const sourceRoot = path.join(root, action.source);
+      const markerWasCurrent = inspectDirectSkillTarget(sourceRoot, targetRoot).status === "managed";
+      if (markerWasCurrent) {
+        current += 1;
+        continue;
+      }
+      const status = options.apply ? "applied" : "planned";
       if (options.apply) {
-        if (fs.existsSync(markerPath)) backupTarget(markerPath);
+        if (fs.existsSync(action.destination)) backupTarget(action.destination);
         writeDirectSkillMarker(sourceRoot, targetRoot, {
           allowAdopt: shouldAdoptDirectSkill(directSkill)
         });
-        recordAction({
-          id: `direct-skill:${directSkill.name}:ownership`,
-          kind: "write-managed-ownership-marker",
-          target: markerPath,
-          status: "applied",
-          reason: "managed-direct-skill-ownership"
-        });
-        applied += 1;
-      } else {
-        recordAction({
-          id: `direct-skill:${directSkill.name}:ownership`,
-          kind: "write-managed-ownership-marker",
-          target: markerPath,
-          status: "planned",
-          reason: "managed-direct-skill-ownership"
-        });
-        planned += 1;
       }
-    } else {
-      current += 1;
+      recordAction({
+        id: action.id,
+        kind: "write-managed-ownership-marker",
+        target: action.destination,
+        status,
+        reason: "managed-direct-skill-ownership"
+      });
+      if (status === "applied") applied += 1;
+      else planned += 1;
     }
   }
-  const rulesResult = repairRulesFile(rulesEntry.source, rulesEntry.target, rulesEntry.id);
-  if (rulesResult.status === "current") current += 1;
-  else if (rulesResult.status === "planned") planned += 1;
-  else if (rulesResult.status === "applied") applied += 1;
-  if (rulesResult.status !== "current") changed.push(rulesResult);
 
-  const sourceFiles = new Set(pluginSourceFiles);
-  const managedPluginMirrors = [
-    { id: "codex-plugin", root: pluginTargetRoot },
-    { id: "marketplace-plugin-source", root: marketplacePluginTargetRoot }
-  ];
-  const extraPluginFiles = managedPluginMirrors.flatMap((mirror) =>
+  const extraPluginFiles = pluginMirrors.flatMap((mirror) =>
     listFilesRecursive(mirror.root, { rejectLinks: true })
-      .filter((file) => !sourceFiles.has(file))
+      .filter((file) => !mirror.sourceFiles.has(file))
       .map((file) => ({ mirror: mirror.id, path: path.join(mirror.root, file), root: mirror.root }))
   );
   const pruned = [];
@@ -622,7 +589,6 @@ function repairManagedFiles() {
     });
   }
 
-  const expected = entries.length + generatedProfiles.length + 1 + directSkills.length;
   if (current + planned + applied !== expected) {
     throw new Error(
       `Managed file accounting invariant failed: expected ${expected}, observed ${current + planned + applied}.`
@@ -941,22 +907,48 @@ function pathEntryExists(target) {
   }
 }
 
-function assertRepairSurfaceSafety() {
-  const targets = [
-    path.join(options.codexHome, "AGENTS.md"),
-    path.join(options.codexHome, "config.toml"),
-    path.join(options.codexHome, "rules", "default.rules"),
-    path.join(options.codexHome, "agents"),
-    path.join(options.codexHome, "plugins", "codex-chef-workflows"),
-    path.join(options.agentsHome, "plugins", "marketplace.json"),
-    path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows"),
-    ...directSkills.map((skill) => path.join(options.agentsHome, "skills", skill.name))
-  ];
+function resolveRepairContract() {
+  const contract = resolveInstallContract({
+    root,
+    platform: options.platform,
+    codexHome: options.codexHome,
+    agentsHome: options.agentsHome,
+    home: os.homedir(),
+    noBackup: options.noBackup
+  });
+  const targets = contract.preflightTargets;
   for (const target of targets) assertManagedTarget(target);
+  return contract;
+}
+
+function assertNoBackupCreationOnly(targets, pluginRefreshInspection) {
+  if (!options.apply || !options.noBackup) return;
+  const requestedExistingMutation = targets.find((target) => pathEntryExists(target));
+  const requestedNonCreationAction = options.pruneManagedPluginExtras
+    || options.migrateLegacyProfilePins
+    || options.adoptFetchSkill
+    || options.adoptSeoSkill
+    || options.adoptEvidenceResearchSkill
+    || options.adoptDirectSkills.size > 0;
+  const requestedPluginCacheMutation = pluginRefreshInspection?.status === "planned";
+  if (requestedExistingMutation || requestedNonCreationAction || requestedPluginCacheMutation) {
+    throw new Error(
+      "--no-backup is creation-only; existing managed targets, adoption, migration, prune actions, and a stale installed plugin cache require backup-backed apply."
+    );
+  }
 }
 
 try {
-  assertRepairSurfaceSafety();
+  const repairContract = resolveRepairContract();
+  const noBackupPluginRefresh = options.apply && options.noBackup
+    ? refreshInstalledPlugin({
+        apply: false,
+        codexHome: options.codexHome,
+        expectedVersion: readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version,
+        platform: options.platform
+      })
+    : null;
+  assertNoBackupCreationOnly(repairContract.preflightTargets, noBackupPluginRefresh);
   for (const directSkill of directSkills) {
     const source = path.join(root, "plugins", "codex-chef-workflows", "skills", directSkill.name);
     const target = path.join(options.agentsHome, "skills", directSkill.name);
@@ -986,11 +978,10 @@ try {
   if (preflight.status !== "ok") {
     throw new Error("Repair preflight failed; refusing to plan or apply managed global changes until validators pass.");
   }
-  config = runConfigMerge();
-  managedFiles = repairManagedFiles();
+  managedFiles = repairManagedFiles(repairContract);
   legacyProfileMigration = migrateLegacyProfilePins();
   marketplace = repairMarketplace();
-  pluginRefresh = refreshInstalledPlugin({
+  pluginRefresh = noBackupPluginRefresh || refreshInstalledPlugin({
     apply: options.apply,
     codexHome: options.codexHome,
     expectedVersion: readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version,

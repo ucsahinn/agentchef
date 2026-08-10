@@ -41,6 +41,11 @@ node scripts/plan-install.mjs --list-operations
 Summary normal preview'i kisa tutar; JSON ve full human plan managed
 target'lari, opsiyonel global Git degisikliklerini, curated skill komutlarini,
 collision policy'yi, backup davranisini ve risk seviyesini listeler.
+Seçilen manifest profili, planlayıcı ile installer'ların uyguladığı normatif
+operasyon sözleşmesidir. Sıralı operasyonlar; kopyalanan dosyaların yanı sıra
+üretilen `full`/`multi-session`/`offline` profillerini, direct-skill sahiplik
+işaretlerini, kurulu plugin cache yenilemesini ve Unix hook izin adımını da
+açıkça kapsar; bu değişiklikler belgelenmemiş installer davranışı olarak kalmaz.
 Profile operasyonu `development.config.toml`, `review.config.toml`,
 `ci.config.toml`, `token-safe.config.toml`, `full.config.toml` ve
 `multi-session.config.toml` dosyalarini kapsar.
@@ -78,9 +83,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair modu, zaten Codex setup'i olan makineler icindir. Codex Chef'in
 yonettigi global guidance, rule, agent/profile dosyalari, bundled plugin,
-on bir yönetilen direct lokal workflow, eksik config bloklari ve local plugin
+on bir yönetilen direct lokal workflow, `serena-pool.mjs`, eksik config bloklari ve local plugin
 marketplace kaydi icin once no-write plan verir, sonra istenirse backup alarak
-onarir. Baska marketplace plugin'lerini korur ve user skill'lerini silmez;
+onarir. Launcher, Serena köprüsü, üretilen/kopyalanan profiller, sahiplik
+işaretleri, marketplace ve seçilen diğer tüm kaynaklarla hedefler ilk yönetilen
+yazmadan önce ön kontrolden geçer; eksik, bağlantılı veya güvensiz bir yol varsa
+akış güvenli biçimde durur. Baska marketplace plugin'lerini korur ve user skill'lerini silmez;
 fazla veya duplicate global skill'leri cleanup adayi olarak raporlar.
 Namespaced Codex Chef plugin'i zaten kuruluysa preview eski versioned plugin
 cache'ini raporlar, apply ise cache'i yerinde yeniler. Repair, plugin'i daha
@@ -99,7 +107,8 @@ loglari `--no-log` yoksa repo-local kalir. Varsayilan preview kisadir;
 `npm run chef -- --update --verbose-plan` tam install dry-run kanitini basar.
 Apply modunda clean worktree ister ve `git pull --ff-only` calistirir. Pull repo HEAD'ini ilerletirse aynı onaylı CLI fresh preview basar, sinirli update-integrity kontrolu, managed refresh ve
 kurulu ortam doğrulamasıyla devam eder; ikinci çalıştırma gerekmez. Geniş `npm run check` paketi CI/release kapısı olarak kalır; Update rutin kullanıcıları installer-smoke senaryoları için bekletmez. Repo zaten guncelse managed dosyalari backup alan installer uzerinden yeniler.
-Update Codex Chef'e ait dosyalari backup sonrasinda yeniler, managed config tablolarini
+Update, yedek aldıktan sonra yalnızca kaynakta yönetilen dosyaları senkronlar ve
+yönetilen dizinlerdeki ilgisiz ek dosyaları korur. Managed config tablolarini
 senkronlar ve kullaniciya ait `config.toml` ayarlarini korur. curated global skill veya
 opsiyonel global Git guard kurmaz; bunlar icin
 `--install --apply` veya `--skills --apply` yuzeylerini acikca kullan. Daha
@@ -288,9 +297,14 @@ Kullanışlı parametreler:
   ekrana basılan `install-pinned-skill.mjs` komutu bu flag ile tekrar çalıştırılır.
 - `-InstallGitGuards`: global Git ignore, global pre-commit hook kurar ve
   `core.excludesfile` ile `core.hooksPath` ayarlar. Bunu ayrı tutuyoruz çünkü
-  mevcut kullanıcıdaki bütün Git repolarını etkiler.
-- `-Force`: yedek aldıktan sonra yönetilen Codex dosyalarının üzerine yazar.
-  Bunu sadece bilinçli upgrade için, `-WhatIf` çıktısını inceledikten sonra
+  mevcut kullanıcıdaki bütün Git repolarını etkiler. Mevcut yabancı dosya veya
+  anahtar durumu; çakışan yüzey `-AdoptGitIgnore`, `-AdoptGitHook`,
+  `-AdoptGitExcludesFile` ya da `-AdoptGitHooksPath` ile açıkça sahiplenilmedikçe
+  güvenli biçimde reddedilir. Her parametre yalnızca adını verdiği dosya veya
+  anahtar için yetki verir; diğer üç yüzeyi sahiplenmez.
+- `-Force`: yedek aldıktan sonra yönetilen tekil dosyaları değiştirir ve
+  yönetilen dizinlerde yalnızca kaynakta sahip olunan girdileri senkronlar.
+  İlgisiz ek dosyalar korunur. Bunu sadece bilinçli upgrade için, `-WhatIf` çıktısını inceledikten sonra
   kullan. Vermezsen mevcut `config.toml` önce yedeklenir ve sadece eksik Codex
   Chef bloklarını alır; mevcut ajan dosyaları ve rule dosyaları atlanır.
   Kisisel plugin marketplace dosyasi komple degistirilmez; sadece Codex Chef
@@ -299,9 +313,11 @@ Kullanışlı parametreler:
 - `-Repair`: ortak repair motoruyla mevcut setup'i onarir. `-WhatIf` ile
   no-write repair plani basar. `-WhatIf` olmadan managed drift'i backup alip
   duzeltir. User skill'lerini silmez.
-- `-NoBackup`: opsiyonel managed-file yedeklerini kapatır. Tavsiye edilmez.
-  Pinned-skill upgrade veya açık pinned-skill adoption için zorunlu güvenlik
-  yedeğini asla kapatmaz.
+- `-NoBackup`: yalnızca hedeflerin tamamen boş olduğu, sadece yeni dosya
+  oluşturacak apply akışları için kabul edilen uyumluluk parametresidir. Seçilen
+  herhangi bir işlem mevcut hedefe dokunacak, birleştirecek, değiştirecek,
+  silecek, budayacak, sahiplenecek, cache yenileyecek veya global Git durumunu
+  değiştirecekse ön kontrol ilk yazmadan önce akışı reddeder.
 - `-WhatIf`: gerçek setup'a dokunmadan dosya, Git ve skill operasyonlarını ön
   izler.
 - `-Interactive`: özel Codex/Agents home değerlerini ve opsiyonel global Git
@@ -339,14 +355,22 @@ Kullanışlı flagler:
 - `--adopt-direct-skill=<ad>`: katalogdaki başka bir foreign direct hedefi
   inceleme sonrasında sahiplenir.
 - `--install-git-guards`: global Git ignore ve hook ayarlarına ayrıca opt-in.
-- `--force`: backup aldıktan sonra managed hedefleri değiştirir; vermezsen
+- `--adopt-git-ignore`, `--adopt-git-hook`,
+  `--adopt-git-excludes-file` ve `--adopt-git-hooks-path`: tam olarak bir
+  çakışan Git-guard dosyasını ya da anahtarını sahiplenme yetkisi verir.
+  Seçilmeyen yabancı durum güvenli biçimde reddedilmeye devam eder.
+- `--force`: yedek aldıktan sonra yönetilen tekil dosyaları değiştirir;
+  dizinlerde yalnızca kaynakta sahip olunan girdileri senkronlar ve ilgisiz ek
+  dosyaları korur. Vermezsen
   mevcut `config.toml` merge edilir ve diğer mevcut managed dosyalar atlanır.
   Kisisel plugin marketplace dosyasi komple degistirilmez; sadece Codex Chef
   kaydi backup sonrasi eklenir veya guncellenir, ilgisiz plugin kayitlari
   korunur.
 - `--repair`: mevcut global Codex setup'i icin backup'li repair uygular;
   `--dry-run` ile no-write plan verir.
-- `--no-backup`
+- `--no-backup`: yalnızca yeni dosya oluşturan uyumluluk modu. Mevcut bir hedef
+  veya birleştirme, değiştirme, silme, sahiplenme, cache yenileme ya da global
+  değişiklik seçilmişse ilk yazmadan önce durur.
 - `--dry-run`
 - `--plain-output`: ASCII status işaretleri kullanır.
 - `--interactive`: macOS/Linux/WSL tarafında aynı path, skill, force, Git guard ve
@@ -371,7 +395,8 @@ config'i ise kullaniciya ait overlay olarak ele alir. Normal install ve repair;
 kullanicinin model/reasoning secimini, approval ve sandbox ayarlarini, project
 trust kayitlarini, ozel MCP server'larini ve ilgisiz personal plugin marketplace
 kayitlarini korur. Chef-managed agent/MCP guvenlik tablolari merge edilip
-dogrulanir; `--force` acik replacement siniri olarak kalir. Boylece paket global
+dogrulanir; `--force` açık, yedek destekli senkronizasyon sınırı olarak kalır ve
+ilgisiz dizin girdilerini silme yetkisi vermez. Boylece paket global
 ve genel olur, tek bir makinenin profil veya trust durumu dagitilan default'a
 donusmez.
 
@@ -398,10 +423,32 @@ Installer şu managed target'ları replace etmeden önce yedekler:
 - iki managed plugin aynası
 - bütün managed direct-skill dizinleri ve ownership marker'ları
 
-Dizin replacement sadece yönetilen Codex veya Agents home altında yapılır.
-Installer herhangi bir write öncesinde bu root'ların altındaki symlink veya
-junction component'lerini reddeder; managed gibi görünen bir path başka dizine
-kaçamaz.
+Yönetilen dizin güncellemeleri yalnızca kaynakta sahip olunan girdileri
+senkronlar ve ilgisiz ek dosyaları korur. Yıkıcı bir budama işlemi ayrı, açık ve
+yedek destekli bir operasyondur. Installer herhangi bir write öncesinde
+yapılandırılmış home'ların altındaki symlink veya junction bileşenlerini
+reddeder; yönetilen gibi görünen bir yol başka dizine kaçamaz.
+
+Global Git guard'ları, iki dosya ile iki Git config anahtarı normal yönetilen
+dosya arşivinin dışında kaldığı için ayrı bir tipli kurtarma makbuzu kullanır.
+Apply başlamadan önce önceki byte'lar, dosya modu, varlık/yokluk bilgisi ve
+sıralı anahtar değerleri `codex-chef.global-git-guards-receipt@1` içinde aynen
+kaydedilir. Makbuz ayrıca apply sonrası beklenen yönetilen dosya hash'lerini,
+Unix modlarını ve Git config değerlerini bağlar. Apply başarısız olursa işlem
+bu makbuzdan geri alınır. Makbuzu sakla
+ve installer'ın yazdırdığı tam restore komutunu kullan; temel biçim şöyledir:
+
+```bash
+node scripts/manage-global-git-guards.mjs restore --home <home> --receipt <receipt-path> --json
+```
+
+Restore; önce makbuz şemasını, kayıtlı home'u, tam iki dosya/iki anahtarlık izin
+listesini, boyutu, yolları ve bağlantı güvenliğini doğrular. Ardından önceki
+değerleri geri yükler veya daha önce bulunmayan hedefleri kaldırır. Apply'dan
+sonra yönetilen dosya, mod ya da anahtar değiştiyse restore hiçbir şey yazmaz;
+böylece sonraki kullanıcı değişiklikleri ezilmez ve ilk repo şablonlarına
+ihtiyaç duyulmaz. Bu akış
+`codex-chef.backup.v1` arşivlerinden bilinçli olarak ayrıdır.
 
 ## Kurulum Sonrası Kontrol
 
@@ -430,7 +477,8 @@ Gercek kurulumda curated skill'ler ve opsiyonel Git guard'lar bilerek dahil edil
 
 `npm run verify:install:runtime` read-only çalışır. Kurulan `~/.codex` ve
 `~/.agents` hedeflerini kontrol eder; managed agent, rule, profile ve plugin
-dosyalarında source drift olup olmadığına bakar; sonra Codex CLI kontrollerini
+dosyalarının yanı sıra kurulu `serena-pool.mjs` köprüsünde source drift olup
+olmadığına bakar; sonra Codex CLI kontrollerini
 `CODEX_HOME` açıkça kurulu hedefe ayarlanmış şekilde çalıştırır. Ambient shell
 bir sandbox veya farklı `CODEX_HOME` okuyorsa bu drift warning olarak raporlanır;
 verifier yine de kurulu hedefin beklenen MCP config'ini verdiğini kanıtlar.
@@ -476,10 +524,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair temizse normal install komutuna gecebilirsin. Mevcut `config.toml`
 backup alınarak merge edilir; kullanıcıya ait tablolar korunur. Diğer mevcut
-managed dosyalar `-Force` / `--force` vermediğin sürece atlanır. Kisisel
+managed dosyalar `-Force` / `--force` vermediğin sürece atlanır. Force yalnızca
+yönetilen tekil dosyaları değiştirir ve kaynakta sahip olunan dizin girdilerini
+senkronlar; ilgisiz ek dosyalar kalır. Kisisel
 plugin marketplace ilgisiz kayitlari korur ve sadece Codex Chef kaydini backup
-sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force'tan daha
-guvenli ilk adımdır.
+sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force
+senkronizasyonundan daha guvenli ilk adımdır.
 
 ## Geri Dönüş
 

@@ -136,6 +136,13 @@ for (const profile of routing.profiles || []) {
   if (!Array.isArray(profile.flags) || profile.flags.length === 0) {
     fail(`routing profile must name at least one flag/config mode: ${profile.id}`);
   }
+  const flags = new Set(profile.flags || []);
+  if (flags.has("sandbox:read-only") && flags.has("workspace-write")) {
+    fail(`${profile.id} cannot combine read-only routing with workspace-write.`);
+  }
+  if (flags.has("profile:review") && flags.has("approval:on-request")) {
+    fail(`${profile.id} cannot combine profile:review with approval:on-request.`);
+  }
   if (!allowedDelegationModes.has(profile.delegationMode)) {
     fail(`routing profile ${profile.id} has invalid delegationMode: ${profile.delegationMode}`);
   }
