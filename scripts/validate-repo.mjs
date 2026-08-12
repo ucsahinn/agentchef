@@ -210,7 +210,11 @@ const deniedExtensions = new Set([
   ".tgz"
 ]);
 
-const ignoredDirs = new Set([".git", ".serena", "node_modules", "dist", "build", "coverage", ".next", "tmp", "temp"]);
+const ignoredDirs = new Set([
+  ".git", ".serena", ".agentspace", "node_modules", "dist", "build", "coverage", ".next", "tmp", "temp",
+  "agent-results"
+]);
+const ignoredRelativeFiles = new Set(["docs/.agent-notifications"]);
 const textExtensions = new Set([
   ".css",
   ".gitignore",
@@ -264,6 +268,7 @@ function walk(dir) {
   for (const entry of entries) {
     if (ignoredDirs.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
+    if (ignoredRelativeFiles.has(toPosix(path.relative(root, full)))) continue;
     if (entry.isDirectory()) {
       files.push(...walk(full));
     } else {
@@ -654,7 +659,7 @@ if (fs.existsSync(mcpCatalog)) {
     .filter((server) => server.defaultEnabled === true)
     .map((server) => server.name)
     .sort();
-  const expectedDefaultEnabledServers = ["context7", "openaiDeveloperDocs", "serena"];
+  const expectedDefaultEnabledServers = ["openaiDeveloperDocs", "serena"];
   if (JSON.stringify(defaultEnabledServers) !== JSON.stringify(expectedDefaultEnabledServers)) {
     failures.push(`Public MCP catalog default-enabled servers must be exactly: ${expectedDefaultEnabledServers.join(", ")}`);
   }

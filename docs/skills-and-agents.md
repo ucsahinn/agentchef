@@ -37,7 +37,7 @@ Agents are focused roles for work that benefits from a separate reviewer,
 researcher, mapper, or verifier. A matching role is a recommendation, not a
 reason to open a subagent for every small task.
 
-- [See all 21 specialist agents](agents.md)
+- [See the 11 coordinators and all 21 specialist workers](agents.md)
 - [Open the machine-readable agent catalog](../catalog/agents.json)
 - [Read the official Codex subagents guide](https://developers.openai.com/codex/subagents)
 

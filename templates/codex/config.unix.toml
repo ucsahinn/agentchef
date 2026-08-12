@@ -35,7 +35,7 @@ default_tools_approval_mode = "prompt"
 
 [agents]
 max_threads = 10
-max_depth = 1
+max_depth = 2
 job_max_runtime_seconds = 3600
 
 [agents.code_mapper]
@@ -122,6 +122,50 @@ config_file = "agents/release_verifier.toml"
 description = "Setup diagnostician for starter health, catalog drift, install-plan coverage, and safe next checks."
 config_file = "agents/codex_doctor.toml"
 
+[agents.backend_coordinator]
+description = "Backend coordinator that correlates bounded implementation, integration, and debugging evidence."
+config_file = "agents/backend_coordinator.toml"
+
+[agents.data_coordinator]
+description = "Data coordinator that correlates read-only data documentation, lineage, catalog, quality, and source-evidence findings."
+config_file = "agents/data_coordinator.toml"
+
+[agents.devops_coordinator]
+description = "DevOps coordinator that correlates operational performance, runtime health, and setup diagnostics."
+config_file = "agents/devops_coordinator.toml"
+
+[agents.frontend_coordinator]
+description = "Frontend coordinator that correlates rendered UI verification evidence."
+config_file = "agents/frontend_coordinator.toml"
+
+[agents.leadership_coordinator]
+description = "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence."
+config_file = "agents/leadership_coordinator.toml"
+
+[agents.product_coordinator]
+description = "Product coordinator that correlates prompts, product framing, and executable specifications."
+config_file = "agents/product_coordinator.toml"
+
+[agents.qa_coordinator]
+description = "QA coordinator that correlates quality and verification evidence."
+config_file = "agents/qa_coordinator.toml"
+
+[agents.design_coordinator]
+description = "Design coordinator that correlates product design review evidence."
+config_file = "agents/design_coordinator.toml"
+
+[agents.security_coordinator]
+description = "Security coordinator that correlates security evidence and remediation gates."
+config_file = "agents/security_coordinator.toml"
+
+[agents.marketing_coordinator]
+description = "Marketing coordinator that correlates discoverability and content evidence."
+config_file = "agents/marketing_coordinator.toml"
+
+[agents.support_coordinator]
+description = "Customer-support coordinator that correlates onboarding and support-flow evidence."
+config_file = "agents/support_coordinator.toml"
+
 [sandbox_workspace_write]
 network_access = false
 
@@ -135,10 +179,10 @@ startup_timeout_sec = 20
 tool_timeout_sec = 120
 
 [mcp_servers.context7]
-enabled = true
+enabled = false
 command = "npx"
 args = ["-y", "@upstash/context7-mcp@3.2.1"]
-default_tools_approval_mode = "approve"
+default_tools_approval_mode = "prompt"
 startup_timeout_sec = 20
 tool_timeout_sec = 120
 

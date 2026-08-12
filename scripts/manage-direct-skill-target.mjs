@@ -127,10 +127,12 @@ export function inspectDirectSkillTarget(sourceRoot, targetRoot) {
       ? readMarker(markerPath)
       : null;
     if (marker && stableJson(marker) === stableJson(markerContract)) {
-      const exactManagedMatch = stableJson(targetFiles) === stableJson(sourceFiles)
-        && filesMatch(source, target, sourceFiles);
-      if (exactManagedMatch) {
+      const managedFilesMatch = filesMatch(source, target, sourceFiles);
+      if (managedFilesMatch && stableJson(targetFiles) === stableJson(sourceFiles)) {
         return { status: "managed", safeToSync: true, sourceFiles };
+      }
+      if (managedFilesMatch) {
+        return { status: "managed-with-extras", safeToSync: true, reason: "local-extras-preserved", sourceFiles };
       }
       return {
         status: "managed-drift",

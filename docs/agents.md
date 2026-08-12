@@ -5,12 +5,55 @@
 An agent is the **who** in a Codex workflow: a focused role with a clear job,
 boundaries, and evidence to return.
 
-Codex Chef includes 21 custom roles. They are not background services and they
-do not all run on every task. A role can guide the main session without being
-spawned. Delegation is useful when work can run independently, noisy output
-should stay out of the main thread, or you explicitly ask for parallel agents.
+Codex Chef includes 11 coordination roles and 21 specialist worker roles. They
+are not background services and they do not all run on every task. A role can
+guide the main session without being spawned. Delegation is useful when work can
+run independently, noisy output should stay out of the main thread, or you
+explicitly ask for parallel agents.
 
 Official Codex reference: [Subagents](https://developers.openai.com/codex/subagents)
+
+## Call A Coordinator
+
+Ask for a named role in ordinary language. State the task, the coordinator,
+whether independent work should run in parallel, and the evidence you want
+returned. For example:
+
+> Have `backend_coordinator` own this API bug. Let it use only its cataloged
+> specialists, wait for their results, and return the root cause, proposed fix,
+> test evidence, conflicts, and remaining risks.
+
+Use a human-friendly nickname to identify the coordinator, but invoke the
+canonical `*_coordinator` ID. Nicknames are matching labels only: they do not
+create a new agent, a separately installed role, or an additional delegation
+level.
+
+| Nickname candidates | Callable canonical ID |
+| --- | --- |
+| `Engineering Lead`, `Leadership Coordinator`, `Delivery Lead` | `leadership_coordinator` |
+| `Product Lead`, `Product Coordinator`, `Scope Lead` | `product_coordinator` |
+| `Backend Lead`, `Backend Coordinator`, `Integration Lead` | `backend_coordinator` |
+| `Data Lead`, `Data Coordinator`, `Information Lead` | `data_coordinator` |
+| `Frontend Lead`, `Frontend Coordinator`, `UI Evidence Lead` | `frontend_coordinator` |
+| `DevOps Lead`, `DevOps Coordinator`, `Operations Lead` | `devops_coordinator` |
+| `Security Lead`, `Security Coordinator`, `Risk Lead` | `security_coordinator` |
+| `QA Lead`, `QA Coordinator`, `Assurance Lead` | `qa_coordinator` |
+| `Design Lead`, `Design Coordinator`, `UX Review Lead` | `design_coordinator` |
+| `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
+| `Support Lead`, `Support Coordinator`, `Customer Care Lead` | `support_coordinator` |
+
+The main session remains the decision and permission boundary. A coordinator
+correlates evidence; it does not silently publish, deploy, broaden permissions,
+or take over unrelated work. In the CLI, use `/agent` to inspect or switch to an
+agent thread. In the app or IDE, use the subagent activity panel when available;
+you can also ask Codex to steer, stop, or close an agent.
+
+The routing path is:
+
+`task -> routing profile -> primary coordinator -> selected specialists + narrow skills/MCPs`
+
+Cross-domain work returns a compact handoff to the main session, which decides
+whether another coordinator is needed.
 
 ## 🗺️ Understand The Problem
 
@@ -69,16 +112,48 @@ Official Codex reference: [Subagents](https://developers.openai.com/codex/subage
 5. The active user profile remains authoritative; Codex Chef role files do not
    pin every agent to one model.
 
+The routing board includes a narrow data-documentation route: `data_coordinator`
+with `docs_researcher` correlates read-only lineage, catalog, quality, and source
+evidence. It does not claim data-engineering, database-performance, security, or
+operations expertise. Application implementation, database access, and database
+performance needs return a concise parent-routed handoff to `backend_coordinator`
+with the question, inspected evidence, conflict, decision needed, and open
+verification need. Customer support/onboarding (`support_coordinator` with `devex_auditor`) is
+also advisory. Neither route grants database, customer-account, or production access.
+
 ## AgentSpace Ownership, Knowledge, And Worker Safety
 
-The eight AgentSpace office roles own work; the 21 Codex Chef specialists remain
-narrow task workers. \`catalog/agents.json\` records the complete 8-to-21 ownership
-map. A routing result exposes each selected worker's owner and a \`knowledgeRef\`
-equal to the specialist name. That reference resolves only to reviewed metadata
-in \`catalog/agent-research-corpus.json\`; routing never injects AgentSpace memory,
-auth, session, or other machine-local content.
+| Coordinator | Bounded specialist workers |
+| --- | --- |
+| `leadership_coordinator` | `context_architect`, `engineering_planner`, `code_reviewer`, `release_verifier` |
+| `product_coordinator` | `prompt_architect`, `product_strategist`, `spec_author` |
+| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger` |
+| `data_coordinator` | `docs_researcher` |
+| `frontend_coordinator` | `frontend_verifier` |
+| `devops_coordinator` | `performance_auditor`, `codex_doctor` |
+| `security_coordinator` | `security_auditor` |
+| `qa_coordinator` | `qa_lead`, `test_verifier` |
+| `design_coordinator` | `design_reviewer` |
+| `marketing_coordinator` | `google_seo_auditor`, `docs_author` |
+| `support_coordinator` | `devex_auditor` |
 
-Every installed worker TOML applies \`approval_policy = "on-request"\` and its
+The eleven installed coordinators own work: leadership, product, backend, data,
+frontend, DevOps, security, QA, design, marketing, and customer support. The 21
+Codex Chef specialists remain narrow task workers. \`catalog/agents.json\` records
+the complete 11-to-21 ownership map. A coordinator may select only its cataloged
+worker group (at most four workers), and workers do not delegate further.
+
+Cross-domain coordination is a concise, parent-routed handoff rather than direct
+peer spawning: the primary coordinator returns its question, evidence, conflict,
+decision, and open verification need to the main session, which decides whether a
+peer coordinator is needed. This keeps the runtime at two delegation levels and
+prevents recursive agent trees. A routing result exposes each selected worker's
+owner and a \`knowledgeRef\` equal to the specialist name. That reference resolves
+only to reviewed metadata in \`catalog/agent-research-corpus.json\`; routing never
+injects AgentSpace memory, auth, session, or other machine-local content.
+
+Every installed coordinator and worker TOML applies \`approval_policy = "on-request"\`.
+Coordinators are read-only; workers use their
 catalog sandbox (\`read-only\` or \`workspace-write\`). The reviewed
 \`rules/default.rules\` surface can allow narrow safe inspection commands while
 destructive, credentialed, publishing, deployment, broad-shell, and other risky

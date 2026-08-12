@@ -602,6 +602,8 @@ function validatePortabilityContracts() {
     ".git",
     ".next",
     ".serena",
+    ".agentspace",
+    "agent-results",
     "build",
     "coverage",
     "dist",
@@ -609,6 +611,7 @@ function validatePortabilityContracts() {
     "temp",
     "tmp"
   ]);
+  const ignoredRelativeFiles = new Set(["docs/.agent-notifications"]);
   const textExtensions = new Set([
     ".json",
     ".js",
@@ -628,6 +631,7 @@ function validatePortabilityContracts() {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
       const fullPath = path.join(directory, entry.name);
+      if (ignoredRelativeFiles.has(path.relative(root, fullPath).split(path.sep).join("/"))) continue;
       if (entry.isDirectory()) files.push(...walkTextFiles(fullPath));
       else if (entry.isFile() && (textExtensions.has(path.extname(entry.name)) || entry.name === "package.json")) {
         files.push(fullPath);

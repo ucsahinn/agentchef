@@ -306,6 +306,11 @@ without changing global/user state. `npm run chef -- --backups --backup <id>`
 inspects backup archive metadata only: paths, sizes, hashes, manifest status,
 issues, and restorable targets. It does not print file contents.
 
+An interrupted install or repair archive can use its atomic operation journal
+as a recovery manifest only when every recorded path, size, and SHA-256 value
+still matches the archive. This does not broaden the restore allowlist or
+permit unrecorded files.
+
 Restore treats backup archives as untrusted input. `npm run chef -- --backups
 --backup <id> --restore` is a preview. The apply path requires `--apply`,
 loads and verifies the exact source bytes, creates a fresh rollback backup of

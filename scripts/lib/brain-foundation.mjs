@@ -421,13 +421,44 @@ export function applyRestorePlan(plan) {
   const rollbackBackupId = `rollback-${crypto.randomUUID()}`;
   applyBackupPlan(buildBackupPlan({ target: plan.target, backupId: rollbackBackupId }));
   const restored = [];
-  for (const entry of verified) {
-    const destination = entry.destinationPath;
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    const temporary = `${destination}.brain-restore-${crypto.randomUUID()}.tmp`;
-    fs.copyFileSync(entry.sourcePath, temporary, fs.constants.COPYFILE_EXCL);
-    fs.renameSync(temporary, destination);
-    restored.push(entry.relativePath);
+  const applied = [];
+  try {
+    for (const entry of verified) {
+      const destination = entry.destinationPath;
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      const temporary = `${destination}.brain-restore-${crypto.randomUUID()}.tmp`;
+      fs.copyFileSync(entry.sourcePath, temporary, fs.constants.COPYFILE_EXCL);
+      fs.renameSync(temporary, destination);
+      applied.push({ ...entry, outputHash: entry.backupHash, existedBefore: entry.currentHash !== null });
+      restored.push(entry.relativePath);
+    }
+  } catch (restoreError) {
+    const rollbackFailures = [];
+    for (const entry of applied.reverse()) {
+      try {
+        const currentHash = fs.existsSync(entry.destinationPath) && fs.lstatSync(entry.destinationPath).isFile()
+          ? sha256(fs.readFileSync(entry.destinationPath))
+          : null;
+        if (currentHash !== entry.outputHash) {
+          rollbackFailures.push(`${entry.relativePath}: destination changed after restore write`);
+          continue;
+        }
+        if (entry.existedBefore) {
+          const original = resolveInside(plan.target, `.brain/backups/${rollbackBackupId}/${entry.relativePath}`);
+          const temporary = `${entry.destinationPath}.brain-rollback-${crypto.randomUUID()}.tmp`;
+          fs.copyFileSync(original, temporary, fs.constants.COPYFILE_EXCL);
+          fs.renameSync(temporary, entry.destinationPath);
+        } else {
+          fs.unlinkSync(entry.destinationPath);
+        }
+      } catch (rollbackError) {
+        rollbackFailures.push(`${entry.relativePath}: ${rollbackError.message}`);
+      }
+    }
+    const suffix = rollbackFailures.length > 0
+      ? ` Restore rollback incomplete: ${rollbackFailures.join("; ")}`
+      : " Restore rollback completed.";
+    throw new Error(`Brain restore failed: ${restoreError.message}.${suffix}`);
   }
   return { backupId: plan.backupId, restored, rollbackBackupId };
 }

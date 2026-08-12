@@ -12,6 +12,7 @@ const DEFAULT_ORPHAN_GRACE_MS = 60_000;
 const DEFAULT_SESSION_END_DELAY_MS = 45_000;
 const MAX_BUFFER = 16 * 1024 * 1024;
 const SESSION_STATE_ROOT = path.join(os.tmpdir(), "codex-chef-session-end");
+const SESSION_OUTCOME_ROOT = path.join(SESSION_STATE_ROOT, "outcomes");
 
 const MCP_SIGNATURES = [
   ["chrome-devtools", /chrome-devtools-mcp/i],
@@ -696,6 +697,24 @@ function consumeOwnedSweepState(statePath) {
   return JSON.parse(content);
 }
 
+function recordOwnedSweepOutcome(snapshot, results, error = null) {
+  try {
+    fs.mkdirSync(SESSION_OUTCOME_ROOT, { recursive: true, mode: 0o700 });
+    const outcome = {
+      schemaVersion: "codex-chef.session-end-outcome.v1",
+      recordedAt: new Date().toISOString(),
+      ownerPid: snapshot?.ownerPid || null,
+      resultCount: results.length,
+      failedCount: results.filter((item) => !item.ok).length,
+      results: results.map((item) => ({ pid: item.rootPid, server: item.server, ok: item.ok, exitCode: item.exitCode ?? null })),
+      error: error ? String(error.message || error) : null
+    };
+    fs.writeFileSync(path.join(SESSION_OUTCOME_ROOT, `${Date.now()}-${crypto.randomUUID()}.json`), JSON.stringify(outcome), { encoding: "utf8", mode: 0o600, flag: "wx" });
+  } catch {
+    // The hook must stay silent and bounded even when its metadata sink is unavailable.
+  }
+}
+
 function scheduleOwnedSweep(snapshot, delayMs) {
   const statePath = createOwnedSweepState(snapshot);
   const child = spawn(
@@ -772,8 +791,12 @@ export async function runProcessHygieneCli(argv) {
     if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
     const snapshot = consumeOwnedSweepState(ownedSweepState);
     const collected = collectProcessSnapshot();
-    if (!collected.ok) return 0;
-    terminateCleanupPlan(buildOwnedCleanupPlan(collected.processes, snapshot));
+    if (!collected.ok) {
+      recordOwnedSweepOutcome(snapshot, [], collected.error || new Error("Process snapshot unavailable."));
+      return 0;
+    }
+    const results = terminateCleanupPlan(buildOwnedCleanupPlan(collected.processes, snapshot));
+    recordOwnedSweepOutcome(snapshot, results);
     return 0;
   }
 

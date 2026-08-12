@@ -69,6 +69,11 @@ if [ "$INSTALL_GIT_GUARDS" -ne 1 ] && {
   exit 2
 fi
 
+if [ "$REPAIR" -eq 1 ] && [ "$INSTALL_GIT_GUARDS" -eq 1 ]; then
+  echo "--repair does not reconcile global Git guards; run the installer without --repair for that operation." >&2
+  exit 2
+fi
+
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Required command not found for Codex Chef Bash install: $1" >&2
@@ -375,7 +380,46 @@ if [ "$INTERACTIVE" -eq 1 ] && [ "$INSTALL_GIT_GUARDS" -ne 1 ]; then
   fi
 fi
 
-BACKUP_ROOT="$CODEX_HOME_DIR/backups/codex-chef-$(date +%Y%m%d-%H%M%S)"
+BACKUP_ROOT="$CODEX_HOME_DIR/backups/codex-chef-$(date +%Y%m%d-%H%M%S)-$$"
+OPERATION_JOURNAL="$REPO_ROOT/scripts/lib/operation-journal.mjs"
+OPERATION_JOURNAL_ACTIVE=0
+LAST_BACKUP_PATH=""
+GIT_GUARD_RECEIPT=""
+
+# A global install must not race another install/repair/restore for this CODEX_HOME.
+# mkdir is atomic; a pre-existing lock is deliberately never removed automatically.
+OPERATION_LOCK_DIR="$CODEX_HOME_DIR/.codex-chef-operation.lock"
+OPERATION_LOCK_OWNER="$OPERATION_LOCK_DIR/owner"
+acquire_operation_lock() {
+if [ "$DRY_RUN" -eq 0 ]; then
+  if ! mkdir "$OPERATION_LOCK_DIR" 2>/dev/null; then
+    echo "Another Codex Chef operation is already in progress for $CODEX_HOME_DIR; refusing concurrent install." >&2
+    exit 1
+  fi
+  printf 'pid=%s\noperation=install\nstarted_at=%s\n' "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$OPERATION_LOCK_OWNER"
+  cleanup_operation_lock() {
+    operation_status=$?
+    if [ "$OPERATION_JOURNAL_ACTIVE" -eq 1 ]; then
+      if [ "$operation_status" -eq 0 ]; then
+        node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" complete >/dev/null 2>&1 || true
+      else
+        node "$OPERATION_JOURNAL" rollback "$BACKUP_ROOT" - "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR" >&2 || true
+        if [ -n "$GIT_GUARD_RECEIPT" ] && [ -f "$GIT_GUARD_RECEIPT" ]; then
+          GIT_GUARD_ROLLBACK=("$REPO_ROOT/scripts/manage-global-git-guards.mjs" "restore" "--home" "$HOME" "--receipt" "$GIT_GUARD_RECEIPT" "--json")
+          if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then GIT_GUARD_ROLLBACK+=("--git-config-global" "$GIT_CONFIG_GLOBAL"); fi
+          node "${GIT_GUARD_ROLLBACK[@]}" >&2 || true
+        fi
+        node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" failed >/dev/null 2>&1 || true
+      fi
+    fi
+    if [ -f "$OPERATION_LOCK_OWNER" ] && grep -Fqx "pid=$$" "$OPERATION_LOCK_OWNER"; then
+      rm -f "$OPERATION_LOCK_OWNER"
+      rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
+    fi
+  }
+  trap cleanup_operation_lock EXIT HUP INT TERM
+fi
+}
 
 run_change() {
   local target="$1"
@@ -412,6 +456,30 @@ assert_managed_write_target() {
   if ! node "$REPO_ROOT/scripts/assert-managed-target.mjs" "$managed_root" "$target" >/dev/null; then
     echo "Managed write target became unsafe; refusing access: $target" >&2
     exit 1
+  fi
+}
+
+start_operation_journal() {
+  if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" start "$BACKUP_ROOT" install
+    OPERATION_JOURNAL_ACTIVE=1
+  fi
+}
+
+track_install_write() {
+  local target="$1"
+  local backup="${2:--}"
+  if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" track "$BACKUP_ROOT" "$target" "$backup"
+  fi
+}
+
+track_install_tree() {
+  local destination="$1"
+  local source="$2"
+  local backup="${3:--}"
+  if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" track-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"
   fi
 }
 
@@ -453,6 +521,7 @@ assert_managed_directory_target() {
 
 backup_target() {
   local target="$1"
+  LAST_BACKUP_PATH=""
   if [ "$NO_BACKUP" -eq 1 ] || [ ! -e "$target" ]; then
     return
   fi
@@ -460,8 +529,9 @@ backup_target() {
   ensure_dir "$BACKUP_ROOT"
   local rel
   case "$target" in
-    "$CODEX_HOME_DIR"/*) rel="${target#"$CODEX_HOME_DIR"/}" ;;
-    *) rel="$(basename "$target")" ;;
+    "$CODEX_HOME_DIR"/*) rel="codex/${target#"$CODEX_HOME_DIR"/}" ;;
+    "$AGENTS_HOME_DIR"/*) rel="agents/${target#"$AGENTS_HOME_DIR"/}" ;;
+    *) echo "Refusing to back up unmanaged target: $target" >&2; exit 1 ;;
   esac
   ensure_dir "$(dirname "$BACKUP_ROOT/$rel")"
   if ! run_change "$BACKUP_ROOT/$rel" "back up $target" managed_backup_copy "$target" "$BACKUP_ROOT/$rel"; then
@@ -470,6 +540,10 @@ backup_target() {
     fi
     echo "Backup failed; refusing to replace managed target without a backup: $target" >&2
     exit 1
+  fi
+  if [ "$DRY_RUN" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" record "$BACKUP_ROOT" "$BACKUP_ROOT/$rel"
+    LAST_BACKUP_PATH="$BACKUP_ROOT/$rel"
   fi
 }
 
@@ -484,6 +558,7 @@ install_file() {
   ensure_dir "$(dirname "$destination")"
   backup_target "$destination"
   if run_change "$destination" "install file from $source" managed_copy_file "$source" "$destination"; then
+    track_install_write "$destination" "$LAST_BACKUP_PATH"
     action "installed" "$destination"
   elif [ "$DRY_RUN" -ne 1 ]; then
     echo "Failed to install file from $source to $destination" >&2
@@ -511,6 +586,7 @@ install_codex_config() {
     fi
     assert_managed_write_target "$destination"
     if run_change "$destination" "$merge_action" node "${merge_args[@]}"; then
+      track_install_write "$destination" "$LAST_BACKUP_PATH"
       if [ "$UPDATE" -eq 1 ]; then
         action "updated config" "$destination"
       else
@@ -540,6 +616,7 @@ install_mcp_profile() {
     render_args+=("--dry-run")
   fi
   if run_change "$destination" "$render_action" node "${render_args[@]}"; then
+    track_install_write "$destination" "$LAST_BACKUP_PATH"
     action "generated profile" "$destination"
   elif [ "$DRY_RUN" -ne 1 ]; then
     echo "Failed to generate MCP profile: $destination" >&2
@@ -552,6 +629,7 @@ install_directory() {
   local destination="$2"
   assert_managed_write_target "$destination"
   backup_target "$destination"
+  local directory_backup="$LAST_BACKUP_PATH"
   ensure_dir "$destination"
   assert_managed_directory_target "$destination"
   if run_change "$destination" "sync source-owned files from $source while preserving unrelated extras" true; then
@@ -560,6 +638,7 @@ install_directory() {
       ensure_dir "$(dirname "$destination/$rel")"
       managed_copy_file "$source/$rel" "$destination/$rel"
     done
+    track_install_tree "$destination" "$source" "$directory_backup"
     action "synced directory" "$destination"
   fi
 }
@@ -603,6 +682,8 @@ fi
 installer_safety_preflight
 run_preflight_validators
 preflight_install_targets
+acquire_operation_lock
+start_operation_journal
 
 section "Managed Codex files"
 ensure_dir "$CODEX_HOME_DIR"
@@ -661,6 +742,11 @@ while IFS= read -r DIRECT_SKILL_NAME; do
       DIRECT_MARK_ARGS+=("--allow-adopt")
     fi
     node "${DIRECT_MARK_ARGS[@]}" >/dev/null
+    DIRECT_MARK_BACKUP="-"
+    if [ -n "$LAST_BACKUP_PATH" ] && [ -e "$LAST_BACKUP_PATH/.codex-chef-managed.json" ]; then
+      DIRECT_MARK_BACKUP="$LAST_BACKUP_PATH/.codex-chef-managed.json"
+    fi
+    track_install_write "$DIRECT_SKILL_TARGET/.codex-chef-managed.json" "$DIRECT_MARK_BACKUP"
   fi
 done < <(direct_skill_names)
 
@@ -682,6 +768,7 @@ else
     backup_target "$MARKETPLACE_PATH"
     assert_managed_write_target "$MARKETPLACE_PATH"
     node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --write
+    track_install_write "$MARKETPLACE_PATH" "$LAST_BACKUP_PATH"
     action "updated marketplace" "$MARKETPLACE_PATH"
   elif [ "$marketplace_status" -eq 0 ]; then
     SKIPPED_EXISTING_COUNT=$((SKIPPED_EXISTING_COUNT + 1))
@@ -689,16 +776,6 @@ else
     echo "Cannot update plugin marketplace because it is invalid or unreadable: $MARKETPLACE_PATH" >&2
     exit 1
   fi
-fi
-
-PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
-PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
-if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
-  PLUGIN_REFRESH_ARGS+=("--apply")
-fi
-if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
-  echo "Refresh installed Codex Chef plugin cache failed." >&2
-  exit 1
 fi
 
 if [ "$INSTALL_GIT_GUARDS" -eq 1 ]; then
@@ -853,6 +930,17 @@ NODE
   fi
 fi
 
+# The plugin cache is the final external mutation: later output/manifest work is non-mutating.
+PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
+PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
+if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
+  PLUGIN_REFRESH_ARGS+=("--apply")
+fi
+if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
+  echo "Refresh installed Codex Chef plugin cache failed." >&2
+  exit 1
+fi
+
 section "Capability board"
 node - "$REPO_ROOT" <<'NODE'
 const fs = require("fs");
@@ -867,7 +955,10 @@ const skillCatalog = readJson("catalog/skills.json");
 const routingCatalog = readJson("catalog/routing-profiles.json");
 const pluginSkillRoot = path.join(root, "plugins/codex-chef-workflows/skills");
 
-const agents = agentCatalog.agents.map((agent) => agent.name);
+const agents = [
+  ...agentCatalog.agents.map((agent) => agent.name),
+  ...(agentCatalog.coordinators || []).map((coordinator) => coordinator.name)
+];
 const readyMcps = mcpCatalog.servers
   .filter((server) => server.defaultEnabled === true)
   .map((server) => server.name);

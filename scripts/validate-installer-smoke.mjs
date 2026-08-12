@@ -239,7 +239,11 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
     "review.config.toml",
     "token-safe.config.toml"
   ];
-  const expectedAgents = JSON.parse(read(path.join(root, "catalog", "agents.json"))).agents.map((agent) => `${agent.name}.toml`);
+  const agentCatalog = JSON.parse(read(path.join(root, "catalog", "agents.json")));
+  const expectedAgents = [
+    ...agentCatalog.agents.map((agent) => `${agent.name}.toml`),
+    ...(agentCatalog.coordinators || []).map((coordinator) => `${coordinator.name}.toml`)
+  ];
 
   assertFileExists(configPath, `${label} explicit CODEX_HOME`);
   assertFileExists(agentsPath, `${label} explicit CODEX_HOME`);
@@ -276,6 +280,8 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
     assertIncludes(config, "multi_agent = true", `${label} config`);
     assertIncludes(config, '[agents.code_mapper]', `${label} config`);
     assertIncludes(config, '[agents.codex_doctor]', `${label} config`);
+    assertIncludes(config, '[agents.leadership_coordinator]', `${label} config`);
+    assertIncludes(config, '[agents.support_coordinator]', `${label} config`);
     assertRootAssignment(config, "approval_policy", '"on-request"', `${label} config`);
     assertRootAssignment(config, "sandbox_mode", '"workspace-write"', `${label} config`);
     assertRootAssignment(config, "model_reasoning_effort", '"medium"', `${label} config`);
@@ -871,6 +877,29 @@ if (!previewOutput.includes("Dry run: no files") && !previewOutput.includes("Dry
 }
 if (fs.existsSync(path.join(previewCodexHome, "config.toml")) || fs.existsSync(path.join(previewAgentsHome, "plugins", "marketplace.json"))) {
   fail("Installer full preview smoke must not write Codex or Agents files.");
+}
+
+const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [rollback] #-"));
+const rollbackCodexHome = path.join(rollbackRoot, ".codex");
+const rollbackAgentsHome = path.join(rollbackRoot, ".agents");
+const rollbackAgentsPath = path.join(rollbackCodexHome, "AGENTS.md");
+ensureDir(rollbackCodexHome);
+fs.writeFileSync(rollbackAgentsPath, "# user-owned pre-install AGENTS\n", "utf8");
+progress("post-mutation rollback");
+const rollbackResult = runInstaller(rollbackCodexHome, rollbackAgentsHome, [], {
+  extraEnv: {
+    CODEX_CHEF_TEST_MODE: "1",
+    CODEX_CHEF_TEST_INSTALL_FAIL_AFTER_MUTATIONS: "1"
+  }
+});
+if (rollbackResult.status === 0) {
+  fail("Installer rollback smoke must fail at the injected post-mutation checkpoint.");
+}
+if (read(rollbackAgentsPath) !== "# user-owned pre-install AGENTS\n") {
+  fail("Installer rollback smoke must restore an overwritten managed file after a later transaction failure.");
+}
+if (fs.existsSync(path.join(rollbackCodexHome, "config.toml"))) {
+  fail("Installer rollback smoke must remove a transaction-created target after a failure.");
 }
 
 progress("zero-config install");

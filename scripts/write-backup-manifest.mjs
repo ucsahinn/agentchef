@@ -47,6 +47,7 @@ for (let index = 0; index < args.length; index += 1) {
 if (!options.backupRoot) throw new CliUsageError("--backup-root is required");
 
 const manifestName = ".codex-chef-backup.json";
+const journalName = ".codex-chef-operation-journal.json";
 const backupRoot = path.resolve(options.backupRoot);
 if (!fs.existsSync(backupRoot) || !fs.statSync(backupRoot).isDirectory()) {
   throw new Error(`Backup root does not exist: ${backupRoot}`);
@@ -83,7 +84,7 @@ function listEntries() {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       const relative = toPosix(path.relative(backupRoot, fullPath));
-      if (relative === manifestName) continue;
+      if (relative === manifestName || relative === journalName) continue;
       if (!validateRelativePath(relative)) {
         issues.push(`unsafe-relative-path:${relative}`);
         continue;

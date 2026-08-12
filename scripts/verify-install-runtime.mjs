@@ -34,6 +34,7 @@ const options = {
   expectSkills: false,
   expectGitGuards: false,
   skipCodexCli: false,
+  skipDoctorProbe: false,
   offline: false,
   noMcpProbe: false,
   requireLiveRuntime: false,
@@ -52,6 +53,7 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--expect-skills") options.expectSkills = true;
   else if (arg === "--expect-git-guards") options.expectGitGuards = true;
   else if (arg === "--skip-codex-cli") options.skipCodexCli = true;
+  else if (arg === "--skip-doctor-probe") options.skipDoctorProbe = true;
   else if (arg === "--offline") options.offline = true;
   else if (arg === "--no-mcp-probe") options.noMcpProbe = true;
   else if (arg === "--require-live-runtime") options.requireLiveRuntime = true;
@@ -87,10 +89,11 @@ Options:
   --expect-skills         Fail if installable curated skills are missing
   --expect-git-guards     Fail if optional global Git guard files/settings are missing
   --skip-codex-cli        Do not call codex doctor or codex mcp list
+  --skip-doctor-probe     Do not call codex doctor; MCP and plugin probes may still run
   --offline               Skip all live Codex CLI/runtime probes
   --no-mcp-probe          Run doctor probes but skip codex mcp list
   --probe-timeout-ms <n>  Default timeout for non-live helper probes (default: 30000)
-  --doctor-timeout-ms <n> Per-doctor timeout (default: 30000)
+  --doctor-timeout-ms <n> Per-doctor timeout (default: 12000)
   --mcp-timeout-ms <n>    MCP list timeout (default: 15000)
   --require-live-runtime  Treat unavailable/timed-out live probes as failures
   --ambient-doctor         Also inspect the ambient CODEX_HOME; off by default to keep verification bounded
@@ -153,6 +156,14 @@ function parseBlocks(text, pattern) {
 
 function normalizePath(filePath) {
   return path.resolve(filePath || "");
+}
+
+function sameFilesystemPath(left, right) {
+  const normalizedLeft = normalizePath(left);
+  const normalizedRight = normalizePath(right);
+  return process.platform === "win32"
+    ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+    : normalizedLeft === normalizedRight;
 }
 
 function posixPath(filePath) {
@@ -243,9 +254,7 @@ function parseCodexDoctorRuntime(doctor, warnings, label) {
     doctorExitCode: doctor.status,
     activeCodexHome: redact(activeCodexHome),
     activeConfig: redact(activeConfig),
-    activeHomeMatchesInstall: activeCodexHome
-      ? normalizePath(activeCodexHome).toLowerCase() === normalizePath(options.codexHome).toLowerCase()
-      : null
+    activeHomeMatchesInstall: activeCodexHome ? sameFilesystemPath(activeCodexHome, options.codexHome) : null
   };
 }
 
@@ -268,7 +277,10 @@ function runtimeInstallContract() {
 function inspectInstalledFiles(failures) {
   const agentsCatalog = readJson("catalog/agents.json");
   const mcpCatalog = readJson("catalog/mcp-servers.json");
-  const expectedAgents = agentsCatalog.agents.map((agent) => agent.name).sort();
+  const expectedAgents = [
+    ...agentsCatalog.agents.map((agent) => agent.name),
+    ...(agentsCatalog.coordinators || []).map((coordinator) => coordinator.name)
+  ].sort();
   const expectedMcp = mcpCatalog.servers.map((server) => server.name).sort();
 
   const configPath = path.join(options.codexHome, "config.toml");
@@ -302,10 +314,13 @@ function inspectInstalledFiles(failures) {
     const target = path.join(options.agentsHome, "skills", skill.name);
     try {
       const state = inspectDirectSkillTarget(source, target);
-      if (state.status !== "managed") {
+      if (!["managed", "managed-with-extras"].includes(state.status)) {
         failures.push(
           `Installed direct skill ownership is invalid for ${skill.name}: ${redact(target)} (${state.reason || state.status})`
         );
+      }
+      if (state.status === "managed-with-extras") {
+        warnings.push(`Installed direct skill preserves local extra files: ${skill.name} at ${redact(target)}.`);
       }
     } catch (error) {
       failures.push(`Installed direct skill ownership could not be verified for ${skill.name}: ${error.message}`);
@@ -350,7 +365,7 @@ function inspectInstalledFiles(failures) {
   };
 }
 
-function inspectManagedFileDrift(failures) {
+function inspectManagedFileDrift(failures, warnings) {
   const mismatched = [];
   const missing = [];
   const extra = [];
@@ -514,7 +529,7 @@ function inspectManagedFileDrift(failures) {
       if (!mirror.sourceFiles.has(file)) {
         const extraPath = path.join(mirror.target, file);
         extra.push(redact(extraPath));
-        failures.push(`Installed managed plugin mirror has an extra file not present in source: ${redact(extraPath)}`);
+        warnings.push(`Installed managed plugin mirror preserves an extra local file not present in source: ${redact(extraPath)}. Use repair --prune-managed-plugin-extras only after review.`);
       }
     }
   }
@@ -615,20 +630,24 @@ function inspectCodexRuntime(failures, warnings) {
   }
 
   const installedEnv = { ...process.env, CODEX_HOME: options.codexHome };
-  const doctor = runProbe("installed-home codex doctor", codexCommand(), ["doctor", "--json"], {
+  const doctor = options.skipDoctorProbe ? null : runProbe("installed-home codex doctor", codexCommand(), ["doctor", "--json"], {
     env: installedEnv,
     timeout: options.doctorTimeoutMs
   });
   const runtime = { inspected: false, ambient };
-  if (doctor.error) {
-    warnings.push(`Could not run codex doctor --json with installed CODEX_HOME: ${doctor.error.message}`);
+  if (options.skipDoctorProbe) {
+    runtime.doctor = { inspected: false, note: "Skipped by --skip-doctor-probe." };
+  } else if (doctor.error) {
+    (options.requireLiveRuntime ? failures : warnings).push(`Could not run codex doctor --json with installed CODEX_HOME: ${doctor.error.message}`);
     runtime.error = doctor.error.message;
   } else {
     Object.assign(runtime, {
       inspected: true,
-      ...parseCodexDoctorRuntime(doctor, warnings, "codex doctor --json with installed CODEX_HOME")
+        ...parseCodexDoctorRuntime(doctor, warnings, "codex doctor --json with installed CODEX_HOME")
     });
-    if (doctor.status !== 0) warnings.push(`Codex doctor --json with installed CODEX_HOME exited ${doctor.status}.`);
+    if (doctor.status !== 0) {
+      (options.requireLiveRuntime ? failures : warnings).push(`Codex doctor --json with installed CODEX_HOME exited ${doctor.status}.`);
+    }
   }
 
   if (runtime.activeHomeMatchesInstall === false) {
@@ -649,6 +668,13 @@ function inspectCodexRuntime(failures, warnings) {
     const message = `Could not run codex mcp list --json with installed CODEX_HOME: ${mcpList.error.message}`;
     (options.requireLiveRuntime ? failures : warnings).push(message);
     runtime.mcpList = { inspected: false, error: mcpList.error.message };
+    return runtime;
+  }
+
+  if (mcpList.status !== 0) {
+    const message = `codex mcp list --json with installed CODEX_HOME exited ${mcpList.status}.`;
+    (options.requireLiveRuntime ? failures : warnings).push(message);
+    runtime.mcpList = { inspected: false, exitCode: mcpList.status, error: message };
     return runtime;
   }
 
@@ -848,10 +874,10 @@ function inspectGitGuards(failures) {
   const hooks = run("git", ["config", "--global", "--get", "core.hooksPath"]);
   const configuredExcludes = (excludes.stdout || "").trim();
   const configuredHooks = (hooks.stdout || "").trim();
-  if (normalizePath(configuredExcludes).toLowerCase() !== normalizePath(ignorePath).toLowerCase()) {
+  if (!sameFilesystemPath(configuredExcludes, ignorePath)) {
     failures.push("Global Git core.excludesfile does not point at the Codex Chef guard file.");
   }
-  if (normalizePath(configuredHooks).toLowerCase() !== normalizePath(hooksPath).toLowerCase()) {
+  if (!sameFilesystemPath(configuredHooks, hooksPath)) {
     failures.push("Global Git core.hooksPath does not point at the Codex Chef hooks directory.");
   }
 
@@ -870,7 +896,7 @@ const report = {
   schemaVersion: "codex-chef.install-runtime.v1",
   generatedAt: new Date().toISOString(),
   installed: inspectInstalledFiles(failures),
-  managedFiles: inspectManagedFileDrift(failures),
+  managedFiles: inspectManagedFileDrift(failures, warnings),
   configDrift: inspectConfigDrift(failures),
   runtime: inspectCodexRuntime(failures, warnings),
   plugin: inspectPluginRuntime(failures, warnings),

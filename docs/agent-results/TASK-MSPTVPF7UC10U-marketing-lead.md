@@ -1,87 +1,69 @@
-# TASK-MSPTVPF7UC10U — Rol keşfedilebilirliği, adlandırma ve dokümantasyon mesajı incelemesi
+# TASK-MSPTVPF7UC10U — Marketing rolü keşfedilebilirliği ve EN/TR mesajı
 
 ## Ne yapıldı
 
-Coordinator/uzman terminolojisi, README giriş yüzeyi, Agents dokümanları, marketing role template’i ve discoverability niyeti için gerçek routing CLI incelendi. Uygulama değişikliği yapılmadı.
+Marketing rolü, adlandırma, README girişleri ve İngilizce/Türkçe agent dokümantasyonu katalog/config/routing kaynaklarıyla karşılaştırıldı.
 
-### Definition of Done
-
-- [x] Başlangıç yüzeyinden coordinator/worker mimarisine erişim doğrulandı.
-- [x] Marketing rol adı, nickname adayları ve worker kapsamı incelendi.
-- [x] SEO/dokümantasyon niyetinde gerçek routing seçimi alındı.
-- [x] EN/TR mesajı ve karışabilecek noktalar belgelendi.
-
-## Bulgular ve öneriler
-
-1. README’nin ilk yönlendirme tablosu açık: “See 11 coordinators + 21 specialists” doğrudan `docs/agents.md`ye, Türkçe eşleniği `docs/agents.tr.md`ye gider.
-2. Ownership tablosu bütün 11 coordinator, worker grupları ve delegasyon/güvenlik sınırlarını tek yüzeyde gösterir.
-3. `marketing_coordinator` teknik adı net; nickname adayları “Marketing Lead”, “Marketing Coordinator”, “Growth Lead” farklı kullanıcı dillerine karşılık verir.
-4. Marketing’in sınırı doğru: `google_seo_auditor` + `docs_author`ı koordine eder, yayın yapmaz; read-only/on-request kalır.
-5. SEO + metadata + documentation + discoverability görevinde gerçek CLI `marketing_coordinator`ı primary seçti.
-
-### Mesaj riski
-
-`docs/agents.md` ilk paragrafı “Codex Chef includes 21 custom roles” der; aşağıda “eleven installed coordinators” ve “21 specialist workers” açıklanır. README 11+21 ayrımını doğru yaparken bu ilk cümle toplam rol sayısını belirsizleştirir.
-
-Uygulanmamış minimal öneri:
-
-```text
-Codex Chef includes 11 coordination roles and 21 specialist worker roles.
-They are not background services...
-```
-
-Türkçesi:
-
-```text
-Codex Chef, 11 koordinasyon rolü ve 21 uzman worker rolü içerir.
-Bunlar arka planda sürekli çalışan servisler değildir...
-```
-
-Uzman odaklı bölüm listeleri coordinator’ları yalnız ownership tablosunda gösterir. Kullanıcıların doğrudan “Marketing Lead” araması hedefleniyorsa bu tablonun üstüne kısa bir coordinator-vs-specialist seçme notu eklenmeli; önce kullanıcı testi gerekir.
+- Canonical isimlendirme tutarlı: katalogda `marketing_coordinator` / role ID `marketing`; rol TOML nickname adayları `Marketing Lead`, `Marketing Coordinator`, `Growth Lead`; sahip olduğu dar worker kümesi `google_seo_auditor`, `docs_author`.
+- README ve README.tr ana girişleri aynı 11 coordinator + 21 specialist iddiasını, doğru `docs/agents` dil bağlantısını ve “delegation yalnız gerçekten faydalı olduğunda” mesajını veriyor.
+- EN ve TR agent rehberleri 21 specialist çağrı-anı satırında eş; SEO/discoverability ile docs/content uzmanlarının kullanıcıya dönük çağrı koşulları açıkça anlatılıyor.
+- Keşfedilebilirlik açığı: `marketing_coordinator`, iki dilde yalnız AgentSpace ownership tablosunda bulunuyor. README’de örnek roller arasında ve “Bring it in when…” specialist rehberinde pazarlama/growth için coordinator giriş noktası yok. CLI `seo-web-quality` ise marketing coordinator’ı yalnız peer handoff olarak gösteriyor; doğrudan owner olarak `google_seo_auditor` seçiyor.
 
 ## Kanıt
 
-```text
-npm run validate:doc-locales
-Doc locale validation passed for complete English and Turkish operator docs.
+Odaklı doğrulamalar:
 
-npm run validate:locales
+```text
+> npm run validate:agents
+Agent config validation passed. Checked 11 coordinators and 21 specialist workers across 2 configs.
+
+> npm run validate:locales
 README locale validation passed. Checked 6 honest public entry points.
+
+> npm run validate:doc-locales
+Doc locale validation passed for complete English and Turkish operator docs.
 ```
+
+Gerçek CLI routing görünürlüğü:
 
 ```text
-Real routing CLI task: SEO metadata documentation discoverability
-primaryCoordinator: marketing_coordinator
-primary workers: google_seo_auditor, docs_author
-peer handoffs: data_coordinator(docs_researcher), devops_coordinator(performance_auditor), frontend_coordinator(frontend_verifier), support_coordinator(devex_auditor)
-each handoff via: parent-routed-handoff
+Coordinator: devops_coordinator owns: performance_auditor
+Peer handoff: frontend_coordinator via parent-routed-handoff: frontend_verifier
+Peer handoff: marketing_coordinator via parent-routed-handoff: google_seo_auditor
+
+Owner: google_seo_auditor with performance_auditor and frontend_verifier
+Boundary: Do not promise rankings, automate backlinks, or use credentialed Search Console access without explicit approval.
 ```
+
+Statik EN/TR korelasyonu:
 
 ```text
-templates/codex/agents/marketing_coordinator.toml
-nickname_candidates = ["Marketing Lead", "Marketing Coordinator", "Growth Lead"]
-approval_policy = "on-request"
-sandbox_mode = "read-only"
-Own discoverability and content task correlation, not publication.
+README.md:      “See 11 coordinators + 21 specialists” -> docs/agents.md
+README.tr.md:   “11 koordinatör + 21 uzmanı gör” -> docs/agents.tr.md
+docs/agents.md:    21 specialist “Bring it in when…” rows; marketing_coordinator -> google_seo_auditor, docs_author
+docs/agents.tr.md: 21 specialist çağrı-anı satırı; marketing_coordinator -> google_seo_auditor, docs_author
 ```
 
-İncelenen yüzeyler: `README.md`, `README.tr.md`, `docs/agents.md`, `docs/agents.tr.md`, `docs/skills-and-agents.md`, `docs/skills-and-agents.tr.md`, `catalog/agents.json`, `templates/codex/agents/marketing_coordinator.toml`, `scripts/codex-routing-board.mjs`.
+Bu görev için Gitleaks çağrısı da denendi ancak denetim shell'i `gitleaks` executable'ını bulamadı; bu nedenle secret-scan kanıtı mevcut değildir. Rapor yalnız public role/dokümantasyon adlarını içerir.
 
 ## Değişen dosyalar
 
-- `docs/agent-results/TASK-MSPTVPF7UC10U-marketing-lead.md` — inceleme raporu.
+- `docs/agent-results/TASK-MSPTVPF7UC10U-marketing-lead.md` — bu denetim raporu.
+- `docs/agent-results/INDEX.md` — rapor bağlantısı mevcut alfabetik biçim korunarak eklendi.
+- `.agentspace/memory/agents/pm-d00406/marketing-role-discoverability.md` ve `MEMORY.md` — yalnız yerel PM hafızasında kalıcı keşfedilebilirlik notu/pointer'ı; install veya Git yüzeyi değildir.
 
 ## Riskler
 
-- “Marketing Lead” nickname’i TOML’dedir; public docs’ta doğrudan aranabilir giriş yoktur.
-- “21 custom roles” ile 11+21 mimarisi aynı yüzeyde farklı sayım modeli kullanır.
-- Marketing coordinator’ın görevi discoverability/content correlation’dır; ranking garantisi veya yayın yetkisi olarak sunulmamalıdır.
+- “Marketing Lead” kullanıcı dostu nickname olarak role TOML’unda var fakat README ve agent seçme rehberi bunu giriş noktası olarak kullanmıyor. Growth/content talebi kullanıcı tarafından yalnız `docs_author` ya da `google_seo_auditor` olarak algılanabilir.
+- `seo-web-quality` profili SEO/Web Quality odağındadır; content/discoverability stratejisinin tamamını pazarlama coordinator’ına yönlendiren ayrı bir profil değildir.
+- Bu analiz canlı Search Console, sıralama veya publish kontrolü değildir; static docs, validator ve yazmayan CLI routing kanıtına dayanır.
 
 ## Açık sorular
 
-- Kullanıcıların direct coordinator seçmesi mi, yoksa yalnız routing sonucunda görmesi mi hedef?
-- Nickname adayları `/agent` veya başka bir kullanıcı yüzeyinde arama/eşleştirme için gerçekten kullanılıyor mu? Runtime nickname resolution kanıtı bu incelemede yok.
+- README “Agents” örnek cümlesine `google_seo_auditor` veya “marketing/discoverability” kavramı eklenmeli mi; yoksa kısa giriş yüzeyi bilinçli olarak genel mi kalmalı?
+- `marketing-discoverability` adlı küçük bir routing profili, `marketing_coordinator` ile `google_seo_auditor`/`docs_author` seçimini doğrudan görünür kılmalı mı?
+- Türkçe rehberde uzman isimleri korunurken kullanıcı dilindeki “Pazarlama / keşfedilebilirlik” giriş etiketi eklenmeli mi?
 
 ## Sonraki adım
 
-Doküman sahibi, iki dilde ilk cümlede 11 coordinator + 21 specialist ayrımını eşitlemeli. Sonra `npm run validate:doc-locales`, `npm run validate:locales` ve discoverability routing acceptance testi yeniden çalıştırılmalı.
+Keşfedilebilirlik iyileştirmesi istenirse en küçük doğru değişiklik: README/README.tr’de aynı kavramsal giriş, docs/agents EN/TR’de “Marketing / Pazarlama ve keşfedilebilirlik” coordinator çağrı cümlesi ve opsiyonel dar routing profili. Katalog, config, role TOML, iki dil ve `validate:agents`/`validate:routing` birlikte güncellenmeli; SEO ranking vaadi, credentialed Search Console veya otomatik publish kapsam dışı kalmalıdır.

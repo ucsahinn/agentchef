@@ -138,6 +138,7 @@ if (!Array.isArray(packageJson.files) || packageJson.files.length === 0) {
     if (!fileEntries.has(required)) fail(`package.json files allowlist missing required entry: ${required}`);
   }
   for (const entry of packageJson.files) {
+    if (entry.startsWith("!")) continue;
     const normalized = posix(entry).replace(/\/+$/, "");
     const absolute = path.join(root, normalized);
     if (!fs.existsSync(absolute)) fail(`package.json files allowlist references missing path: ${entry}`);

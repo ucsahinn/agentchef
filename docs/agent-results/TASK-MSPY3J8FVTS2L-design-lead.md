@@ -1,115 +1,69 @@
-# TASK-MSPY3J8FVTS2L — Onboarding mental model design
+---
+task: TASK-MSPY3J8FVTS2L
+role: design-lead
+title: Rol ve onboarding mental modeli doğrulaması
+status: passed-with-one-critical-gap
+date: 2026-08-12
+---
 
-## Ne yapıldı
+# Rol ve onboarding mental modeli doğrulaması
 
-Codex Chef'in mevcut ilk-kullanım yüzeyini tek bir mental model altında
-toparladım. Tasarım kararı: kullanıcı ürünü bir "agent/MCP katalogu" olarak
-değil, güvenli biçimde tamamlanan bir iş akışı olarak anlamalıdır:
+## Sonuç
 
-```text
-İhtiyacını söyle → Önce etkisini gör → Bilinçli uygula → İlk işi kanıtla
-```
+Temel model anlaşılır: kullanıcı 11 koordinatörün iş alanı sahibi, 21 uzman
+worker'ın ise yalnız seçildiğinde kanıt üreten alt rol olduğunu öğrenebilir.
+Roller sürekli çalışan servis değildir; delegasyon koşulludur. Ana oturum karar
+ve izin sınırını korur, `/agent` thread izleme yoludur ve global `AGENTS.md`,
+repo-içi `AGENTS.md` karşısında daha düşük önceliktedir.
 
-Bu model, mevcut yüzeylere doğrudan karşılık gelir:
-
-| Kullanıcı sorusu | Birincil yüzey | Beklenen anlayış |
-| --- | --- | --- |
-| "Bu benim için ne yapar?" | README'deki görev odaklı giriş | Codex Chef, her şeyi açan bir paket değil; ihtiyaca göre dar yüzey seçer. |
-| "Makinemde ne değişecek?" | Preview-first install | İlk komut yazmaz; planı gösterir. |
-| "Uygularsam kontrol bende mi?" | `--apply`, yedek ve onay sınırları | Uygulama bilinçli ikinci adımdır; kullanıcı ayarları ve riskli erişimler korunur. |
-| "Sonra nasıl başlarım?" | Capability board ve ilk görev örneği | Bir isteği anlatmak yeterlidir; routing öneridir, otomatik yetki/delegasyon değildir. |
-| "Çalıştığını nasıl anlarım?" | Status/doctor/routing komutları | Sağlık, görünür komut çıktısı ve doğrulamayla değerlendirilir. |
-
-Önerilen anlatı sırası: README'nin mevcut "Start With What You Need" bölümü
-kullanıcıyı görevine göre bir yüzeye götürür; "Preview First, Install Second"
-bu keşfi geri alınabilir makine etkisine bağlar; kurulum çıktısındaki capability
-board hangi özelliklerin hazır, kapalı veya opt-in olduğunu gösterir; ardından
-kullanıcı ilk gerçek görevini ana oturuma verir. Böylece katalog ayrıntıları,
-başlangıç kararı için bir engel değil, gerektiğinde açılan destekleyici bilgi
-olur.
-
-### Davranış ilkeleri
-
-1. **Görev önce, mekanizma sonra.** İlk ekranda kullanıcıdan agent, skill veya
-   MCP seçmesi beklenmez; bunlar ihtiyaçtan sonra görünür olur.
-2. **Önizleme güven sözleşmesidir.** Dry-run bir "kurulum başarısız" durumu
-   değil, kullanıcının ilk başarılı kontrol noktasıdır.
-3. **Yönlendirme yetki değildir.** Bir rol eşleşmesi öneridir; ana oturum karar,
-   izin ve dış-etki sınırı olmaya devam eder.
-4. **Hazır / opt-in / onay gerekli ayrımı görünür kalır.** Kullanıcı, bir
-   yeteneğin katalogda listelenmesini etkin veya yetkili sanmamalıdır.
-5. **Kanıtla kapanış.** İlk değer anı, "kuruldu" metni değil, gerçek bir
-   durum/routing/doğrulama komutunun anlaşılır sonucudur.
-
-### Definition of Done
-
-- [x] İlk kullanım için tek cümlelik, sıralı bir mental model tanımlandı.
-- [x] Model mevcut README, installer ve routing yüzeylerine eşlendi.
-- [x] Delegasyon, onay ve yerel persona sınırlarıyla çelişmediği kontrol edildi.
-- [x] UI olmayan bu repo için doğrulama, gerçek CLI/validator kanıtıyla yapıldı;
-  var olmayan bir interaktif ekran için sentetik E2E iddiası yapılmadı.
+Bir kritik onboarding boşluğu kaldı: rol nickname'leri yayınlanan en kısa
+onboarding yüzeyinde canonical çağrılabilir role açıkça bağlanmıyor.
 
 ## Kanıt
 
-İncelenen kaynaklar:
+| Zihinsel model parçası | Kanıt | Değerlendirme |
+| --- | --- | --- |
+| Sayı ve yaşam döngüsü | `docs/agents.tr.md:8-12` 11 koordinatör + 21 uzmanı, koşullu delegasyonu ve sürekli servis olmadıklarını açıklar. | Geçti |
+| Coordinator → worker sınırı | `docs/agents.tr.md:98-126` sahiplik tablosunu, en fazla dört worker'ı, workers'ın yeniden delege edemeyeceğini ve parent-routed handoff'u gösterir. | Geçti |
+| Gereksiz rol üst üste binmesi | Gerçek katalog sayımı 11 coordinator, 21 unique worker ve 21 unique atanmış worker verdi. Her worker tam olarak bir coordinator altında: `design_coordinator → design_reviewer`, `frontend_coordinator → frontend_verifier`, `qa_coordinator → qa_lead/test_verifier`, `support_coordinator → devex_auditor` vb. `catalog/agents.json` içindeki ayrı `primaryUse`/`mustNot` sözleşmeleri yakın alanları ayrıştırır. | Geçti |
+| Çağırma ve izleme | `docs/agents.tr.md:16-37` canonical coordinator çağırma örneği, routing akışı ve `/agent` izleme/yönlendirme/kapatma yolunu verir; `docs/install.tr.md:217-222` aynı izleme yolunu tekrarlar. | Geçti |
+| Repo/global ayrımı | `README.tr.md:63-71` global sözleşmenin `~/.codex/AGENTS.md` olarak kurulduğunu ve repo-içi `AGENTS.md`'nin daha spesifik/öncelikli kaldığını açıklar. | Geçti |
+| Runtime görünürlüğü | `node scripts/codex-routing-board.mjs --task ...` gerçek çıktısında görünür routing sözleşmesi, `/agent`, `support_coordinator → devex_auditor`, koşullu delegasyon ve approval sınırı sunuldu. | Geçti |
+| İsim/nickname ayrımı | `templates/codex/agents/design_coordinator.toml` `nickname_candidates = ["Design Lead", "Design Coordinator", "UX Review Lead"]` içerir. Buna karşılık `README.tr.md`, `docs/agents.tr.md` ve `docs/install.tr.md` içinde `Design Lead`, `nickname_candidates` veya takma adın canonical `design_coordinator` adına çözümü bulunmaz. Docs yalnız canonical adı çağırma örneği verir. | **Kritik boşluk** |
 
-- `README.md` — görev odaklı giriş, preview/apply ayrımı, capability board ve
-  dört ilk komut.
-- `docs/agents.md` — ana oturumun karar/izin sınırı olması ve routing'in
-  öneri niteliği.
-- `docs/workflow-surface-map.md` — surface seçimi ve koşullu delegasyon.
-- `docs/expected-output.md` — preview, capability board ve status çıktısı
-  sözleşmesi.
-- `templates/codex/AGENTS.md` — onay, güvenlik, routing ve doğrulama
-  guardrail'leri.
+## Kritik UX boşluğu
 
-Gerçek doğrulama çıktısı:
+Kullanıcıya bir görev veya ekip etiketi `Design Lead` olarak geldiğinde, bunun
+`design_coordinator` çağrısına karşılık geldiğini onboarding belgelerinden
+çıkaramaz. Runtime role dosyası nickname'i tanır; ancak kullanıcıya açık en kısa
+giriş yüzeyi bu eşlemeyi ve nickname'in yalnız insan-dostu etiket, canonical
+adın ise çağrılabilir kimlik olduğunu söylemez. Bu, görevi yanlışlıkla
+`design_reviewer` worker'ına yönlendirme veya rolün hiç bulunmadığını sanma
+riskini doğurur.
+
+Önerilen dar düzeltme (bu görevde uygulanmadı): `docs/agents.tr.md` içindeki
+"Bir Koordinatör Çağır" bölümüne tek satırlık bir kural ve 11 satırlık
+nickname → canonical coordinator tablosu/bağlantısı ekleyin. README yalnız
+aynı bölüme yönlendirsin; nickname'leri bağımsız ikinci bir role dönüşmesin.
+
+## Zorunlu doğrulama
+
+Gerçek çalıştırmalar:
 
 ```text
-> npm.cmd run validate:agents
-Agent config validation passed. Checked 11 coordinators and 21 specialist workers across 2 configs.
-
-> node scripts/codex-routing-board.mjs --profile starter-health
-Policy: route matches are recommendations; delegation is conditional and inherits the active user profile.
-Boundary: routing profiles make specialists visible, not hidden permission to spawn agents or enable risky tools.
-Delegation mode: conditional
-Privilege delta: read-only diagnostics first; repair writes only after explicit apply.
+npm run chef -- --routing --profile starter-health --no-log  PASS
+npm run validate:agents                                PASS (11 coordinator, 21 worker)
+npm run validate:routing                               PASS (18 profile)
+npm run validate:docs                                  PASS
+npm run validate:doc-locales                           PASS
+node scripts/codex-routing-board.mjs --task "Tasarım rolü..."  PASS
 ```
 
-Bu kanıt, tasarımın iki kritik vaadini destekler: roller görünür ama zorunlu
-değildir; sağlık/onarım önce read-only teşhisle başlar.
+Not: `--profile design-review` denemesi geçerli bir profil adı olmadığı için
+beklendiği gibi "Unknown routing profile" ile çıktı; bu deneme rapordaki
+boşluğun dayanağı değildir.
 
-## Değişen dosyalar
+## Kapsam
 
-- `docs/agent-results/TASK-MSPY3J8FVTS2L-design-lead.md` — bu tasarım raporu.
-- `.agentspace/memory/agents/secv/onboarding-mental-model.md` — gelecekteki
-  onboarding kararları için yerel, kalıcı tasarım notu.
-- `.agentspace/memory/agents/secv/MEMORY.md` — seçilmiş hafıza işaretçisi.
-- `docs/agent-results/INDEX.md` — sonuç indeksi, proje komutuyla yenilenecek.
-
-## Riskler
-
-- Capability board ilk karar noktasından önce gösterilirse kullanıcı agent,
-  skill ve MCP ayrıntıları arasında seçim yapmak zorunda hissedebilir.
-- Preview, "kurulumun kendisi" gibi anlatılırsa kullanıcı kontrol adımını atlayıp
-  doğrudan `--apply` kullanabilir.
-- `Lead`/coordinator etiketleri açık sınır olmadan sunulursa otomatik uygulama
-  veya geniş yetki beklentisi yaratabilir.
-- AgentSpace personasını installable onboarding anlatısına taşımak, yerel
-  kimlik/hafıza ile paketlenebilir rol yüzeyini yanlış biçimde birleştirir.
-
-## Açık sorular
-
-1. README'nin üst kısmına bu dört-adımlı model için kısa bir "First successful
-   run" şeridi eklenmesi isteniyor mu?
-2. Gelecekte bir app/IDE onboarding yüzeyi eklenirse, beş yeni kullanıcıyla şu
-   görev testi yapılmalı: kullanıcı preview'ın yazmadığını, `--apply`ın bilinçli
-   onay olduğunu ve ilk görevin agent seçmeden verilebildiğini doğru açıklıyor
-   mu?
-
-## Sonraki adım
-
-Uygulama onayı verilirse en küçük değişiklik, README ve README.tr'ye aynı
-dört-adımlı metinsel onboarding şeridini eklemek; ardından iki dil doğrulaması
-ve gerçek install preview çıktısıyla test etmektir. Yeni bir UI ancak bu metin
-akışı kullanıcı testinde yetersiz kalırsa değerlendirilmelidir.
+Ürün/dokümantasyon davranışı değiştirilmedi; bu yalnızca runtime ve onboarding
+inceleme raporudur.

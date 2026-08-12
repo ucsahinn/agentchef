@@ -31,6 +31,38 @@ test("release and Turkish security signals select their high-priority routes", (
   assert.equal(security.taskRecommendation.recommendations[0].id, "security-sensitive");
 });
 
+test("data systems and onboarding support tasks select their primary coordinators", () => {
+  const data = run("--task", "read-only data modeling schema query pipeline analytics data quality source evidence", "--json");
+  const support = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
+
+  assert.equal(data.taskRecommendation.recommendations[0].id, "data-systems");
+  assert.equal(data.coordination.primaryCoordinator.name, "data_coordinator");
+  assert.equal(support.taskRecommendation.recommendations[0].id, "onboarding-support");
+  assert.equal(support.coordination.primaryCoordinator.name, "support_coordinator");
+});
+
+test("data evidence work keeps its coordinator primary and exposes parent-routed cross-domain handoffs", () => {
+  const data = run("--task", "read-only data lineage catalog data quality evidence", "--json");
+
+  assert.equal(data.coordination.primaryCoordinator.name, "data_coordinator");
+  assert.deepEqual(data.profiles.find((profile) => profile.id === "data-systems").crossDomainHandoffs, [
+    {
+      when: "The task needs application implementation, database access, or database performance work.",
+      toCoordinator: "backend_coordinator",
+      via: "parent-routed-handoff",
+      action: "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for backend_coordinator routing."
+    }
+  ]);
+});
+
+test("equal worker-count routing preserves the first recommended profile's owner", () => {
+  const report = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
+  const repeated = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
+
+  assert.equal(report.coordination.primaryCoordinator.name, "support_coordinator");
+  assert.deepEqual(report.coordination, repeated.coordination);
+});
+
 test("unmatched task returns no advisory route", () => {
   const report = run("--task", "zzzxqv unmatched token", "--json");
   assert.deepEqual(report.taskRecommendation.recommendations, []);

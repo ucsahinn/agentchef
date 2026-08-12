@@ -193,7 +193,7 @@ if (!fs.existsSync(catalogPath)) {
     }
     if (catalog.defaults?.model !== "gpt-5.5") fail("catalog/agents.json defaults.model must stay gpt-5.5.");
     if (catalog.defaults?.maxThreads !== 10) fail("catalog/agents.json defaults.maxThreads must stay 10.");
-    if (catalog.defaults?.maxDepth !== 1) fail("catalog/agents.json defaults.maxDepth must stay 1.");
+    if (catalog.defaults?.maxDepth !== 2) fail("catalog/agents.json defaults.maxDepth must stay 2 for bounded coordinator-to-worker delegation.");
     if (catalog.defaults?.jobMaxRuntimeSeconds !== 3600) {
       fail("catalog/agents.json defaults.jobMaxRuntimeSeconds must stay 3600.");
     }
@@ -214,10 +214,13 @@ if (!fs.existsSync(catalogPath)) {
       fail("Agent catalog must keep knowledge name-bound, metadata-only, and private AgentSpace memory excluded.");
     }
     const roleAssignments = new Map();
+    const rolesById = new Map();
     for (const role of catalog.agentSpaceRoles || []) {
-      if (!/^(backend|data|devops|frontend|leadership|product|qa|design)$/.test(role.id || "")) {
+      if (!/^(backend|data|devops|frontend|leadership|product|qa|design|security|marketing|support)$/.test(role.id || "")) {
         fail(`Unsupported AgentSpace role id: ${role.id}`);
       }
+      if (rolesById.has(role.id)) fail(`Duplicate AgentSpace role id: ${role.id}`);
+      rolesById.set(role.id, role);
       for (const name of role.specialists || []) {
         if (roleAssignments.has(name)) fail(`AgentSpace specialist assigned more than once: ${name}`);
         roleAssignments.set(name, role.id);
@@ -361,13 +364,72 @@ if (!fs.existsSync(catalogPath)) {
       if (!catalogNames.has(name)) fail(`AgentSpace role references unknown specialist: ${name}`);
     }
 
+    const coordinationPolicy = catalog.coordinationPolicy;
+    if (coordinationPolicy?.maxDelegationDepth !== 2
+      || coordinationPolicy?.maxWorkersPerCoordinator !== 4
+      || coordinationPolicy?.peerCommunication !== "parent-routed-handoff"
+      || coordinationPolicy?.workerDelegation !== "prohibited"
+      || coordinationPolicy?.privateContext !== "excluded") {
+      fail("Coordinator policy must keep depth-two, bounded, parent-routed, private-context-excluded orchestration.");
+    }
+    if (!Array.isArray(catalog.coordinators) || catalog.coordinators.length !== rolesById.size) {
+      fail("Coordinator catalog must define exactly one coordinator for every AgentSpace role.");
+    }
+    const coordinatorNames = new Set();
+    const coordinatorRoles = new Set();
+    for (const coordinator of catalog.coordinators || []) {
+      if (!/^[A-Za-z0-9_.-]+_coordinator$/.test(coordinator.name || "")) {
+        fail(`Coordinator must declare a valid _coordinator name: ${coordinator.name}`);
+        continue;
+      }
+      if (coordinatorNames.has(coordinator.name)) fail(`Duplicate coordinator name: ${coordinator.name}`);
+      coordinatorNames.add(coordinator.name);
+      if (coordinatorRoles.has(coordinator.roleId)) fail(`Duplicate coordinator role: ${coordinator.roleId}`);
+      coordinatorRoles.add(coordinator.roleId);
+      const role = rolesById.get(coordinator.roleId);
+      if (!role) fail(`Coordinator references unsupported role: ${coordinator.roleId}`);
+      if (!coordinator.description || coordinator.configFile !== `agents/${coordinator.name}.toml`) {
+        fail(`Coordinator ${coordinator.name} must declare description and matching configFile.`);
+      }
+      if (!Array.isArray(coordinator.workers) || coordinator.workers.length < 1 || coordinator.workers.length > (coordinationPolicy?.maxWorkersPerCoordinator || 4)) {
+        fail(`Coordinator ${coordinator.name} must own a bounded worker group.`);
+      }
+      if (JSON.stringify([...(coordinator.workers || [])].sort()) !== JSON.stringify([...(role?.specialists || [])].sort())) {
+        fail(`Coordinator ${coordinator.name} workers must exactly match AgentSpace role ${coordinator.roleId}.`);
+      }
+      const template = readAgentTemplate(coordinator.configFile);
+      if (!template) continue;
+      if (readTomlString(template, "name") !== coordinator.name
+        || readTomlString(template, "description") !== coordinator.description
+        || readTomlString(template, "approval_policy") !== "on-request"
+        || readTomlString(template, "sandbox_mode") !== "read-only") {
+        fail(`Coordinator template contract drift for ${coordinator.name}.`);
+      }
+      const nicknames = readTomlStringArray(template, "nickname_candidates");
+      if (!nicknames || nicknames.length < 3 || new Set(nicknames).size !== nicknames.length) {
+        fail(`Coordinator ${coordinator.name} must have three unique nickname_candidates.`);
+      }
+      for (const required of [
+        "Do not delegate to another coordinator or create nested worker trees.",
+        "A worker may not delegate further.",
+        "the parent routes peer consultation",
+        "AgentSpace private memory, sessions, credentials, or machine-local context"
+      ]) {
+        if (!template.includes(required)) fail(`Coordinator ${coordinator.name} missing orchestration guardrail: ${required}`);
+      }
+      if (/model\s*=|model_reasoning_effort\s*=|danger-full-access|approval_policy\s*=\s*"never"|\.agentspace[\\/]|MEMORY\.md|auth\.json|sessions[\\/]/i.test(template)) {
+        fail(`Coordinator ${coordinator.name} contains a forbidden pin, unsafe setting, or private-context reference.`);
+      }
+    }
+
     const templateNames = fs.existsSync(agentDir)
       ? fs.readdirSync(agentDir).filter((file) => file.endsWith(".toml")).map((file) => path.basename(file, ".toml"))
       : [];
+    const runtimeNames = new Set([...catalogNames, ...coordinatorNames]);
     for (const name of templateNames) {
-      if (!catalogNames.has(name)) fail(`Agent template missing from catalog: ${name}`);
+      if (!runtimeNames.has(name)) fail(`Agent template missing from catalog: ${name}`);
     }
-    for (const name of catalogNames) {
+    for (const name of runtimeNames) {
       if (!templateNames.includes(name)) fail(`Catalog agent missing template file: ${name}`);
     }
 
@@ -378,17 +440,17 @@ if (!fs.existsSync(catalogPath)) {
 
       validateTextContains(configFile, text, "multi_agent = true");
       validateTextContains(configFile, text, "max_threads = 10");
-      validateTextContains(configFile, text, "max_depth = 1");
+      validateTextContains(configFile, text, "max_depth = 2");
       validateTextContains(configFile, text, "job_max_runtime_seconds = 3600");
       if (/\[apps\._default\][\s\S]*?\ndefault_tools_enabled\s*=/.test(text)) {
         fail(`${configFile} must not use apps._default.default_tools_enabled; Codex strict config rejects it.`);
       }
 
-      for (const name of catalogNames) {
+      for (const name of runtimeNames) {
         if (!configNames.has(name)) fail(`${configFile} missing agent block for ${name}.`);
       }
       for (const name of configNames) {
-        if (!catalogNames.has(name)) fail(`${configFile} has agent block not present in catalog: ${name}.`);
+        if (!runtimeNames.has(name)) fail(`${configFile} has agent block not present in catalog: ${name}.`);
       }
       for (const agent of catalog.agents || []) {
         const block = blocks.get(agent.name);
@@ -398,6 +460,14 @@ if (!fs.existsSync(catalogPath)) {
         }
         if (readTomlString(block, "config_file") !== agent.configFile) {
           fail(`${configFile} config_file drift for ${agent.name}.`);
+        }
+      }
+      for (const coordinator of catalog.coordinators || []) {
+        const block = blocks.get(coordinator.name);
+        if (!block) continue;
+        if (readTomlString(block, "description") !== coordinator.description
+          || readTomlString(block, "config_file") !== coordinator.configFile) {
+          fail(`${configFile} coordinator block drift for ${coordinator.name}.`);
         }
       }
     }
@@ -410,5 +480,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-const count = JSON.parse(fs.readFileSync(catalogPath, "utf8")).agents.length;
-console.log(`Agent config validation passed. Checked ${count} agents across ${configFiles.length} configs.`);
+const validatedCatalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+const specialistCount = validatedCatalog.agents.length;
+const coordinatorCount = (validatedCatalog.coordinators || []).length;
+console.log(`Agent config validation passed. Checked ${coordinatorCount} coordinators and ${specialistCount} specialist workers across ${configFiles.length} configs.`);

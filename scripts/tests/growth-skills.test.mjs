@@ -310,9 +310,9 @@ test("managed direct skill marker does not hide missing or modified source files
     fs.copyFileSync(path.join(source, "reference.md"), path.join(target, "reference.md"));
     fs.writeFileSync(path.join(target, "unexpected.txt"), "not canonical\n", "utf8");
     state = inspectDirectSkillTarget(source, target);
-    assert.equal(state.status, "managed-drift");
+    assert.equal(state.status, "managed-with-extras");
     assert.equal(state.safeToSync, true);
-    assert.equal(state.reason, "managed-content-drift");
+    assert.equal(state.reason, "local-extras-preserved");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

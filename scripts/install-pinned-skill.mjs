@@ -165,6 +165,7 @@ function emitResult(outcome, message) {
   console.log(message);
 }
 
+let operationError = null;
 try {
   run("git", ["init", "--quiet"], "Git initialization");
   run("git", ["remote", "add", "origin", githubUrl], "Git remote configuration");
@@ -249,6 +250,17 @@ try {
       );
     }
   }
+} catch (error) {
+  operationError = error;
+  throw error;
 } finally {
-  removeCheckout();
+  try {
+    removeCheckout();
+  } catch (cleanupError) {
+    if (operationError) {
+      console.error(`Pinned skill checkout cleanup also failed: ${cleanupError.message}`);
+    } else {
+      throw cleanupError;
+    }
+  }
 }

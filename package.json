@@ -27,6 +27,8 @@
     "assets/",
     "catalog/",
     "docs/",
+    "!docs/.agent-notifications",
+    "!docs/agent-results/**",
     "kb/",
     "manifests/",
     "plugins/",
@@ -36,6 +38,8 @@
   ],
   "scripts": {
     "validate": "node scripts/validate-repo.mjs",
+    "results:index": "node scripts/index-agent-results.mjs",
+    "test:results-index": "node --test scripts/tests/agent-results-index.test.mjs",
     "validate:docs": "node scripts/validate-docs.mjs",
     "validate:doc-locales": "node scripts/validate-doc-locales.mjs",
     "validate:locales": "node scripts/validate-readme-locales.mjs",

@@ -42,7 +42,7 @@ kopyalamadan sağlam bir başlangıç düzeni kurar.
 
 | İncele | Ne bulacaksın? |
 | --- | --- |
-| [🤖 21 agent'ın tamamını gör](docs/agents.tr.md) | Her uzman rolün ne yaptığını, ne zaman seçildiğini ve delegasyonun ne zaman gerçekten faydalı olduğunu. |
+| [🤖 11 koordinatör + 21 uzmanı gör](docs/agents.tr.md) | Koordinasyon rolleri, uzman worker'lar ve delegasyonun ne zaman gerçekten faydalı olduğunu. |
 | [🧩 Skill kataloğunu aç](docs/skills.tr.md) | On bir bundled workflow'u, full install ile gelen on beş incelenmiş skill'i ve varsayılan yolu kalabalıklaştırmayan opsiyonları. |
 | [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | Dengeli üç sunuculu varsayılanı, opsiyonel lokal yetenekleri, sekiz kontrollü connector'ı ve süreç/erişim sınırlarını. |
 | [📜 Kurulan çalışma sözleşmesini oku](templates/codex/AGENTS.md) | `~/.codex/AGENTS.md` olarak kurulan kullanıcı-geneli varsayılanlar; repo-içi `AGENTS.md` yine daha yüksek önceliklidir. |

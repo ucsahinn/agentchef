@@ -52,7 +52,7 @@ node scripts/plan-install.mjs --all --json --redact-paths
 
 ```text
 Codex Chef enterprise routing board
-Profiles: 16
+Profiles: 18
 Policy: task-shape routing names matching specialists, selects matching skills when applicable, and may spawn bounded local subagents when the current runtime permits delegation; risky actions remain approval-gated.
 
 Subagent visibility contract:
@@ -92,10 +92,10 @@ What if: Performing the operation ...
 [*] Capability board
   - Agents ready (21):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, context7, serena
-  - MCP opt-in / disabled by default (13):
-    sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (14):
+    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
@@ -148,10 +148,10 @@ Continue with this plan? [Y/n]:
 [chef] Capability board
   - Agents ready (21):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, context7, serena
-  - MCP opt-in / disabled by default (13):
-    sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (14):
+    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
@@ -237,10 +237,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (21):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, context7, serena
-  - MCP opt-in / disabled by default (13):
-    sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (14):
+    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
@@ -269,10 +269,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (21):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, context7, serena
-  - MCP opt-in / disabled by default (13):
-    sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (14):
+    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):

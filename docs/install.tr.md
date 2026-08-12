@@ -412,6 +412,14 @@ Yeni backup'lar ayrica `.codex-chef-backup.json` manifest'i tasir. Bu kucuk
 dosya operation, package version, platform, backup-relative path, size, hash ve
 metadata yazilirken gorulen archive issue'larini kaydeder.
 
+Ilk managed write oncesinde home basina bir islem kilidi ve atomik
+`.codex-chef-operation-journal.json` olusturulur. Tamamlanan her managed write,
+sonraki hash'ini ve varsa tam backup karsiligini kaydeder. Daha sonraki bir
+installer adimi hata verirse yalnizca hala installer'in yazdigi hash ile eslesen
+hedef geri yuklenir veya kaldirilir; sonradan degismis hedef korunur ve journal
+kurtarma kaniti olarak kalir. Son manifest yazilmadan kesilen islemde journal,
+ayni hash-dogrulanmis restore inventory'sini saglar.
+
 Installer şu managed target'ları replace etmeden önce yedekler:
 
 - `AGENTS.md`

@@ -88,6 +88,7 @@ const routing = readJson("catalog/routing-profiles.json");
 const agentCatalog = readJson("catalog/agents.json");
 const agentIndex = new Map(agentCatalog.agents.map((agent) => [agent.name, agent]));
 const ownerIndex = new Map(agentCatalog.agentSpaceRoles.flatMap((role) => role.specialists.map((name) => [name, role.id])));
+const coordinatorByRole = new Map((agentCatalog.coordinators || []).map((coordinator) => [coordinator.roleId, coordinator]));
 function workerFor(name) {
   const agent = agentIndex.get(name);
   return {
@@ -99,6 +100,45 @@ function workerFor(name) {
       sandboxMode: agent.sandboxMode,
       rules: agentCatalog.workerApprovalProfile.rules
     }
+  };
+}
+
+function coordinationFor(profiles) {
+  const selectedWorkers = [...new Set(profiles.flatMap((profile) => profile.agents))];
+  const workerOrder = new Map(selectedWorkers.map((worker, index) => [worker, index]));
+  const workersByRole = new Map();
+  for (const name of selectedWorkers) {
+    const roleId = ownerIndex.get(name);
+    if (!roleId) continue;
+    const workers = workersByRole.get(roleId) || [];
+    workers.push(name);
+    workersByRole.set(roleId, workers);
+  }
+  const candidates = [...workersByRole.entries()]
+    .map(([roleId, workers]) => ({
+      coordinator: coordinatorByRole.get(roleId),
+      workers,
+      firstWorkerOrder: Math.min(...workers.map((worker) => workerOrder.get(worker)))
+    }))
+    .filter((entry) => entry.coordinator)
+    .sort((left, right) => right.workers.length - left.workers.length
+      || left.firstWorkerOrder - right.firstWorkerOrder
+      || left.coordinator.name.localeCompare(right.coordinator.name));
+  const primary = candidates[0] || null;
+  return {
+    policy: agentCatalog.coordinationPolicy || null,
+    primaryCoordinator: primary ? {
+      name: primary.coordinator.name,
+      roleId: primary.coordinator.roleId,
+      workers: primary.workers
+    } : null,
+    peerHandoffs: candidates.slice(1).map(({ coordinator, workers }) => ({
+      toCoordinator: coordinator.name,
+      roleId: coordinator.roleId,
+      workers,
+      via: agentCatalog.coordinationPolicy?.peerCommunication || "parent-routed-handoff",
+      reason: "Selected work crosses the primary coordinator's bounded worker group."
+    }))
   };
 }
 if (options.profile && options.task) throw new CliUsageError("Use either --profile or --task, not both.");
@@ -132,6 +172,7 @@ const report = {
   },
   profileCount: profiles.length,
   taskRecommendation: options.task ? { algorithm: "weighted-catalog-v1", task: options.task, recommendations: recommendations.map(({ profile, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence }) => ({ id: profile.id, title: profile.title, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence, advisory: true })) } : null,
+  coordination: coordinationFor(profiles),
   profiles: profiles.map((profile) => ({ ...profile, workers: profile.agents.map(workerFor) }))
 };
 
@@ -156,6 +197,13 @@ if (options.json) {
   printWrapped("Routing result: completion state and evidence in one final table or line.", { prefix: "- ", continuationPrefix: "  " });
   printWrapped("Use /agent in Codex CLI to inspect active agent threads, switch to one, or steer/close it.", { prefix: "- ", continuationPrefix: "  " });
   printWrapped("Boundary: routing profiles make specialists visible, not hidden permission to spawn agents or enable risky tools.", { prefix: "- ", continuationPrefix: "  " });
+  if (report.coordination.primaryCoordinator) {
+    console.log("");
+    printWrapped(`${report.coordination.primaryCoordinator.name} owns: ${report.coordination.primaryCoordinator.workers.join(", ")}`, { prefix: "Coordinator: ", continuationPrefix: "             " });
+    for (const handoff of report.coordination.peerHandoffs) {
+      printWrapped(`${handoff.toCoordinator} via ${handoff.via}: ${handoff.workers.join(", ")}`, { prefix: "Peer handoff: ", continuationPrefix: "              " });
+    }
+  }
   console.log("");
   console.log("Lifecycle hygiene:");
   printWrapped("Close completed subagent threads when they are no longer needed.", { prefix: "- ", continuationPrefix: "  " });

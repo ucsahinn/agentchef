@@ -153,6 +153,43 @@ test("repair restores a drifted Serena bridge with a backup", () => {
   assert.equal(typeof serenaAction?.backup, "string");
 });
 
+test("a second repair apply is a persistent no-op after convergence", () => {
+  const target = fixture("apply-idempotency");
+  const first = runRepair(target, ["--apply"]);
+  assert.equal(first.status, 0, first.stderr || first.stdout);
+
+  const backupsPath = path.join(target.codexHome, "backups");
+  const backupsBefore = fs.existsSync(backupsPath) ? fs.readdirSync(backupsPath).sort() : [];
+  const preview = runRepair(target, ["--preview"]);
+  const previewPayload = report(preview);
+  assert.equal(preview.status, 0, preview.stderr || preview.stdout);
+  assert.equal(previewPayload.managedFiles.planned, 0);
+  assert.deepEqual(fs.existsSync(backupsPath) ? fs.readdirSync(backupsPath).sort() : [], backupsBefore);
+  const second = runRepair(target, ["--apply"]);
+  const payload = report(second);
+
+  assert.equal(second.status, 0, second.stderr || second.stdout);
+  assert.equal(payload.managedFiles.applied, 0);
+  assert.deepEqual(fs.existsSync(backupsPath) ? fs.readdirSync(backupsPath).sort() : [], backupsBefore);
+});
+
+test("repair reconciles a failed post-write transaction without overwriting later user changes", () => {
+  const target = fixture("transaction-reconcile");
+  const agentsPath = path.join(target.codexHome, "AGENTS.md");
+  const original = "# user-managed prior content\n";
+  write(agentsPath, original);
+
+  const result = runRepair(target, ["--apply"], {
+    CODEX_CHEF_TEST_MODE: "1",
+    CODEX_CHEF_TEST_REPAIR_FAIL_AFTER_WRITES: "1"
+  });
+  const payload = report(result);
+  assert.equal(result.status, 1);
+  assert.match(payload.failures.join("\n"), /Injected repair post-write failure/);
+  assert.equal(fs.readFileSync(agentsPath, "utf8"), original);
+  assert.match(payload.notes.join("\n"), /reconciled 1 managed target/i);
+});
+
 test("unsafe Serena targets fail before earlier managed files are written", (t) => {
   const target = fixture("serena-link");
   const outsideHome = path.join(target.root, "outside-codex-home");

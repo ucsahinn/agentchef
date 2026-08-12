@@ -211,8 +211,8 @@ const balancedEnabledNames = (catalog.servers || [])
   .filter((server) => server.transport === "stdio" && server.defaultEnabled === true)
   .map((server) => server.name)
   .sort();
-if (JSON.stringify(balancedEnabledNames) !== JSON.stringify(["context7", "serena"])) {
-  fail(`Balanced default must enable only context7 and serena local MCPs, found: ${balancedEnabledNames.join(", ") || "none"}`);
+if (JSON.stringify(balancedEnabledNames) !== JSON.stringify(["serena"])) {
+  fail(`Balanced default must enable only the managed Serena bridge; remote npx MCPs remain disabled, found: ${balancedEnabledNames.join(", ") || "none"}`);
 }
 
 for (const [profileFile, expectedEnabled] of [

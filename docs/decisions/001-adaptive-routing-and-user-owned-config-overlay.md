@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-Codex Chef ships 21 specialist role files and a broad set of skills and MCP
+Codex Chef ships 11 read-only coordinator role files, 21 specialist worker role files, and a broad set of skills and MCP
 definitions. Earlier guidance treated a prompt-to-role match too much like a
 spawn requirement and required separate visibility messages for agents, skills,
 and MCPs. That increased thread count, startup/context noise, and token use even

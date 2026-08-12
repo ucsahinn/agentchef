@@ -19,6 +19,7 @@ import {
   sanitizeCliError
 } from "./lib/cli-error-contract.mjs";
 import { classifyGitStatus } from "./lib/git-worktree.mjs";
+import { acquireOperationLock } from "./lib/operation-lock.mjs";
 import {
   buildProcessAudit,
   terminateCleanupPlan
@@ -1270,7 +1271,7 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
   }
 
   const result = spawnSync(executable, argsForSpawn, {
-    cwd: root,
+    cwd: extra.cwd || root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: extra.timeout || 180000,
@@ -1675,6 +1676,50 @@ function runUpdateValidation(extra = {}) {
   });
 }
 
+function resolveGitRef(ref) {
+  const result = spawnSync("git", ["rev-parse", "--verify", `${ref}^{commit}`], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  if (result.error || result.status !== 0) {
+    return { ok: false, message: redactSensitiveOutput(result.error?.message || result.stderr || `git rev-parse ${ref} exited ${result.status}`) };
+  }
+  return { ok: true, value: result.stdout.trim() };
+}
+
+function runFetchedUpdateValidation(candidateCommit, extra = {}) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-update-"));
+  const candidatePath = path.join(tempRoot, "candidate");
+  let added = false;
+  try {
+    const addedWorktree = runLoggedCommand("update-candidate-worktree", "git", ["worktree", "add", "--detach", candidatePath, candidateCommit], {
+      timeout: 120000,
+      quiet: extra.quiet
+    });
+    if (!addedWorktree.ok) return addedWorktree;
+    added = true;
+    return runLoggedCommand("update-candidate-check", npmCommand(), ["run", "validate:update"], {
+      cwd: candidatePath,
+      timeout: 120000,
+      quiet: extra.quiet,
+      waitNote: localText(
+        "Validating the exact fetched commit before changing the current checkout.",
+        "Mevcut checkout degismeden once tam olarak getirilen commit dogrulaniyor."
+      )
+    });
+  } finally {
+    if (added) {
+      runLoggedCommand("update-candidate-cleanup", "git", ["worktree", "remove", "--force", candidatePath], {
+        timeout: 120000,
+        quiet: true
+      });
+    }
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
 const MANAGED_REFRESH_TARGETS = [
   "CODEX_HOME/AGENTS.md",
   "CODEX_HOME/config.toml",
@@ -1924,7 +1969,12 @@ async function runUpdate(interaction = {}) {
     printProgress(10, localText("Version check failed", "Sürüm kontrolü başarısız"), "failed");
     return fetch;
   }
-  const remoteVersion = gitPackageVersion("FETCH_HEAD");
+  const candidate = resolveGitRef("FETCH_HEAD");
+  if (!candidate.ok) {
+    console.log(`${ICONS.warn} Cannot resolve fetched update commit: ${candidate.message}`);
+    return { ok: false };
+  }
+  const remoteVersion = gitPackageVersion(candidate.value);
   if (!remoteVersion.ok) {
     console.log(`${ICONS.warn} ${localText(`Cannot read available version: ${remoteVersion.message}`, `Uygun sürüm okunamadı: ${remoteVersion.message}`)}`);
     return { ok: false };
@@ -1944,12 +1994,28 @@ async function runUpdate(interaction = {}) {
     const allowed = await confirmWriteAction(
       localText("Update", "Guncelleme"),
       localText(
-        `Codex Chef is already at v${beforeVersion}; validate it, then refresh managed Codex files and verify the installed runtime.`,
+        `Codex Chef is already at v${beforeVersion}; validate the current checkout, then refresh managed Codex files and verify the installed runtime.`,
         `Codex Chef zaten v${beforeVersion} sürümünde; doğrulanacak, managed Codex dosyaları yenilenecek ve kurulu runtime kontrol edilecek.`
       ),
       interaction
     );
     if (!allowed) return { ok: false, skipped: true, upToDate: true, localVersion: beforeVersion, availableVersion: remoteVersion.value };
+    const validation = runUpdateValidation({ quiet: !options.details });
+    if (!validation.ok) return validation;
+    let applied;
+    if (process.platform === "win32") {
+      applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput"], { quiet: !options.details });
+    } else {
+      applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"], { quiet: !options.details });
+    }
+    return completeAppliedAction(applied, false, {
+      kind: "update",
+      quiet: !options.details,
+      beforeVersion,
+      afterVersion: beforeVersion,
+      beforeHead: beforeHead.value,
+      afterHead: beforeHead.value
+    });
   }
   if (versionOrder > 0) {
     printProgress(100, localText("Local version is newer; update skipped.", "Yerel sürüm daha yeni; güncelleme atlandı."), "done");
@@ -1959,14 +2025,16 @@ async function runUpdate(interaction = {}) {
   const allowed = await confirmWriteAction(
     localText("Update", "Guncelleme"),
     localText(
-      `Update fast-forwards Codex Chef from v${beforeVersion} to v${remoteVersion.value}, validates it, then refreshes managed Codex files.`,
+      `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef from v${beforeVersion} to v${remoteVersion.value} and refreshes managed files.`,
       `Güncelleme Codex Chef'i v${beforeVersion} sürümünden v${remoteVersion.value} sürümüne fast-forward eder, doğrular ve managed Codex dosyalarını yeniler.`
     ),
     interaction
   );
   if (!allowed) return { ok: false, skipped: true };
   printProgress(30, localText("Downloading source update", "Kaynak güncelleme indiriliyor"));
-  const pull = runLoggedCommand("update-merge", "git", ["merge", "--ff-only", "FETCH_HEAD"], {
+  const candidateValidation = runFetchedUpdateValidation(candidate.value, { quiet: !options.details });
+  if (!candidateValidation.ok) return candidateValidation;
+  const pull = runLoggedCommand("update-merge", "git", ["merge", "--ff-only", candidate.value], {
     timeout: 300000,
     quiet: true
   });
@@ -2278,6 +2346,7 @@ async function runRepair(interaction = {}) {
 }
 
 const BACKUP_MANIFEST_NAME = ".codex-chef-backup.json";
+const OPERATION_JOURNAL_NAME = ".codex-chef-operation-journal.json";
 const BACKUP_ID_PATTERN = /^codex-chef-[A-Za-z0-9._-]+$/;
 
 function codexHome() {
@@ -2353,7 +2422,33 @@ function hashFile(filePath) {
 
 function readBackupManifest(archivePath) {
   const manifestPath = path.join(archivePath, BACKUP_MANIFEST_NAME);
-  if (!fs.existsSync(manifestPath)) return null;
+  if (!fs.existsSync(manifestPath)) {
+    const journalPath = path.join(archivePath, OPERATION_JOURNAL_NAME);
+    if (!fs.existsSync(journalPath)) return null;
+    try {
+      const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+      if (
+        journal?.schemaVersion !== "codex-chef.operation-journal.v1"
+        || !Array.isArray(journal.backups)
+      ) {
+        return { invalid: true, error: "Operation journal has an unsupported shape." };
+      }
+      return {
+        schemaVersion: "codex-chef.backup.v1",
+        createdAt: journal.createdAt,
+        operation: journal.operation,
+        recoveryJournal: true,
+        entries: journal.backups.map((entry) => ({
+          backupRelativePath: entry.path,
+          size: entry.size,
+          sha256: entry.sha256
+        })),
+        issues: []
+      };
+    } catch (error) {
+      return { invalid: true, error: `Operation journal is invalid JSON: ${error.message}` };
+    }
+  }
   try {
     return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   } catch (error) {
@@ -2370,7 +2465,7 @@ function listArchiveFiles(archivePath, includeHashes = false) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       const relative = toPosix(path.relative(archivePath, fullPath));
-      if (relative === BACKUP_MANIFEST_NAME) continue;
+      if (relative === BACKUP_MANIFEST_NAME || relative === OPERATION_JOURNAL_NAME) continue;
       if (!validateArchiveRelativePath(relative)) {
         issues.push(`Rejected unsafe backup path: ${relative}`);
         continue;
@@ -2431,7 +2526,7 @@ function managedRestoreAllowlist() {
     add(`codex/${relative}`, path.join(codexHome(), ...relative.split("/")));
   };
 
-  for (const relative of ["AGENTS.md", "config.toml", "rules/default.rules"]) addCodex(relative);
+  for (const relative of ["AGENTS.md", "config.toml", "rules/default.rules", "codex-profile.mjs", "serena-pool.mjs"]) addCodex(relative);
   for (const file of fs.readdirSync(path.join(root, "templates", "codex", "agents"))) {
     if (file.endsWith(".toml")) addCodex(`agents/${file}`);
   }
@@ -2695,7 +2790,7 @@ function writeBackupManifest(backupPath, extra = {}) {
   fs.writeFileSync(path.join(backupPath, BACKUP_MANIFEST_NAME), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
 
-function restoreBackupArchive(archivePath, plan) {
+function restoreBackupArchiveUnlocked(archivePath, plan) {
   if (plan.files.length === 0) {
     throw new Error("Selected backup archive has no restorable managed Codex Chef files.");
   }
@@ -2798,6 +2893,15 @@ function restoreBackupArchive(archivePath, plan) {
     throw error;
   }
   return { restored: verified.length, rollbackPath };
+}
+
+function restoreBackupArchive(archivePath, plan) {
+  const lock = acquireOperationLock({ root: codexHome(), operation: "backup-restore" });
+  try {
+    return restoreBackupArchiveUnlocked(archivePath, plan);
+  } finally {
+    lock.release();
+  }
 }
 
 function deleteBackupArchive(archivePath) {

@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+let baselineFixtureRoot = null;
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -20,12 +21,23 @@ function run(command, args, options = {}) {
 }
 
 function installFixture(codexHome, agentsHome) {
-  const env = { ...process.env, CODEX_HOME: codexHome, AGENTS_HOME: agentsHome, NO_COLOR: "1", FORCE_COLOR: "0" };
-  const result = process.platform === "win32"
-    ? run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\scripts\\install.ps1", "-PlainOutput"], { env })
-    : run("bash", ["scripts/install.sh", "--plain-output"], { env });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+  if (!baselineFixtureRoot) {
+    baselineFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-baseline-"));
+    const baselineCodexHome = path.join(baselineFixtureRoot, ".codex");
+    const baselineAgentsHome = path.join(baselineFixtureRoot, ".agents");
+    const env = { ...process.env, CODEX_HOME: baselineCodexHome, AGENTS_HOME: baselineAgentsHome, NO_COLOR: "1", FORCE_COLOR: "0" };
+    const result = process.platform === "win32"
+      ? run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\scripts\\install.ps1", "-PlainOutput"], { env })
+      : run("bash", ["scripts/install.sh", "--plain-output"], { env });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  }
+  fs.cpSync(path.join(baselineFixtureRoot, ".codex"), codexHome, { recursive: true, force: false, errorOnExist: true });
+  fs.cpSync(path.join(baselineFixtureRoot, ".agents"), agentsHome, { recursive: true, force: false, errorOnExist: true });
 }
+
+test.after(() => {
+  if (baselineFixtureRoot) fs.rmSync(baselineFixtureRoot, { recursive: true, force: true });
+});
 
 function verifyOffline(codexHome, agentsHome) {
   return run(process.execPath, [
@@ -36,6 +48,14 @@ function verifyOffline(codexHome, agentsHome) {
     "--agents-home", agentsHome
   ]);
 }
+
+test("runtime verifier help documents its effective timeout defaults", () => {
+  const result = run(process.execPath, ["scripts/verify-install-runtime.mjs", "--help"]);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /--probe-timeout-ms <n>\s+Default timeout for non-live helper probes \(default: 30000\)/);
+  assert.match(result.stdout, /--doctor-timeout-ms <n>\s+Per-doctor timeout \(default: 12000\)/);
+  assert.match(result.stdout, /--mcp-timeout-ms <n>\s+MCP list timeout \(default: 15000\)/);
+});
 
 function writeEmptyMcpCodex(binDir, codexHome) {
   const escapedHome = fs.realpathSync.native(codexHome).replaceAll("\\", "\\\\");
@@ -100,7 +120,7 @@ test("runtime verifier treats an empty live MCP list as ambiguous when managed c
   }
 });
 
-test("slow doctor is an attention signal when live MCP visibility still completes", () => {
+test("strict live runtime fails when the installed-home doctor times out", () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-slow-doctor-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
@@ -141,10 +161,9 @@ test("slow doctor is an attention signal when live MCP visibility still complete
       "--agents-home", agentsHome
     ], { env });
     const report = JSON.parse(result.stdout);
-    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
     assert.equal(report.runtime.mcpList.inspected, true);
-    assert.match(report.warnings.join("\n"), /Could not run codex doctor --json with installed CODEX_HOME/i);
-    assert.equal(report.failures.some((failure) => /doctor --json/i.test(failure)), false);
+    assert.match(report.failures.join("\n"), /Could not run codex doctor --json with installed CODEX_HOME/i);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

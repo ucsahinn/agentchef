@@ -307,7 +307,10 @@ function runNodeScript(script, scriptArgs, label, extra = {}) {
     exitCode: result.status,
     status: parsed.status || (result.status === 0 ? "ok" : "fail"),
     report: parsed,
-    failures: parsed.failures || []
+    failures: [
+      ...(Array.isArray(parsed.failures) ? parsed.failures : []),
+      ...(result.status === 0 ? [] : [`${label} exited ${result.status} despite emitting JSON.`])
+    ]
   };
 }
 
@@ -1089,13 +1092,31 @@ function writeOutput(report) {
   if (!options.output) return;
 
   const outputPath = path.resolve(root, options.output);
-  if (!outputPath.startsWith(root + path.sep)) {
+  const relative = path.relative(root, outputPath);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new Error(`Refusing to write status report outside repository: ${options.output}`);
+  }
+  const segments = relative.split(path.sep).filter(Boolean);
+  let current = root;
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    try {
+      if (fs.lstatSync(current).isSymbolicLink()) {
+        throw new Error(`Refusing to write status report through linked path: ${options.output}`);
+      }
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      break;
+    }
   }
   if (fs.existsSync(outputPath) && !options.forceOutput) {
     throw new Error(`Refusing to overwrite existing report without --force-output: ${options.output}`);
   }
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  const finalStat = fs.existsSync(outputPath) ? fs.lstatSync(outputPath) : null;
+  if (finalStat?.isSymbolicLink()) {
+    throw new Error(`Refusing to write status report through linked path: ${options.output}`);
+  }
   fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
@@ -1117,7 +1138,9 @@ const runtime = options.skipRuntime
         "--agents-home",
         options.agentsHome,
         ...(options.expectSkills ? ["--expect-skills"] : []),
-        ...(options.expectGitGuards ? ["--expect-git-guards"] : [])
+        ...(options.expectGitGuards ? ["--expect-git-guards"] : []),
+        "--skip-doctor-probe",
+        "--no-mcp-probe"
       ],
       "verify:install:runtime",
       { timeout: RUNTIME_VERIFY_TIMEOUT_MS }

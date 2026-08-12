@@ -178,7 +178,7 @@ const matrix = [
   ["codex mcp list", ["codex.cmd", "mcp", "list"], "allow"],
   ["codex doctor json", ["codex.cmd", "doctor", "--json"], "allow"],
   ["codex execpolicy check", ["codex.cmd", "execpolicy", "check", "--rules", "templates/codex/rules/default.rules", "git", "status"], "allow"],
-  ["exact Context7 MCP startup", ["npx.cmd", "-y", "@upstash/context7-mcp@3.2.1"], "allow"],
+  ["exact Context7 MCP startup requires approval", ["npx.cmd", "-y", "@upstash/context7-mcp@3.2.1"], "prompt"],
   ["ad-hoc npx package", ["npx.cmd", "-y", "left-pad@1.3.0"], "no-match"],
   ["read-only GitHub PR view", ["gh", "pr", "view", "1"], "allow"],
   ["read-only GitHub run watch", ["gh", "run", "watch", "1"], "allow"],

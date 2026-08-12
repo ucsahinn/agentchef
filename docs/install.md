@@ -423,6 +423,14 @@ New backups also include `.codex-chef-backup.json`, a small manifest with the
 operation, package version, platform, backup-relative paths, sizes, hashes, and
 any archive issues detected while writing metadata.
 
+Before the first managed write, a per-home operation lock and an atomic
+`.codex-chef-operation-journal.json` are created. Each completed managed write
+records its post-write hash and the exact backup (when one existed). If a later
+installer step fails, only targets that still match the installer-written hash
+are restored or removed; a target changed after the write is preserved and the
+journal remains as recovery evidence. An interrupted journal can supply the
+same hash-validated restore inventory when the final manifest was not written.
+
 The installer backs up managed targets before replacing them:
 
 - `AGENTS.md`

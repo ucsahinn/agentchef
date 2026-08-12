@@ -27,6 +27,9 @@
 .playwright-cli/
 codex-manual.md
 codex-manual.outline.md
+.agentspace/
+docs/.agent-notifications
+docs/agent-results/
 
 # Build and dependency output
 node_modules/

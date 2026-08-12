@@ -141,9 +141,10 @@ test("report verification rejects unknown top-level and finding properties", () 
     confidence: "high"
   };
   const baseReport = {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     reviewId: plan.manifest.reviewId,
     snapshotCommit: plan.manifest.snapshot.commit,
+    snapshotContentSha256: plan.manifest.snapshot.contentSha256,
     summary: "Fixture summary",
     findings: [baseFinding]
   };
@@ -180,6 +181,67 @@ test("report verification rejects unknown top-level and finding properties", () 
   }
 });
 
+test("report verification rejects finding evidence beyond the packaged file", () => {
+  const { repo, out } = fixture();
+  const plan = buildPackPlan({ target: repo, out });
+  const manifestPath = applyPack(plan);
+  const reportPath = path.join(out, "out-of-range-report.json");
+  fs.writeFileSync(reportPath, `${JSON.stringify({
+    schemaVersion: "1.1.0",
+    reviewId: plan.manifest.reviewId,
+    snapshotCommit: plan.manifest.snapshot.commit,
+    snapshotContentSha256: plan.manifest.snapshot.contentSha256,
+    summary: "Fixture summary",
+    findings: [{
+      id: "finding-out-of-range",
+      severity: "medium",
+      title: "Out of range evidence",
+      evidence: "The second line does not exist.",
+      file: "app.js",
+      line: 2,
+      recommendation: "Use a real line.",
+      confidence: "high"
+    }]
+  }, null, 2)}\n`, "utf8");
+  const result = spawnSync(process.execPath, [
+    cliPath,
+    "verify",
+    "--target",
+    repo,
+    "--manifest",
+    manifestPath,
+    "--report",
+    reportPath,
+    "--json"
+  ], { cwd: repo, encoding: "utf8", windowsHide: true, timeout: 15000 });
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.stdout).reportFailures.some((failure) => /beyond packaged file/i.test(failure)), true);
+});
+
+test("dirty snapshots receive a content identity and reports must bind to it", () => {
+  const { repo, out } = fixture();
+  fs.writeFileSync(path.join(repo, "app.js"), "export const answer = 43;\n", "utf8");
+  const plan = buildPackPlan({ target: repo, out });
+  assert.equal(plan.manifest.snapshot.dirty, true);
+  assert.match(plan.manifest.snapshot.contentSha256, /^[0-9a-f]{64}$/);
+  assert.match(plan.manifest.reviewId, new RegExp(plan.manifest.snapshot.contentSha256.slice(0, 12)));
+
+  const manifestPath = applyPack(plan);
+  const reportPath = path.join(out, "missing-content-identity.json");
+  fs.writeFileSync(reportPath, `${JSON.stringify({
+    schemaVersion: "1.1.0",
+    reviewId: plan.manifest.reviewId,
+    snapshotCommit: plan.manifest.snapshot.commit,
+    summary: "Fixture summary",
+    findings: []
+  }, null, 2)}\n`, "utf8");
+  const result = spawnSync(process.execPath, [
+    cliPath, "verify", "--target", repo, "--manifest", manifestPath, "--report", reportPath, "--json"
+  ], { cwd: repo, encoding: "utf8", windowsHide: true, timeout: 15000 });
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.stdout).reportFailures.some((failure) => /snapshotContentSha256/i.test(failure)), true);
+});
+
 test("secret-like tracked content fails closed", () => {
   const { repo, out } = fixture();
   fs.writeFileSync(path.join(repo, "leak.txt"), `token=${"gh"}${"p_"}abcdefghijklmnopqrstuvwxyz1234567890\n`);
@@ -209,6 +271,11 @@ test("secret-like tracked content fails closed", () => {
       + `-----END ${"ENCRYPTED PRIVATE"} KEY-----`
     ),
     ["private key", "GitHub fine-grained token", "JWT", "connection string"]
+  );
+  assert.deepEqual(
+    scanSecrets(`Authorization: Bearer ${"opaque-credential-value-abcdefghijklmnopqrstuvwxyz123456"}`),
+    ["Bearer credential"],
+    "opaque bearer credentials are blocked even when their issuer is not recognizable"
   );
 
   const genericValue = ["actual", "credential", "value", "123456789"].join("-");

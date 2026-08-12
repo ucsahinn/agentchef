@@ -6,18 +6,19 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "reviewId", "generatedAt", "targetName", "snapshot", "policy", "files", "excluded", "parts"],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
     "reviewId": { "type": "string", "minLength": 12 },
     "generatedAt": { "type": "string", "format": "date-time" },
     "targetName": { "type": "string", "minLength": 1 },
     "snapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["commit", "branch", "dirty"],
+      "required": ["commit", "branch", "dirty", "contentSha256"],
       "properties": {
         "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "branch": { "type": "string", "minLength": 1 },
-        "dirty": { "type": "boolean" }
+        "dirty": { "type": "boolean" },
+        "contentSha256": { "$ref": "#/$defs/hash" }
       }
     },
     "policy": {
@@ -69,11 +70,12 @@
     "file": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "bytes", "sha256", "part"],
+      "required": ["path", "bytes", "sha256", "lineCount", "part"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "$ref": "#/$defs/hash" },
+        "lineCount": { "type": "integer", "minimum": 0 },
         "part": { "type": "string", "pattern": "^review-bundle-part-[0-9]{3}\\.txt$" }
       }
     }

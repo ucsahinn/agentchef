@@ -4,11 +4,12 @@
   "title": "Codex Chef External Review Report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "reviewId", "snapshotCommit", "summary", "findings"],
+  "required": ["schemaVersion", "reviewId", "snapshotCommit", "snapshotContentSha256", "summary", "findings"],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
     "reviewId": { "type": "string", "minLength": 12 },
     "snapshotCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "snapshotContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "summary": { "type": "string", "minLength": 1 },
     "findings": {
       "type": "array",

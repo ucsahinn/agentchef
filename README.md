@@ -41,7 +41,7 @@ private machine, credentials, sessions, or local memory.
 
 | Explore | What you will find |
 | --- | --- |
-| [🤖 See all 21 agents](docs/agents.md) | The specialist roles, what each one owns, and when delegation is actually useful. |
+| [🤖 See 11 coordinators + 21 specialists](docs/agents.md) | The coordination roles, specialist workers, and when delegation is actually useful. |
 | [🧩 Browse the skill catalog](docs/skills.md) | Eleven bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
 | [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The balanced three-server default, optional local capabilities, eight gated connectors, and their process/access boundaries. |
 | [📜 Read the installed working agreement](templates/codex/AGENTS.md) | The user-wide defaults installed as `~/.codex/AGENTS.md`; a repository-local `AGENTS.md` still has precedence. |

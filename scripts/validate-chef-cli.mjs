@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -687,6 +688,7 @@ function runBackupsFixtureSmokes() {
   fs.mkdirSync(path.join(backupRoot, "rules"), { recursive: true });
   fs.mkdirSync(path.join(backupRoot, "agents"), { recursive: true });
   fs.writeFileSync(path.join(backupRoot, "AGENTS.md"), "# restored agents\n", "utf8");
+  fs.writeFileSync(path.join(backupRoot, "codex-profile.mjs"), "// restored profile launcher\n", "utf8");
   fs.writeFileSync(path.join(backupRoot, "config.toml"), "sandbox_mode = \"workspace-write\"\n", "utf8");
   fs.writeFileSync(path.join(backupRoot, "rules", "default.rules"), "allow [\"rg\"]\n", "utf8");
   fs.writeFileSync(path.join(backupRoot, "marketplace.json"), "{\"name\":\"codex-chef\"}\n", "utf8");
@@ -706,13 +708,35 @@ function runBackupsFixtureSmokes() {
     fail(`chef-cli backup fixture manifest failed: ${manifestResult.stderr || manifestResult.stdout}`);
   }
 
+  const journalBackupId = "codex-chef-20990101-000001-journal";
+  const journalBackupRoot = path.join(codexHome, "backups", journalBackupId);
+  const journalFile = path.join(journalBackupRoot, "codex", "AGENTS.md");
+  fs.mkdirSync(path.dirname(journalFile), { recursive: true });
+  fs.writeFileSync(journalFile, "# recovered from interrupted operation\n", "utf8");
+  fs.writeFileSync(path.join(journalBackupRoot, ".codex-chef-operation-journal.json"), `${JSON.stringify({
+    schemaVersion: "codex-chef.operation-journal.v1",
+    operation: "install",
+    createdAt: new Date().toISOString(),
+    state: "failed",
+    backups: [{
+      path: "codex/AGENTS.md",
+      size: fs.statSync(journalFile).size,
+      sha256: crypto.createHash("sha256").update(fs.readFileSync(journalFile)).digest("hex")
+    }]
+  }, null, 2)}\n`, "utf8");
+
   fs.mkdirSync(path.join(codexHome, "rules"), { recursive: true });
   fs.mkdirSync(path.join(agentsHome, "plugins"), { recursive: true });
   fs.writeFileSync(path.join(codexHome, "AGENTS.md"), "# current agents\n", "utf8");
+  fs.writeFileSync(path.join(codexHome, "codex-profile.mjs"), "// current profile launcher\n", "utf8");
   fs.writeFileSync(path.join(codexHome, "rules", "default.rules"), "allow [\"git\", \"status\"]\n", "utf8");
   fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), "{\"name\":\"current\"}\n", "utf8");
 
   const env = { CODEX_HOME: codexHome, AGENTS_HOME: agentsHome };
+  const journalPreview = runCliSmokeRaw("backups-journal-recovery-preview", ["--backups", "--backup", journalBackupId, "--restore", "--plain", "--no-log"], { env });
+  if (journalPreview.ok && !journalPreview.output.includes("Backup restore preview")) {
+    fail("chef-cli must allow a hash-validated interrupted-operation journal to drive restore preview.");
+  }
   const list = runCliSmokeRaw("backups-list-fixture", ["--backups", "--plain", "--no-log"], { env });
   if (list.ok) {
     for (const snippet of ["Backup library", backupId, "Backup root"]) {
@@ -757,9 +781,13 @@ function runBackupsFixtureSmokes() {
     }
   }
   const restoredAgents = fs.readFileSync(path.join(codexHome, "AGENTS.md"), "utf8");
+  const restoredProfile = fs.readFileSync(path.join(codexHome, "codex-profile.mjs"), "utf8");
   const restoredMarketplace = fs.readFileSync(path.join(agentsHome, "plugins", "marketplace.json"), "utf8");
   if (!restoredAgents.includes("restored agents")) {
     fail("chef-cli backup restore apply did not restore CODEX_HOME/AGENTS.md from the archive");
+  }
+  if (!restoredProfile.includes("restored profile launcher")) {
+    fail("chef-cli backup restore apply did not restore CODEX_HOME/codex-profile.mjs from the canonical archive path");
   }
   if (!restoredMarketplace.includes("codex-chef")) {
     fail("chef-cli backup restore apply did not restore AGENTS_HOME/plugins/marketplace.json from legacy marketplace backup");

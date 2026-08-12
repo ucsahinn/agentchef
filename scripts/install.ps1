@@ -33,6 +33,9 @@ if ($All) {
 if (($AdoptGitIgnore -or $AdoptGitHook -or $AdoptGitExcludesFile -or $AdoptGitHooksPath) -and -not $InstallGitGuards) {
   throw "Git guard adoption switches require -InstallGitGuards."
 }
+if ($Repair -and $InstallGitGuards) {
+  throw "-Repair does not reconcile global Git guards; run the installer without -Repair for that operation."
+}
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
@@ -396,7 +399,87 @@ if ($Interactive -and -not $InstallGitGuards) {
   }
 }
 
-$BackupRoot = Join-Path $CodexHome ("backups\codex-chef-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+$BackupRoot = Join-Path $CodexHome ("backups\codex-chef-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + $PID)
+$OperationJournalScript = Join-Path $RepoRoot "scripts\lib\operation-journal.mjs"
+$OperationJournalActive = $false
+$LastBackupPath = $null
+$GitGuardReceipt = $null
+$OperationLockPath = Join-Path $CodexHome ".codex-chef-operation.lock"
+$OperationLockOwnerPath = Join-Path $OperationLockPath "owner"
+$OperationLockId = [guid]::NewGuid().ToString()
+
+function Release-OperationLock {
+  if (-not (Test-Path -LiteralPath $OperationLockOwnerPath)) { return }
+  try {
+    $owner = Get-Content -LiteralPath $OperationLockOwnerPath -Raw -ErrorAction Stop | ConvertFrom-Json
+    if ($owner.id -eq $OperationLockId) {
+      Remove-Item -LiteralPath $OperationLockOwnerPath -Force -ErrorAction Stop
+      Remove-Item -LiteralPath $OperationLockPath -Force -ErrorAction Stop
+    }
+  } catch {
+    # Preserve a lock we cannot prove belongs to this process.
+  }
+}
+
+function Acquire-OperationLock {
+if (-not $WhatIfPreference) {
+  try {
+    New-Item -ItemType Directory -Path $OperationLockPath -ErrorAction Stop | Out-Null
+  } catch {
+    throw "Another Codex Chef operation is already in progress for $CodexHome; refusing concurrent install."
+  }
+  @{ id = $OperationLockId; pid = $PID; operation = "install"; startedAt = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json -Compress | Set-Content -LiteralPath $OperationLockOwnerPath -NoNewline -Encoding utf8
+}
+}
+
+function Start-OperationJournal {
+  if ($WhatIfPreference -or $NoBackup) { return }
+  & node $OperationJournalScript start $BackupRoot install
+  if ($LASTEXITCODE -ne 0) { throw "Could not create durable install operation journal." }
+  $Script:OperationJournalActive = $true
+}
+
+function Finish-OperationJournal {
+  param([Parameter(Mandatory=$true)][ValidateSet("complete", "failed")][string]$State)
+  if (-not $Script:OperationJournalActive) { return }
+  & node $OperationJournalScript finish $BackupRoot $State
+  if ($LASTEXITCODE -ne 0) { Write-Warning "Could not mark install operation journal as $State." }
+  $Script:OperationJournalActive = $false
+}
+
+function Track-InstallWrite {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [string]$BackupPath = "-"
+  )
+  if ($WhatIfPreference -or $NoBackup) { return }
+  & node $OperationJournalScript track $BackupRoot $Path $BackupPath
+  if ($LASTEXITCODE -ne 0) { throw "Could not record the completed install mutation for $Path." }
+}
+
+function Track-InstallTree {
+  param(
+    [Parameter(Mandatory=$true)][string]$Destination,
+    [Parameter(Mandatory=$true)][string]$Source,
+    [string]$BackupPath = "-"
+  )
+  if ($WhatIfPreference -or $NoBackup) { return }
+  & node $OperationJournalScript track-tree $BackupRoot $Destination $Source $BackupPath
+  if ($LASTEXITCODE -ne 0) { throw "Could not record completed managed directory mutations for $Destination." }
+}
+
+trap {
+  if ($Script:OperationJournalActive) {
+    & node $OperationJournalScript rollback $BackupRoot - $CodexHome $AgentsHome 2>&1 | Write-Warning
+  }
+  if ($Script:GitGuardReceipt -and (Test-Path -LiteralPath $Script:GitGuardReceipt)) {
+    $RollbackGuardArgs = Get-GlobalGitGuardArgs -Command "restore" -ReceiptPath $Script:GitGuardReceipt
+    & node @RollbackGuardArgs 2>&1 | Write-Warning
+  }
+  Finish-OperationJournal -State "failed"
+  Release-OperationLock
+  throw $_
+}
 
 function Invoke-Change {
   param(
@@ -490,14 +573,21 @@ function Assert-ManagedDirectoryTarget {
 function Backup-Target {
   param([Parameter(Mandatory=$true)][string]$Path)
   if ($NoBackup -or -not (Test-Path -LiteralPath $Path)) {
+    $Script:LastBackupPath = $null
     return
   }
 
   Assert-ManagedWriteTarget $Path
   Ensure-Dir $BackupRoot
-  $relative = Get-RelativePathSafe -Base $CodexHome -Path $Path
-  if ($relative.StartsWith("..")) {
-    $relative = Split-Path -Leaf $Path
+  $codexFull = [System.IO.Path]::GetFullPath($CodexHome).TrimEnd('\', '/')
+  $agentsFull = [System.IO.Path]::GetFullPath($AgentsHome).TrimEnd('\', '/')
+  $pathFull = [System.IO.Path]::GetFullPath($Path)
+  if ($pathFull.StartsWith($codexFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $relative = Join-Path "codex" (Get-RelativePathSafe -Base $CodexHome -Path $Path)
+  } elseif ($pathFull.StartsWith($agentsFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $relative = Join-Path "agents" (Get-RelativePathSafe -Base $AgentsHome -Path $Path)
+  } else {
+    throw "Refusing to back up unmanaged target: $Path"
   }
   $destination = Join-Path $BackupRoot $relative
   Ensure-Dir (Split-Path -Parent $destination)
@@ -506,6 +596,11 @@ function Backup-Target {
     Assert-ManagedWriteTarget $destination
     Copy-Item -LiteralPath $Path -Destination $destination -Recurse -Force
   } | Out-Null
+  if (-not $WhatIfPreference) {
+    & node $OperationJournalScript record $BackupRoot $destination
+    if ($LASTEXITCODE -ne 0) { throw "Could not durably record backup before replacing $Path." }
+    $Script:LastBackupPath = $destination
+  }
 }
 
 function Install-File {
@@ -527,6 +622,7 @@ function Install-File {
     Copy-Item -LiteralPath $Source -Destination $Destination -Force
   }
   if ($changed) {
+    Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
     Write-Action -Status "installed" -Message $Destination
   }
 }
@@ -563,6 +659,7 @@ function Install-CodexConfig {
       }
     }
     if ($changed) {
+      Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
       Write-Action -Status $(if ($Update) { "updated config" } else { "merged config" }) -Message $Destination
     }
     return
@@ -600,6 +697,7 @@ function Install-McpProfile {
     }
   }
   if ($changed) {
+    Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
     Write-Action -Status "generated profile" -Message $Destination
   }
 }
@@ -612,6 +710,7 @@ function Install-Directory {
 
   Assert-ManagedWriteTarget $Destination
   Backup-Target $Destination
+  $directoryBackup = $Script:LastBackupPath
   Ensure-Dir $Destination
   Assert-ManagedDirectoryTarget $Destination
   $changed = Invoke-Change -Target $Destination -Action "Sync source-owned files from $Source while preserving unrelated extras" -ScriptBlock {
@@ -631,6 +730,7 @@ function Install-Directory {
     }
   }
   if ($changed) {
+    Track-InstallTree -Destination $Destination -Source $Source -BackupPath $(if ($directoryBackup) { $directoryBackup } else { "-" })
     Write-Action -Status "synced directory" -Message $Destination
   }
 }
@@ -673,6 +773,8 @@ if ($Interactive) {
 Invoke-InstallerSafetyPreflight
 Invoke-PreflightValidators
 Invoke-InstallTargetPreflight
+Acquire-OperationLock
+Start-OperationJournal
 
 Write-Section "Managed Codex files"
 Ensure-Dir $CodexHome
@@ -721,6 +823,11 @@ foreach ($DirectSkill in $DirectSkills) {
     if ($LASTEXITCODE -ne 0) {
       throw "Cannot record Codex Chef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
     }
+    $markerBackup = "-"
+    if ($Script:LastBackupPath -and (Test-Path -LiteralPath (Join-Path $Script:LastBackupPath ".codex-chef-managed.json"))) {
+      $markerBackup = Join-Path $Script:LastBackupPath ".codex-chef-managed.json"
+    }
+    Track-InstallWrite -Path (Join-Path $DirectTarget ".codex-chef-managed.json") -BackupPath $markerBackup
   }
 }
 
@@ -741,22 +848,13 @@ if ($marketplaceCheckExit -eq 2) {
     }
   }
   if ($changed) {
+    Track-InstallWrite -Path $MarketplacePath -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
     Write-Action -Status "updated marketplace" -Message $MarketplacePath
   }
 } elseif ($marketplaceCheckExit -eq 0) {
   $Script:SkippedExistingCount += 1
 } else {
   throw "Cannot update plugin marketplace because it is invalid or unreadable: $MarketplacePath"
-}
-
-$PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
-$PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
-if (-not $WhatIfPreference -and -not $NoBackup) {
-  $PluginRefreshArgs += "--apply"
-}
-& node @PluginRefreshArgs
-if ($LASTEXITCODE -ne 0) {
-  throw "Refresh installed Codex Chef plugin cache failed with code $LASTEXITCODE."
 }
 
 if ($InstallGitGuards) {
@@ -770,17 +868,17 @@ if ($InstallGitGuards) {
     Write-Host $GitGuardOutput
     Write-Action -Status "previewed" -Message "global Git guard files, adoption decisions, and config changes"
   } else {
-    $GitGuardReceipt = "$BackupRoot-git-guards.json"
-    Ensure-Dir (Split-Path -Parent $GitGuardReceipt)
-    $GitGuardArgs = Get-GlobalGitGuardArgs -Command "apply" -ReceiptPath $GitGuardReceipt
+    $Script:GitGuardReceipt = "$BackupRoot-git-guards.json"
+    Ensure-Dir (Split-Path -Parent $Script:GitGuardReceipt)
+    $GitGuardArgs = Get-GlobalGitGuardArgs -Command "apply" -ReceiptPath $Script:GitGuardReceipt
     $GitGuardOutput = (& node @GitGuardArgs | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
       throw "Global Git guard transaction failed with code $LASTEXITCODE`: $GitGuardOutput"
     }
     Write-Host $GitGuardOutput
     Write-Action -Status "configured" -Message "global Git guard files and config transaction"
-    Write-Note "Git guard receipt: $GitGuardReceipt"
-    $RestoreArgs = Get-GlobalGitGuardArgs -Command "restore" -ReceiptPath $GitGuardReceipt
+    Write-Note "Git guard receipt: $Script:GitGuardReceipt"
+    $RestoreArgs = Get-GlobalGitGuardArgs -Command "restore" -ReceiptPath $Script:GitGuardReceipt
     $RestoreDisplay = ($RestoreArgs | ForEach-Object { '"' + $_.Replace('"', '`"') + '"' }) -join ' '
     Write-Note "Restore with: node $RestoreDisplay"
   }
@@ -865,6 +963,17 @@ if ($InstallSkills) {
   }
 }
 
+# The plugin cache is the final external mutation: later output/manifest work is non-mutating.
+$PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
+$PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
+if (-not $WhatIfPreference -and -not $NoBackup) {
+  $PluginRefreshArgs += "--apply"
+}
+& node @PluginRefreshArgs
+if ($LASTEXITCODE -ne 0) {
+  throw "Refresh installed Codex Chef plugin cache failed with code $LASTEXITCODE."
+}
+
 Write-Section "Capability board"
 try {
   $AgentCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\agents.json") -Raw | ConvertFrom-Json
@@ -872,7 +981,7 @@ try {
   $SkillCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\skills.json") -Raw | ConvertFrom-Json
   $RoutingCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\routing-profiles.json") -Raw | ConvertFrom-Json
   $PluginSkillRoot = Join-Path $RepoRoot "plugins\codex-chef-workflows\skills"
-  $AgentNames = @($AgentCatalog.agents | ForEach-Object { $_.name })
+  $AgentNames = @($AgentCatalog.agents | ForEach-Object { $_.name }) + @($AgentCatalog.coordinators | ForEach-Object { $_.name })
   $McpReady = @($McpCatalog.servers | Where-Object { $_.defaultEnabled -eq $true } | ForEach-Object { $_.name })
   $McpOptIn = @($McpCatalog.servers | Where-Object { $_.defaultEnabled -ne $true } | ForEach-Object { $_.name })
   $McpSetupNotes = @($McpCatalog.servers | Where-Object { $_.setupKind -ne "none" -and ($_.setupKind -ne "local-state" -or $_.name -eq "codebase-memory") } | ForEach-Object { "$($_.name) [$($_.setupKind)]: $($_.setupHint)" })
@@ -914,6 +1023,8 @@ if (-not $NoBackup -and (Test-Path -LiteralPath $BackupRoot)) {
   }
   Write-Note "Backup: $BackupRoot"
 }
+Finish-OperationJournal -State "complete"
+Release-OperationLock
 
 # PowerShell can otherwise propagate the last native command exit code after a
 # successful dry run or install, which makes CI report a false failure.

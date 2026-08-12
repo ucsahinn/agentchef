@@ -229,7 +229,7 @@ if (report) {
   if (report.effectiveControls?.features?.multiAgent !== true) {
     fail("codex status must report that multi-agent routing is enabled in effective controls.");
   }
-  if (report.effectiveControls?.agents?.maxDepth !== 1) {
+  if (report.effectiveControls?.agents?.maxDepth !== 2) {
     fail("codex status effective controls must report the bounded subagent depth.");
   }
   if (!report.effectiveControls?.contextBudget?.longRunningRecommendation?.includes("token-safe.config.toml")) {

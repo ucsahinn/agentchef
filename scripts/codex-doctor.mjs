@@ -91,7 +91,9 @@ function isLocalizedDoc(file) {
 
 function inspectAgents(failures) {
   const catalog = readJson("catalog/agents.json");
-  const catalogNames = new Set(catalog.agents.map((agent) => agent.name));
+  const specialistNames = catalog.agents.map((agent) => agent.name);
+  const coordinatorNames = (catalog.coordinators || []).map((coordinator) => coordinator.name);
+  const catalogNames = new Set([...specialistNames, ...coordinatorNames]);
   const templateDir = path.join(root, "templates", "codex", "agents");
   const templateNames = new Set(
     fs.readdirSync(templateDir)
@@ -118,7 +120,9 @@ function inspectAgents(failures) {
   });
 
   return {
-    count: catalog.agents.length,
+    count: catalogNames.size,
+    specialistCount: specialistNames.length,
+    coordinatorCount: coordinatorNames.length,
     categories: [...new Set(catalog.agents.map((agent) => agent.category))].sort(),
     readOnlyCount: catalog.agents.filter((agent) => agent.sandboxMode === "read-only").length,
     workspaceWriteCount: catalog.agents.filter((agent) => agent.sandboxMode === "workspace-write").length,

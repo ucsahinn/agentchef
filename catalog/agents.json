@@ -2,11 +2,11 @@
   "version": "0.1.0",
   "dateChecked": "2026-06-15",
   "officialReference": "https://developers.openai.com/codex/config-reference#configtoml",
-  "sourcePolicy": "Specialist agents are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. Agent role files intentionally avoid per-agent model and reasoning pins when catalog modelSelection/modelReasoningEffort are auto, so the current profile and Codex runtime can choose the appropriate balance for the task. Each role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-agent expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
+  "sourcePolicy": "Eleven read-only coordinators and 21 specialist workers are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. Coordinators use a bounded, parent-routed orchestration contract and never receive private AgentSpace memory. Specialist role files intentionally avoid per-agent model and reasoning pins when catalog modelSelection/modelReasoningEffort are auto, so the current profile and Codex runtime can choose the appropriate balance for the task. Each specialist role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-specialist expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
   "defaults": {
     "model": "gpt-5.5",
     "maxThreads": 10,
-    "maxDepth": 1,
+    "maxDepth": 2,
     "jobMaxRuntimeSeconds": 3600
   },
   "workerApprovalProfile": {
@@ -20,15 +20,38 @@
     "runtimeInjection": false,
     "privateAgentSpaceMemory": "excluded"
   },
+  "coordinationPolicy": {
+    "maxDelegationDepth": 2,
+    "maxWorkersPerCoordinator": 4,
+    "peerCommunication": "parent-routed-handoff",
+    "workerDelegation": "prohibited",
+    "privateContext": "excluded"
+  },
+  "coordinators": [
+    { "name": "backend_coordinator", "roleId": "backend", "description": "Backend coordinator that correlates bounded implementation, integration, and debugging evidence.", "configFile": "agents/backend_coordinator.toml", "workers": ["code_mapper", "mcp_integrator", "root_cause_debugger"] },
+    { "name": "data_coordinator", "roleId": "data", "description": "Data coordinator that correlates read-only data documentation, lineage, catalog, quality, and source-evidence findings.", "configFile": "agents/data_coordinator.toml", "workers": ["docs_researcher"] },
+    { "name": "devops_coordinator", "roleId": "devops", "description": "DevOps coordinator that correlates operational performance, runtime health, and setup diagnostics.", "configFile": "agents/devops_coordinator.toml", "workers": ["performance_auditor", "codex_doctor"] },
+    { "name": "frontend_coordinator", "roleId": "frontend", "description": "Frontend coordinator that correlates rendered UI verification evidence.", "configFile": "agents/frontend_coordinator.toml", "workers": ["frontend_verifier"] },
+    { "name": "leadership_coordinator", "roleId": "leadership", "description": "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence.", "configFile": "agents/leadership_coordinator.toml", "workers": ["context_architect", "engineering_planner", "code_reviewer", "release_verifier"] },
+    { "name": "product_coordinator", "roleId": "product", "description": "Product coordinator that correlates prompts, product framing, and executable specifications.", "configFile": "agents/product_coordinator.toml", "workers": ["prompt_architect", "product_strategist", "spec_author"] },
+    { "name": "qa_coordinator", "roleId": "qa", "description": "QA coordinator that correlates quality and verification evidence.", "configFile": "agents/qa_coordinator.toml", "workers": ["qa_lead", "test_verifier"] },
+    { "name": "design_coordinator", "roleId": "design", "description": "Design coordinator that correlates product design review evidence.", "configFile": "agents/design_coordinator.toml", "workers": ["design_reviewer"] },
+    { "name": "security_coordinator", "roleId": "security", "description": "Security coordinator that correlates security evidence and remediation gates.", "configFile": "agents/security_coordinator.toml", "workers": ["security_auditor"] },
+    { "name": "marketing_coordinator", "roleId": "marketing", "description": "Marketing coordinator that correlates discoverability and content evidence.", "configFile": "agents/marketing_coordinator.toml", "workers": ["google_seo_auditor", "docs_author"] },
+    { "name": "support_coordinator", "roleId": "support", "description": "Customer-support coordinator that correlates onboarding and support-flow evidence.", "configFile": "agents/support_coordinator.toml", "workers": ["devex_auditor"] }
+  ],
   "agentSpaceRoles": [
     { "id": "backend", "specialists": ["code_mapper", "mcp_integrator", "root_cause_debugger"] },
-    { "id": "data", "specialists": ["docs_researcher", "google_seo_auditor", "docs_author"] },
-    { "id": "devops", "specialists": ["devex_auditor", "performance_auditor", "codex_doctor"] },
+    { "id": "data", "specialists": ["docs_researcher"] },
+    { "id": "devops", "specialists": ["performance_auditor", "codex_doctor"] },
     { "id": "frontend", "specialists": ["frontend_verifier"] },
     { "id": "leadership", "specialists": ["context_architect", "engineering_planner", "code_reviewer", "release_verifier"] },
     { "id": "product", "specialists": ["prompt_architect", "product_strategist", "spec_author"] },
-    { "id": "qa", "specialists": ["qa_lead", "security_auditor", "test_verifier"] },
-    { "id": "design", "specialists": ["design_reviewer"] }
+    { "id": "qa", "specialists": ["qa_lead", "test_verifier"] },
+    { "id": "design", "specialists": ["design_reviewer"] },
+    { "id": "security", "specialists": ["security_auditor"] },
+    { "id": "marketing", "specialists": ["google_seo_auditor", "docs_author"] },
+    { "id": "support", "specialists": ["devex_auditor"] }
   ],
   "agents": [
     {

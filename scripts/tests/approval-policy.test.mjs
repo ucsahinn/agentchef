@@ -45,7 +45,8 @@ test("approval policy prompts before report-identified Git and npm mutations", a
     ["apply npm audit fixes", ["npm.cmd", "audit", "fix"]],
     ["run a repository-controlled build script", ["npm.cmd", "run", "build"]],
     ["run an arbitrary repository script", ["npm.cmd", "run", "postinstall"]],
-    ["run the npm test lifecycle script", ["npm.cmd", "test"]]
+    ["run the npm test lifecycle script", ["npm.cmd", "test"]],
+    ["does not auto-allow an arbitrary PowerShell directory", ["New-Item", "-ItemType", "Directory", "C:\\unmanaged-target"], "no-match"]
   ];
 
   const availabilityProbe = execPolicyDecision(["git", "status"]);
@@ -54,9 +55,9 @@ test("approval policy prompts before report-identified Git and npm mutations", a
     return;
   }
 
-  for (const [label, tokens] of cases) {
+  for (const [label, tokens, expected = "prompt"] of cases) {
     await t.test(label, () => {
-      assert.equal(execPolicyDecision(tokens), "prompt", tokens.join(" "));
+      assert.equal(execPolicyDecision(tokens), expected, tokens.join(" "));
     });
   }
 });

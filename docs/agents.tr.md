@@ -5,13 +5,55 @@
 Agent, Codex workflow'undaki **kim** sorusunun cevabıdır: görevi, sınırı ve
 döndüreceği kanıt belli olan uzman bir rol.
 
-Codex Chef 21 özel rol içerir. Bunlar arka planda sürekli çalışan servisler
-değildir ve her görevde topluca açılmaz. Bir rol, subagent başlatılmadan da ana
-oturuma yol gösterebilir. Delegasyon; işler bağımsız ilerleyebiliyorsa, gürültülü
-çıktıyı ana thread'den ayırmak gerekiyorsa veya sen açıkça paralel agent
-istiyorsan anlamlıdır.
+Codex Chef 11 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
+planda sürekli çalışan servisler değildir ve her görevde topluca açılmaz. Bir
+rol, subagent başlatılmadan da ana oturuma yol gösterebilir. Delegasyon; işler
+bağımsız ilerleyebiliyorsa, gürültülü çıktıyı ana thread'den ayırmak gerekiyorsa
+veya sen açıkça paralel agent istiyorsan anlamlıdır.
 
 Resmi Codex kaynağı: [Subagent'lar](https://developers.openai.com/codex/subagents)
+
+## Bir Koordinatör Çağır
+
+Belirli bir rolü normal dille iste. Görevi, koordinatörü, bağımsız işlerin
+paralel ilerleyip ilerlemeyeceğini ve geri dönmesini istediğin kanıtı belirt.
+Örneğin:
+
+> `backend_coordinator` bu API bug'ını sahiplensin. Yalnız katalogdaki
+> uzmanlarını kullansın, sonuçlarını beklesin; root cause, önerilen fix, test
+> kanıtı, çatışmalar ve kalan riskleri döndürsün.
+
+İnsan-dostu bir takma adla koordinatörü belirt, ancak çağrılabilir kimlik olarak
+kanonik `*_coordinator` ID'sini kullan. Takma adlar yalnızca eşleştirme
+etiketleridir; yeni bir agent, ayrı kurulan bir rol veya ek bir delegasyon
+seviyesi oluşturmazlar.
+
+| Takma ad adayları | Çağrılabilir kanonik ID |
+| --- | --- |
+| `Engineering Lead`, `Leadership Coordinator`, `Delivery Lead` | `leadership_coordinator` |
+| `Product Lead`, `Product Coordinator`, `Scope Lead` | `product_coordinator` |
+| `Backend Lead`, `Backend Coordinator`, `Integration Lead` | `backend_coordinator` |
+| `Data Lead`, `Data Coordinator`, `Information Lead` | `data_coordinator` |
+| `Frontend Lead`, `Frontend Coordinator`, `UI Evidence Lead` | `frontend_coordinator` |
+| `DevOps Lead`, `DevOps Coordinator`, `Operations Lead` | `devops_coordinator` |
+| `Security Lead`, `Security Coordinator`, `Risk Lead` | `security_coordinator` |
+| `QA Lead`, `QA Coordinator`, `Assurance Lead` | `qa_coordinator` |
+| `Design Lead`, `Design Coordinator`, `UX Review Lead` | `design_coordinator` |
+| `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
+| `Support Lead`, `Support Coordinator`, `Customer Care Lead` | `support_coordinator` |
+
+Karar ve izin sınırı ana oturumda kalır. Koordinatör kanıtı korele eder; sessizce
+publish/deploy yapmaz, yetki genişletmez veya ilgisiz işi devralmaz. CLI'da bir
+agent thread'ini incelemek ya da ona geçmek için `/agent` kullan. App veya IDE'de
+varsa subagent activity panelini aç; Codex'ten bir agent'ı yönlendirmesini,
+durdurmasını veya kapatmasını da isteyebilirsin.
+
+Routing yolu şöyledir:
+
+`görev -> routing profili -> birincil koordinatör -> seçilen uzmanlar + dar skill/MCP'ler`
+
+Alanlar arası iş, ana oturuma kısa bir handoff döndürür; başka bir koordinatör
+gerekip gerekmediğine ana oturum karar verir.
 
 ## 🗺️ Önce Problemi Anla
 
@@ -70,18 +112,49 @@ Resmi Codex kaynağı: [Subagent'lar](https://developers.openai.com/codex/subage
 5. Aktif kullanıcı profili yetkili kalır; Codex Chef rol dosyaları her agent'ı
    tek bir modele sabitlemez.
 
+Veri rotası dardır: `data_coordinator`, `docs_researcher` ile salt-okunur lineage,
+katalog, kalite ve kaynak kanıtını birleştirir. Data engineering, veritabanı
+performansı, güvenlik veya operasyon uzmanlığı iddia etmez. Uygulama geliştirme,
+veritabanı erişimi ve veritabanı performansı ihtiyaçları soru, incelenen kanıt,
+çatışma, gereken karar ve açık doğrulama ihtiyacını içeren kısa bir parent-routed
+handoff ile `backend_coordinator` için ana oturuma döner. Customer support/onboarding rotası da
+advisory'dir. Bu rotalar veritabanı, customer-account veya production erişimi vermez.
+
 ## AgentSpace Sahipliği, Knowledge ve Worker Güvenliği
 
-Sekiz AgentSpace ofis rolü işin sahibidir; 21 Codex Chef uzmanı dar görev
-worker'ları olarak kalır. \`catalog/agents.json\` eksiksiz 8→21 sahiplik eşlemesini
-tutar. Routing sonucu seçilen her worker için sahibi ve uzman adıyla aynı olan
-\`knowledgeRef\` değerini gösterir. Bu referans yalnızca
-\`catalog/agent-research-corpus.json\` içindeki incelenmiş metadata'ya çözülür;
-routing AgentSpace hafızasını, auth/session verisini veya makineye özel içeriği
-prompt'a enjekte etmez.
+| Koordinatör | Sınırlı uzman worker'lar |
+| --- | --- |
+| `leadership_coordinator` | `context_architect`, `engineering_planner`, `code_reviewer`, `release_verifier` |
+| `product_coordinator` | `prompt_architect`, `product_strategist`, `spec_author` |
+| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger` |
+| `data_coordinator` | `docs_researcher` |
+| `frontend_coordinator` | `frontend_verifier` |
+| `devops_coordinator` | `performance_auditor`, `codex_doctor` |
+| `security_coordinator` | `security_auditor` |
+| `qa_coordinator` | `qa_lead`, `test_verifier` |
+| `design_coordinator` | `design_reviewer` |
+| `marketing_coordinator` | `google_seo_auditor`, `docs_author` |
+| `support_coordinator` | `devex_auditor` |
 
-Kurulan her worker TOML'ü \`approval_policy = "on-request"\` ve katalogdaki dar
-sandbox değerini (\`read-only\` veya \`workspace-write\`) uygular. İncelenmiş
+Kurulumda çalışan on bir koordinatör vardır: leadership, product, backend, data,
+frontend, DevOps, security, QA, design, marketing ve customer support. 21 Codex
+Chef uzmanı dar görev worker'ı olarak kalır. \`catalog/agents.json\` eksiksiz
+11→21 sahiplik eşlemesini tutar. Bir koordinatör yalnızca katalogdaki worker
+grubunu (en çok dört worker) seçebilir; worker daha fazla delege etmez.
+
+Alanlar arası koordinasyon doğrudan peer spawn değil, ana oturum üzerinden giden
+kısa bir handoff'tur: birincil koordinatör soruyu, kanıtı, çatışmayı, kararı ve
+açık doğrulama ihtiyacını ana oturuma döndürür; akran koordinatör gerekip
+gerekmediğine ana oturum karar verir. Bu, iki seviye delegasyon sınırını korur
+ve recursive agent tree oluşmasını önler. Routing sonucu seçilen her worker için
+sahibi ve uzman adıyla aynı olan \`knowledgeRef\` değerini gösterir. Bu referans
+yalnızca \`catalog/agent-research-corpus.json\` içindeki incelenmiş metadata'ya
+çözülür; routing AgentSpace hafızasını, auth/session verisini veya makineye özel
+içeriği prompt'a enjekte etmez.
+
+Kurulan her koordinatör ve worker TOML'ü \`approval_policy = "on-request"\`
+uygular. Koordinatörler read-only'dir; worker'lar katalogdaki dar sandbox
+değerini (\`read-only\` veya \`workspace-write\`) uygular. İncelenmiş
 \`rules/default.rules\` yalnız dar ve güvenli inceleme komutlarını promptsuz
 çalıştırabilir; yıkıcı, credential kullanan, publish/deploy yapan, geniş shell ve
 diğer riskli sınıflar prompt-gated kalır. Worker'lar \`danger-full-access\` veya

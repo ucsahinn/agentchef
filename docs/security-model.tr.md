@@ -294,6 +294,11 @@ global/user state degistirmeden listeler. `npm run chef -- --backups --backup
 <id>` backup archive metadata'sini inceler: path, size, hash, manifest durumu,
 issue ve restorable target bilgisi. File content basmaz.
 
+Kesilen bir install veya repair arsivi, ancak kayitli her path, size ve SHA-256
+degeri archive ile hala eslesiyorsa atomik operation journal'i recovery manifest
+olarak kullanabilir. Bu durum restore allowlist'i genisletmez ve kayitsiz
+dosyalara izin vermez.
+
 Restore backup archive'larini untrusted input kabul eder. `npm run chef --
 --backups --backup <id> --restore` preview'dir. Apply path'i `--apply` ister,
 exact source byte'larini okuyup dogrular, mevcut target'larin fresh rollback

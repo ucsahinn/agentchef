@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,6 +20,8 @@ import {
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
 import { PLUGIN_ID, refreshInstalledPlugin } from "./refresh-installed-plugin.mjs";
+import { acquireOperationLock } from "./lib/operation-lock.mjs";
+import { createOperationJournal } from "./lib/operation-journal.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -157,13 +160,17 @@ function shouldAdoptDirectSkill(skill) {
 const backupRoot = path.join(
   options.codexHome,
   "backups",
-  `codex-chef-repair-${timestamp()}`
+  `codex-chef-repair-${timestamp()}-${crypto.randomUUID()}`
 );
 const actions = [];
 const warnings = [];
 const notes = [];
 const failures = [];
 let preflight;
+let operationLock = null;
+let operationJournal = null;
+const transactionOriginals = new Map();
+const transactionWrites = new Map();
 
 function timestamp() {
   const date = new Date();
@@ -230,17 +237,86 @@ function relativeBackupPath(targetPath) {
 function backupTarget(targetPath) {
   if (!options.apply || options.noBackup || !fs.existsSync(targetPath)) return null;
   assertManagedTarget(targetPath);
+  const key = path.resolve(targetPath);
+  if (transactionOriginals.has(key)) return transactionOriginals.get(key);
+  operationJournal ||= createOperationJournal({ backupRoot, operation: "repair-install" });
   const destination = path.join(backupRoot, relativeBackupPath(targetPath));
   try {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.cpSync(targetPath, destination, { recursive: true, force: true });
+    operationJournal?.recordBackup(destination);
   } catch (error) {
     throw new Error(
       `Could not back up managed target before repair: ${targetPath} -> ${destination}. ` +
       `Fix filesystem permissions or rerun the repair from an elevated shell. Cause: ${error.message}`
     );
   }
+  transactionOriginals.set(key, destination);
   return destination;
+}
+
+function fingerprintTarget(targetPath) {
+  if (!fs.existsSync(targetPath)) return { kind: "absent" };
+  const stat = fs.lstatSync(targetPath);
+  if (stat.isSymbolicLink()) throw new Error(`Transaction refuses linked output: ${targetPath}`);
+  if (stat.isFile()) {
+    return {
+      kind: "file",
+      sha256: crypto.createHash("sha256").update(fs.readFileSync(targetPath)).digest("hex")
+    };
+  }
+  if (!stat.isDirectory()) throw new Error(`Transaction refuses unsupported output: ${targetPath}`);
+  const hash = crypto.createHash("sha256");
+  for (const relative of listFilesRecursive(targetPath, { rejectLinks: true })) {
+    hash.update(relative).update("\0").update(fs.readFileSync(path.join(targetPath, relative))).update("\0");
+  }
+  return { kind: "directory", sha256: hash.digest("hex") };
+}
+
+function sameFingerprint(left, right) {
+  return left.kind === right.kind && left.sha256 === right.sha256;
+}
+
+function trackTransactionWrite(targetPath) {
+  if (!options.apply) return;
+  const key = path.resolve(targetPath);
+  assertManagedTarget(key);
+  transactionWrites.set(key, {
+    output: fingerprintTarget(key),
+    backup: transactionOriginals.get(key) || null
+  });
+  const failAfter = Number(process.env.CODEX_CHEF_TEST_REPAIR_FAIL_AFTER_WRITES || 0);
+  if (process.env.CODEX_CHEF_TEST_MODE === "1" && Number.isInteger(failAfter) && failAfter > 0 && transactionWrites.size >= failAfter) {
+    throw new Error("Injected repair post-write failure");
+  }
+}
+
+function reconcileTransaction() {
+  const unresolved = [];
+  for (const [targetPath, entry] of [...transactionWrites.entries()].reverse()) {
+    let current;
+    try {
+      current = fingerprintTarget(targetPath);
+    } catch (error) {
+      unresolved.push(`${redact(targetPath)} could not be inspected: ${error.message}`);
+      continue;
+    }
+    if (!sameFingerprint(current, entry.output)) {
+      unresolved.push(`${redact(targetPath)} changed after repair wrote it; preserved user/concurrent changes`);
+      continue;
+    }
+    try {
+      assertManagedTarget(targetPath);
+      fs.rmSync(targetPath, { recursive: true, force: true });
+      if (entry.backup) {
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.cpSync(entry.backup, targetPath, { recursive: true, force: true });
+      }
+    } catch (error) {
+      unresolved.push(`${redact(targetPath)} could not be reconciled: ${error.message}`);
+    }
+  }
+  return unresolved;
 }
 
 function recordAction(action) {
@@ -274,6 +350,7 @@ function migrateLegacyProfilePins() {
     if (options.apply) {
       action.backup = backupTarget(target);
       fs.writeFileSync(target, updated, "utf8");
+      trackTransactionWrite(target);
     }
     recordAction(action);
     results.push({ profile: name, status: action.status });
@@ -333,6 +410,7 @@ function repairFile(sourceRel, targetPath, id) {
     ensureDir(path.dirname(targetPath));
     action.backup = backupTarget(targetPath);
     fs.copyFileSync(sourcePath, targetPath);
+    trackTransactionWrite(targetPath);
   }
 
   recordAction(action);
@@ -388,6 +466,7 @@ function repairGeneratedMcpProfile(templateRel, targetPath, id) {
     ensureDir(path.dirname(targetPath));
     action.backup = backupTarget(targetPath);
     fs.writeFileSync(targetPath, rendered, "utf8");
+    trackTransactionWrite(targetPath);
   }
   recordAction(action);
   return { status: action.status, source: templateRel, target: redact(targetPath), reason: action.reason };
@@ -447,6 +526,7 @@ function repairRulesFile(sourceRel, targetPath, id) {
     }
     const next = extra ? `${sourceText.trimEnd()}\n\n# Local approval rules preserved by Codex Chef repair.\n${extra}\n` : sourceText;
     fs.writeFileSync(targetPath, next, "utf8");
+    trackTransactionWrite(targetPath);
   }
 
   recordAction(action);
@@ -525,7 +605,7 @@ function repairManagedFiles(contract) {
       const directSkill = directSkills.find((entry) => entry.name === skillName);
       if (!directSkill) throw new Error(`Resolved ownership marker has no matching direct skill: ${action.id}`);
       const sourceRoot = path.join(root, action.source);
-      const markerWasCurrent = inspectDirectSkillTarget(sourceRoot, targetRoot).status === "managed";
+      const markerWasCurrent = ["managed", "managed-with-extras"].includes(inspectDirectSkillTarget(sourceRoot, targetRoot).status);
       if (markerWasCurrent) {
         current += 1;
         continue;
@@ -536,6 +616,7 @@ function repairManagedFiles(contract) {
         writeDirectSkillMarker(sourceRoot, targetRoot, {
           allowAdopt: shouldAdoptDirectSkill(directSkill)
         });
+        trackTransactionWrite(action.destination);
       }
       recordAction({
         id: action.id,
@@ -578,6 +659,7 @@ function repairManagedFiles(contract) {
     }
     const backup = backupTarget(extraPath);
     fs.rmSync(extraPath, { force: true });
+    trackTransactionWrite(extraPath);
     pruned.push(redact(extraPath));
     recordAction({
       id: `prune-plugin-extra:${extra.mirror}:${toPosix(path.relative(extra.root, extraPath))}`,
@@ -718,6 +800,7 @@ function runConfigMerge() {
       failures.push(`Codex config repair apply failed: ${[apply.stdout, apply.stderr].filter(Boolean).join("\n").trim()}`);
       return { inspected: true, status: "fail", exitCode: apply.status };
     }
+    trackTransactionWrite(destination);
   }
 
   if (configNeedsApply) {
@@ -777,6 +860,7 @@ function repairMarketplace() {
     ensureDir(path.dirname(marketplacePath));
     const backup = backupTarget(marketplacePath);
     writeMarketplaceEntry(marketplacePath, pluginTarget);
+    trackTransactionWrite(marketplacePath);
     recordAction({
       id: "plugin-marketplace",
       kind: state.existingIndex >= 0 ? "update-marketplace-entry" : "add-marketplace-entry",
@@ -978,6 +1062,9 @@ try {
   if (preflight.status !== "ok") {
     throw new Error("Repair preflight failed; refusing to plan or apply managed global changes until validators pass.");
   }
+  if (options.apply) {
+    operationLock = acquireOperationLock({ root: options.codexHome, operation: "repair-install" });
+  }
   managedFiles = repairManagedFiles(repairContract);
   legacyProfileMigration = migrateLegacyProfilePins();
   marketplace = repairMarketplace();
@@ -1002,6 +1089,18 @@ try {
   writeBackupManifest();
 } catch (error) {
   failures.push(error.message);
+} finally {
+  if (options.apply && failures.length > 0 && transactionWrites.size > 0) {
+    const unresolved = reconcileTransaction();
+    if (unresolved.length > 0) {
+      failures.push(`Repair reconciliation left ${unresolved.length} unresolved target(s): ${unresolved.join("; ")}`);
+    } else {
+      notes.push(`Repair failed after mutation; reconciled ${transactionWrites.size} managed target(s) from their backups.`);
+    }
+  }
+  if (operationJournal && failures.length > 0) operationJournal.finish("failed");
+  if (operationJournal && failures.length === 0) operationJournal.finish("complete");
+  if (operationLock) operationLock.release();
 }
 
 const plannedCount = actions.filter((action) => action.status === "planned").length;
