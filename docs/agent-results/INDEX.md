@@ -19,3 +19,4 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSPLX7EBX2YJF-sss.md](TASK-MSPLX7EBX2YJF-sss.md)
 - [TASK-MSPLX7EBX2YJF-tasarimci.md](TASK-MSPLX7EBX2YJF-tasarimci.md)
 - [TASK-MSPMS8AGAX4O5-gelistirici.md](TASK-MSPMS8AGAX4O5-gelistirici.md)
+- [TASK-MSPTVP54CIXM5-qa-engineer.md](TASK-MSPTVP54CIXM5-qa-engineer.md)
