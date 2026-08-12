@@ -93,6 +93,68 @@ test("CLI initializes, captures and retrieves a note using JSON contracts", () =
   assert.equal(JSON.parse(retrieve.stdout).notes.length, 1);
 });
 
+test("CLI retrieves shared and Chef-role memory only for the requested role", () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-role-memory-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  assert.equal(run(["init", "--target", target, "--apply", "--json"]).status, 0);
+
+  const candidatePath = path.join(sandbox, "role-memory.json");
+  fs.writeFileSync(candidatePath, JSON.stringify({
+    schemaVersion: "codex-chef.brain-candidate.v1",
+    candidateId: "77777777-7777-4777-8777-777777777777",
+    type: "decision",
+    title: "Security memory boundary",
+    projectId: "codex-chef",
+    bodyMarkdown: "Shared decisions and the security role use bounded memory.",
+    privacy: "local",
+    confidence: "confirmed",
+    retention: "project",
+    sourceRefs: ["user:2026-08-12"],
+    agentRoles: ["shared", "security"]
+  }), "utf8");
+
+  assert.equal(run(["capture", "--target", target, "--input", candidatePath, "--apply", "--json"]).status, 0);
+  const security = run(["retrieve", "--target", target, "--project", "codex-chef", "--role", "security", "--query", "memory", "--json"]);
+  assert.equal(security.status, 0, security.stderr);
+  assert.equal(JSON.parse(security.stdout).notes.length, 1);
+
+  const frontend = run(["retrieve", "--target", target, "--project", "codex-chef", "--role", "frontend", "--query", "memory", "--json"]);
+  assert.equal(frontend.status, 0, frontend.stderr);
+  assert.equal(JSON.parse(frontend.stdout).notes.length, 1, "shared memory is available to every Chef role");
+
+  const unknown = run(["retrieve", "--target", target, "--project", "codex-chef", "--role", "not-a-chef-role", "--json"]);
+  assert.notEqual(unknown.status, 0);
+  assert.match(jsonError(unknown), /role/i);
+
+  const invalidCandidate = { ...JSON.parse(fs.readFileSync(candidatePath, "utf8")), candidateId: "abababab-abab-4bab-8bab-abababababab", agentRoles: ["not-a-chef-role"] };
+  fs.writeFileSync(candidatePath, JSON.stringify(invalidCandidate), "utf8");
+  const invalidCapture = run(["capture", "--target", target, "--input", candidatePath, "--preview", "--json"]);
+  assert.notEqual(invalidCapture.status, 0);
+  assert.match(jsonError(invalidCapture), /role/i);
+});
+
+test("CLI capture accepts a UTF-8 BOM candidate from Windows PowerShell", () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-bom-candidate-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  assert.equal(run(["init", "--target", target, "--apply", "--json"]).status, 0);
+  const candidatePath = path.join(sandbox, "candidate.json");
+  fs.writeFileSync(candidatePath, `\uFEFF\uFEFF${JSON.stringify({
+    schemaVersion: "codex-chef.brain-candidate.v1",
+    candidateId: "99999999-9999-4999-8999-999999999999",
+    type: "knowledge",
+    title: "Windows candidate encoding",
+    projectId: "codex-chef",
+    bodyMarkdown: "BOM-safe candidate input.",
+    privacy: "local",
+    confidence: "confirmed",
+    retention: "project",
+    sourceRefs: ["user:2026-08-12"],
+    agentRoles: ["security"]
+  })}`, "utf8");
+  const captured = run(["capture", "--target", target, "--input", candidatePath, "--apply", "--json"]);
+  assert.equal(captured.status, 0, captured.stderr);
+});
+
 test("CLI builds a read-only Obsidian URI and rejects vault escapes", () => {
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-uri-"));
   const target = path.join(sandbox, "CodexChefBrain");

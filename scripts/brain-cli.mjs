@@ -43,6 +43,7 @@ function parseArgs(argv) {
     target: process.env.CODEX_CHEF_BRAIN_HOME ? path.resolve(process.env.CODEX_CHEF_BRAIN_HOME) : null,
     input: null,
     projectId: null,
+    agentRole: null,
     query: "",
     note: null,
     backupId: null,
@@ -54,11 +55,12 @@ function parseArgs(argv) {
     else if (arg === "--apply") options.mode = "apply";
     else if (arg === "--json") options.json = true;
     else if (arg === "--help" || arg === "-h") options.help = true;
-    else if (["--target", "--vault", "--input", "--project", "--query", "--note", "--id", "--backup"].includes(arg)) {
+    else if (["--target", "--vault", "--input", "--project", "--role", "--query", "--note", "--id", "--backup"].includes(arg)) {
       const value = requireCliValue(argv, index, arg);
       if (arg === "--target" || arg === "--vault") options.target = path.resolve(value);
       else if (arg === "--input") options.input = path.resolve(value);
       else if (arg === "--project") options.projectId = value;
+      else if (arg === "--role") options.agentRole = value;
       else if (arg === "--query") options.query = value;
       else if (arg === "--note") options.note = value;
       else options.backupId = value;
@@ -68,6 +70,11 @@ function parseArgs(argv) {
     }
   }
   return options;
+}
+
+function chefAgentRoles() {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, "catalog", "agents.json"), "utf8"));
+  return new Set((catalog.agentSpaceRoles || []).map(({ id }) => id));
 }
 
 function requireTarget(options) {
@@ -103,7 +110,7 @@ Usage:
   node scripts/brain-cli.mjs status --target PATH [--json]
   node scripts/brain-cli.mjs permissions --target PATH [--json]
   node scripts/brain-cli.mjs capture --target PATH --input candidate.json --preview|--apply [--json]
-  node scripts/brain-cli.mjs retrieve --target PATH --project ID --query TEXT [--json]
+  node scripts/brain-cli.mjs retrieve --target PATH --project ID [--role CHEF_ROLE] --query TEXT [--json]
   node scripts/brain-cli.mjs uri --target PATH --note RELATIVE_PATH [--json]
   node scripts/brain-cli.mjs backup --target PATH [--id ID] --preview|--apply [--json]
   node scripts/brain-cli.mjs restore --target PATH --id ID --preview|--apply [--json]
@@ -156,14 +163,20 @@ function execute(options) {
   }
   if (options.action === "capture") {
     if (!options.input) throw new Error("capture requires --input candidate.json.");
-    const candidate = JSON.parse(fs.readFileSync(options.input, "utf8"));
+    const candidate = JSON.parse(fs.readFileSync(options.input, "utf8").replace(/^\uFEFF+/, ""));
+    if (candidate.agentRoles && candidate.agentRoles.some((role) => role !== "shared" && !chefAgentRoles().has(role))) {
+      throw new Error(`capture agentRoles must use shared or a Chef role: ${[...chefAgentRoles()].join(", ")}.`);
+    }
     const plan = buildCapturePlan({ target, candidate });
     print(options.mode === "apply" ? applyCapturePlan(plan) : { ...plan, content: undefined, destinationPath: undefined }, options.json);
     return;
   }
   if (options.action === "retrieve") {
     if (!options.projectId) throw new Error("retrieve requires --project ID.");
-    print(retrieveBrainNotes({ target, projectId: options.projectId, query: options.query }), options.json);
+    if (options.agentRole && !chefAgentRoles().has(options.agentRole)) {
+      throw new Error(`retrieve --role must be a Chef role: ${[...chefAgentRoles()].join(", ")}.`);
+    }
+    print(retrieveBrainNotes({ target, projectId: options.projectId, agentRole: options.agentRole, query: options.query }), options.json);
     return;
   }
   if (options.action === "uri") {

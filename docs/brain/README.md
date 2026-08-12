@@ -48,6 +48,21 @@ lexical, exact-project scoped, bounded, and excludes restricted/archive/runtime
 content by default. `uri` only produces a percent-encoded `obsidian://open`
 value for an existing Markdown or Canvas note; it never launches or writes.
 
+## Role memory
+
+Optional `agentRoles` capture metadata creates a small curated layer for Chef's
+existing roles: use `shared` and role IDs from `catalog/agents.json`, such as
+`security`, `frontend`, or `qa`. A scoped retrieval returns only `shared` notes
+and notes tagged with that requested role:
+
+```powershell
+npm.cmd run brain -- retrieve --target C:\path\to\CodexChefBrain --project my-project --role security --query "approval boundary" --json
+```
+
+Role memory is a bounded untrusted context pack. It cannot grant approvals,
+alter sandbox policy, activate connectors, or override user/repository rules.
+Notes without `agent_roles` retain project-scoped retrieval compatibility.
+
 `audit` is also read-only. It resolves Obsidian-style Markdown links against
 existing Markdown and Canvas files, reports missing targets, identifies
 canonical notes without an inbound relationship, and flags notes whose

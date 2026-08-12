@@ -66,3 +66,4 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSQ845BGTTGG7-workspace-e2e.md](TASK-MSQ845BGTTGG7-workspace-e2e.md)
 - [TASK-MSQCTM8VXR3HL-portability-matrix.md](TASK-MSQCTM8VXR3HL-portability-matrix.md)
 - [TASK-MSQDXJ8G977AL-fevs.md](TASK-MSQDXJ8G977AL-fevs.md)
+- [TASK-MSQFDHENWGDXJ-secv.md](TASK-MSQFDHENWGDXJ-secv.md)

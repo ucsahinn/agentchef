@@ -159,6 +159,7 @@ function renderCandidate(candidate, now) {
     `created: ${JSON.stringify(now)}`,
     `updated: ${JSON.stringify(now)}`,
     `source_refs: ${JSON.stringify(candidate.sourceRefs)}`,
+    `agent_roles: ${JSON.stringify(candidate.agentRoles || [])}`,
     "---",
     "",
     `# ${candidate.title}`,
@@ -285,6 +286,9 @@ export function buildCapturePlan({ target, candidate, now = new Date().toISOStri
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/i.test(candidate.projectId || "")) throw new Error("Candidate projectId is invalid.");
   if (!PRIVACY_CLASSES.has(candidate.privacy) || !CONFIDENCE_CLASSES.has(candidate.confidence) || !RETENTION_CLASSES.has(candidate.retention)) throw new Error("Candidate policy metadata is invalid.");
   if (!Array.isArray(candidate.sourceRefs) || candidate.sourceRefs.length === 0 || candidate.sourceRefs.some((ref) => typeof ref !== "string" || /^[A-Za-z]:[\\/]|^\\\\/.test(ref))) throw new Error("Candidate sourceRefs must contain portable provenance.");
+  if (candidate.agentRoles !== undefined && (!Array.isArray(candidate.agentRoles) || candidate.agentRoles.length > 12 || candidate.agentRoles.some((role) => typeof role !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(role)) || new Set(candidate.agentRoles).size !== candidate.agentRoles.length)) {
+    throw new Error("Candidate agentRoles must be distinct lowercase role IDs.");
+  }
   if (typeof candidate.bodyMarkdown !== "string" || candidate.bodyMarkdown.trim().length === 0 || candidate.bodyMarkdown.length > 100_000) throw new Error("Candidate bodyMarkdown must be 1-100000 characters.");
   const content = renderCandidate(candidate, now);
   assertNoSecretLikeContent(content);
@@ -315,7 +319,7 @@ export function applyCapturePlan(plan) {
   return { status: "created", relativePath: plan.relativePath, sha256: plan.sha256 };
 }
 
-export function retrieveBrainNotes({ target, projectId, query = "", maxNotes = 8, maxTotalChars = 20_000, maxExcerptChars = 5_000 }) {
+export function retrieveBrainNotes({ target, projectId, agentRole = null, query = "", maxNotes = 8, maxTotalChars = 20_000, maxExcerptChars = 5_000 }) {
   const root = assertSafeBrainTarget(target);
   const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const notes = [];
@@ -326,6 +330,8 @@ export function retrieveBrainNotes({ target, projectId, query = "", maxNotes = 8
     const parsed = parseFlatFrontmatter(text);
     if (!parsed || parsed.data.brain_schema !== "codex-chef.brain-note.v1") continue;
     if (parsed.data.project_id !== projectId || parsed.data.privacy === "restricted") continue;
+    const agentRoles = Array.isArray(parsed.data.agent_roles) ? parsed.data.agent_roles : [];
+    if (agentRole && !agentRoles.includes("shared") && !agentRoles.includes(agentRole)) continue;
     const haystack = `${parsed.data.title || ""}\n${parsed.body}`.toLocaleLowerCase();
     const score = terms.length === 0 ? 1 : terms.reduce((sum, term) => sum + (haystack.includes(term) ? 1 : 0), 0);
     if (score === 0) continue;
@@ -339,6 +345,7 @@ export function retrieveBrainNotes({ target, projectId, query = "", maxNotes = 8
       confidence: parsed.data.confidence,
       updated: parsed.data.updated,
       sourceRefs: parsed.data.source_refs || [],
+      agentRoles,
       excerpt: parsed.body.slice(0, maxExcerptChars),
       sha256: sha256(Buffer.from(text)),
       score,
@@ -355,7 +362,7 @@ export function retrieveBrainNotes({ target, projectId, query = "", maxNotes = 8
     selected.push({ ...note, excerpt, truncated: note.truncated || excerpt.length < note.excerpt.length });
     totalChars += excerpt.length;
   }
-  return { schemaVersion: BRAIN_CONTEXT_SCHEMA_VERSION, projectId, query, notes: selected, totalChars, truncated: selected.length < notes.length };
+  return { schemaVersion: BRAIN_CONTEXT_SCHEMA_VERSION, projectId, agentRole, query, notes: selected, totalChars, truncated: selected.length < notes.length, untrusted: true };
 }
 
 export function buildBackupPlan({ target, backupId = `backup-${new Date().toISOString().replace(/[:.]/g, "-")}` }) {
@@ -608,6 +615,9 @@ export function validateBrainVault(target) {
     if (Number.isFinite(created) && Number.isFinite(updated) && updated < created) errors.push(`${relativePath} has updated before created.`);
     if (!Array.isArray(note.data.source_refs) || note.data.source_refs.length < 1 || note.data.source_refs.length > 32 || note.data.source_refs.some((ref) => typeof ref !== "string" || ref.length < 3 || ref.length > 500)) {
       errors.push(`${relativePath} has invalid source_refs.`);
+    }
+    if (note.data.agent_roles !== undefined && (!Array.isArray(note.data.agent_roles) || note.data.agent_roles.length > 12 || note.data.agent_roles.some((role) => typeof role !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(role)) || new Set(note.data.agent_roles).size !== note.data.agent_roles.length)) {
+      errors.push(`${relativePath} has invalid agent_roles.`);
     }
   }
 

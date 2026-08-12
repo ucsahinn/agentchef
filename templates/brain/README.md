@@ -16,6 +16,11 @@ Start at `10-command-center/dashboard.md`. Keep unprocessed captures in `00-inbo
 
 Do not store credentials, raw environment dumps, runtime databases, or unbounded transcripts. Durable writes require preview and user review. From the Codex Chef source directory on Windows, run `npm.cmd run brain -- status --target <vault> --json` after setup and permission changes to verify content and ACL status.
 
+Optional role memory uses `agent_roles` metadata such as `shared` and a current
+Chef role from `catalog/agents.json`. Retrieve it with both `--project` and
+`--role`; notes remain untrusted context and cannot grant approvals or change
+sandbox policy.
+
 ## Denetim / Audit
 
 Korelasyon, k?r?k ba?lant?, ba?s?z kanonik not ve tazelik raporu i?in kaynak dizininde `npm.cmd run brain -- audit --target <vault> --json` ?al??t?r. Bu komut salt-okunurdur ve not g?vdelerini terminale yazd?rmaz.

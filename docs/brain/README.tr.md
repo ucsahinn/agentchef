@@ -55,6 +55,22 @@ ili?kisi olmayan kanonik notlar? tan?mlar ve frontmatter i?indeki `updated`
 zaman damgas? 30 g?nl?k pencereden eski notlar? i?aretler. Yaln?z yol ve
 metadata raporlar; not g?vdelerini yazd?rmaz.
 
+## Rol hafızası
+
+İsteğe bağlı `agentRoles` capture metadata'sı, Chef'in mevcut rolleri için küçük
+ve seçilmiş bir katman oluşturur: `shared` ile `catalog/agents.json` içindeki
+`security`, `frontend` veya `qa` gibi rol kimliklerini kullanın. Rol kapsamlı
+retrieval yalnız `shared` notlarını ve istenen rolle etiketli notları döndürür:
+
+```powershell
+npm.cmd run brain -- retrieve --target C:\path\to\CodexChefBrain --project my-project --role security --query "approval boundary" --json
+```
+
+Rol hafızası sınırlı ve güvenilmeyen bir context pack'tir. Onay veremez,
+sandbox politikasını değiştiremez, connector etkinleştiremez veya kullanıcı/repo
+kurallarını ezemez. `agent_roles` içermeyen notlar proje kapsamlı uyumluluğu
+korur.
+
 ## Sınır
 
 Brain; kuyruk, scheduler, onay servisi, runtime database, ham konuşma arşivi,
