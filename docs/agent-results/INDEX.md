@@ -12,6 +12,7 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSP4DJ71STG6E-status-doctor.md](TASK-MSP4DJ71STG6E-status-doctor.md)
 - [TASK-MSP4DJ71STG6E-status.md](TASK-MSP4DJ71STG6E-status.md)
 - [TASK-MSP4DJ71STG6E-tasarimci.md](TASK-MSP4DJ71STG6E-tasarimci.md)
+- [TASK-MSP4H7JXFBUEI-ekip-lideri-d00406.md](TASK-MSP4H7JXFBUEI-ekip-lideri-d00406.md)
 - [TASK-MSP4H7JXFBUEI-handoff-review.md](TASK-MSP4H7JXFBUEI-handoff-review.md)
 - [TASK-MSP4H7N0XWKR0-docs-review.md](TASK-MSP4H7N0XWKR0-docs-review.md)
 - [TASK-MSP4H7N0XWKR0-lock-review.md](TASK-MSP4H7N0XWKR0-lock-review.md)
