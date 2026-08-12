@@ -59,3 +59,15 @@ test("operation lock release removes only the lock it owns", () => {
     assert.equal(existsSync(lock.lockPath), false);
   });
 });
+
+test("invalid operation is rejected before creating the requested root", () => {
+  withTemporaryRoot((parent) => {
+    const root = join(parent, "must-not-be-created");
+
+    assert.throws(
+      () => acquireOperationLock({ root, operation: "" }),
+      /operation must be a non-empty string/i
+    );
+    assert.equal(existsSync(root), false);
+  });
+});

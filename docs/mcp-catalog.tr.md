@@ -6,8 +6,8 @@ MCP'ler Codex'e ek araç veya canlı bağlam verir: güncel dokümantasyon, brow
 kanıtı, semantic code navigation, özel hesap verileri ya da veritabanı erişimi
 gibi. Bu yüzden çok kullanışlılar ama her birinin sınırı açık olmalı.
 
-Codex Chef toplam 16 MCP tanıyor. Dengeli starter üç sunucuyu açar: uzak
-`openaiDeveloperDocs` ile lokal `context7` ve `serena`. Beş ek lokal stdio
+Codex Chef toplam 16 MCP tanıyor. Dengeli starter iki sunucuyu açar: uzak
+`openaiDeveloperDocs` ile lokal lazy `serena` bridge. Context7 dahil altı ek lokal stdio
 yardımcısı tanımlı ama kapalı kalır; yetenek kaybolmaz, her eşzamanlı oturumda
 Node/Python ağaçları gereksiz yere başlamaz. Hesap, veritabanı veya geniş dosya
 sistemi erişimi isteyen diğer sekiz connector ise gerçekten ihtiyacın olana
@@ -28,7 +28,7 @@ kadar kapalı kalır.
 | MCP | Ana config | Ne için kullanıyorum? | Neye ihtiyaç duyuyor? |
 | --- | --- | --- | --- |
 | [`openaiDeveloperDocs`](https://developers.openai.com/mcp) | Açık | Güncel OpenAI geliştirici dokümantasyonu | Ek bir şeye ihtiyaç duymaz |
-| [`context7`](https://github.com/upstash/context7) | Açık | Güncel kütüphane ve framework dokümantasyonu | Node/npx ve ilk açılışta internet |
+| [`context7`](https://github.com/upstash/context7) | Kapalı | İsteğe bağlı güncel kütüphane ve framework dokümantasyonu | Node/npx ve ilk açılışta internet |
 | [`serena`](https://github.com/oraios/serena) | Açık | Bilmediğin repoda sembol seviyesinde kod gezintisi | `uvx` ve sabitlenmiş Serena kaynağı |
 | [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Kapalı | Karmaşık işi anlaşılır adımlara ayırmak | Node/npx ve ilk açılışta internet |
 | [`playwright`](https://github.com/microsoft/playwright-mcp) | Kapalı | İzole, kalıcı olmayan profilde browser snapshot, screenshot, console ve prompt-gated network kanıtı | Node/npx ve yerel browser kontrolü |
@@ -38,8 +38,8 @@ kadar kapalı kalır.
 
 Tüm bundled lokal MCP'lere ihtiyaç duyan tek ana oturumda
 `codex --profile full` kullan. Eşzamanlı ikincil pencereleri
-`codex --profile multi-session` ile başlat; bu profil yedi lokal stdio sunucunun
-tamamını kapatır ama agent, skill, uzak OpenAI docs, built-in memory, hook ve
+`codex --profile multi-session` ile başlat; bu profil lazy Serena bridge'ini
+açık tutup diğer altı lokal stdio sunucuyu kapatır; agent, skill, uzak OpenAI docs, built-in memory, hook ve
 app yüzeylerini korur. Profil ana config üzerine katmanlandığı için kapatmak
 sunucu tanımını silmez.
 

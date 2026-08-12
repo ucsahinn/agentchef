@@ -7,8 +7,8 @@ browser evidence, semantic code navigation, private account data, or database
 access. That makes them useful, but it also means each server needs a clear
 boundary.
 
-Codex Chef knows about 16 MCP servers. The balanced starter enables three:
-remote `openaiDeveloperDocs` plus local `context7` and `serena`. Five additional
+Codex Chef knows about 16 MCP servers. The balanced starter enables two:
+remote `openaiDeveloperDocs` plus the local lazy `serena` bridge. Six additional
 local stdio helpers remain defined but disabled, preserving capability without
 eagerly starting their Node/Python trees in every concurrent session. Serena
 uses a lightweight bridge instead of a direct `uvx` stdio child, so it creates
@@ -30,7 +30,7 @@ deliberately need them.
 | MCP | Base | What I use it for | What it needs |
 | --- | --- | --- | --- |
 | [`openaiDeveloperDocs`](https://developers.openai.com/mcp) | On | Current OpenAI developer documentation | Nothing extra |
-| [`context7`](https://github.com/upstash/context7) | On | Current library and framework docs | Node/npx and first-run network access |
+| [`context7`](https://github.com/upstash/context7) | Off | Opt-in current library and framework docs | Node/npx and first-run network access |
 | [`serena`](https://github.com/oraios/serena) | On | Symbol-aware code navigation in unfamiliar repositories | Lightweight local bridge; `uvx` and the pinned source only on first semantic call |
 | [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Off | Breaking a complex task into clear steps | Node/npx and first-run network access |
 | [`playwright`](https://github.com/microsoft/playwright-mcp) | Off | Browser snapshots, screenshots, console and prompt-gated network evidence in an isolated, non-persistent profile | Node/npx and local browser control |

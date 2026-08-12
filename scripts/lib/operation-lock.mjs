@@ -40,11 +40,12 @@ export function releaseOperationLock(lock) {
 
 export function acquireOperationLock({ root, operation }) {
   const resolvedRoot = resolve(requireText(root, "root"));
+  const validatedOperation = requireText(operation, "operation");
   mkdirSync(resolvedRoot, { recursive: true });
   const lockPath = join(resolvedRoot, LOCK_DIRECTORY_NAME);
   const owner = {
     pid: process.pid,
-    operation: requireText(operation, "operation"),
+    operation: validatedOperation,
     startedAt: new Date().toISOString(),
     id: randomUUID()
   };

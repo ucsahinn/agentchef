@@ -769,9 +769,18 @@ function inspectCodexCliRuntime() {
   const { version, login, mcp, mcpNames, mcpStates } = targetProbe;
   const ambientMcpNames = ambientProbe.mcpNames;
   const ambientMcpStates = ambientProbe.mcpStates;
+  const ambientMcpStatesSameAsTarget = ambientMcpStates.length === mcpStates.length
+    && ambientMcpStates.every((server, index) => {
+      const targetServer = mcpStates[index];
+      return server.name === targetServer?.name
+        && server.enabled === targetServer.enabled
+        && server.disabledReason === targetServer.disabledReason
+        && server.authStatus === targetServer.authStatus;
+    });
   const ambientSameAsTarget = ambientProbe.login.status === login.status
     && ambientMcpNames.length === mcpNames.length
-    && ambientMcpNames.every((name, index) => name === mcpNames[index]);
+    && ambientMcpNames.every((name, index) => name === mcpNames[index])
+    && ambientMcpStatesSameAsTarget;
   const ambientRelationship = ambientProbe.login.inspected || ambientProbe.mcp.inspected
     ? (ambientSameAsTarget ? "same" : "different")
     : "unknown";
@@ -1024,11 +1033,15 @@ function summarizeCodexDoctor() {
     const nonBlockingWarningIds = new Set(["network.websocket_reachability"]);
     const blockingWarningChecks = warningChecks.filter((check) => !nonBlockingWarningIds.has(check.id));
     const nonBlockingWarningChecks = warningChecks.filter((check) => nonBlockingWarningIds.has(check.id));
+    const exitIssue = result.status === 0
+      ? null
+      : `codex doctor --json exited ${result.status} despite emitting parseable JSON.`;
 
     return {
       inspected: true,
-      status: counts.fail > 0 || blockingWarningChecks.length > 0 ? "attention" : "ok",
+      status: exitIssue || counts.fail > 0 || blockingWarningChecks.length > 0 ? "attention" : "ok",
       exitCode: result.status,
+      exitIssue,
       overallStatus: parsed.overallStatus || null,
       codexVersion: parsed.codexVersion || null,
       counts,
@@ -1200,7 +1213,8 @@ const attentionReasons = [
   ...(gitRepository.status === "ok" ? [] : [gitRepository.summary]),
   ...(codexDoctor.status === "attention"
     ? [
-        `codex doctor checks need attention: ${codexDoctor.counts?.fail || 0} fail, ${codexDoctor.counts?.warning || 0} warning`
+        codexDoctor.exitIssue
+          || `codex doctor checks need attention: ${codexDoctor.counts?.fail || 0} fail, ${codexDoctor.counts?.warning || 0} warning`
       ]
     : [])
 ];

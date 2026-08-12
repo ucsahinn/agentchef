@@ -287,6 +287,11 @@ controls, context-budget evidence, setup notes, and log metadata:
 npm run chef -- --status --details
 ```
 
+The target/ambient comparison covers login status plus the safe MCP state
+fields (`name`, enabled state, disabled reason, and auth status), so equal
+server names cannot hide runtime drift. A parseable `codex doctor --json`
+response with a nonzero exit code is reported as `attention`, not `ok`.
+
 For a fast repository-only audit that avoids installed-runtime checks, global
 skill-root inventory, Codex log metadata, and live Codex CLI probes, run:
 

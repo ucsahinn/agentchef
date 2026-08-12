@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -8,14 +8,36 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const indexer = path.join(root, "scripts", "index-agent-results.mjs");
+const compliantReport = [
+  "# Result",
+  "",
+  "## Ne yapıldı",
+  "Work completed.",
+  "",
+  "## Kanıt",
+  "`node --test` passed.",
+  "",
+  "## Değişen dosyalar",
+  "- None.",
+  "",
+  "## Riskler",
+  "- None.",
+  "",
+  "## Açık sorular",
+  "- None.",
+  "",
+  "## Sonraki adım",
+  "- None.",
+  ""
+].join("\n");
 
 function createFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-agent-results-index-"));
   const results = path.join(fixture, "docs", "agent-results");
   fs.mkdirSync(results, { recursive: true });
-  fs.writeFileSync(path.join(results, "TASK-Z-last.md"), "# Z\n", "utf8");
-  fs.writeFileSync(path.join(results, "TASK-A-first.md"), "# A\n", "utf8");
-  fs.writeFileSync(path.join(results, "ADP-42-qa.md"), "# QA\n", "utf8");
+  fs.writeFileSync(path.join(results, "TASK-Z-last.md"), compliantReport, "utf8");
+  fs.writeFileSync(path.join(results, "TASK-A-first.md"), compliantReport, "utf8");
+  fs.writeFileSync(path.join(results, "ADP-42-qa.md"), compliantReport, "utf8");
   fs.writeFileSync(path.join(results, "README.md"), "# Results notes\n", "utf8");
   fs.writeFileSync(path.join(results, "notes.txt"), "ignore\n", "utf8");
   return fixture;
@@ -41,6 +63,18 @@ test("agent result indexing includes task reports only, sorts them, and is idemp
     const firstWrite = fs.statSync(indexPath).mtimeMs;
     execFileSync(process.execPath, [indexer, "--root", fixture], { encoding: "utf8" });
     assert.equal(fs.statSync(indexPath).mtimeMs, firstWrite);
+  } finally {
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("agent result indexing rejects reports without the required evidence contract", () => {
+  const fixture = createFixture();
+  try {
+    fs.writeFileSync(path.join(fixture, "docs", "agent-results", "TASK-A-first.md"), "# Incomplete\n", "utf8");
+    const result = spawnSync(process.execPath, [indexer, "--root", fixture], { encoding: "utf8" });
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /missing required heading: Ne yapıldı/i);
   } finally {
     fs.rmSync(fixture, { recursive: true, force: true });
   }

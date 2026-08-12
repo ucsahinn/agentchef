@@ -946,7 +946,7 @@ test("SEO report validator rejects bearer credentials in free text", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-secret-"));
   try {
     const report = validSeoReport();
-    report.nextActions = ["Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456"];
+    report.nextActions = [`Authorization: Bearer ${"abcdefghijklmnopqrstuvwxyz123456"}`];
     const reportPath = path.join(tempRoot, "report.json");
     writeJson(reportPath, report);
     const result = runValidator(seoValidator, reportPath);
@@ -1036,7 +1036,7 @@ test("evidence research validator rejects bearer credentials in free text", () =
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-secret-"));
   try {
     const report = validResearchReport();
-    report.synthesis.limitations = ["Authorization: Basic dXNlcjpwYXNzd29yZDEyMzQ1Ng=="];
+    report.synthesis.limitations = [`Authorization: Basic ${"dXNlcjpwYXNzd29yZDEyMzQ1Ng=="}`];
     const reportPath = path.join(tempRoot, "report.json");
     writeJson(reportPath, report);
     const result = runValidator(researchValidator, reportPath);

@@ -15,6 +15,47 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
 }
 
+function normalizedIdentity(value) {
+  return value.normalize("NFKC").trim().toLowerCase();
+}
+
+function validateNamedCatalog(items, label) {
+  if (!Array.isArray(items)) {
+    fail(`${label} catalog must be an array.`);
+    return new Set();
+  }
+  const names = new Set();
+  for (const item of items) {
+    if (typeof item?.name !== "string" || !item.name.trim()) {
+      fail(`${label} catalog entries must declare non-empty names.`);
+      continue;
+    }
+    const normalized = normalizedIdentity(item.name);
+    if (names.has(normalized)) fail(`duplicate ${label} catalog name: ${item.name}`);
+    names.add(normalized);
+  }
+  return names;
+}
+
+function validatedProfileList(profile, field, label) {
+  const value = profile[field];
+  if (!Array.isArray(value)) {
+    fail(`routing profile ${field} must be an array: ${profile.id || "<unknown>"}`);
+    return [];
+  }
+  const seen = new Set();
+  for (const entry of value) {
+    if (typeof entry !== "string" || !entry.trim()) {
+      fail(`routing profile ${profile.id || "<unknown>"} ${field} must contain non-empty strings.`);
+      continue;
+    }
+    const normalized = normalizedIdentity(entry);
+    if (seen.has(normalized)) fail(`routing profile ${profile.id || "<unknown>"} has duplicate ${label}: ${entry}`);
+    seen.add(normalized);
+  }
+  return value;
+}
+
 const routing = readJson("catalog/routing-profiles.json");
 const agents = readJson("catalog/agents.json");
 const mcp = readJson("catalog/mcp-servers.json");
@@ -23,9 +64,9 @@ const agentsTemplate = fs.readFileSync(path.join(root, "templates/codex/AGENTS.m
 const routingBoardScript = fs.readFileSync(path.join(root, "scripts/codex-routing-board.mjs"), "utf8");
 const routingReference = fs.readFileSync(path.join(root, "plugins/codex-chef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"), "utf8");
 
-const agentNames = new Set((agents.agents || []).map((agent) => agent.name));
+const agentNames = validateNamedCatalog(agents.agents, "agent");
 const mcpNames = new Set((mcp.servers || []).map((server) => server.name));
-const catalogSkillNames = new Set((skills.skills || []).map((skill) => skill.name));
+const catalogSkillNames = validateNamedCatalog(skills.skills, "skill");
 const localSkillRoot = path.join(root, "plugins", "codex-chef-workflows", "skills");
 const localSkillNames = fs.existsSync(localSkillRoot)
   ? new Set(fs.readdirSync(localSkillRoot, { withFileTypes: true })
@@ -93,6 +134,11 @@ for (const profile of routing.profiles || []) {
   if (seenIds.has(profile.id)) fail(`duplicate routing profile id: ${profile.id}`);
   seenIds.add(profile.id);
 
+  const profileAgents = validatedProfileList(profile, "agents", "agent");
+  const profileSkills = validatedProfileList(profile, "skills", "skill");
+  const profileMcp = validatedProfileList(profile, "mcp", "MCP server");
+  const profileFlags = validatedProfileList(profile, "flags", "flag");
+
   if (!Number.isInteger(profile.match?.priority) || profile.match.priority < 0 || profile.match.priority > 100) {
     fail(`routing profile match.priority must be an integer from 0 to 100: ${profile.id}`);
   }
@@ -118,25 +164,25 @@ for (const profile of routing.profiles || []) {
     if (typeof term !== "string" || !term.trim()) fail(`routing profile match.excludeTerms must contain non-empty strings: ${profile.id}`);
   }
 
-  if (!Array.isArray(profile.agents) || profile.agents.length === 0) {
+  if (profileAgents.length === 0) {
     fail(`routing profile must name at least one agent: ${profile.id}`);
   }
-  for (const agent of profile.agents || []) {
-    if (!agentNames.has(agent)) fail(`routing profile ${profile.id} references unknown agent: ${agent}`);
+  for (const agent of profileAgents) {
+    if (!agentNames.has(normalizedIdentity(agent))) fail(`routing profile ${profile.id} references unknown agent: ${agent}`);
   }
 
-  for (const skill of profile.skills || []) {
+  for (const skill of profileSkills) {
     if (!allowedSkills.has(skill)) fail(`routing profile ${profile.id} references unknown skill: ${skill}`);
   }
 
-  for (const server of profile.mcp || []) {
+  for (const server of profileMcp) {
     if (!mcpNames.has(server)) fail(`routing profile ${profile.id} references unknown MCP server: ${server}`);
   }
 
-  if (!Array.isArray(profile.flags) || profile.flags.length === 0) {
+  if (profileFlags.length === 0) {
     fail(`routing profile must name at least one flag/config mode: ${profile.id}`);
   }
-  const flags = new Set(profile.flags || []);
+  const flags = new Set(profileFlags);
   if (flags.has("sandbox:read-only") && flags.has("workspace-write")) {
     fail(`${profile.id} cannot combine read-only routing with workspace-write.`);
   }
@@ -146,22 +192,22 @@ for (const profile of routing.profiles || []) {
   if (!allowedDelegationModes.has(profile.delegationMode)) {
     fail(`routing profile ${profile.id} has invalid delegationMode: ${profile.delegationMode}`);
   }
-  if (profile.agents.length > 0 && profile.delegationMode === "none") {
+  if (profileAgents.length > 0 && profile.delegationMode === "none") {
     fail(`routing profile ${profile.id} names agents but sets delegationMode=none`);
   }
-  if (profile.agents.length > 0 && profile.delegationMode !== "conditional") {
+  if (profileAgents.length > 0 && profile.delegationMode !== "conditional") {
     fail(`routing profile ${profile.id} must use conditional specialist delegation.`);
   }
   if (!allowedSkillModes.has(profile.skillMode)) {
     fail(`routing profile ${profile.id} has invalid skillMode: ${profile.skillMode}`);
   }
-  if (profile.skills.length > 0 && profile.skillMode === "none") {
+  if (profileSkills.length > 0 && profile.skillMode === "none") {
     fail(`routing profile ${profile.id} names skills but sets skillMode=none`);
   }
   if (!allowedMcpModes.has(profile.mcpMode)) {
     fail(`routing profile ${profile.id} has invalid mcpMode: ${profile.mcpMode}`);
   }
-  if (profile.mcp.length > 0 && profile.mcpMode === "none") {
+  if (profileMcp.length > 0 && profile.mcpMode === "none") {
     fail(`routing profile ${profile.id} names MCP servers but sets mcpMode=none`);
   }
   if (!Array.isArray(profile.evidence) || profile.evidence.length < 2) {

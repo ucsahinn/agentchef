@@ -20,7 +20,7 @@ concise; `npm run chef -- --update --verbose-plan` prints the full install
 dry-run evidence. Apply mode blocks tracked or staged worktree edits, while
 preserving unrelated untracked files, and runs
 `git pull --ff-only`. If the pull advances the repo, the same approved CLI
-prints a fresh preview, continues local validation, refreshes managed files,
+runs a fresh installer preview from the updated tree, continues local validation, refreshes managed files,
 and verifies installed-runtime parity. A second invocation is not required.
 If the repo is already current, apply runs local validation and refreshes managed files through the backup-backed
 installer without installing curated global skills or optional global Git

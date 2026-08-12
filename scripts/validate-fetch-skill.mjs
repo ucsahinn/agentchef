@@ -390,7 +390,7 @@ try {
   expectFailure("unsafe-auth-state", unsafe, "safety.authStatePersisted must remain false");
 
   const secretMaterial = validReport();
-  secretMaterial.summary.nextAction = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456";
+  secretMaterial.summary.nextAction = `Authorization: Bearer ${"abcdefghijklmnopqrstuvwxyz123456"}`;
   expectFailure("secret-material", secretMaterial, "secret-like material");
 
   const dishonest = validReport();

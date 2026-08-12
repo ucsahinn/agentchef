@@ -2051,10 +2051,8 @@ async function runUpdate(interaction = {}) {
       "Running a fresh preview from the updated tree, then continuing validation and managed refresh in this approved session.",
       "Güncel ağaçtan yeni ön izleme çalıştırılıyor; ardından doğrulama ve managed yenileme bu onaylı oturumda sürecek."
     )}`);
-    if (options.details) {
-      const preview = runPreview(true, false);
-      if (!preview.ok) return preview;
-    }
+    const preview = runPreview(true, false);
+    if (!preview.ok) return preview;
   } else {
     console.log(`${ICONS.ok} ${localText("Repository already up to date; applying the reviewed managed refresh.", "Repo zaten güncel; incelenmiş managed refresh uygulanıyor.")}`);
   }
@@ -2905,12 +2903,17 @@ function restoreBackupArchive(archivePath, plan) {
 }
 
 function deleteBackupArchive(archivePath) {
-  const rootReal = safeRealpath(backupRootPath());
-  const archiveReal = safeRealpath(archivePath);
-  if (!isInside(archiveReal, rootReal)) {
-    throw new Error(`Refusing backup archive deletion outside canonical backup root: ${path.basename(archivePath)}`);
+  const lock = acquireOperationLock({ root: codexHome(), operation: "backup-delete" });
+  try {
+    const rootReal = safeRealpath(backupRootPath());
+    const archiveReal = safeRealpath(archivePath);
+    if (!isInside(archiveReal, rootReal)) {
+      throw new Error(`Refusing backup archive deletion outside canonical backup root: ${path.basename(archivePath)}`);
+    }
+    fs.rmSync(archivePath, { recursive: true, force: false });
+  } finally {
+    lock.release();
   }
-  fs.rmSync(archivePath, { recursive: true, force: false });
 }
 
 function summarizeBackupArchive(id, archivePath) {

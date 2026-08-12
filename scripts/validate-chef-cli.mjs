@@ -11,6 +11,7 @@ import {
   pinnedSkillSchemaVersion
 } from "./lib/skill-provenance.mjs";
 import { activatePinnedSkill } from "./lib/pinned-skill-activation.mjs";
+import { acquireOperationLock } from "./lib/operation-lock.mjs";
 import { writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -1044,6 +1045,23 @@ function runBackupsFixtureSmokes() {
   }
   if (!fs.existsSync(backupRoot)) {
     fail("chef-cli backup delete preview must not remove the archive");
+  }
+
+  const competingLock = acquireOperationLock({ root: codexHome, operation: "install" });
+  try {
+    const lockedDelete = runCliSmokeRaw(
+      "backups-delete-locked-fixture",
+      ["--backups", "--backup", backupId, "--delete", "--apply", "--json", "--no-log"],
+      { env, expectedStatus: 1 }
+    );
+    if (!lockedDelete.ok || !lockedDelete.output.includes("already in progress")) {
+      fail("chef-cli backup delete apply must fail closed while the Codex home operation lock is held");
+    }
+    if (!fs.existsSync(backupRoot)) {
+      fail("chef-cli backup delete apply must preserve the archive while the Codex home operation lock is held");
+    }
+  } finally {
+    competingLock.release();
   }
 
   const deleteApply = runCliSmokeRaw("backups-delete-json-apply-fixture", ["--backups", "--backup", backupId, "--delete", "--apply", "--json", "--no-log"], { env });

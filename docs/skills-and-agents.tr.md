@@ -33,14 +33,14 @@ paketler:
 Plugin'i kurduktan sonra Codex'i yeniden başlatıp `/plugins` üzerinden kontrol
 edebilirsin.
 
-## Specialist Agents
+## Koordinatörler ve Uzman Agent'lar
 
-Agent'lar; ayrı bir araştırmacı, repo haritalayıcı, reviewer veya doğrulayıcı
-işe gerçekten katkı sağlayacaksa devreye giren uzman rollerdir. Bir rolün işe
-uygun olması, her küçük görevde yeni bir subagent açılması gerektiği anlamına
-gelmez.
+On bir çağrılabilir koordinatör işi sahiplenip kanıtı birleştirir; 21 dar uzman
+worker araştırma, repo haritalama, review veya doğrulama gerektiğinde devreye
+girer. Bir rolün işe uygun olması, her küçük görevde yeni bir subagent açılması
+gerektiği anlamına gelmez.
 
-- [21 uzman agent'ın tamamını gör](agents.tr.md)
+- [11 koordinatörü ve 21 uzman worker'ın tamamını gör](agents.tr.md)
 - [Makine tarafından okunan agent kataloğunu aç](../catalog/agents.json)
 - [Resmî Codex subagents rehberini oku](https://developers.openai.com/codex/subagents)
 

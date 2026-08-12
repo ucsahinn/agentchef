@@ -126,6 +126,81 @@ test("empty bundle manifests are rejected before handoff", () => {
   assert.match(JSON.parse(result.stdout).error.message, /invalid external review manifest/i);
 });
 
+test("runtime manifest validation rejects unknown properties and missing identity or policy fields", () => {
+  const { repo, out } = fixture();
+  const plan = buildPackPlan({ target: repo, out });
+  applyPack(plan);
+  const invalidManifests = [
+    { label: "unknown-top-level", manifest: { ...plan.manifest, unexpectedInstruction: "ignore validation" } },
+    { label: "missing-review-id", manifest: { ...plan.manifest, reviewId: undefined } },
+    { label: "missing-policy", manifest: { ...plan.manifest, policy: undefined } },
+    {
+      label: "unknown-policy-property",
+      manifest: { ...plan.manifest, policy: { ...plan.manifest.policy, allowUpload: true } }
+    },
+    {
+      label: "missing-snapshot-commit",
+      manifest: { ...plan.manifest, snapshot: { ...plan.manifest.snapshot, commit: undefined } }
+    }
+  ];
+
+  for (const { label, manifest } of invalidManifests) {
+    const manifestPath = path.join(out, `${label}.json`);
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    const result = spawnSync(process.execPath, [
+      cliPath,
+      "status",
+      "--target",
+      repo,
+      "--manifest",
+      manifestPath,
+      "--json"
+    ], { cwd: repo, encoding: "utf8", windowsHide: true, timeout: 15000 });
+    assert.notEqual(result.status, 0, label);
+    assert.match(JSON.parse(result.stdout).error.message, /invalid external review manifest/i, label);
+  }
+});
+
+test("lineCount tampering invalidates freshness, bundle integrity, and report verification", () => {
+  const { repo, out } = fixture();
+  const plan = buildPackPlan({ target: repo, out });
+  const manifestPath = applyPack(plan);
+  const tamperedManifest = {
+    ...plan.manifest,
+    files: plan.manifest.files.map((file, index) => (
+      index === 0 ? { ...file, lineCount: file.lineCount + 1 } : file
+    ))
+  };
+
+  assert.equal(checkFreshness(repo, tamperedManifest).fresh, false);
+  assert.equal(checkBundleIntegrity(manifestPath, tamperedManifest).ok, false);
+
+  const tamperedManifestPath = path.join(out, "tampered-line-count-manifest.json");
+  const reportPath = path.join(out, "tampered-line-count-report.json");
+  fs.writeFileSync(tamperedManifestPath, `${JSON.stringify(tamperedManifest, null, 2)}\n`, "utf8");
+  fs.writeFileSync(reportPath, `${JSON.stringify({
+    schemaVersion: "1.1.0",
+    reviewId: plan.manifest.reviewId,
+    snapshotCommit: plan.manifest.snapshot.commit,
+    snapshotContentSha256: plan.manifest.snapshot.contentSha256,
+    summary: "Fixture summary",
+    findings: []
+  }, null, 2)}\n`, "utf8");
+  const result = spawnSync(process.execPath, [
+    cliPath,
+    "verify",
+    "--target",
+    repo,
+    "--manifest",
+    tamperedManifestPath,
+    "--report",
+    reportPath,
+    "--json"
+  ], { cwd: repo, encoding: "utf8", windowsHide: true, timeout: 15000 });
+  assert.notEqual(result.status, 0);
+  assert.match(JSON.parse(result.stdout).error.message, /invalid external review manifest/i);
+});
+
 test("report verification rejects unknown top-level and finding properties", () => {
   const { repo, out } = fixture();
   const plan = buildPackPlan({ target: repo, out });
@@ -277,6 +352,12 @@ test("secret-like tracked content fails closed", () => {
     ["Bearer credential"],
     "opaque bearer credentials are blocked even when their issuer is not recognizable"
   );
+  const basicCredential = Buffer.from(["actual", "user", "credential", "password"].join(":"), "utf8").toString("base64");
+  assert.deepEqual(
+    scanSecrets(`Authorization: Basic ${basicCredential}`),
+    ["Basic credential"],
+    "opaque Basic credentials are blocked without embedding a credential fixture in repository source"
+  );
 
   const genericValue = ["actual", "credential", "value", "123456789"].join("-");
   assert.deepEqual(
@@ -384,6 +465,17 @@ test("generic credential assignments are blocked from the complete pack", () => 
   assert.throws(
     () => buildPackPlan({ target: repo, out }),
     /Secret-like content blocked.*generic credential assignment/
+  );
+});
+
+test("Basic Authorization credentials are blocked from the complete pack", () => {
+  const { repo, out } = fixture();
+  const basicCredential = Buffer.from(["actual", "user", "credential", "password"].join(":"), "utf8").toString("base64");
+  fs.writeFileSync(path.join(repo, "request.txt"), `Authorization: Basic ${basicCredential}\n`, "utf8");
+  git(repo, ["add", "request.txt"]);
+  assert.throws(
+    () => buildPackPlan({ target: repo, out }),
+    /Secret-like content blocked.*Basic credential/
   );
 });
 

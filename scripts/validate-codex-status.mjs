@@ -106,6 +106,94 @@ function writeAmbientDriftCodexCommand() {
   return commandPath;
 }
 
+function writeAmbientMcpStateDriftCodexCommand() {
+  const fixtureDir = path.resolve("tmp/validate-codex-status");
+  fs.mkdirSync(fixtureDir, { recursive: true });
+  const targetServersPath = path.join(fixtureDir, "ambient-state-drift-target-mcp.json");
+  const ambientServersPath = path.join(fixtureDir, "ambient-state-drift-ambient-mcp.json");
+  fs.writeFileSync(targetServersPath, `${JSON.stringify([{
+    name: "sameMcp",
+    enabled: true,
+    auth_status: "authenticated"
+  }])}\n`, "utf8");
+  fs.writeFileSync(ambientServersPath, `${JSON.stringify([{
+    name: "sameMcp",
+    enabled: false,
+    disabled_reason: "ambient-disabled",
+    auth_status: "not_authenticated"
+  }])}\n`, "utf8");
+
+  if (process.platform === "win32") {
+    const commandPath = path.join(fixtureDir, "ambient-state-drift-codex.cmd");
+    fs.writeFileSync(commandPath, [
+      "@echo off",
+      "if \"%1\"==\"--strict-config\" echo codex-cli 0.142.0 && exit /b 0",
+      "if \"%1\"==\"login\" echo Logged in && exit /b 0",
+      `if "%1"=="mcp" if "%CODEX_HOME%"=="" type "${ambientServersPath}" && exit /b 0`,
+      `if "%1"=="mcp" type "${targetServersPath}" && exit /b 0`,
+      "echo unexpected ambient state drift fake codex args %*",
+      "exit /b 1",
+      ""
+    ].join("\r\n"), "utf8");
+    return commandPath;
+  }
+
+  const commandPath = path.join(fixtureDir, "ambient-state-drift-codex.sh");
+  fs.writeFileSync(commandPath, [
+    "#!/bin/sh",
+    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.142.0\\n'; exit 0; fi",
+    "if [ \"$1\" = \"login\" ]; then printf 'Logged in\\n'; exit 0; fi",
+    `if [ "$1" = "mcp" ] && [ -z "$CODEX_HOME" ]; then cat '${ambientServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
+    `if [ "$1" = "mcp" ]; then cat '${targetServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
+    "printf 'unexpected ambient state drift fake codex args %s\\n' \"$*\"",
+    "exit 1",
+    ""
+  ].join("\n"), "utf8");
+  fs.chmodSync(commandPath, 0o755);
+  return commandPath;
+}
+
+function writeNonzeroDoctorCodexCommand() {
+  const fixtureDir = path.resolve("tmp/validate-codex-status");
+  fs.mkdirSync(fixtureDir, { recursive: true });
+  const doctorJson = JSON.stringify({
+    overallStatus: "ok",
+    codexVersion: "0.142.0",
+    checks: {
+      fixture: { id: "fixture", status: "ok", summary: "Fixture check passed." }
+    }
+  });
+
+  if (process.platform === "win32") {
+    const commandPath = path.join(fixtureDir, "nonzero-doctor-codex.cmd");
+    fs.writeFileSync(commandPath, [
+      "@echo off",
+      "if \"%1\"==\"--strict-config\" echo codex-cli 0.142.0 && exit /b 0",
+      "if \"%1\"==\"login\" echo Logged in && exit /b 0",
+      "if \"%1\"==\"mcp\" echo [{\"name\":\"fakeMcp\",\"enabled\":true}] && exit /b 0",
+      `if "%1"=="doctor" echo ${doctorJson} && exit /b 9`,
+      "echo unexpected nonzero doctor fake codex args %*",
+      "exit /b 1",
+      ""
+    ].join("\r\n"), "utf8");
+    return commandPath;
+  }
+
+  const commandPath = path.join(fixtureDir, "nonzero-doctor-codex.sh");
+  fs.writeFileSync(commandPath, [
+    "#!/bin/sh",
+    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.142.0\\n'; exit 0; fi",
+    "if [ \"$1\" = \"login\" ]; then printf 'Logged in\\n'; exit 0; fi",
+    "if [ \"$1\" = \"mcp\" ]; then printf '[{\"name\":\"fakeMcp\",\"enabled\":true}]\\n'; exit 0; fi",
+    `if [ "$1" = "doctor" ]; then printf '%s\\n' '${doctorJson.replaceAll("'", "'\\''")}'; exit 9; fi`,
+    "printf 'unexpected nonzero doctor fake codex args %s\\n' \"$*\"",
+    "exit 1",
+    ""
+  ].join("\n"), "utf8");
+  fs.chmodSync(commandPath, 0o755);
+  return commandPath;
+}
+
 const jsonResult = run(["--json", "--redact-paths", "--skip-runtime", "--skip-codex-doctor-checks"]);
 if (jsonResult.error) {
   fail(`codex status JSON validation could not run: ${jsonResult.error.message}`);
@@ -380,6 +468,99 @@ if (ambientDriftResult.error) {
     }
   } catch (error) {
     fail(`codex status ambient drift validation did not emit parseable JSON: ${error.message}`);
+  }
+}
+
+const ambientMcpStateDriftCodexCommand = writeAmbientMcpStateDriftCodexCommand();
+const ambientMcpStateDriftResult = run([
+  "--json",
+  "--redact-paths",
+  "--skip-runtime",
+  "--skip-codex-doctor-checks"
+], {
+  env: {
+    ...process.env,
+    CODEX_STATUS_CODEX_COMMAND: ambientMcpStateDriftCodexCommand,
+    CODEX_HOME: ""
+  }
+});
+if (ambientMcpStateDriftResult.error) {
+  fail(`codex status ambient MCP state drift validation could not run: ${ambientMcpStateDriftResult.error.message}`);
+} else if (ambientMcpStateDriftResult.status !== 0) {
+  fail(`codex status ambient MCP state drift validation exited ${ambientMcpStateDriftResult.status}: ${(ambientMcpStateDriftResult.stderr || ambientMcpStateDriftResult.stdout).trim()}`);
+} else {
+  try {
+    const stateDriftReport = JSON.parse(ambientMcpStateDriftResult.stdout);
+    if (stateDriftReport.codexCliRuntime?.ambient?.relationshipToTarget !== "different") {
+      fail("codex status must report target/ambient MCP state drift even when configured server names match.");
+    }
+    if (!Array.isArray(stateDriftReport.warnings) || !stateDriftReport.warnings.some((warning) => warning.includes("Ambient Codex CLI status differs"))) {
+      fail("codex status must make target/ambient MCP state drift visible as a warning.");
+    }
+  } catch (error) {
+    fail(`codex status ambient MCP state drift validation did not emit parseable JSON: ${error.message}`);
+  }
+}
+
+const nonzeroDoctorCodexCommand = writeNonzeroDoctorCodexCommand();
+const nonzeroDoctorResult = run([
+  "--json",
+  "--redact-paths",
+  "--skip-runtime",
+  "--skip-codex-cli"
+], {
+  env: {
+    ...process.env,
+    CODEX_STATUS_CODEX_COMMAND: nonzeroDoctorCodexCommand
+  }
+});
+if (nonzeroDoctorResult.error) {
+  fail(`codex status nonzero doctor validation could not run: ${nonzeroDoctorResult.error.message}`);
+} else if (nonzeroDoctorResult.status !== 0) {
+  fail(`codex status nonzero doctor validation exited ${nonzeroDoctorResult.status}: ${(nonzeroDoctorResult.stderr || nonzeroDoctorResult.stdout).trim()}`);
+} else {
+  try {
+    const nonzeroDoctorReport = JSON.parse(nonzeroDoctorResult.stdout);
+    if (nonzeroDoctorReport.codexDoctor?.exitCode !== 9) {
+      fail("codex status must preserve the nonzero codex doctor exit code.");
+    }
+    if (nonzeroDoctorReport.codexDoctor?.status !== "attention") {
+      fail("codex status must not report codex doctor as ok after a nonzero exit code.");
+    }
+    if (!Array.isArray(nonzeroDoctorReport.attentionReasons)
+      || !nonzeroDoctorReport.attentionReasons.some((reason) => reason.includes("exited 9"))) {
+      fail("codex status must explain the nonzero codex doctor exit code in attention reasons.");
+    }
+  } catch (error) {
+    fail(`codex status nonzero doctor validation did not emit parseable JSON: ${error.message}`);
+  }
+}
+
+const foreignCwd = path.resolve("tmp/validate-codex-doctor-foreign-cwd");
+fs.mkdirSync(foreignCwd, { recursive: true });
+const doctorFromForeignCwd = spawnSync(process.execPath, [
+  path.resolve("scripts/codex-doctor.mjs"),
+  "--json",
+  "--redact-paths"
+], {
+  cwd: foreignCwd,
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+  timeout: 120000,
+  windowsHide: true
+});
+if (doctorFromForeignCwd.error) {
+  fail(`codex doctor foreign-cwd validation could not run: ${doctorFromForeignCwd.error.message}`);
+} else if (doctorFromForeignCwd.status !== 0) {
+  fail(`codex doctor must resolve its repository from the script location, not process.cwd(): ${(doctorFromForeignCwd.stderr || doctorFromForeignCwd.stdout).trim()}`);
+} else {
+  try {
+    const foreignCwdReport = JSON.parse(doctorFromForeignCwd.stdout);
+    if (foreignCwdReport.status !== "ok" || foreignCwdReport.repo?.packageName !== "codex-chef") {
+      fail("codex doctor foreign-cwd validation must inspect the Codex Chef repository.");
+    }
+  } catch (error) {
+    fail(`codex doctor foreign-cwd validation did not emit parseable JSON: ${error.message}`);
   }
 }
 

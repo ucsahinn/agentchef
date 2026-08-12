@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "reviewId", "generatedAt", "targetName", "snapshot", "policy", "files", "excluded", "parts"],
   "properties": {
     "schemaVersion": { "const": "1.1.0" },
-    "reviewId": { "type": "string", "minLength": 12 },
+    "reviewId": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}-[0-9a-f]{12}$" },
     "generatedAt": { "type": "string", "format": "date-time" },
     "targetName": { "type": "string", "minLength": 1 },
     "snapshot": {

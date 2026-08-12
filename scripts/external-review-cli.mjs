@@ -26,6 +26,7 @@ const SECRET_PATTERNS = [
   ["Slack token", /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],
   ["JWT", /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/],
   ["Bearer credential", /\b(?:proxy-)?authorization\s*[:=]\s*["']?bearer\s+[A-Za-z0-9._~+\/-]{20,}["']?/i],
+  ["Basic credential", /\b(?:proxy-)?authorization\s*[:=]\s*["']?basic\s+[A-Za-z0-9+/]{4,}={0,2}["']?/i],
   ["connection string", /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp|amqps|mssql):\/\/[^\s"'`{}$]+@[^\s"'`{}$]+/i]
 ];
 
@@ -47,10 +48,14 @@ function lineCount(text) {
 
 function snapshotContentSha256(files) {
   const content = [...files]
-    .map((file) => `${file.path}\0${file.sha256}`)
+    .map((file) => `${file.path}\0${file.sha256}\0${file.bytes}\0${file.lineCount}`)
     .sort()
     .join("\n");
   return sha256(content);
+}
+
+function expectedReviewId(generatedAt, commit, contentSha256) {
+  return `${generatedAt.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}-${commit.slice(0, 8)}-${contentSha256.slice(0, 12)}`;
 }
 
 function toPosix(value) {
@@ -342,7 +347,7 @@ export function buildPackPlan({ target, out, maxPartBytes = DEFAULT_PART_BYTES }
   }
   if (included.length === 0) fail("No safe tracked text files are available to package.");
   const contentSha256 = snapshotContentSha256(included);
-  const reviewId = `${generatedAt.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}-${commit.slice(0, 8)}-${contentSha256.slice(0, 12)}`;
+  const reviewId = expectedReviewId(generatedAt, commit, contentSha256);
   const resolvedOut = assertOutputOutsideTarget(
     resolvedTarget,
     out || defaultOutput(resolvedTarget, reviewId)
@@ -413,24 +418,130 @@ function readManifest(manifestPath) {
     fail("External review manifest must be a regular non-linked file.", "UNSAFE_MANIFEST");
   }
   const manifest = JSON.parse(fs.readFileSync(resolved, "utf8"));
-  if (
-    manifest.schemaVersion !== "1.1.0"
-    || !Array.isArray(manifest.files)
-    || manifest.files.length === 0
-    || manifest.files.some((file) => !Number.isInteger(file?.lineCount) || file.lineCount < 0)
-    || typeof manifest.snapshot?.contentSha256 !== "string"
-    || !/^[0-9a-f]{64}$/.test(manifest.snapshot.contentSha256)
-    || snapshotContentSha256(manifest.files) !== manifest.snapshot.contentSha256
-    || !Array.isArray(manifest.parts)
-    || manifest.parts.length === 0
-  ) {
+  if (validateManifest(manifest).length > 0) {
     fail("Unsupported or invalid external review manifest.");
   }
   return { resolved, manifest };
 }
 
+function validateObjectKeys(value, allowedKeys, label, failures) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    failures.push(`${label} must be an object`);
+    return false;
+  }
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) failures.push(`Unknown ${label} property: ${key}`);
+  }
+  return true;
+}
+
+export function validateManifest(manifest) {
+  const failures = [];
+  const topLevelKeys = new Set([
+    "schemaVersion",
+    "reviewId",
+    "generatedAt",
+    "targetName",
+    "snapshot",
+    "policy",
+    "files",
+    "excluded",
+    "parts"
+  ]);
+  if (!validateObjectKeys(manifest, topLevelKeys, "manifest", failures)) return failures;
+  if (manifest.schemaVersion !== "1.1.0") failures.push("schemaVersion must be 1.1.0");
+  if (typeof manifest.reviewId !== "string"
+    || !/^\d{8}T\d{6}Z-[0-9a-f]{8}-[0-9a-f]{12}$/.test(manifest.reviewId)) {
+    failures.push("reviewId is invalid");
+  }
+  if (typeof manifest.generatedAt !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(manifest.generatedAt)
+    || Number.isNaN(Date.parse(manifest.generatedAt))) {
+    failures.push("generatedAt must be an ISO date-time");
+  }
+  if (typeof manifest.targetName !== "string" || manifest.targetName.length === 0) {
+    failures.push("targetName is required");
+  }
+
+  const snapshotValid = validateObjectKeys(
+    manifest.snapshot,
+    new Set(["commit", "branch", "dirty", "contentSha256"]),
+    "snapshot",
+    failures
+  );
+  if (snapshotValid) {
+    if (!/^[0-9a-f]{40}$/.test(manifest.snapshot.commit || "")) failures.push("snapshot.commit is invalid");
+    if (typeof manifest.snapshot.branch !== "string" || manifest.snapshot.branch.length === 0) failures.push("snapshot.branch is required");
+    if (typeof manifest.snapshot.dirty !== "boolean") failures.push("snapshot.dirty must be boolean");
+    if (!/^[0-9a-f]{64}$/.test(manifest.snapshot.contentSha256 || "")) failures.push("snapshot.contentSha256 is invalid");
+  }
+
+  const policyValid = validateObjectKeys(
+    manifest.policy,
+    new Set(["trackedTextOnly", "outputOutsideTarget", "externalUploadPerformed", "maxFileBytes", "maxPartBytes"]),
+    "policy",
+    failures
+  );
+  if (policyValid) {
+    if (manifest.policy.trackedTextOnly !== true) failures.push("policy.trackedTextOnly must be true");
+    if (manifest.policy.outputOutsideTarget !== true) failures.push("policy.outputOutsideTarget must be true");
+    if (manifest.policy.externalUploadPerformed !== false) failures.push("policy.externalUploadPerformed must be false");
+    if (!Number.isInteger(manifest.policy.maxFileBytes) || manifest.policy.maxFileBytes < 1) failures.push("policy.maxFileBytes is invalid");
+    if (!Number.isInteger(manifest.policy.maxPartBytes) || manifest.policy.maxPartBytes < 10_000) failures.push("policy.maxPartBytes is invalid");
+  }
+
+  if (!Array.isArray(manifest.files) || manifest.files.length === 0) {
+    failures.push("files must be a non-empty array");
+  } else {
+    for (const [index, file] of manifest.files.entries()) {
+      if (!validateObjectKeys(file, new Set(["path", "bytes", "sha256", "lineCount", "part"]), `files[${index}]`, failures)) continue;
+      if (typeof file.path !== "string" || file.path.length === 0) failures.push(`files[${index}].path is required`);
+      if (!Number.isInteger(file.bytes) || file.bytes < 0) failures.push(`files[${index}].bytes is invalid`);
+      if (!/^[0-9a-f]{64}$/.test(file.sha256 || "")) failures.push(`files[${index}].sha256 is invalid`);
+      if (!Number.isInteger(file.lineCount) || file.lineCount < 0) failures.push(`files[${index}].lineCount is invalid`);
+      if (!/^review-bundle-part-\d{3}\.txt$/.test(file.part || "")) failures.push(`files[${index}].part is invalid`);
+    }
+  }
+
+  if (!Array.isArray(manifest.excluded)) {
+    failures.push("excluded must be an array");
+  } else {
+    const reasons = new Set(["sensitive-path", "not-a-file", "file-too-large", "binary"]);
+    for (const [index, excluded] of manifest.excluded.entries()) {
+      if (!validateObjectKeys(excluded, new Set(["path", "reason"]), `excluded[${index}]`, failures)) continue;
+      if (typeof excluded.path !== "string" || excluded.path.length === 0) failures.push(`excluded[${index}].path is required`);
+      if (!reasons.has(excluded.reason)) failures.push(`excluded[${index}].reason is invalid`);
+    }
+  }
+
+  if (!Array.isArray(manifest.parts) || manifest.parts.length === 0) {
+    failures.push("parts must be a non-empty array");
+  } else {
+    for (const [index, part] of manifest.parts.entries()) {
+      if (!validateObjectKeys(part, new Set(["name", "bytes", "sha256"]), `parts[${index}]`, failures)) continue;
+      if (!/^review-bundle-part-\d{3}\.txt$/.test(part.name || "")) failures.push(`parts[${index}].name is invalid`);
+      if (!Number.isInteger(part.bytes) || part.bytes < 1) failures.push(`parts[${index}].bytes is invalid`);
+      if (!/^[0-9a-f]{64}$/.test(part.sha256 || "")) failures.push(`parts[${index}].sha256 is invalid`);
+    }
+  }
+
+  if (Array.isArray(manifest.files) && manifest.files.length > 0 && snapshotValid
+    && /^[0-9a-f]{64}$/.test(manifest.snapshot.contentSha256 || "")) {
+    const actualContentSha256 = snapshotContentSha256(manifest.files);
+    if (actualContentSha256 !== manifest.snapshot.contentSha256) failures.push("snapshot.contentSha256 does not match files");
+    if (typeof manifest.generatedAt === "string"
+      && /^[0-9a-f]{40}$/.test(manifest.snapshot.commit || "")
+      && typeof manifest.reviewId === "string"
+      && expectedReviewId(manifest.generatedAt, manifest.snapshot.commit, actualContentSha256) !== manifest.reviewId) {
+      failures.push("reviewId does not match manifest identity");
+    }
+  }
+  return failures;
+}
+
 export function checkFreshness(target, manifest) {
   const resolvedTarget = resolveTarget(target);
+  const manifestFailures = validateManifest(manifest);
   const results = manifest.files.map((file) => {
     const absolute = path.resolve(resolvedTarget, file.path);
     let stat;
@@ -443,8 +554,19 @@ export function checkFreshness(target, manifest) {
       };
     }
     if (!stat.isFile()) return { path: file.path, status: "unsafe" };
-    const actual = sha256(fs.readFileSync(absolute));
-    return { path: file.path, status: actual === file.sha256 ? "fresh" : "changed", actualSha256: actual };
+    const content = fs.readFileSync(absolute);
+    const actualSha256 = sha256(content);
+    const actualBytes = content.length;
+    const actualLineCount = lineCount(content.toString("utf8"));
+    return {
+      path: file.path,
+      status: actualSha256 === file.sha256 && actualBytes === file.bytes && actualLineCount === file.lineCount
+        ? "fresh"
+        : "changed",
+      actualSha256,
+      actualBytes,
+      actualLineCount
+    };
   });
   const head = runGit(resolvedTarget, ["rev-parse", "HEAD"]).trim();
   const expectedTracked = [...(manifest.files || []), ...(manifest.excluded || [])]
@@ -459,15 +581,19 @@ export function checkFreshness(target, manifest) {
     && missingTracked.length === 0
     && currentTracked.length === expectedTracked.length;
   return {
-    fresh: results.every((entry) => entry.status === "fresh")
+    fresh: manifestFailures.length === 0
+      && results.every((entry) => entry.status === "fresh")
       && head === manifest.snapshot.commit
       && sourceSetFresh,
+    manifestFailures,
     expectedCommit: manifest.snapshot.commit,
     currentCommit: head,
     expectedContentSha256: manifest.snapshot.contentSha256,
     currentContentSha256: snapshotContentSha256(results.map((entry) => ({
       path: entry.path,
-      sha256: entry.actualSha256 || ""
+      sha256: entry.actualSha256 || "",
+      bytes: entry.actualBytes ?? -1,
+      lineCount: entry.actualLineCount ?? -1
     }))),
     sourceSet: {
       fresh: sourceSetFresh,
@@ -483,6 +609,7 @@ export function checkFreshness(target, manifest) {
 export function checkBundleIntegrity(manifestPath, manifest) {
   const manifestFile = path.resolve(manifestPath);
   const bundleRoot = path.dirname(manifestFile);
+  const manifestFailures = validateManifest(manifest);
   const parts = [];
   for (const part of manifest.parts || []) {
     const partName = String(part.name || "");
@@ -511,9 +638,11 @@ export function checkBundleIntegrity(manifestPath, manifest) {
     });
   }
   return {
-    ok: parts.length > 0
+    ok: manifestFailures.length === 0
+      && parts.length > 0
       && parts.length === (manifest.parts || []).length
       && parts.every((entry) => entry.status === "fresh"),
+    manifestFailures,
     parts
   };
 }

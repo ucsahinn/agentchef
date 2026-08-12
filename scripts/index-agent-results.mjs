@@ -16,10 +16,45 @@ for (let index = 2; index < process.argv.length; index += 1) {
 const resultsDirectory = path.join(root, "docs", "agent-results");
 const indexPath = path.join(resultsDirectory, "INDEX.md");
 const compareNames = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
+const requiredHeadings = [
+  "Ne yapıldı",
+  "Kanıt",
+  "Değişen dosyalar",
+  "Riskler",
+  "Açık sorular",
+  "Sonraki adım"
+];
 const reports = fs.readdirSync(resultsDirectory, { withFileTypes: true })
   .filter((entry) => entry.isFile() && /^(?:TASK|ADP)-.+\.md$/.test(entry.name))
   .map((entry) => entry.name)
   .sort(compareNames);
+function reportContractFailure(report) {
+  const text = fs.readFileSync(path.join(resultsDirectory, report), "utf8");
+  for (const heading of requiredHeadings) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!new RegExp(`^##\\s+${escaped}\\s*$`, "m").test(text)) {
+      return `${report} missing required heading: ${heading}`;
+    }
+  }
+  const evidence = text.match(/^##\s+Kanıt\s*\r?\n([\s\S]*?)(?=^##\s+|$(?![\s\S]))/m)?.[1]?.trim();
+  if (!evidence || /^(?:yok|n\/?a|none|todo|tbd|-)\.?$/i.test(evidence)) {
+    return `${report} has empty evidence`;
+  }
+  return null;
+}
+const reportsByTask = new Map();
+for (const report of reports) {
+  const taskId = report.match(/^((?:TASK|ADP)-[^-]+)-/)?.[1];
+  const taskReports = reportsByTask.get(taskId) || [];
+  taskReports.push(report);
+  reportsByTask.set(taskId, taskReports);
+}
+for (const [taskId, taskReports] of reportsByTask) {
+  const failures = taskReports.map(reportContractFailure);
+  if (failures.every(Boolean)) {
+    throw new Error(`${taskId} has no compliant result report: ${failures.join("; ")}`);
+  }
+}
 const contents = [
   "# Agent Results Index",
   "",

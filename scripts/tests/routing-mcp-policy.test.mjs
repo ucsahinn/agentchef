@@ -69,6 +69,53 @@ test("routing validation rejects review profiles that request on-request approva
   assertPolicyFailure(result, /security-sensitive cannot combine profile:review with approval:on-request/);
 });
 
+for (const [field, invalidValue] of [
+  ["skills", ""],
+  ["skills", null],
+  ["mcp", ""],
+  ["mcp", {}]
+]) {
+  test(`routing validation rejects non-array ${field}`, (t) => {
+    const result = routingFixture(t, (catalog) => {
+      catalog.profiles[0][field] = invalidValue;
+    });
+    assertPolicyFailure(result, new RegExp(`routing profile ${field} must be an array: repo-map-before-change`));
+  });
+}
+
+for (const [field, label] of [
+  ["agents", "agent"],
+  ["skills", "skill"],
+  ["mcp", "MCP server"],
+  ["flags", "flag"]
+]) {
+  test(`routing validation rejects duplicate profile ${field}`, (t) => {
+    const result = routingFixture(t, (catalog) => {
+      const profile = catalog.profiles.find(({ id }) => id === "repo-map-before-change");
+      profile[field].push(profile[field][0]);
+    });
+    assertPolicyFailure(result, new RegExp(`routing profile repo-map-before-change has duplicate ${label}:`));
+  });
+}
+
+for (const [catalogName, collection, label] of [
+  ["agents", "agents", "agent"],
+  ["skills", "skills", "skill"]
+]) {
+  test(`routing validation rejects duplicate ${label} catalog names`, (t) => {
+    const targetRoot = tempSurface(t, routingFiles);
+    const catalogPath = path.join(targetRoot, "catalog", `${catalogName}.json`);
+    const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+    catalog[collection].push({ ...catalog[collection][0] });
+    fs.writeFileSync(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
+
+    assertPolicyFailure(
+      runValidator(targetRoot, "scripts/validate-routing-profiles.mjs"),
+      new RegExp(`duplicate ${label} catalog name: ${catalog[collection][0].name}`)
+    );
+  });
+}
+
 const mcpFiles = [
   ".gitignore",
   "catalog/mcp-servers.json",

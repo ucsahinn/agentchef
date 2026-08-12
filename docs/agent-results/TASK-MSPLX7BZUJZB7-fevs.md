@@ -178,3 +178,27 @@ Resmi sözleşmeler:
 ## 6. Sonraki adım
 
 Önce validator negatif fixture'larını ekleyen küçük bir uygulama görevi açın. Katalog bağını ve routing-board gözlemlenebilirliğini tek inceleme kapsamına alın; installer manifestine yeni operation eklemeyin. Geçici HOME üzerinde gerçek dry-run/install-smoke ve gerçek `codex:routing` çağrısıyla DoD'u doğrulayın.
+
+## Ne yapıldı
+
+Hedef ajan mimarisi ve kurulum etkisi tasarlandı; tarihsel validator/index boşlukları dürüstçe kaydedildi.
+
+## Kanıt
+
+Agent, corpus, routing ve install-plan dar doğrulamaları geçti; `git diff --check` temizdi. Tarihsel eksik `results:index` daha sonra `TASK-MSPUSOBRNKBJI`, tam mimari kapanış ise `TASK-MSPUV2B1RK12R` ile tamamlandı.
+
+## Değişen dosyalar
+
+Bu görevde yalnız kendi sonuç raporu ve sonuç indeksi değişti.
+
+## Riskler
+
+Tarihsel `results:index` ve kapsam dışı full-validate hataları geriye dönük PASS sayılmamıştır.
+
+## Açık sorular
+
+Yok; sonraki gap-fix ve entegrasyon görevleri kanıtlı şekilde kapandı.
+
+## Sonraki adım
+
+Negatif fixture, geçici-home smoke ve gerçek routing kanıtlarını tam kontrolde koru.

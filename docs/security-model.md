@@ -41,7 +41,9 @@ connectors, not harmless documentation helpers.
 
 Rules used in this starter:
 
-- OpenAI Docs and Context7 are documentation-oriented defaults.
+- OpenAI Docs and the lazy Serena semantic bridge are enabled by default.
+  Context7 is an opt-in library-documentation helper because it starts an
+  additional Node process and may need first-run network access.
 - Playwright and Chrome DevTools are local browser verification tools; only
   evidence/navigation tools are allowlisted by default, while interaction,
   evaluation, upload, and request-detail tools stay prompt-gated or disabled.
@@ -289,8 +291,10 @@ global skill installs and optional global Git guards.
 `npm run chef -- --update --apply` first blocks tracked or staged Git worktree
 changes while preserving unrelated untracked files, then
 runs `git pull --ff-only`. If new commits are pulled, it prints a fresh preview
-from the updated tree and stops. If the repository is already current, it runs
-local validation before the managed refresh, then refreshes scoped managed
+by running the installer dry-run from the updated tree, continues local validation and the managed
+refresh in the same approved session, and verifies installed-runtime parity; a
+second invocation is not required. If the repository is already current, it
+runs local validation before the managed refresh, then refreshes scoped managed
 Codex Chef files through the backup-backed installer. That refresh synchronizes
 source-owned files, preserves unrelated directory extras, and refreshes an
 already-installed stale plugin cache in place. It

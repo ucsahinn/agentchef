@@ -24,7 +24,7 @@ npm run chef -- --update --apply
 `--apply` olmadan update modu managed/global dosyalari degistirmez; normal CLI
 loglari `--no-log` yoksa repo-local kalir. Varsayilan preview kisadir;
 `npm run chef -- --update --verbose-plan` tam install dry-run kanitini basar.
-Apply modunda tracked veya staged degisiklik varsa durur; tracked hedeflerle cakismayan untracked dosyalari korur ve `git pull --ff-only` calistirir. Pull repo HEAD'ini ilerletirse ayni onayli CLI fresh preview basar, lokal validation,
+Apply modunda tracked veya staged degisiklik varsa durur; tracked hedeflerle cakismayan untracked dosyalari korur ve `git pull --ff-only` calistirir. Pull repo HEAD'ini ilerletirse ayni onayli CLI güncel ağaçtan fresh installer preview çalıştırır, lokal validation,
 managed yenileme ve kurulu ortam doğrulamasıyla devam eder; ikinci çalıştırma gerekmez. Repo zaten guncelse managed dosyalari lokal validation sonrasi backup alan installer
 uzerinden yeniler; curated global skill veya opsiyonel global Git guard kurmaz.
 

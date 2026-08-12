@@ -2,12 +2,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CliUsageError,
   installCliErrorBoundary
 } from "./lib/cli-error-contract.mjs";
 
-const root = path.resolve(process.cwd());
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(scriptDir, "..");
 const args = process.argv.slice(2);
 installCliErrorBoundary({
   tool: "codex-doctor",

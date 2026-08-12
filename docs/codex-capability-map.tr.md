@@ -24,7 +24,7 @@ Resmi kaynaklar:
 | Rules | Dar komut approval varsayilanlari | Sadece dogrulama komutlari; destructive/publish aksiyonlari gated | `npm run validate:content` |
 | Skills | Progressive disclosure ile yeniden kullanilabilir workflow'lar | Commit-pinned curated kurulumlar ve GPT Pro context/handoff, yetkili reconstruction, kanıta dayalı SEO, izlenebilir deep research dahil on bir yerel plugin skill'i | `npm run verify:skills` |
 | Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On bir skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; bundled MCP/app yok | `npm run validate` |
-| MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli üç varsayılan; opsiyonel lokal stdio yardımcıları ve auth isteyen connector'lar kapalı | `npm run validate:mcp` |
+| MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli iki varsayılan; Context7, diğer lokal stdio yardımcıları ve auth isteyen connector'lar ihtiyaç olana kadar kapalı | `npm run validate:mcp` |
 | Subagents | Evidence-heavy uzman delegasyonu | Sandbox'li role dosyalariyla 21 incelenmis uzman ajan | `npm run validate:agents` |
 | Doctor/status | No-write saglik ve drift ozeti | Default repo-only; opsiyonel global varlik kontrolu | `npm run codex:doctor` |
 

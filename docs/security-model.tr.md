@@ -40,7 +40,9 @@ dokümantasyon helper'ı gibi değil, güçlü connector boundary'leri gibi ele 
 
 Bu starter'ın kuralları:
 
-- OpenAI Docs ve Context7 dokümantasyon odaklı default'lardır.
+- OpenAI Docs ve lazy Serena semantic bridge varsayılan olarak açıktır.
+  Context7 ek bir Node süreci başlatabildiği ve ilk çalışmada network
+  gerektirebildiği için opt-in bir kütüphane dokümantasyonu yardımcısıdır.
 - Playwright ve Chrome DevTools lokal browser verification icindir; varsayilan
   olarak yalniz evidence/navigation tool'lari allowlist edilir. Interaction,
   evaluation, upload ve request-detail tool'lari prompt-gated veya disabled
@@ -278,10 +280,13 @@ yalnizca tek managed plugin hedefiyle sinirli kalir.
 yoksa normal repo-local CLI loglari yine yazilir. Managed-file install plan ve
 installer dry-run yolunu kullanir; curated global skill kurulumlarini ve
 opsiyonel global Git guard'lari disarida birakir. Apply
-modu tracked veya staged degisiklikleri durdurur, ilgisiz untracked dosyalari korur ve sonra `git pull --ff-only` calistirir. Yeni commit cekilirse
-updated tree uzerinden fresh preview basar ve durur. Repo zaten guncelse
-managed refresh oncesi lokal validation calistirir, sonra scoped managed Codex
-Chef dosyalarini backup alan installer uzerinden yeniler. Bu refresh kaynakta
+modu tracked veya staged degisiklikleri durdurur, ilgisiz untracked dosyalari
+korur ve sonra `git pull --ff-only` calistirir. Yeni commit cekilirse güncel
+ağaçtan installer dry-run çalıştırıp fresh preview basar; aynı onaylı oturumda lokal
+validation, managed yenileme ve kurulu runtime doğrulamasıyla devam eder. İkinci
+çalıştırma gerekmez. Repo zaten guncelse managed refresh oncesi lokal validation
+calistirir, sonra scoped managed Codex Chef dosyalarini backup alan installer
+uzerinden yeniler. Bu refresh kaynakta
 sahip olunan dosyaları senkronlar, ilgisiz dizin eklerini korur ve daha önce
 kurulmuş eski plugin cache'ini yerinde yeniler. Publish, unscoped cleanup, curated global skill kurma, opsiyonel
 global Git guard kurma, user skill silme, credential rotate veya

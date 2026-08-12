@@ -290,6 +290,12 @@ ekleyin:
 npm run chef -- --status --details
 ```
 
+Hedef/ortam karşılaştırması oturum durumuyla birlikte güvenli MCP state
+alanlarını (`name`, açık/kapalı durumu, kapatma nedeni ve auth durumu) kapsar;
+böylece eşit sunucu adları runtime drift'ini gizleyemez. Parse edilebilir bir
+`codex doctor --json` yanıtı nonzero exit code ile dönerse `ok` değil,
+`attention` olarak raporlanır.
+
 Kurulu runtime check'lerini, global skill-root envanterini, Codex log
 metadata'sini ve live Codex CLI probe'larini atlayan hizli repo-only audit icin:
 
