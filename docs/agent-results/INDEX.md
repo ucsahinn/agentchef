@@ -64,3 +64,5 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSQ6XPFG8LARL-chef-portability.md](TASK-MSQ6XPFG8LARL-chef-portability.md)
 - [TASK-MSQ6XPHZEPUAT-ekip-lideri.md](TASK-MSQ6XPHZEPUAT-ekip-lideri.md)
 - [TASK-MSQ845BGTTGG7-workspace-e2e.md](TASK-MSQ845BGTTGG7-workspace-e2e.md)
+- [TASK-MSQCTM8VXR3HL-portability-matrix.md](TASK-MSQCTM8VXR3HL-portability-matrix.md)
+- [TASK-MSQDXJ8G977AL-fevs.md](TASK-MSQDXJ8G977AL-fevs.md)
