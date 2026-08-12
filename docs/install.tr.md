@@ -530,6 +530,31 @@ Zaten bir Codex setup'ın varsa once repair planina bak:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
 ```
 
+### Portable Workspace OS Siniri
+
+Bu, portable Workspace OS kurulum testidir: `CODEX_HOME` ve `AGENTS_HOME`
+degerleri acik, repo-relative hedeflerdir; boylece ayni komutlar baska bir
+PC'de kullanicinin gercek Codex state'ini kopyalamadan calisir. Codex Chef
+yalniz kendi Codex runtime template'lerini, agent'larini, skill'lerini, MCP
+config'ini ve backup-backed managed dosyalarini bu hedeflere kurar. Codex Chef
+Control, Codex Chef Brain veya Kitchen'i kurmaz ya da yonetmez; bunlar ayri
+authority layer'lar olarak kalir.
+
+Izole, non-dry-run smoke install icin sahip oldugun bos bir klasor sec; `--apply`
+eklemeden once plani incele:
+
+```powershell
+$portableRoot = Join-Path $PWD ".codex-chef-portable"
+$env:CODEX_HOME = Join-Path $portableRoot "codex"
+$env:AGENTS_HOME = Join-Path $portableRoot "agents"
+node .\scripts\repair-install.mjs --preview --redact-paths --json
+```
+
+Bu klasore baskasinin home dizinini, `auth.json` dosyasini, Brain notlarini,
+session'larini veya Control/Kitchen database'lerini kopyalama. Yeni bir PC ayni
+preview'i kendi bos portable root'u ile calistirir; gercek user-home kurulumu
+icin ancak backup-backed plan incelendikten sonra onay verilir.
+
 Repair temizse normal install komutuna gecebilirsin. Mevcut `config.toml`
 backup alınarak merge edilir; kullanıcıya ait tablolar korunur. Diğer mevcut
 managed dosyalar `-Force` / `--force` vermediğin sürece atlanır. Force yalnızca

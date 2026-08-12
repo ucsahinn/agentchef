@@ -533,6 +533,30 @@ CODEX_HOME="$PWD/tmp/codex-home" AGENTS_HOME="$PWD/tmp/agents-home" \
 Use non-dry-run temp homes only when you intentionally want a smoke install.
 Remove `tmp/` only when you created it intentionally.
 
+### Portable Workspace OS Boundary
+
+This is a portable Workspace OS install test: `CODEX_HOME` and `AGENTS_HOME`
+are explicit, repository-relative targets, so the same commands work on another
+PC without copying a user's real Codex state. Codex Chef installs only its own
+Codex runtime templates, agents, skills, MCP configuration, and backup-backed
+managed files into those targets. It does not install or control Codex Chef
+Control, Codex Chef Brain, or Kitchen; those remain separate authority layers.
+
+For an isolated, non-dry-run smoke install, choose a fresh folder you own and
+review the plan before adding `--apply`:
+
+```powershell
+$portableRoot = Join-Path $PWD ".codex-chef-portable"
+$env:CODEX_HOME = Join-Path $portableRoot "codex"
+$env:AGENTS_HOME = Join-Path $portableRoot "agents"
+node .\scripts\repair-install.mjs --preview --redact-paths --json
+```
+
+Do not reuse another person's home, copy `auth.json`, Brain notes, sessions, or
+Control/Kitchen databases into this folder. A fresh machine can instead run the
+same preview with its own empty portable root, then opt into a real user-home
+install only after reviewing its backup-backed plan.
+
 If you already have a Codex setup, inspect the repair plan first:
 
 ```powershell

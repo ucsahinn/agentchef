@@ -305,6 +305,21 @@ credentials, or enable account/database/broad-filesystem connectors.
 
 ## Backup Inventory And Restore
 
+## Portable Workspace OS Boundary
+
+Codex Chef is portable because its installer resolves `CODEX_HOME` and
+`AGENTS_HOME` at execution time rather than embedding a machine path. A
+repository-relative temporary root is suitable for preview and isolated smoke
+testing; a real home remains an explicit user choice and any managed replacement
+stays backup-backed.
+
+The package boundary is intentional: Chef installs Codex capability and
+distribution assets only. It does not install or control Codex Chef Control,
+read or write Codex Chef Brain, connect to a Kitchen database, adopt existing
+terminal sessions, or transfer `auth.json`, session, credential, or machine
+state between PCs. Those systems may integrate through their separately
+versioned, least-privilege contracts, never through an installer side effect.
+
 `npm run chef -- --backups` lists backup archives under the active Codex home
 without changing global/user state. `npm run chef -- --backups --backup <id>`
 inspects backup archive metadata only: paths, sizes, hashes, manifest status,

@@ -98,6 +98,16 @@ function validateDocText(file) {
   if (/npx\s+run\s+chef/i.test(text)) {
     failures.push(`Documentation must not suggest the unrelated npx run watcher command: ${rel}`);
   }
+  if (rel === "docs/install.md" || rel === "docs/install.tr.md") {
+    const portableRequirements = rel === "docs/install.md"
+      ? ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "does not install or control"]
+      : ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "authority layer"];
+    for (const required of portableRequirements) {
+      if (!text.includes(required)) {
+        failures.push(`${rel} must retain the portable Workspace OS boundary: ${required}`);
+      }
+    }
+  }
   if (/^docs\/expected-output(?:\.(?:de|es|pt-BR|tr|fr))?\.md$/.test(rel)) {
     const versionPattern = /codex-chef@(\d+\.\d+\.\d+)/g;
     let match;
