@@ -85,6 +85,22 @@ function printWrapped(value, { prefix = "", continuationPrefix = " ".repeat(pref
 }
 
 const routing = readJson("catalog/routing-profiles.json");
+const agentCatalog = readJson("catalog/agents.json");
+const agentIndex = new Map(agentCatalog.agents.map((agent) => [agent.name, agent]));
+const ownerIndex = new Map(agentCatalog.agentSpaceRoles.flatMap((role) => role.specialists.map((name) => [name, role.id])));
+function workerFor(name) {
+  const agent = agentIndex.get(name);
+  return {
+    name,
+    agentSpaceOwner: ownerIndex.get(name),
+    knowledgeRef: name,
+    workerApprovalProfile: {
+      approvalPolicy: agentCatalog.workerApprovalProfile.approvalPolicy,
+      sandboxMode: agent.sandboxMode,
+      rules: agentCatalog.workerApprovalProfile.rules
+    }
+  };
+}
 if (options.profile && options.task) throw new CliUsageError("Use either --profile or --task, not both.");
 const recommendations = options.task ? recommendProfiles(routing.profiles, options.task) : [];
 const profiles = options.profile
@@ -116,7 +132,7 @@ const report = {
   },
   profileCount: profiles.length,
   taskRecommendation: options.task ? { algorithm: "weighted-catalog-v1", task: options.task, recommendations: recommendations.map(({ profile, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence }) => ({ id: profile.id, title: profile.title, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence, advisory: true })) } : null,
-  profiles
+  profiles: profiles.map((profile) => ({ ...profile, workers: profile.agents.map(workerFor) }))
 };
 
 if (options.json) {

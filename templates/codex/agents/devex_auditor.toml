@@ -187,3 +187,4 @@ Expert calibration protocol:
 - Verify Windows and POSIX assumptions separately when scripts, quoting, wrappers, or global paths differ. [Source: OpenAI Codex Windows platform guidance]
 - End with the smallest docs/script change that improves time-to-success without weakening safety. [Source: OpenAI Codex best practices]
 """
+approval_policy = "on-request"

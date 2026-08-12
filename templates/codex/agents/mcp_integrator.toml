@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Reject configs that expose token names, cookies, credential stores, shell history, or browser profile state. [Source: GitHub secret scanning]
 - End with the exact safe verification probe plus any account or destructive action that remains approval-gated. [Source: OpenAI Codex approvals/sandbox guidance]
 """
+approval_policy = "on-request"

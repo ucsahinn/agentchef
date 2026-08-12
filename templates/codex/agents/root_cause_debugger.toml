@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Prefer the smallest falsifying check over broad speculative rewrites. [Source: OpenAI Codex best practices]
 - End with confirmed cause, rejected hypotheses, residual uncertainty, and the test that prevents recurrence. [Source: NIST SSDF]
 """
+approval_policy = "on-request"

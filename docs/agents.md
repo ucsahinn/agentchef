@@ -69,6 +69,22 @@ Official Codex reference: [Subagents](https://developers.openai.com/codex/subage
 5. The active user profile remains authoritative; Codex Chef role files do not
    pin every agent to one model.
 
+## AgentSpace Ownership, Knowledge, And Worker Safety
+
+The eight AgentSpace office roles own work; the 21 Codex Chef specialists remain
+narrow task workers. \`catalog/agents.json\` records the complete 8-to-21 ownership
+map. A routing result exposes each selected worker's owner and a \`knowledgeRef\`
+equal to the specialist name. That reference resolves only to reviewed metadata
+in \`catalog/agent-research-corpus.json\`; routing never injects AgentSpace memory,
+auth, session, or other machine-local content.
+
+Every installed worker TOML applies \`approval_policy = "on-request"\` and its
+catalog sandbox (\`read-only\` or \`workspace-write\`). The reviewed
+\`rules/default.rules\` surface can allow narrow safe inspection commands while
+destructive, credentialed, publishing, deployment, broad-shell, and other risky
+classes remain prompt-gated. Workers never use \`danger-full-access\` or a global
+\`approval_policy = "never"\` default.
+
 To see the reviewed metadata behind this page, open
 [`catalog/agents.json`](../catalog/agents.json). Routing profiles live in
 [`catalog/routing-profiles.json`](../catalog/routing-profiles.json).

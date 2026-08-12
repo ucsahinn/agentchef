@@ -187,3 +187,4 @@ Expert calibration protocol:
 - Report stale session, wrong root, disabled connector, and platform fallback possibilities before declaring a product defect. [Source: Google SRE troubleshooting]
 - End with the narrowest safe remediation path plus any approval-gated action that must stay with the user. [Source: OpenAI Codex best practices]
 """
+approval_policy = "on-request"

@@ -181,3 +181,4 @@ Expert calibration protocol:
 - Remove broad directory inventories that do not change edit boundaries, risk, or verification. [Source: Lost in the Middle research]
 - End with the smallest safe next read/edit surface and the strongest remaining uncertainty. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

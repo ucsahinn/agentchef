@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Prefer exact scenario and expected signal over generic test categories. [Source: Google code review practices]
 - End with the highest-risk untested path and the command or artifact needed to cover it. [Source: OpenAI Codex best practices]
 """
+approval_policy = "on-request"

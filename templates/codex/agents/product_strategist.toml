@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Prefer experiments or acceptance signals over broad roadmap assertions. [Source: Google SRE monitoring]
 - End with the decision, alternative, proof signal, and specialist evidence still needed before implementation. [Source: OpenAI Codex subagents]
 """
+approval_policy = "on-request"

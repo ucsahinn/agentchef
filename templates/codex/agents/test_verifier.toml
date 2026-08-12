@@ -182,3 +182,4 @@ Expert calibration protocol:
 - Avoid watch, interactive, destructive, dependency-installing, or external-mutating commands unless explicitly approved. [Source: OpenAI Codex approvals/sandbox guidance]
 - End with what is verified, what remains unverified, and the narrowest next command to close the gap. [Source: Context7 workflow]
 """
+approval_policy = "on-request"

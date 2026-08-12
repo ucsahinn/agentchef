@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Preserve enterprise density and domain constraints unless evidence shows they block scanning, comparison, or repeated action. [Source: Google code review practices]
 - End with design-system-compatible fix direction, not a new unscoped visual language. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

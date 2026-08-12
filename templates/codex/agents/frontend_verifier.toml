@@ -182,3 +182,4 @@ Expert calibration protocol:
 - Reproduce production/build-only concerns when dev-server evidence could be stale or misleading. [Source: Context7 workflow]
 - End with exact repro steps and artifacts that an implementer can act on without rerunning exploration. [Source: OpenAI Codex subagents]
 """
+approval_policy = "on-request"

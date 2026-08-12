@@ -190,3 +190,4 @@ Expert calibration protocol:
 - Check whether mitigation creates availability, privacy, tenant isolation, recovery, or correctness risk. [Source: MCP security best practices]
 - End with prioritized findings, safe verification, mitigation direction, residual risk, and approval-gated actions. [Source: OpenAI Codex approvals/sandbox guidance]
 """
+approval_policy = "on-request"

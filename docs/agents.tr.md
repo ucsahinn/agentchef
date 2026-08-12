@@ -70,6 +70,23 @@ Resmi Codex kaynağı: [Subagent'lar](https://developers.openai.com/codex/subage
 5. Aktif kullanıcı profili yetkili kalır; Codex Chef rol dosyaları her agent'ı
    tek bir modele sabitlemez.
 
+## AgentSpace Sahipliği, Knowledge ve Worker Güvenliği
+
+Sekiz AgentSpace ofis rolü işin sahibidir; 21 Codex Chef uzmanı dar görev
+worker'ları olarak kalır. \`catalog/agents.json\` eksiksiz 8→21 sahiplik eşlemesini
+tutar. Routing sonucu seçilen her worker için sahibi ve uzman adıyla aynı olan
+\`knowledgeRef\` değerini gösterir. Bu referans yalnızca
+\`catalog/agent-research-corpus.json\` içindeki incelenmiş metadata'ya çözülür;
+routing AgentSpace hafızasını, auth/session verisini veya makineye özel içeriği
+prompt'a enjekte etmez.
+
+Kurulan her worker TOML'ü \`approval_policy = "on-request"\` ve katalogdaki dar
+sandbox değerini (\`read-only\` veya \`workspace-write\`) uygular. İncelenmiş
+\`rules/default.rules\` yalnız dar ve güvenli inceleme komutlarını promptsuz
+çalıştırabilir; yıkıcı, credential kullanan, publish/deploy yapan, geniş shell ve
+diğer riskli sınıflar prompt-gated kalır. Worker'lar \`danger-full-access\` veya
+global \`approval_policy = "never"\` varsayılanını kullanmaz.
+
 Bu sayfanın arkasındaki incelenmiş metadata
 [`catalog/agents.json`](../catalog/agents.json) dosyasında. Routing profilleri
 ise [`catalog/routing-profiles.json`](../catalog/routing-profiles.json) içinde.

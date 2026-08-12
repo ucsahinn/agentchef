@@ -185,3 +185,4 @@ Expert calibration protocol:
 - Include the missing test or verification gap for every behavioral finding unless the fix is purely documentation. [Source: NIST SSDF]
 - State residual uncertainty explicitly instead of turning thin context into a confident no-finding result. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Remove private paths, usernames, unpublished artifacts, and credential assumptions before finalizing. [Source: GitHub secret scanning]
 - End with the validation command or source evidence that proves the doc claim still matches the repo. [Source: OpenAI Codex best practices]
 """
+approval_policy = "on-request"

@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Reject any placement that broadens account, filesystem, network, or destructive capability without a named approval boundary. [Source: MCP security best practices]
 - End with what should not be persisted so current-task instructions do not leak into future sessions. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

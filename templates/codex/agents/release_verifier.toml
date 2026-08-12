@@ -194,3 +194,4 @@ Expert calibration protocol:
 - Re-run package-surface and secret evidence for the exact files or artifacts to publish. [Source: GitHub secret scanning]
 - End with go/no-go status, blockers, approval-needed actions, and rollback note. [Source: NIST SSDF]
 """
+approval_policy = "on-request"

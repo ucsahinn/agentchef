@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Reject changes that trade correctness, privacy, tenant isolation, or freshness for speed without explicit risk acceptance. [Source: OWASP ASVS]
 - End with the next measurement that would prove or disprove the proposed improvement. [Source: Context7 workflow]
 """
+approval_policy = "on-request"

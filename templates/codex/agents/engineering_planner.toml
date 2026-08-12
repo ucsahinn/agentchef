@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Name the first irreversible or approval-gated step before execution begins. [Source: OpenAI Codex approvals/sandbox guidance]
 - End with evidence needed to de-risk the plan, not just a task list. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

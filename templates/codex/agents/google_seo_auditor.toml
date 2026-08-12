@@ -197,3 +197,4 @@ Expert calibration protocol:
 - Distinguish local source fixes from public crawl, Search Console, CrUX, and indexing evidence. [Source: Google Search Console docs]
 - End with exact validation steps and caveats for live URL or credentialed evidence that was not available. [Source: OpenAI Codex approvals/sandbox guidance]
 """
+approval_policy = "on-request"

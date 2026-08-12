@@ -202,6 +202,27 @@ if (!fs.existsSync(catalogPath)) {
     }
 
     const catalogNames = new Set();
+    const workerProfile = catalog.workerApprovalProfile;
+    if (workerProfile?.approvalPolicy !== "on-request"
+      || workerProfile?.sandboxSource !== "catalog-agent"
+      || workerProfile?.rules !== "rules/default.rules") {
+      fail("Agent catalog must define the safe on-request worker approval profile.");
+    }
+    if (catalog.knowledgePolicy?.agentReference !== "name"
+      || catalog.knowledgePolicy?.runtimeInjection !== false
+      || catalog.knowledgePolicy?.privateAgentSpaceMemory !== "excluded") {
+      fail("Agent catalog must keep knowledge name-bound, metadata-only, and private AgentSpace memory excluded.");
+    }
+    const roleAssignments = new Map();
+    for (const role of catalog.agentSpaceRoles || []) {
+      if (!/^(backend|data|devops|frontend|leadership|product|qa|design)$/.test(role.id || "")) {
+        fail(`Unsupported AgentSpace role id: ${role.id}`);
+      }
+      for (const name of role.specialists || []) {
+        if (roleAssignments.has(name)) fail(`AgentSpace specialist assigned more than once: ${name}`);
+        roleAssignments.set(name, role.id);
+      }
+    }
     for (const agent of catalog.agents || []) {
       if (!agent.name || !/^[A-Za-z0-9_.-]+$/.test(agent.name)) {
         fail(`Agent must declare a valid name: ${agent.name}`);
@@ -209,6 +230,7 @@ if (!fs.existsSync(catalogPath)) {
       }
       if (catalogNames.has(agent.name)) fail(`Duplicate agent name: ${agent.name}`);
       catalogNames.add(agent.name);
+      if (!roleAssignments.has(agent.name)) fail(`Agent missing AgentSpace role ownership: ${agent.name}`);
       for (const key of [
         "category",
         "description",
@@ -246,6 +268,9 @@ if (!fs.existsSync(catalogPath)) {
 
       const template = readAgentTemplate(agent.configFile);
       if (template) {
+        if (readTomlString(template, "approval_policy") !== "on-request") {
+          fail(`Agent template approval_policy must stay on-request for ${agent.name}.`);
+        }
         if (readTomlString(template, "name") !== agent.name) {
           fail(`Agent template name drift for ${agent.name}.`);
         }
@@ -331,6 +356,9 @@ if (!fs.existsSync(catalogPath)) {
           fail(`Agent template contains forbidden unsafe setting or token name: ${agent.name}.`);
         }
       }
+    }
+    for (const name of roleAssignments.keys()) {
+      if (!catalogNames.has(name)) fail(`AgentSpace role references unknown specialist: ${name}`);
     }
 
     const templateNames = fs.existsSync(agentDir)

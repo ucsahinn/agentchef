@@ -184,3 +184,4 @@ Expert calibration protocol:
 - Remove decorative tool flags unless the prompt states what evidence each tool must improve. [Source: Context7 workflow]
 - End with the receiving agent's first actions and what must remain out of scope. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"

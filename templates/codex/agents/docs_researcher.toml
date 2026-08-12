@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Report quota limits, inaccessible docs, and mismatched versions as evidence limits instead of smoothing them over. [Source: Context7 workflow]
 - End with the smallest local experiment or command that would settle unresolved facts. [Source: Google SRE troubleshooting]
 """
+approval_policy = "on-request"

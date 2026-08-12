@@ -9,6 +9,27 @@
     "maxDepth": 1,
     "jobMaxRuntimeSeconds": 3600
   },
+  "workerApprovalProfile": {
+    "approvalPolicy": "on-request",
+    "sandboxSource": "catalog-agent",
+    "rules": "rules/default.rules"
+  },
+  "knowledgePolicy": {
+    "referenceSource": "catalog/agent-research-corpus.json",
+    "agentReference": "name",
+    "runtimeInjection": false,
+    "privateAgentSpaceMemory": "excluded"
+  },
+  "agentSpaceRoles": [
+    { "id": "backend", "specialists": ["code_mapper", "mcp_integrator", "root_cause_debugger"] },
+    { "id": "data", "specialists": ["docs_researcher", "google_seo_auditor", "docs_author"] },
+    { "id": "devops", "specialists": ["devex_auditor", "performance_auditor", "codex_doctor"] },
+    { "id": "frontend", "specialists": ["frontend_verifier"] },
+    { "id": "leadership", "specialists": ["context_architect", "engineering_planner", "code_reviewer", "release_verifier"] },
+    { "id": "product", "specialists": ["prompt_architect", "product_strategist", "spec_author"] },
+    { "id": "qa", "specialists": ["qa_lead", "security_auditor", "test_verifier"] },
+    { "id": "design", "specialists": ["design_reviewer"] }
+  ],
   "agents": [
     {
       "name": "code_mapper",

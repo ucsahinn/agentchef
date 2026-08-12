@@ -183,3 +183,4 @@ Expert calibration protocol:
 - Mark open assumptions that affect security, data, migration, public API, release, or user-visible behavior. [Source: OWASP ASVS]
 - End with verification gates and the first implementation slice that can prove value safely. [Source: Diataxis reference guidance]
 """
+approval_policy = "on-request"
