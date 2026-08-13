@@ -93,6 +93,20 @@ must contain no executable instruction, shell command, approval token,
 credential, absolute user path, raw prompt, terminal transcript, or private
 memory content.
 
+The v1 closed payload vocabulary is deliberately small. `suite.snapshot.state`
+is `available`, `unavailable`, `unknown`, `stale`, or `unsupported`.
+`run.observed.runState` is `queued`, `running`, `succeeded`, `failed`,
+`cancelled`, `unavailable`, or `stale`; its `mode` is `read-only` or
+`approved-write`; and its `worktreeState` is `ready`, `isolated`, `dirty`,
+`missing`, or `unknown`. `approval.observed.decision` is `approved`,
+`rejected`, or `pending`, with scope `run.start`, `run.stop`, or
+`worktree.change`. `capability.observed.capability` is `routing.read`,
+`run.read`, `approval.read`, `worktree.read`, `repository.mutate`, or
+`publish`; its availability is `available`, `unavailable`, `unknown`, or
+`forbidden`. `reasonCode` is `available`, `connector-unavailable`,
+`permission-denied`, `schema-unsupported`, `source-stale`,
+`upstream-unavailable`, or `invalid-envelope`.
+
 ## Correlation, data minimisation, and redaction
 
 `suiteId` spans a user-visible unit of work. `taskId` identifies the task-board
@@ -187,9 +201,7 @@ external corpus paths are not fixtures.
 An implementation is complete only when the owner can supply evidence for all
 seven gates, preserves the FND-01 authority boundaries, honours FND-02 visible
 empty/recovery states, and introduces no secret, PII, destructive authority, or
-hidden cross-module side effect. The current v1 schema and implementation
-already fail closed on unknown envelope fields and unauthorized producers;
-payload enums remain an explicit follow-up: the schema currently accepts a
-generic object while the implementation only requires event-specific non-empty
-string fields. Before a Kitchen release, each payload enum must be represented
-consistently in the JSON schema, validator, and synthetic fixtures.
+hidden cross-module side effect. The v1 schema, validator, and synthetic
+fixtures fail closed on unknown envelope and payload fields, unauthorized
+producers, malformed producer and schema versions, and payload values outside
+the documented enum vocabulary.

@@ -31,5 +31,34 @@
     },
     "capabilities": { "type": "array", "items": { "minLength": 1, "type": "string" } },
     "payload": { "type": "object" }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/suiteSnapshot" },
+    { "$ref": "#/$defs/runObserved" },
+    { "$ref": "#/$defs/approvalObserved" },
+    { "$ref": "#/$defs/capabilityObserved" },
+    { "$ref": "#/$defs/projectionDegraded" }
+  ],
+  "$defs": {
+    "suiteSnapshot": {
+      "if": { "properties": { "eventType": { "const": "suite.snapshot" } } },
+      "then": { "properties": { "payload": { "type": "object", "additionalProperties": false, "required": ["state", "observedAt", "sourceRevision"], "properties": { "state": { "enum": ["available", "unavailable", "unknown", "stale", "unsupported"] }, "observedAt": { "type": "string", "format": "date-time" }, "sourceRevision": { "type": "string", "minLength": 1 } } } } }
+    },
+    "runObserved": {
+      "if": { "properties": { "eventType": { "const": "run.observed" } } },
+      "then": { "properties": { "payload": { "type": "object", "additionalProperties": false, "required": ["runState", "mode", "worktreeState"], "properties": { "runState": { "enum": ["queued", "running", "succeeded", "failed", "cancelled", "unavailable", "stale"] }, "mode": { "enum": ["read-only", "approved-write"] }, "worktreeState": { "enum": ["ready", "isolated", "dirty", "missing", "unknown"] } } } } }
+    },
+    "approvalObserved": {
+      "if": { "properties": { "eventType": { "const": "approval.observed" } } },
+      "then": { "properties": { "payload": { "type": "object", "additionalProperties": false, "required": ["decision", "decisionAt", "scope"], "properties": { "decision": { "enum": ["approved", "rejected", "pending"] }, "decisionAt": { "type": "string", "format": "date-time" }, "scope": { "enum": ["run.start", "run.stop", "worktree.change"] } } } } }
+    },
+    "capabilityObserved": {
+      "if": { "properties": { "eventType": { "const": "capability.observed" } } },
+      "then": { "properties": { "payload": { "type": "object", "additionalProperties": false, "required": ["capability", "availability", "reasonCode"], "properties": { "capability": { "enum": ["routing.read", "run.read", "approval.read", "worktree.read", "repository.mutate", "publish"] }, "availability": { "enum": ["available", "unavailable", "unknown", "forbidden"] }, "reasonCode": { "enum": ["available", "connector-unavailable", "permission-denied", "schema-unsupported", "source-stale", "upstream-unavailable", "invalid-envelope"] } } } } }
+    },
+    "projectionDegraded": {
+      "if": { "properties": { "eventType": { "const": "projection.degraded" } } },
+      "then": { "properties": { "payload": { "type": "object", "additionalProperties": false, "required": ["reasonCode", "lastFreshAt"], "properties": { "reasonCode": { "enum": ["available", "connector-unavailable", "permission-denied", "schema-unsupported", "source-stale", "upstream-unavailable", "invalid-envelope"] }, "lastFreshAt": { "type": "string", "format": "date-time" } } } } }
+    }
   }
 }

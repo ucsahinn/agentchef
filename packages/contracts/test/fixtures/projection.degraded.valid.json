@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "evt_projection_degraded_01JTEST",
+  "eventType": "projection.degraded",
+  "occurredAt": "2026-08-14T00:00:00.000Z",
+  "producer": { "product": "kitchen", "version": "0.1.0" },
+  "correlation": { "suiteId": "suite_01JTEST" },
+  "payload": { "reasonCode": "upstream-unavailable", "lastFreshAt": "2026-08-14T00:00:00.000Z" }
+}
