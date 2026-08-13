@@ -77,3 +77,4 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSQZ8W4FAQI6B-fevs.md](TASK-MSQZ8W4FAQI6B-fevs.md)
 - [TASK-MSQZ8W4FAQI6B-sss.md](TASK-MSQZ8W4FAQI6B-sss.md)
 - [TASK-MSR02V1DK60YF-secv.md](TASK-MSR02V1DK60YF-secv.md)
+- [TASK-MSR02V5MU3PH9-bob.md](TASK-MSR02V5MU3PH9-bob.md)
