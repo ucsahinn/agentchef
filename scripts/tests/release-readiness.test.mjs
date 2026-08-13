@@ -99,7 +99,8 @@ test("release readiness Git-state branches are deterministic", async (context) =
       for (const relativePath of [
         ".SeReNa/session.json",
         ".AGENTS/plugins/cache/staged state.json",
-        ".CoDeX/skills/example/SKILL.md"
+        ".CoDeX/skills/example/SKILL.md",
+        ".AgentSpace/memory/agent/MEMORY.md"
       ]) {
         const localState = path.join(fixture.root, relativePath);
         fs.mkdirSync(path.dirname(localState), { recursive: true });
@@ -111,6 +112,7 @@ test("release readiness Git-state branches are deterministic", async (context) =
       assert.match(result.stderr, /Tracked release file must not contain local agent state: \.SeReNa\/session\.json/);
       assert.match(result.stderr, /\.AGENTS\/plugins\/cache\/staged state\.json/);
       assert.match(result.stderr, /\.CoDeX\/skills\/example\/SKILL\.md/);
+      assert.match(result.stderr, /\.AgentSpace\/memory\/agent\/MEMORY\.md/);
     });
   });
 

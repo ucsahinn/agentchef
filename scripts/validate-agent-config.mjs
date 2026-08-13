@@ -413,7 +413,13 @@ if (!fs.existsSync(catalogPath)) {
         "Do not delegate to another coordinator or create nested worker trees.",
         "A worker may not delegate further.",
         "the parent routes peer consultation",
-        "AgentSpace private memory, sessions, credentials, or machine-local context"
+        "AgentSpace private memory, sessions, credentials, or machine-local context",
+        "Work only on the user's explicit request",
+        "Discover relevant repository evidence",
+        "write a small Definition of Done",
+        "real, relevant verification",
+        "Do not create Task Board work",
+        "commit, push, publish, or deploy"
       ]) {
         if (!template.includes(required)) fail(`Coordinator ${coordinator.name} missing orchestration guardrail: ${required}`);
       }

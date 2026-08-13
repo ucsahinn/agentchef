@@ -70,6 +70,23 @@ test("installed global agreement forbids worker recursion and routes coordinator
   assert.match(agreement, /private AgentSpace memory/);
 });
 
+test("every coordinator carries the portable pane-start operating contract", () => {
+  for (const coordinator of agents.coordinators) {
+    const template = fs.readFileSync(path.join(root, "templates", "codex", coordinator.configFile), "utf8");
+    for (const required of [
+      "Work only on the user's explicit request",
+      "Discover relevant repository evidence",
+      "write a small Definition of Done",
+      "real, relevant verification",
+      "Do not create Task Board work",
+      "commit, push, publish, or deploy"
+    ]) {
+      assert.match(template, new RegExp(required), `${coordinator.name}: ${required}`);
+    }
+    assert.doesNotMatch(template, /\.agentspace[\\/]|agentdesk_task|docs[\\/]agent-results|MEMORY\.md/i);
+  }
+});
+
 test("real routing CLI returns selected specialist knowledge without private content injection", () => {
   const output = execFileSync(process.execPath, [routingBoard, "--task", "repository architecture mapping before implementation", "--json"], {
     cwd: root,

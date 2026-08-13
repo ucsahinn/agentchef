@@ -97,6 +97,7 @@ function isLocalAgentStatePath(file) {
   const folded = normalized.toLowerCase();
   if (folded === ".serena" || folded.startsWith(".serena/")) return true;
   if (folded === ".codex" || folded.startsWith(".codex/")) return true;
+  if (folded === ".agentspace" || folded.startsWith(".agentspace/")) return true;
   if (folded === ".agents" || folded.startsWith(".agents/")) {
     return normalized !== ".agents/plugins/marketplace.json";
   }
