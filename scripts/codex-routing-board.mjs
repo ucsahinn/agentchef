@@ -97,7 +97,9 @@ function workerFor(name) {
     knowledgeRef: name,
     workerApprovalProfile: {
       approvalPolicy: agentCatalog.workerApprovalProfile.approvalPolicy,
-      sandboxMode: agent.sandboxMode,
+      approvalsReviewer: agentCatalog.workerApprovalProfile.approvalsReviewer,
+      sandboxMode: agentCatalog.workerApprovalProfile.sandboxMode,
+      roleSandboxMode: agent.sandboxMode,
       rules: agentCatalog.workerApprovalProfile.rules
     }
   };

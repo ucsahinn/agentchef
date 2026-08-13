@@ -11,7 +11,8 @@
   },
   "workerApprovalProfile": {
     "approvalPolicy": "on-request",
-    "sandboxSource": "catalog-agent",
+    "approvalsReviewer": "auto_review",
+    "sandboxMode": "workspace-write",
     "rules": "rules/default.rules"
   },
   "knowledgePolicy": {

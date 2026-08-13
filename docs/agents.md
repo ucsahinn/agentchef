@@ -161,8 +161,17 @@ only to reviewed metadata in \`catalog/agent-research-corpus.json\`; routing nev
 injects AgentSpace memory, auth, session, or other machine-local content.
 
 Every installed coordinator and worker TOML applies \`approval_policy = "on-request"\`.
-Coordinators are read-only; workers use their
-catalog sandbox (\`read-only\` or \`workspace-write\`). The reviewed
+An AgentSpace worker session has a separate runtime profile:
+\`sandbox_mode = "workspace-write"\`, \`approval_policy = "on-request"\`, and
+\`approvals_reviewer = "auto_review"\`. Routing reports this effective session
+profile and the specialist's narrower \`roleSandboxMode\` separately. Because
+AgentSpace account profiles use an isolated \`CODEX_HOME\`, those root keys must
+exist in that profile; another Codex home's defaults are not inherited.
+The official [Codex Configuration Reference](https://developers.openai.com/codex/config-reference#configtoml)
+defines `approvals_reviewer = "auto_review"` as the reviewer-subagent mode and
+states that it does not change sandboxing.
+Coordinators remain read-only, and specialist role files retain their catalog
+sandbox (\`read-only\` or \`workspace-write\`). The reviewed
 \`rules/default.rules\` surface can allow narrow safe inspection commands while
 destructive, credentialed, publishing, deployment, broad-shell, and other risky
 classes remain prompt-gated. Workers never use \`danger-full-access\` or a global

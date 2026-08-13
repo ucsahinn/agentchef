@@ -153,8 +153,17 @@ yalnızca \`catalog/agent-research-corpus.json\` içindeki incelenmiş metadata'
 içeriği prompt'a enjekte etmez.
 
 Kurulan her koordinatör ve worker TOML'ü \`approval_policy = "on-request"\`
-uygular. Koordinatörler read-only'dir; worker'lar katalogdaki dar sandbox
-değerini (\`read-only\` veya \`workspace-write\`) uygular. İncelenmiş
+uygular. AgentSpace worker oturumunun ayrı bir runtime profili vardır:
+\`sandbox_mode = "workspace-write"\`, \`approval_policy = "on-request"\` ve
+\`approvals_reviewer = "auto_review"\`. Routing, bu etkin oturum profilini ve
+uzmanın daha dar \`roleSandboxMode\` değerini ayrı ayrı gösterir. AgentSpace hesap
+profilleri izole bir \`CODEX_HOME\` kullandığından bu kök anahtarlar o profilde
+bulunmalıdır; başka bir Codex home'un varsayılanları devralınmaz. Resmi
+[Codex Configuration Reference](https://developers.openai.com/codex/config-reference#configtoml),
+`approvals_reviewer = "auto_review"` değerini reviewer-subagent modu olarak
+tanımlar ve sandbox sınırını değiştirmediğini belirtir. Koordinatörler
+read-only kalır; uzman rol dosyaları katalogdaki dar sandbox değerini
+(\`read-only\` veya \`workspace-write\`) korur. İncelenmiş
 \`rules/default.rules\` yalnız dar ve güvenli inceleme komutlarını promptsuz
 çalıştırabilir; yıkıcı, credential kullanan, publish/deploy yapan, geniş shell ve
 diğer riskli sınıflar prompt-gated kalır. Worker'lar \`danger-full-access\` veya

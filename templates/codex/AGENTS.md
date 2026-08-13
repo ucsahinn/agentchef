@@ -31,6 +31,7 @@
 - Keep write-heavy implementation in the main thread unless the user explicitly requests split write scopes.
 - If agents may edit, give them non-overlapping files and reconcile before verification.
 - Agents inherit approval and sandbox boundaries; never use delegation to bypass them.
+- AgentSpace worker sessions must start from a Codex home whose root config keeps `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`; an isolated account profile does not inherit these keys from another Codex home.
 - A coordinator may delegate only to its cataloged specialist workers, with at most four workers and one coordinator-to-worker level.
 - Specialist workers must not spawn agents; return a bounded evidence handoff to the coordinator or parent instead.
 - Coordinator-to-coordinator communication is a parent-routed handoff, not direct peer spawning; include the question, evidence, conflict, decision, and open verification need.

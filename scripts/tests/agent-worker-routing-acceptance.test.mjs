@@ -19,7 +19,8 @@ test("all 21 specialists expose AgentSpace ownership, knowledge, and safe worker
   assert.equal(owners.size, 21);
   assert.deepEqual(agents.workerApprovalProfile, {
     approvalPolicy: "on-request",
-    sandboxSource: "catalog-agent",
+    approvalsReviewer: "auto_review",
+    sandboxMode: "workspace-write",
     rules: "rules/default.rules"
   });
 
@@ -98,6 +99,10 @@ test("real routing CLI returns selected specialist knowledge without private con
   assert.ok(selected.some((worker) => worker.name === "code_mapper"));
   assert.ok(selected.every((worker) => worker.knowledgeRef === worker.name));
   assert.ok(selected.every((worker) => worker.workerApprovalProfile.approvalPolicy === "on-request"));
+  assert.ok(selected.every((worker) => worker.workerApprovalProfile.approvalsReviewer === "auto_review"));
+  assert.ok(selected.every((worker) => worker.workerApprovalProfile.sandboxMode === "workspace-write"));
+  assert.ok(selected.every((worker) => worker.workerApprovalProfile.roleSandboxMode
+    === agents.agents.find((agent) => agent.name === worker.name)?.sandboxMode));
   assert.ok(report.coordination.primaryCoordinator);
   assert.ok(report.coordination.primaryCoordinator.workers.every((worker) => selected.some((selectedWorker) => selectedWorker.name === worker)));
   assert.ok(report.coordination.peerHandoffs.every((handoff) => handoff.via === "parent-routed-handoff"));
@@ -168,9 +173,18 @@ test("installer alignment ignores local AgentSpace notification and result artif
 });
 
 test("package validation excludes local AgentSpace notification and result artifacts", () => {
+  const executablePath = [
+    path.dirname(process.execPath),
+    process.env.PATH || process.env.Path || ""
+  ].filter(Boolean).join(path.delimiter);
   const result = execFileSync(process.execPath, [path.join(root, "scripts", "validate-package-surface.mjs")], {
     cwd: root,
     encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: executablePath,
+      ...(process.platform === "win32" ? { Path: executablePath } : {})
+    },
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(result, /Package surface validation passed\./);

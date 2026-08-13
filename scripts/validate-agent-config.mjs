@@ -204,9 +204,10 @@ if (!fs.existsSync(catalogPath)) {
     const catalogNames = new Set();
     const workerProfile = catalog.workerApprovalProfile;
     if (workerProfile?.approvalPolicy !== "on-request"
-      || workerProfile?.sandboxSource !== "catalog-agent"
+      || workerProfile?.approvalsReviewer !== "auto_review"
+      || workerProfile?.sandboxMode !== "workspace-write"
       || workerProfile?.rules !== "rules/default.rules") {
-      fail("Agent catalog must define the safe on-request worker approval profile.");
+      fail("Agent catalog must define the workspace-write, on-request, auto-reviewed worker approval profile.");
     }
     if (catalog.knowledgePolicy?.agentReference !== "name"
       || catalog.knowledgePolicy?.runtimeInjection !== false
@@ -445,6 +446,9 @@ if (!fs.existsSync(catalogPath)) {
       const configNames = new Set(blocks.keys());
 
       validateTextContains(configFile, text, "multi_agent = true");
+      validateTextContains(configFile, text, 'approval_policy = "on-request"');
+      validateTextContains(configFile, text, 'approvals_reviewer = "auto_review"');
+      validateTextContains(configFile, text, 'sandbox_mode = "workspace-write"');
       validateTextContains(configFile, text, "max_threads = 10");
       validateTextContains(configFile, text, "max_depth = 2");
       validateTextContains(configFile, text, "job_max_runtime_seconds = 3600");
