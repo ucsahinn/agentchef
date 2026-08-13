@@ -8,7 +8,7 @@ const valid = {
   module: "chef",
   version: "0.5.72",
   runtime: { nodeCompatibility: ">=18" },
-  contracts: { events: [1], capabilities: [1] },
+  contracts: { events: [1], capabilities: [1], proposals: [1] },
   health: { commandId: "chef.health.v1", mode: "read-only" },
   brain: { healthCommandId: "brain.health.v1", mode: "read-only" },
   noCopyState: ["auth", "sessions", "brain-content", "control-state"]

@@ -19,8 +19,8 @@ export function validateChefModuleManifest(value) {
   if (value.schemaVersion !== "1.0") return { ok: false, code: "unsupported-schema-major" };
   if (value.module !== "chef" || !safeString(value.version)) return { ok: false, code: "unsafe-value" };
   if (!only(value.runtime, new Set(["nodeCompatibility"])) || value.runtime.nodeCompatibility !== ">=18") return { ok: false, code: "malformed-runtime" };
-  if (!only(value.contracts, new Set(["events", "capabilities"]))
-    || ![value.contracts.events, value.contracts.capabilities].every((versions) => Array.isArray(versions) && versions.length > 0 && versions.every((version) => version === 1))) {
+  if (!only(value.contracts, new Set(["events", "capabilities", "proposals"]))
+    || ![value.contracts.events, value.contracts.capabilities, value.contracts.proposals].every((versions) => Array.isArray(versions) && versions.length > 0 && versions.every((version) => version === 1))) {
     return { ok: false, code: "malformed-contracts" };
   }
   if (!only(value.health, new Set(["commandId", "mode"])) || value.health.commandId !== "chef.health.v1" || value.health.mode !== "read-only"
