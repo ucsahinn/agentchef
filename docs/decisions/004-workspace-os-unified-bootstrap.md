@@ -94,9 +94,16 @@ must distinguish a blocking failure from an optional capability warning.
 | --- | --- | --- | --- |
 | Host | Windows, macOS, Linux, or WSL | 64-bit Windows, current user | Windows desktop, current user |
 | Node runtime | Node 18 major line, component-scoped | Node 24 major line, component-scoped | Node 24 major line, component-scoped |
-| Native prerequisites | Git, npm/npx, Codex as required by selected Chef mode | .NET SDK `8.0.422` exactly; .NET 8 runtime; Codex CLI `0.145.x`; Control prerequisites | Electron payload and locked npm dependencies |
+| Native prerequisites | Git, npm/npx, Codex as required by selected Chef mode | .NET 8 runtime; Codex CLI `0.145.x`; Control prerequisites. A source-build or payload-generation gate additionally requires the exact `global.json` SDK policy: `8.0.422`, roll-forward disabled. | Electron payload and locked npm dependencies |
 | Version evidence | source revision and Chef manifest/package-lock digest | `package.json`, `package-lock.json`, `global.json`, Node executable SHA-256, and setup payload identity | `package.json`, `package-lock.json`, Electron/package identity, and Node executable SHA-256 |
 | Runtime isolation | no global PATH rewrite | no global PATH rewrite; use Control's copied/integrated Node runtime only after verification | invoke only Kitchen's verified Node 24/Electron runtime |
+
+The runtime gate reflects the current Control setup contract: it probes for a
+.NET 8 **runtime**. The bootstrap must not silently strengthen a binary-release
+install into an SDK requirement; `8.0.422` is instead mandatory when the plan
+builds or regenerates the Control native payload. The plan records which gate
+applies, so a release consumer and a source builder receive an unambiguous
+blocked/ready result.
 
 The release manifest must pin exact Node binaries by architecture, source URL,
 size, and SHA-256. `>=18` and `>=24 <25` are compatibility ranges, not
