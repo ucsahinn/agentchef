@@ -470,8 +470,9 @@ function validateResolvedInstallContract() {
   const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract");
   const codexHome = path.join(fixtureRoot, "codex");
   const agentsHome = path.join(fixtureRoot, "agents");
+  const platform = process.platform === "win32" ? "windows" : "unix";
   const contract = resolveInstallContract({
-    platform: "windows",
+    platform,
     codexHome,
     agentsHome,
     home: fixtureRoot

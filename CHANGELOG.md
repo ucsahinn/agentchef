@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.5.69 - 2026-08-14
+
+- Fix cross-platform installer-alignment validation by resolving the fixture contract for the host platform before comparing it with the host installer preflight.
+
 ## 0.5.68 - 2026-08-13
 
 - Add an explicit, repository-local coordination board whose tasks must be created by the user; pane selection and route matching do not start work, and reviewed evidence is required before completion.

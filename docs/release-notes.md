@@ -2,6 +2,14 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.69 - 2026-08-14
+
+Codex Chef 0.5.69 restores the cross-platform validation gate for the current coordination release.
+
+### What Changed
+
+- Fixes the installer-alignment fixture so it resolves paths for the host platform before comparing the preflight contract, allowing Windows, macOS, and Linux validation to agree.
+
 ## v0.5.68 - 2026-08-13
 
 Codex Chef 0.5.68 makes cross-role coordination explicit and auditable while preserving the boundary between safe health evidence and private Brain contents.

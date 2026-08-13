@@ -2,6 +2,14 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.69 - 2026-08-14
+
+Codex Chef 0.5.69, guncel koordinasyon surumu icin platformlar arasi dogrulama kapisini yeniden calisir hale getirir.
+
+### Neler Degisti?
+
+- Installer-alignment fixture'i, preflight sozlesmesiyle karsilastirmadan once yollarini calisan platforma gore cozer; boylece Windows, macOS ve Linux dogrulamasi ayni sonucu uretir.
+
 ## v0.5.68 - 2026-08-13
 
 Codex Chef 0.5.68, roller arasi koordinasyonu acik ve denetlenebilir hale getirirken guvenli saglik kaniti ile ozel Brain icerigi arasindaki siniri korur.
