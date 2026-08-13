@@ -8,6 +8,9 @@ Codex safety model.
 - `sandbox_mode = "workspace-write"` keeps writes inside the workspace by
   default.
 - `approval_policy = "on-request"` keeps escalations interactive.
+- `approvals_reviewer = "auto_review"` can automatically review eligible
+  approval prompts; it does not expand the workspace sandbox or override command
+  rules. Risky and unmatched operations remain prompt-gated.
 - Network access stays disabled in the workspace-write sandbox unless a trusted
   profile or explicit approval changes that.
 - `shell_environment_policy` uses `inherit = "core"` and keeps default secret
@@ -23,6 +26,12 @@ Codex safety model.
   repository controls the shell code behind them. Exact read-only npm
   inspections (`ls`, `outdated`, `view`) and the reviewed no-script package
   dry-run remain allowed.
+
+AgentSpace account profiles resolve an isolated `CODEX_HOME`. A worker session
+therefore receives the safe defaults only when its own root `config.toml` carries
+the same workspace-write, on-request, and auto-review trio. Changing another
+Codex home cannot update an already running worker; start a new pane after the
+profile is changed.
 - Git mutations such as fetch, branch/tag/remote changes, config writes, staging,
   commit, push, reset, checkout, and restore prompt. Exact read-only inspections
   such as status/diff/log/show, `branch --show-current`/`--list`, `remote
@@ -329,6 +338,13 @@ An interrupted install or repair archive can use its atomic operation journal
 as a recovery manifest only when every recorded path, size, and SHA-256 value
 still matches the archive. This does not broaden the restore allowlist or
 permit unrecorded files.
+
+The Unix installer creates a missing selected `CODEX_HOME` before atomically
+acquiring the per-home operation lock. It never removes a pre-existing lock;
+cleanup releases only the lock whose recorded owner identity matches the
+current installer. Successful, failed, and interrupted paths share that
+ownership check, so a later install is not blocked by an owned stale lock and a
+foreign concurrent lock is not removed.
 
 Restore treats backup archives as untrusted input. `npm run chef -- --backups
 --backup <id> --restore` is a preview. The apply path requires `--apply`,

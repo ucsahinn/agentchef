@@ -2,6 +2,17 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.72 - 2026-08-14
+
+Codex Chef 0.5.72 lets the Unix installer safely start from a Codex home that does not exist yet and proves the operation lock is released before an immediate reinstall.
+
+### What Changed
+
+- Creates the selected Unix `CODEX_HOME` before the atomic per-home lock acquisition, preserves concurrent-install rejection, and adds a real two-install regression test that checks the lock is absent after both runs.
+- Makes routing output distinguish the isolated AgentSpace worker session policy (`workspace-write`, `on-request`, `auto_review`) from the specialist role's own sandbox boundary.
+- Adds reviewed suite, threat, and portability contracts plus a private fail-closed observation-envelope package included in the source package and full test gate.
+- Keeps the legacy GPT Pro project exporter compatible with external-review manifest schemas `1.0.0` and `1.1.0`.
+
 ## v0.5.71 - 2026-08-14
 
 Codex Chef 0.5.71 ensures the Unix installer releases its operation lock when a successful install finishes.

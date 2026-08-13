@@ -4,6 +4,14 @@ Codex Chef installs into the current user's Codex home. That is `~/.codex` by
 default; when `CODEX_HOME` is set, the installer respects that path instead.
 Start with a preview so the first real write is never a surprise.
 
+An app-managed or account-specific Codex profile is an independent Codex home;
+it does not inherit root settings from `~/.codex/config.toml`. AgentSpace worker
+profiles must therefore carry `sandbox_mode = "workspace-write"`,
+`approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"` in
+their own `config.toml`. Restart the worker in a new pane after changing that
+profile. Point `CODEX_HOME` at an alternate profile only when you intentionally
+want the preview and installer to target it.
+
 ## Prerequisites
 
 - Codex CLI or Codex app installed.
@@ -430,6 +438,12 @@ installer step fails, only targets that still match the installer-written hash
 are restored or removed; a target changed after the write is preserved and the
 journal remains as recovery evidence. An interrupted journal can supply the
 same hash-validated restore inventory when the final manifest was not written.
+
+On Unix, the installer prepares a missing `CODEX_HOME` before attempting the
+atomic per-home lock. A lock-directory collision still fails closed as a
+concurrent operation. Normal completion explicitly finishes the journal and
+releases only the lock whose owner identity matches the current installer; the
+exit trap retains the same cleanup path for failures and interruptions.
 
 The installer backs up managed targets before replacing them:
 

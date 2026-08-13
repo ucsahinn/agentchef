@@ -8,6 +8,9 @@ için tasarlandı.
 - `sandbox_mode = "workspace-write"` yazma erişimini varsayılan olarak workspace
   içinde tutar.
 - `approval_policy = "on-request"` yetki yükseltmelerini interaktif bırakır.
+- `approvals_reviewer = "auto_review"` uygun onay isteklerini otomatik inceleyebilir;
+  workspace sandbox'ını genişletmez veya komut kurallarını geçersiz kılmaz.
+  Riskli ve eşleşmeyen işlemler prompt-gated kalır.
 - Workspace-write sandbox içinde network erişimi kapalı kalır.
 - `shell_environment_policy`, `inherit = "core"` kullanır ve default secret
   exclusion'ları açık tutar. Böylece subprocess'ler geniş lokal token
@@ -22,6 +25,12 @@ için tasarlandı.
   çalışacak shell kodunu repo belirler. Tam olarak tanımlanmış read-only npm
   incelemeleri (`ls`, `outdated`, `view`) ile script çalıştırmayan, incelenmiş
   paket dry-run komutu izinli kalır.
+
+AgentSpace hesap profilleri izole bir `CODEX_HOME` çözümler. Bu nedenle worker
+oturumu güvenli varsayılanları ancak kendi kök `config.toml` dosyası aynı
+workspace-write, on-request ve auto-review üçlüsünü taşıyorsa alır. Başka bir
+Codex home'u değiştirmek çalışan worker'ı güncellemez; profil değiştikten sonra
+yeni bir pane başlat.
 - Fetch, branch/tag/remote değişiklikleri, config yazma, stage, commit, push,
   reset, checkout ve restore gibi Git mutasyonları onay ister. Status/diff/log/show,
   `branch --show-current`/`--list`, `remote get-url`, `tag --list` ve izin
@@ -303,6 +312,13 @@ Kesilen bir install veya repair arsivi, ancak kayitli her path, size ve SHA-256
 degeri archive ile hala eslesiyorsa atomik operation journal'i recovery manifest
 olarak kullanabilir. Bu durum restore allowlist'i genisletmez ve kayitsiz
 dosyalara izin vermez.
+
+Unix installer secilen eksik `CODEX_HOME` dizinini home-bazli islem kilidini
+atomik almadan once olusturur. Onceden var olan kilidi kaldirmaz; cleanup yalniz
+kayitli sahip kimligi mevcut installer ile eslesen kilidi serbest birakir.
+Basarili, basarisiz ve kesintili yollar ayni sahiplik kontrolunu kullanir;
+sonraki kurulum owned stale lock ile engellenmez, yabanci eszamanli kilit de
+kaldirilmaz.
 
 Restore backup archive'larini untrusted input kabul eder. `npm run chef --
 --backups --backup <id> --restore` preview'dir. Apply path'i `--apply` ister,

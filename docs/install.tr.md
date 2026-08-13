@@ -4,6 +4,14 @@ Codex Chef mevcut kullanıcının Codex home dizinine kurulur. Varsayılan konum
 `~/.codex` dizinidir; `CODEX_HOME` tanımlıysa installer bunun yerine o path'i
 kullanır. İlk gerçek write sürpriz olmasın diye her zaman ön izlemeyle başla.
 
+Uygulamanın veya hesabın yönettiği Codex profili bağımsız bir Codex home'dur;
+`~/.codex/config.toml` içindeki kök ayarları devralmaz. Bu nedenle AgentSpace
+worker profilleri kendi `config.toml` dosyasında `sandbox_mode = "workspace-write"`,
+`approval_policy = "on-request"` ve `approvals_reviewer = "auto_review"`
+değerlerini taşımalıdır. Profil değişikliğinden sonra worker'ı yeni bir pane'de
+başlat. `CODEX_HOME` değerini farklı bir profile yalnız ön izleme ve installer'ın
+bilerek o profili hedeflemesini istediğinde yönlendir.
+
 ## Gereksinimler
 
 - Codex CLI veya Codex app.
@@ -419,6 +427,12 @@ installer adimi hata verirse yalnizca hala installer'in yazdigi hash ile eslesen
 hedef geri yuklenir veya kaldirilir; sonradan degismis hedef korunur ve journal
 kurtarma kaniti olarak kalir. Son manifest yazilmadan kesilen islemde journal,
 ayni hash-dogrulanmis restore inventory'sini saglar.
+
+Unix'te installer, atomik home-bazli kilidi almadan once eksik `CODEX_HOME`
+dizinini hazirlar. Kilit dizini cakismasi eszamanli islem olarak fail-closed
+kalir. Normal tamamlanma journal'i acikca bitirir ve yalniz sahip kimligi mevcut
+installer ile eslesen kilidi serbest birakir; exit trap hata ve kesinti yollarinda
+ayni temizligi korur.
 
 Installer şu managed target'ları replace etmeden önce yedekler:
 

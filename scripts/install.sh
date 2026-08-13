@@ -418,6 +418,10 @@ cleanup_operation_lock() {
 
 acquire_operation_lock() {
 if [ "$DRY_RUN" -eq 0 ]; then
+  if ! mkdir -p "$CODEX_HOME_DIR"; then
+    echo "Could not prepare the Codex home for the operation lock: $CODEX_HOME_DIR" >&2
+    exit 1
+  fi
   if ! mkdir "$OPERATION_LOCK_DIR" 2>/dev/null; then
     echo "Another Codex Chef operation is already in progress for $CODEX_HOME_DIR; refusing concurrent install." >&2
     exit 1

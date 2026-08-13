@@ -2,6 +2,17 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.72 - 2026-08-14
+
+Codex Chef 0.5.72, Unix installer'in henuz var olmayan bir Codex home ile guvenle baslamasini saglar ve islem kilidinin hemen sonraki yeniden kurulumdan once serbest birakildigini kanitlar.
+
+### Neler Degisti?
+
+- Atomik home-bazli kilidi almadan once secilen Unix `CODEX_HOME` dizinini olusturur, eszamanli kurulum reddini korur ve her iki kosudan sonra kilidin bulunmadigini denetleyen gercek iki-kurulum regresyon testi ekler.
+- Routing ciktisinda izole AgentSpace worker oturum politikasini (`workspace-write`, `on-request`, `auto_review`) uzman rolunun kendi sandbox sinirindan ayri gosterir.
+- Incelenmis suite, tehdit ve tasinabilirlik sozlesmelerini; kaynak paketine ve tam test kapisina dahil edilen private, fail-closed observation-envelope paketiyle birlikte ekler.
+- Legacy GPT Pro proje exporter'ini external-review manifest semalarinin `1.0.0` ve `1.1.0` surumleriyle uyumlu tutar.
+
 ## v0.5.71 - 2026-08-14
 
 Codex Chef 0.5.71, basarili bir Unix kurulumu bittiginde islem kilidinin serbest birakilmasini garanti eder.

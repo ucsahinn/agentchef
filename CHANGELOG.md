@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.5.72 - 2026-08-14
+
+- Prepare a missing Unix `CODEX_HOME` before atomically acquiring its operation lock, and cover a fresh install plus an immediate second install with a real Git Bash regression test.
+- Report the isolated AgentSpace worker runtime profile (`workspace-write`, `on-request`, `auto_review`) separately from each specialist's narrower role sandbox.
+- Add the versioned suite, threat, and portability contracts plus a private, fail-closed observation-envelope package that ships in the reviewed source surface and runs in the full check.
+- Accept external-review manifest schema `1.1.0` in the legacy GPT Pro project exporter while retaining `1.0.0` compatibility.
+
 ## 0.5.71 - 2026-08-14
 
 - Explicitly complete the Unix installer operation journal and release its owned lock on the successful path; retain the exit trap for failure and interruption recovery.
