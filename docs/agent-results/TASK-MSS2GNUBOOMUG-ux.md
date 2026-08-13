@@ -1,5 +1,9 @@
 # TASK-MSS2GNUBOOMUG — UX traceability report
 
+## Scope correction
+
+This report covers the selected 25-source FND-02 traceability contract, not every screenshot in the external `C:\\ss` corpus. The separate FND-02B task owns the complete external-folder catalogue. The 25 sources were reopened independently at their original dimensions in five direct visual passes (S01-S05, S06-S10, S11-S15, S16-S20, and S21-S25); no crop, collage, derived screenshot, or external asset was used or committed.
+
 ## Ne yapıldı
 
 - 25 user-supplied reference screen was visually reviewed as 25 independent original-resolution images.

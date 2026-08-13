@@ -13,6 +13,10 @@ Each target preserves the capability visible in its source. A later implementati
 - Review rule: every row maps to exactly one target screen. No crop or composite was used for analysis.
 - Target status: documentation only. No existing UI or source file was modified by this task.
 
+## Corpus boundary
+
+`C:\\ss` contains a broader user-owned screenshot corpus. This document deliberately records the 25 sources selected for FND-02 only; it is not a complete inventory of that external folder. The complete-folder inventory belongs to the separate FND-02B catalogue task. Neither boundary permits committing source screenshots, crops, composites, or third-party assets here.
+
 ## 25/25 unique-source matrix
 
 | ID | Unique source file | Original px | Target screen | Visible state that must survive |
