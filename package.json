@@ -1,6 +1,6 @@
 {
   "name": "codex-chef",
-  "version": "0.5.67",
+  "version": "0.5.68",
   "private": true,
   "description": "Codex Chef: cross-platform Codex setup kit with agents, skills, MCPs, safe installers, and validation gates.",
   "files": [
@@ -93,6 +93,7 @@
     "chef:diagnostics": "node scripts/chef-cli.mjs --diagnostics",
     "chef:processes": "node scripts/chef-cli.mjs --processes",
     "chef:update": "node scripts/chef-cli.mjs --update",
+    "coordination:board": "node scripts/coordination-board.mjs",
     "plan:install": "node scripts/plan-install.mjs",
     "repair:install": "node scripts/repair-install.mjs --redact-paths",
     "codex:doctor": "node scripts/codex-doctor.mjs --redact-paths",

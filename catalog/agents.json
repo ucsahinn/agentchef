@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "dateChecked": "2026-06-15",
   "officialReference": "https://developers.openai.com/codex/config-reference#configtoml",
-  "sourcePolicy": "Eleven read-only coordinators and 21 specialist workers are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. Coordinators use a bounded, parent-routed orchestration contract and never receive private AgentSpace memory. Specialist role files intentionally avoid per-agent model and reasoning pins when catalog modelSelection/modelReasoningEffort are auto, so the current profile and Codex runtime can choose the appropriate balance for the task. Each specialist role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-specialist expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
+  "sourcePolicy": "Eleven read-only coordinators and 21 specialist workers are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. An explicit user-created coordination-board task is the only work-state trigger: pane selection, role selection, and routing matches never auto-start work. Coordinators use a bounded, parent-routed orchestration contract, select only their cataloged workers, attach structured worker evidence before a task is done, and never receive private AgentSpace memory. Specialist role files intentionally avoid per-agent model and reasoning pins when catalog modelSelection/modelReasoningEffort are auto, so the current profile and Codex runtime can choose the appropriate balance for the task. Each specialist role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-specialist expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
   "defaults": {
     "model": "gpt-5.5",
     "maxThreads": 10,
@@ -25,7 +25,12 @@
     "maxWorkersPerCoordinator": 4,
     "peerCommunication": "parent-routed-handoff",
     "workerDelegation": "prohibited",
-    "privateContext": "excluded"
+    "privateContext": "excluded",
+    "workStateTrigger": "explicit-user-created-board-task",
+    "catalogWorkerSelection": "required",
+    "workerReturn": "structured-evidence-handoff",
+    "taskCompletion": "evidence-attached-and-reviewed",
+    "autoStart": "prohibited"
   },
   "coordinators": [
     { "name": "backend_coordinator", "roleId": "backend", "description": "Backend coordinator that correlates bounded implementation, integration, and debugging evidence.", "configFile": "agents/backend_coordinator.toml", "workers": ["code_mapper", "mcp_integrator", "root_cause_debugger"] },

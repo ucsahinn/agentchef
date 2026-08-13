@@ -44,6 +44,24 @@ reason to open a subagent for every small task.
 Subagents inherit the current approval and sandbox boundaries. They do not get
 extra authority just because the work was delegated.
 
+## Explicit Coordination Board Workflow
+
+Creating a task explicitly is the only coordination-state trigger. Opening a
+pane, selecting an agent, or matching a routing profile does not start work.
+The coordinator may select only its cataloged workers; each worker returns a
+structured evidence handoff with its outcome, evidence, risks, open questions,
+and next verification need. The parent/main session relays cross-domain
+handoffs. Evidence must be attached and reviewed before the task becomes done;
+there is no auto-start or auto-complete behavior.
+
+Use a user-chosen, repository-local state path. Initializing or creating a task
+records coordination state only; it does not start a coordinator or worker.
+
+```bash
+npm run coordination:board -- init --state .coordination-board.json
+npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
+```
+
 ## Enterprise Routing Profiles
 
 Routing profiles connect a task type with useful agents, skills, MCPs, checks,

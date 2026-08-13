@@ -18,6 +18,7 @@ import {
   validateBrainVault
 } from "./lib/brain-foundation.mjs";
 import { inspectWindowsBrainPermissions } from "./lib/brain-permissions-windows.mjs";
+import { projectBrainHealth } from "./lib/brain-health-projection.mjs";
 import {
   CliUsageError,
   emitCliError,
@@ -26,7 +27,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateRoot = path.join(root, "templates", "brain");
-const ACTIONS = new Set(["init", "status", "doctor", "permissions", "audit", "capture", "retrieve", "uri", "backup", "restore"]);
+const ACTIONS = new Set(["init", "status", "doctor", "health", "permissions", "audit", "capture", "retrieve", "uri", "backup", "restore"]);
 
 function parseArgs(argv) {
   let action = "init";
@@ -108,6 +109,7 @@ Usage:
   node scripts/brain-cli.mjs init --target PATH --preview|--apply [--json]
   node scripts/brain-cli.mjs audit --target PATH [--json]
   node scripts/brain-cli.mjs status --target PATH [--json]
+  node scripts/brain-cli.mjs health --target PATH [--json]
   node scripts/brain-cli.mjs permissions --target PATH [--json]
   node scripts/brain-cli.mjs capture --target PATH --input candidate.json --preview|--apply [--json]
   node scripts/brain-cli.mjs retrieve --target PATH --project ID [--role CHEF_ROLE] --query TEXT [--json]
@@ -138,6 +140,15 @@ function execute(options) {
     };
     print(result, options.json);
     if (!result.ok) process.exitCode = 1;
+    return;
+  }
+  if (options.action === "health") {
+    const contentStatus = validateBrainVault(target);
+    const securityStatus = inspectWindowsBrainPermissions(target);
+    const audit = auditBrainVault({ target });
+    const result = projectBrainHealth({ contentStatus, securityStatus, audit, observedAt: new Date().toISOString() });
+    print(result, options.json);
+    if (result.status !== "available") process.exitCode = 1;
     return;
   }
   if (options.action === "permissions") {

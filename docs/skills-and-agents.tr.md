@@ -47,6 +47,25 @@ gerektiği anlamına gelmez.
 Subagent'lar mevcut onay ve sandbox sınırlarını devralır. İşin devredilmesi,
 onlara fazladan yetki vermez.
 
+## Acik Koordinasyon Panosu Akisi
+
+Koordinasyon durumu yalnizca kullanicinin acikca olusturdugu gorevle baslar.
+Pane acmak, agent secmek veya routing profiliyle eslesmek calismayi baslatmaz.
+Koordinator yalnizca katalogdaki worker'lari secer. Her worker; sonucu, kaniti,
+kapsam degisikligini, riskleri, acik sorulari ve sonraki dogrulama ihtiyacini
+iceren yapilandirilmis bir handoff dondurur. Alanlar arasi handoff'u ana oturum
+iletir. Kanit eklenip incelenmeden gorev done olmaz; auto-start ve auto-complete
+yoktur.
+
+Kullanici tarafindan secilen, repo-yerel bir state yolu kullanin. Baslatma veya
+gorev olusturma yalnizca koordinasyon durumunu kaydeder; koordinator ya da
+worker otomatik baslamaz.
+
+```bash
+npm run coordination:board -- init --state .coordination-board.json
+npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "API zaman asimini incele" --owner-coordinator backend_coordinator
+```
+
 ## Enterprise Routing Profiles
 
 Routing profilleri; yapılacak işi uygun agent, skill, MCP, kontrol komutu ve

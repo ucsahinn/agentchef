@@ -1,7 +1,7 @@
 {
   "version": "0.3.0",
   "dateChecked": "2026-07-29",
-  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces. A match does not force delegation: spawn only for independent parallel work, noisy log or research isolation, or explicit user-requested agents. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
+  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces. A match does not create a coordination-board task or start work: delegation occurs only after an explicit user-created task and only to the selected coordinator's cataloged workers. Workers return structured evidence handoffs; the parent/main session relays cross-domain handoffs; a task becomes done only after its evidence is attached and reviewed. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
   "delegationPolicy": {
     "mode": "conditional",
     "capacityCeiling": 10,
@@ -12,7 +12,8 @@
       "the user explicitly requests delegation"
     ],
     "skipWhen": ["trivial work", "strictly sequential work", "tightly coupled single-file work"],
-    "writeIsolation": "Keep write-heavy implementation in the main thread unless the user explicitly requests non-overlapping write scopes."
+    "writeIsolation": "Keep write-heavy implementation in the main thread unless the user explicitly requests non-overlapping write scopes.",
+    "coordinationBoard": "Explicit task creation records work state; neither a routing match nor pane selection auto-starts, auto-completes, or infers approval."
   },
   "agentRuntimePolicy": {
     "roleSelection": "automatic-when-beneficial",

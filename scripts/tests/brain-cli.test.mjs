@@ -203,6 +203,29 @@ test("CLI exposes a read-only Windows Brain permission audit", () => {
   assert.deepEqual(snapshotVault(target), before);
 });
 
+test("CLI health emits only the safe Brain owner aggregate", () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-health-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  assert.equal(run(["init", "--target", target, "--apply", "--json"]).status, 0);
+  const before = snapshotVault(target);
+  const health = run(["health", "--target", target, "--json"]);
+
+  assert.equal(health.status === 0 || health.status === 1, true, health.stderr);
+  const projection = JSON.parse(health.stdout);
+  assert.equal(projection.schemaVersion, 1);
+  assert.ok(["available", "unavailable"].includes(projection.status));
+  assert.ok(["ok", "attention", "unavailable"].includes(projection.securityStatus));
+  assert.equal(projection.observedAt === null || Number.isFinite(Date.parse(projection.observedAt)), true);
+  for (const field of ["canonicalNoteCount", "collectionCount", "resolvedLinkCount", "brokenLinkCount", "orphanNoteCount", "staleNoteCount"]) {
+    assert.equal(Number.isSafeInteger(projection[field]) && projection[field] >= 0, true, field);
+  }
+  assert.ok(["ok", "attention", "unavailable"].includes(projection.auditStatus));
+  assert.deepEqual(Object.keys(projection).sort(), [
+    "auditStatus", "brokenLinkCount", "canonicalNoteCount", "collectionCount", "itemCount", "observedAt", "orphanNoteCount", "reparsePointCount", "resolvedLinkCount", "sandboxReadOnlyItemCount", "sandboxWriteItemCount", "schemaVersion", "securityStatus", "staleNoteCount", "status"
+  ]);
+  assert.deepEqual(snapshotVault(target), before);
+});
+
 test("CLI exposes a read-only Brain correlation audit", () => {
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-audit-"));
   const target = path.join(sandbox, "CodexChefBrain");

@@ -55,6 +55,14 @@ The routing path is:
 Cross-domain work returns a compact handoff to the main session, which decides
 whether another coordinator is needed.
 
+The detailed coordination-board contract is in
+[Skills, Plugins, And Specialist Agents](skills-and-agents.md): work begins
+only with an explicit user-created board task; pane selection, role selection,
+and routing matches never auto-start it. Coordinators select only their
+cataloged workers, workers return structured evidence handoffs, the main session
+relays cross-domain questions, and evidence must be attached and reviewed before
+the task becomes done.
+
 ## 🗺️ Understand The Problem
 
 | Agent | Bring it in when... |

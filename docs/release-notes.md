@@ -2,6 +2,17 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.68 - 2026-08-13
+
+Codex Chef 0.5.68 makes cross-role coordination explicit and auditable while preserving the boundary between safe health evidence and private Brain contents.
+
+### What Changed
+
+- Adds a repository-local coordination board: only an explicit user-created task records work state; pane selection, role selection, and routing matches never auto-start work.
+- Limits coordinators to their cataloged workers and requires structured evidence handoffs, parent-routed cross-domain questions, and review before a task can close.
+- Adds the read-only `brain health` command, which reports only bounded aggregate health and security status rather than vault paths, notes, links, or error text.
+- Repairs nested support files for Chef-managed direct skills and covers the affected repair layout with regression tests.
+
 ## v0.5.67 - 2026-08-10
 
 Codex Chef 0.5.67 adds a complete, review-bound path for bringing a repository to a manually managed GPT Pro Project without granting automatic upload or execution authority.

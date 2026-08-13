@@ -2,6 +2,17 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.68 - 2026-08-13
+
+Codex Chef 0.5.68, roller arasi koordinasyonu acik ve denetlenebilir hale getirirken guvenli saglik kaniti ile ozel Brain icerigi arasindaki siniri korur.
+
+### Neler Degisti?
+
+- Repo-yerel koordinasyon panosu eklendi: yalnizca kullanicinin acikca olusturdugu gorev is durumunu kaydeder; pane secimi, rol secimi ve routing eslesmeleri isi otomatik baslatmaz.
+- Koordinatorler katalogdaki worker'larla sinirli kalir; yapilandirilmis kanit handoff'u, ana oturum uzerinden alanlar arasi sorular ve gorev kapanmadan once inceleme zorunludur.
+- Salt-okunur `brain health` komutu eklendi; vault yolu, not, link veya hata metni yerine yalnizca sinirli toplu saglik ve guvenlik durumu raporlanir.
+- Chef-managed dogrudan skill'lerin ic ice destek dosyalari repair sirasinda geri yuklenir ve etkilenen kurulum duzeni regression testleriyle kapsanir.
+
 ## v0.5.67 - 2026-08-10
 
 Codex Chef 0.5.67, bir depoyu otomatik yükleme veya çalıştırma yetkisi vermeden, manuel yönetilen bir GPT Pro Project için eksiksiz ve incelemeye bağlı şekilde hazırlayan yolu ekler.

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.68 - 2026-08-13
+
+- Add an explicit, repository-local coordination board whose tasks must be created by the user; pane selection and route matching do not start work, and reviewed evidence is required before completion.
+- Add a read-only Brain health projection that exposes only bounded aggregate and security-status evidence, never vault paths, notes, links, or errors.
+- Restore nested support files when repairing a Chef-managed direct skill, with regression coverage for the affected installation layout.
+
 ## 0.5.67 - 2026-08-10
 
 - Add bundled and direct-installable `gptpro` and `gptpro-handoff` workflows for manual GPT Pro Project context delivery and manifest-bound returned-report verification.
