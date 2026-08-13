@@ -92,7 +92,7 @@ function readReviewManifest(manifestPath) {
   if (!stat || !stat.isFile() || stat.isSymbolicLink()) fail("External-review manifest must be a regular non-linked file.");
   const raw = fs.readFileSync(resolved);
   const manifest = JSON.parse(raw.toString("utf8"));
-  if (manifest.schemaVersion !== "1.0.0" || !manifest.reviewId || !manifest.snapshot?.commit || !Array.isArray(manifest.files) || !manifest.files.length) {
+  if (!new Set(["1.0.0", "1.1.0"]).has(manifest.schemaVersion) || !manifest.reviewId || !manifest.snapshot?.commit || !Array.isArray(manifest.files) || !manifest.files.length) {
     fail("External-review manifest has an unsupported schema or no source files.");
   }
   return { path: resolved, sha256: hash(raw), manifest };

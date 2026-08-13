@@ -56,6 +56,22 @@ test("creates named, directly uploadable text bundles including root project con
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
+test("accepts the current external-review manifest schema", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-export-schema-"));
+  try {
+    const target = path.join(temp, "repo");
+    fs.mkdirSync(target);
+    write(target, "src/index.mjs", "export const version = 1;\n");
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    const manifest = manifestFor(target, ["src/index.mjs"]);
+    manifest.schemaVersion = "1.1.0";
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifest, null, 2)}\n`);
+    const output = path.join(temp, "gptpro-project");
+    const result = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", output, "--apply"], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
 test("fails closed when a source file no longer matches the review manifest", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-stale-"));
   try {
