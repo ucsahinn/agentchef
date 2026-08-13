@@ -19,6 +19,15 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function fixtureChildEnv() {
+  const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
+  return {
+    ...process.env,
+    [pathKey]: path.dirname(process.execPath),
+    CODEX_CHEF_CODEX_COMMAND: "codex-chef-missing-fixture-command"
+  };
+}
+
 function runRepair(args, codexHome, agentsHome, cwd = root) {
   return spawnSync(process.execPath, [
     path.join(root, "scripts", "repair-install.mjs"),
@@ -33,10 +42,7 @@ function runRepair(args, codexHome, agentsHome, cwd = root) {
   ], {
     cwd,
     encoding: "utf8",
-    env: {
-      ...process.env,
-      CODEX_CHEF_CODEX_COMMAND: "codex-chef-missing-fixture-command"
-    },
+    env: fixtureChildEnv(),
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 120000,
     windowsHide: true
