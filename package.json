@@ -1,6 +1,6 @@
 {
   "name": "codex-chef",
-  "version": "0.5.69",
+  "version": "0.5.70",
   "private": true,
   "description": "Codex Chef: cross-platform Codex setup kit with agents, skills, MCPs, safe installers, and validation gates.",
   "files": [

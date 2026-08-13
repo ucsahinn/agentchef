@@ -715,6 +715,12 @@ if (process.argv.includes("--safety-contract")) {
       fail(`${label} installer must run the complete leaf and Git-guard ownership preflight.`);
     }
   }
+  if (!shellInstaller.includes('OPERATION_LOCK_ID="install-$$-$(date -u +%Y%m%dT%H%M%SZ)"')) {
+    fail("Shell installer must record a unique operation-lock owner identity.");
+  }
+  if (!shellInstaller.includes("trap 'cleanup_operation_lock' EXIT HUP INT TERM")) {
+    fail("Shell installer must register the operation-lock cleanup trap without eager expansion.");
+  }
   if (!safetyHelper.includes('import { resolveInstallContract } from "./install-contract.mjs"')) {
     fail("Installer safety preflight must derive its selected targets from the authoritative install contract.");
   }

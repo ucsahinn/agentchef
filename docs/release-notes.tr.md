@@ -2,6 +2,14 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.70 - 2026-08-14
+
+Codex Chef 0.5.70, tamamlanan Unix kurulumlarinin sonraki guvenli yenilemeyi engellememesi icin islem kilidi temizligini duzeltir.
+
+### Neler Degisti?
+
+- Her Unix kurulum islemine benzersiz bir kilit sahibi kimligi verir ve yalnizca kendi kilidini yeniden-girissiz exit trap ile kaldirir.
+
 ## v0.5.69 - 2026-08-14
 
 Codex Chef 0.5.69, guncel koordinasyon surumu icin platformlar arasi dogrulama kapisini yeniden calisir hale getirir.

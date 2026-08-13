@@ -2,6 +2,14 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.70 - 2026-08-14
+
+Codex Chef 0.5.70 fixes Unix installer lock cleanup so completed installs do not block a later safe refresh.
+
+### What Changed
+
+- Gives each Unix installer operation a unique lock owner identity and releases only that lock through a non-reentrant exit trap.
+
 ## v0.5.69 - 2026-08-14
 
 Codex Chef 0.5.69 restores the cross-platform validation gate for the current coordination release.

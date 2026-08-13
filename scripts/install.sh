@@ -390,34 +390,45 @@ GIT_GUARD_RECEIPT=""
 # mkdir is atomic; a pre-existing lock is deliberately never removed automatically.
 OPERATION_LOCK_DIR="$CODEX_HOME_DIR/.codex-chef-operation.lock"
 OPERATION_LOCK_OWNER="$OPERATION_LOCK_DIR/owner"
+OPERATION_LOCK_ID="install-$$-$(date -u +%Y%m%dT%H%M%SZ)"
+OPERATION_LOCK_HELD=0
+
+cleanup_operation_lock() {
+  operation_status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$OPERATION_JOURNAL_ACTIVE" -eq 1 ]; then
+    if [ "$operation_status" -eq 0 ]; then
+      node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" complete >/dev/null 2>&1 || true
+    else
+      node "$OPERATION_JOURNAL" rollback "$BACKUP_ROOT" - "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR" >&2 || true
+      if [ -n "$GIT_GUARD_RECEIPT" ] && [ -f "$GIT_GUARD_RECEIPT" ]; then
+        GIT_GUARD_ROLLBACK=("$REPO_ROOT/scripts/manage-global-git-guards.mjs" "restore" "--home" "$HOME" "--receipt" "$GIT_GUARD_RECEIPT" "--json")
+        if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then GIT_GUARD_ROLLBACK+=("--git-config-global" "$GIT_CONFIG_GLOBAL"); fi
+        node "${GIT_GUARD_ROLLBACK[@]}" >&2 || true
+      fi
+      node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" failed >/dev/null 2>&1 || true
+    fi
+  fi
+  if [ "$OPERATION_LOCK_HELD" -eq 1 ] && [ -f "$OPERATION_LOCK_OWNER" ] && grep -Fqx "id=$OPERATION_LOCK_ID" "$OPERATION_LOCK_OWNER"; then
+    rm -f "$OPERATION_LOCK_OWNER"
+    rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
+  fi
+  return "$operation_status"
+}
+
 acquire_operation_lock() {
 if [ "$DRY_RUN" -eq 0 ]; then
   if ! mkdir "$OPERATION_LOCK_DIR" 2>/dev/null; then
     echo "Another Codex Chef operation is already in progress for $CODEX_HOME_DIR; refusing concurrent install." >&2
     exit 1
   fi
-  printf 'pid=%s\noperation=install\nstarted_at=%s\n' "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$OPERATION_LOCK_OWNER"
-  cleanup_operation_lock() {
-    operation_status=$?
-    if [ "$OPERATION_JOURNAL_ACTIVE" -eq 1 ]; then
-      if [ "$operation_status" -eq 0 ]; then
-        node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" complete >/dev/null 2>&1 || true
-      else
-        node "$OPERATION_JOURNAL" rollback "$BACKUP_ROOT" - "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR" >&2 || true
-        if [ -n "$GIT_GUARD_RECEIPT" ] && [ -f "$GIT_GUARD_RECEIPT" ]; then
-          GIT_GUARD_ROLLBACK=("$REPO_ROOT/scripts/manage-global-git-guards.mjs" "restore" "--home" "$HOME" "--receipt" "$GIT_GUARD_RECEIPT" "--json")
-          if [ "${GIT_CONFIG_GLOBAL:-}" != "" ]; then GIT_GUARD_ROLLBACK+=("--git-config-global" "$GIT_CONFIG_GLOBAL"); fi
-          node "${GIT_GUARD_ROLLBACK[@]}" >&2 || true
-        fi
-        node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" failed >/dev/null 2>&1 || true
-      fi
-    fi
-    if [ -f "$OPERATION_LOCK_OWNER" ] && grep -Fqx "pid=$$" "$OPERATION_LOCK_OWNER"; then
-      rm -f "$OPERATION_LOCK_OWNER"
-      rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
-    fi
-  }
-  trap cleanup_operation_lock EXIT HUP INT TERM
+  if ! printf 'id=%s\npid=%s\noperation=install\nstarted_at=%s\n' "$OPERATION_LOCK_ID" "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$OPERATION_LOCK_OWNER"; then
+    rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
+    echo "Could not record the Codex Chef operation lock owner." >&2
+    exit 1
+  fi
+  OPERATION_LOCK_HELD=1
+  trap 'cleanup_operation_lock' EXIT HUP INT TERM
 fi
 }
 

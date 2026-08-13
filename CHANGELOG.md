@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.5.70 - 2026-08-14
+
+- Fix Unix installer operation-lock cleanup so a completed install releases only its uniquely identified lock and cannot block a later install for the same Codex home.
+
 ## 0.5.69 - 2026-08-14
 
 - Fix cross-platform installer-alignment validation by resolving the fixture contract for the host platform before comparing it with the host installer preflight.
