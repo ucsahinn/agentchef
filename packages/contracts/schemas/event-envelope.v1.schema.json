@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codex-chef.dev/contracts/event-envelope.v1.schema.json",
+  "title": "Codex Chef suite observation envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "eventType", "occurredAt", "producer", "correlation", "payload"],
+  "properties": {
+    "schemaVersion": { "pattern": "^1\\.[0-9]+$", "type": "string" },
+    "eventId": { "minLength": 1, "type": "string" },
+    "eventType": { "enum": ["suite.snapshot", "run.observed", "approval.observed", "capability.observed", "projection.degraded"] },
+    "occurredAt": { "format": "date-time", "type": "string" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version"],
+      "properties": {
+        "product": { "enum": ["chef", "control", "kitchen"] },
+        "version": { "minLength": 1, "type": "string" }
+      }
+    },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suiteId"],
+      "properties": {
+        "suiteId": { "minLength": 1, "type": "string" },
+        "taskId": { "minLength": 1, "type": "string" },
+        "runId": { "minLength": 1, "type": "string" }
+      }
+    },
+    "capabilities": { "type": "array", "items": { "minLength": 1, "type": "string" } },
+    "payload": { "type": "object" }
+  }
+}
