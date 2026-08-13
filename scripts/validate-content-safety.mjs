@@ -5,7 +5,7 @@ import path from "node:path";
 const root = path.resolve(process.cwd());
 const failures = [];
 
-const ignoredDirs = new Set([".git", ".serena", "node_modules", "dist", "build", "coverage", ".next", "out", "tmp", "temp"]);
+const ignoredDirs = new Set([".agentspace", ".git", ".serena", "node_modules", "dist", "build", "coverage", ".next", "out", "tmp", "temp"]);
 const textExtensions = new Set([
   ".md",
   ".json",
