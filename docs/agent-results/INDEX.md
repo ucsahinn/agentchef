@@ -61,6 +61,7 @@ Bu indeks `docs/agent-results/` altındaki görev sonuçlarını dosya adına g�
 - [TASK-MSQ2BHNM2XEX3-frontend-engineer.md](TASK-MSQ2BHNM2XEX3-frontend-engineer.md)
 - [TASK-MSQ2BHTWKDK5Q-data-engineer.md](TASK-MSQ2BHTWKDK5Q-data-engineer.md)
 - [TASK-MSQ2CF647A4DO-ekip-lideri.md](TASK-MSQ2CF647A4DO-ekip-lideri.md)
+- [TASK-MSQ6XP49NU55S-gelistirici.md](TASK-MSQ6XP49NU55S-gelistirici.md)
 - [TASK-MSQ6XPFG8LARL-chef-portability.md](TASK-MSQ6XPFG8LARL-chef-portability.md)
 - [TASK-MSQ6XPHZEPUAT-ekip-lideri.md](TASK-MSQ6XPHZEPUAT-ekip-lideri.md)
 - [TASK-MSQ845BGTTGG7-workspace-e2e.md](TASK-MSQ845BGTTGG7-workspace-e2e.md)
