@@ -2,6 +2,14 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.5.71 - 2026-08-14
+
+Codex Chef 0.5.71 ensures the Unix installer releases its operation lock when a successful install finishes.
+
+### What Changed
+
+- Completes the successful operation path explicitly while preserving the exit trap for failed or interrupted installs.
+
 ## v0.5.70 - 2026-08-14
 
 Codex Chef 0.5.70 fixes Unix installer lock cleanup so completed installs do not block a later safe refresh.

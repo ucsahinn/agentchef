@@ -1024,3 +1024,8 @@ if [ "$NO_BACKUP" -ne 1 ] && [ -d "$BACKUP_ROOT" ]; then
   fi
   note "Backup: $BACKUP_ROOT"
 fi
+
+# Complete the normal path explicitly. The EXIT trap remains the fail-safe for
+# error, interrupt, and termination paths, but a successful installation must
+# release its lock before Bash tears down the process.
+cleanup_operation_lock

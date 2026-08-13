@@ -721,6 +721,9 @@ if (process.argv.includes("--safety-contract")) {
   if (!shellInstaller.includes("trap 'cleanup_operation_lock' EXIT HUP INT TERM")) {
     fail("Shell installer must register the operation-lock cleanup trap without eager expansion.");
   }
+  if (!shellInstaller.includes("cleanup_operation_lock\n")) {
+    fail("Shell installer must explicitly release its operation lock on the normal completion path.");
+  }
   if (!safetyHelper.includes('import { resolveInstallContract } from "./install-contract.mjs"')) {
     fail("Installer safety preflight must derive its selected targets from the authoritative install contract.");
   }

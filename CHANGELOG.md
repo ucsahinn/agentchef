@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.5.71 - 2026-08-14
+
+- Explicitly complete the Unix installer operation journal and release its owned lock on the successful path; retain the exit trap for failure and interruption recovery.
+
 ## 0.5.70 - 2026-08-14
 
 - Fix Unix installer operation-lock cleanup so a completed install releases only its uniquely identified lock and cannot block a later install for the same Codex home.
