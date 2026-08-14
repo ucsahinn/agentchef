@@ -10,7 +10,7 @@ Codex Chef 0.5.72, Unix installer'in henuz var olmayan bir Codex home ile guvenl
 
 - Atomik home-bazli kilidi almadan once secilen Unix `CODEX_HOME` dizinini olusturur, eszamanli kurulum reddini korur ve her iki kosudan sonra kilidin bulunmadigini denetleyen gercek iki-kurulum regresyon testi ekler.
 - Routing ciktisinda izole AgentSpace worker oturum politikasini (`workspace-write`, `on-request`, `auto_review`) uzman rolunun kendi sandbox sinirindan ayri gosterir.
-- Incelenmis suite, tehdit ve tasinabilirlik sozlesmelerini; kaynak paketine ve tam test kapisina dahil edilen private, fail-closed observation-envelope paketiyle birlikte ekler.
+- Incelenmis suite, tehdit ve tasinabilirlik sozlesmelerini; kaynak paketine ve tam test kapisina dahil edilen private, fail-closed observation-envelope paketi ve Chef module manifest/compatibility dogrulamasiyla birlikte ekler.
 - Legacy GPT Pro proje exporter'ini external-review manifest semalarinin `1.0.0` ve `1.1.0` surumleriyle uyumlu tutar.
 
 ## v0.5.71 - 2026-08-14
