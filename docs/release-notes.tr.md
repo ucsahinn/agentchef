@@ -4,7 +4,10 @@ Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski müh
 
 ## v0.5.72 - 2026-08-14
 
-Codex Chef 0.5.72, Unix installer'in henuz var olmayan bir Codex home ile guvenle baslamasini saglar ve islem kilidinin hemen sonraki yeniden kurulumdan once serbest birakildigini kanitlar.
+Codex Chef 0.5.72, son bagimsiz Codex Chef bakim surumudur. Incelenmis
+bagimsiz kurulum, onizleme, yedekleme, repair ve runtime dogrulama akislari
+korunur; sonraki urun fazi Chef'i Kitchen'in dahili modul sinirinin arkasina
+tasir.
 
 ### Neler Degisti?
 
@@ -12,6 +15,26 @@ Codex Chef 0.5.72, Unix installer'in henuz var olmayan bir Codex home ile guvenl
 - Routing ciktisinda izole AgentSpace worker oturum politikasini (`workspace-write`, `on-request`, `auto_review`) uzman rolunun kendi sandbox sinirindan ayri gosterir.
 - Incelenmis suite, tehdit ve tasinabilirlik sozlesmelerini; kaynak paketine ve tam test kapisina dahil edilen private, fail-closed observation-envelope paketi ve Chef module manifest/compatibility dogrulamasiyla birlikte ekler.
 - Legacy GPT Pro proje exporter'ini external-review manifest semalarinin `1.0.0` ve `1.1.0` surumleriyle uyumlu tutar.
+- Canonical yonetilen-home kilitleri, dayanikli islem/update recovery receipt'leri,
+  guvenli pinned-skill compensation ve restore ile GPT Pro teslimi icin atomik
+  staging ekler. Kesilen islemler, kismi yayim sonucunu basarili gostermek
+  yerine recovery kaydi ile fail-closed olur.
+- Git-guard receipt'lerini, sahipligi kanitlanmis stale-process temizligini ve
+  Serena'nin erken baslangic hatasi yonetimini sertlestirir; ilgili contention,
+  rollback ve lifecycle regression kapsamini genisletir.
+- Esdeger fail-closed sinir vakalarinda yalnizca tekrarlayan launcher
+  cagrilarini kaldirarak, desteklenen installer sozlesmesini degistirmeden
+  representative gercek installer smoke kapsamini korur.
+
+### Urun Siniri
+
+Bu surum bagimsiz kurulabilir kalir ve bu repoda belgelenen uyumluluk
+taahhutlerini tasir. Kitchen'i kurmaz; global Codex, Agents, Git, Brain,
+oturum, credential veya cache durumunu Kitchen'a tasimaz. Kitchen migration
+cutover sonrasinda Kitchen tek public installer ve release train olacak;
+Chef, [ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
+uyumluluk ve migration kurallariyla yonetilen versioned bir dahili modul
+olacak.
 
 ## v0.5.71 - 2026-08-14
 
