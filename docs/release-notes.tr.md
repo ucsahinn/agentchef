@@ -2,12 +2,35 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.5.73 - 2026-08-14
+
+Codex Chef 0.5.73 son bagimsiz Codex Chef bakim surumudur. Bagimsiz kurulum
+sozlesmesini degistirmeden, 0.5.72'de macOS CI tarafinda gorulen regresyonu
+duzeltir.
+
+### Neler Degisti?
+
+- Unix installer'daki Bash 4'e ozel `mapfile` cagrilarini, operation-lock root
+  ve pinned-skill rollback receipt'leri icin Bash 3.2 uyumlu okumalarla
+  degistirir.
+- Installer smoke calismadan once macOS sistem Bash uyumlulugunu kontrol eden
+  bir portability regression kapisi ekler.
+
+### Urun Siniri
+
+Bu surum bagimsiz kurulabilir kalir ve bu repoda belgelenen uyumluluk
+taahhutlerini tasir. Kitchen'i kurmaz; global Codex, Agents, Git, Brain,
+oturum, credential veya cache durumunu Kitchen'a tasimaz. Kitchen migration
+cutover sonrasinda Kitchen tek public installer ve release train olacak;
+Chef, [ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
+uyumluluk ve migration kurallariyla yonetilen versioned bir dahili modul
+olacak.
+
 ## v0.5.72 - 2026-08-14
 
-Codex Chef 0.5.72, son bagimsiz Codex Chef bakim surumudur. Incelenmis
-bagimsiz kurulum, onizleme, yedekleme, repair ve runtime dogrulama akislari
-korunur; sonraki urun fazi Chef'i Kitchen'in dahili modul sinirinin arkasina
-tasir.
+Codex Chef 0.5.72, 0.5.73'un korudugu incelenmis bagimsiz kurulum, onizleme,
+yedekleme, repair ve runtime dogrulama akislarinin standalone bakim surumunu
+baslatti.
 
 ### Neler Degisti?
 
@@ -25,16 +48,6 @@ tasir.
 - Esdeger fail-closed sinir vakalarinda yalnizca tekrarlayan launcher
   cagrilarini kaldirarak, desteklenen installer sozlesmesini degistirmeden
   representative gercek installer smoke kapsamini korur.
-
-### Urun Siniri
-
-Bu surum bagimsiz kurulabilir kalir ve bu repoda belgelenen uyumluluk
-taahhutlerini tasir. Kitchen'i kurmaz; global Codex, Agents, Git, Brain,
-oturum, credential veya cache durumunu Kitchen'a tasimaz. Kitchen migration
-cutover sonrasinda Kitchen tek public installer ve release train olacak;
-Chef, [ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
-uyumluluk ve migration kurallariyla yonetilen versioned bir dahili modul
-olacak.
 
 ## v0.5.71 - 2026-08-14
 

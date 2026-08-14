@@ -420,8 +420,10 @@ release_operation_locks() {
 rollback_skill_compensations() {
   if [ ! -f "$SKILL_COMPENSATION_RECEIPT_LOG" ]; then return; fi
   local receipts=()
-  mapfile -t receipts < "$SKILL_COMPENSATION_RECEIPT_LOG"
   local receipt_path
+  while IFS= read -r receipt_path || [ -n "$receipt_path" ]; do
+    receipts+=("$receipt_path")
+  done < "$SKILL_COMPENSATION_RECEIPT_LOG"
   for ((receipt_index=${#receipts[@]} - 1; receipt_index >= 0; receipt_index--)); do
     receipt_path="${receipts[$receipt_index]}"
     if [ -n "$receipt_path" ]; then
@@ -455,11 +457,20 @@ cleanup_operation_lock() {
 
 acquire_operation_lock() {
   if [ "$DRY_RUN" -eq 1 ]; then return; fi
-  mapfile -t OPERATION_LOCK_ROOTS < <(node --input-type=module -e '
+  local canonical_lock_roots
+  if ! canonical_lock_roots="$(node --input-type=module -e '
     import { pathToFileURL } from "node:url";
     const { canonicalizeOperationLockRoots } = await import(pathToFileURL(process.argv[1]).href);
     for (const root of canonicalizeOperationLockRoots({ roots: process.argv.slice(2) })) console.log(root);
-  ' "$REPO_ROOT/scripts/lib/operation-lock.mjs" "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR")
+  ' "$REPO_ROOT/scripts/lib/operation-lock.mjs" "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR")"; then
+    echo "Could not resolve managed roots for the Codex Chef operation lock." >&2
+    exit 1
+  fi
+  OPERATION_LOCK_ROOTS=()
+  local resolved_root
+  while IFS= read -r resolved_root; do
+    if [ -n "$resolved_root" ]; then OPERATION_LOCK_ROOTS+=("$resolved_root"); fi
+  done <<< "$canonical_lock_roots"
   if [ "${#OPERATION_LOCK_ROOTS[@]}" -eq 0 ]; then
     echo "Could not resolve managed roots for the Codex Chef operation lock." >&2
     exit 1

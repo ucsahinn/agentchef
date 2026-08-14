@@ -1,6 +1,6 @@
 {
   "name": "codex-chef",
-  "version": "0.5.72",
+  "version": "0.5.73",
   "private": true,
   "description": "Codex Chef: cross-platform Codex setup kit with agents, skills, MCPs, safe installers, and validation gates.",
   "files": [
@@ -79,6 +79,7 @@
     "test:chef-module-manifest": "node --test scripts/tests/chef-module-manifest.test.mjs",
     "test:contracts": "node --test packages/contracts/test/*.test.mjs",
     "test:unix-installer-lock": "node --test scripts/tests/unix-installer-lock.test.mjs",
+    "test:bash-portability": "node --test scripts/tests/bash-portability.test.mjs",
     "test:routing-recommendation": "node --test scripts/tests/routing-recommendation.test.mjs",
     "validate:tokens": "node scripts/validate-token-surfaces.mjs",
     "validate:adaptive-runtime": "node scripts/validate-adaptive-runtime.mjs",

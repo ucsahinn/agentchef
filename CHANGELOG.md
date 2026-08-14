@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+## 0.5.73 - 2026-08-14
+
+- Finalize the last standalone Codex Chef maintenance release with macOS system
+  Bash 3.2 compatibility: replace Bash 4-only `mapfile` use in lock-root and
+  rollback-receipt collection with portable array reads, and gate the
+  portability workflow with a regression test before installer smoke runs.
+
 ## 0.5.72 - 2026-08-14
 
-- Finalize the last standalone Codex Chef maintenance release. Its reviewed
+- Prepare the standalone Codex Chef maintenance release line. Its reviewed
   PowerShell and Bash installers, safe preview, backup, repair, and runtime
   verification paths remain supported for this release; the later Kitchen
   cutover does not alter this release or copy user-global state into Kitchen.

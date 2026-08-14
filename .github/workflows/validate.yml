@@ -118,6 +118,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: bash -n scripts/install.sh
       - run: npm run validate:installer
+      - run: npm run test:bash-portability
       - run: npm run validate:installer-smoke
       - if: matrix.node == 18
         run: >-

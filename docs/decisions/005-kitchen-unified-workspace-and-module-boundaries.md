@@ -81,7 +81,7 @@ install targets after the Kitchen migration cutover.
 
 ### Standalone release freeze
 
-Codex Chef `0.5.72` is the final standalone maintenance release. It remains a
+Codex Chef `0.5.73` is the final standalone maintenance release. It remains a
 complete, independently installable product with its existing preview,
 backup, repair, and verification guarantees. This decision does not authorize
 removing its installers, repointing its documentation to Kitchen, or coupling

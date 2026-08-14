@@ -9,7 +9,7 @@ Kitchen implementation/package/Electron evidence is user-owned and excluded.
 
 | Gate | Evidence | Status | Release interpretation |
 | --- | --- | --- | --- |
-| Chef source release metadata | `package.json`: private `0.5.72`; explicit package allowlist; release validator | pass | source-starter release check passes, not a Kitchen product publication |
+| Chef source release metadata | `package.json`: private `0.5.73`; explicit package allowlist; release validator | pass | source-starter release check passes, not a Kitchen product publication |
 | Chef/Brain safety | Brain suite 32/32 and `validate:brain` passed | pass | explicit-target, preview-first and ACL contracts are covered |
 | Shared event contracts | envelope/fixture/compatibility suite 20/20 | pass | v1 payload and Chef/Control metadata parity are fail-closed |
 | Chef module metadata | `chef-module.manifest.v1.json` + validator target tests | pass | declares safe runtime/health/no-copy inputs only |
