@@ -17,8 +17,8 @@ const repoRoot = path.resolve(scriptDir, "..");
 
 function parseArguments(argv) {
   const [command, ...args] = argv;
-  if (!command || !["preview", "apply", "restore"].includes(command)) {
-    throw new Error("Usage: manage-global-git-guards.mjs <preview|apply|restore> [options] --json");
+  if (!command || !["preview", "apply", "restore", "recover"].includes(command)) {
+    throw new Error("Usage: manage-global-git-guards.mjs <preview|apply|restore|recover> [options] --json");
   }
   const options = {
     command,
@@ -57,11 +57,11 @@ function parseArguments(argv) {
     index += 1;
   }
   if (!options.json) throw new Error("--json is required so callers receive a machine-readable result.");
-  if ((command === "apply" || command === "restore") && !options.receiptPath) {
+  if ((command === "apply" || command === "restore" || command === "recover") && !options.receiptPath) {
     throw new Error(`${command} requires --receipt <path>.`);
   }
-  if (command === "restore" && (options.adoptFiles.length > 0 || options.adoptKeys.length > 0)) {
-    throw new Error("restore does not accept adoption flags.");
+  if ((command === "restore" || command === "recover") && (options.adoptFiles.length > 0 || options.adoptKeys.length > 0)) {
+    throw new Error(`${command} does not accept adoption flags.`);
   }
   return options;
 }
@@ -110,9 +110,10 @@ function main() {
   const result = restoreGlobalGitGuards({
     home: options.home,
     gitConfigGlobal: options.gitConfigGlobal,
-    receipt: readReceipt(options.receiptPath)
+    receipt: readReceipt(options.receiptPath),
+    receiptPath: path.resolve(options.receiptPath)
   });
-  process.stdout.write(`${JSON.stringify({ ok: true, restored: result.restored }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, restored: result.restored, recovered: result.recovered }, null, 2)}\n`);
 }
 
 try {

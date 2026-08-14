@@ -420,19 +420,22 @@ Yeni backup'lar ayrica `.codex-chef-backup.json` manifest'i tasir. Bu kucuk
 dosya operation, package version, platform, backup-relative path, size, hash ve
 metadata yazilirken gorulen archive issue'larini kaydeder.
 
-Ilk managed write oncesinde home basina bir islem kilidi ve atomik
-`.codex-chef-operation-journal.json` olusturulur. Tamamlanan her managed write,
-sonraki hash'ini ve varsa tam backup karsiligini kaydeder. Daha sonraki bir
-installer adimi hata verirse yalnizca hala installer'in yazdigi hash ile eslesen
-hedef geri yuklenir veya kaldirilir; sonradan degismis hedef korunur ve journal
-kurtarma kaniti olarak kalir. Son manifest yazilmadan kesilen islemde journal,
-ayni hash-dogrulanmis restore inventory'sini saglar.
+Ilk managed write oncesinde atomik `.codex-chef-operation-journal.json`
+olusturulur; canonical managed home'lar farkliysa ikisi altinda da ayri sahipli
+islem kilidi alinir. Bir write mutation oncesinde journal'a durably prepare
+edilir, ancak write tamamlandiktan sonra applied olarak isaretlenir. Daha
+sonraki bir installer adimi hata verirse yalnizca hala installer'in yazdigi hash
+ile eslesen hedef geri yuklenir veya kaldirilir; sonradan degismis hedef korunur
+ve journal kurtarma kaniti olarak kalir. Tamamlanmis commit-pinned skill
+kurulumlari da journal recovery'den once compensation receipt'leriyle geri
+alinir. Son manifest yazilmadan kesilen islemde journal, ayni
+hash-dogrulanmis restore inventory'sini saglar.
 
-Unix'te installer, atomik home-bazli kilidi almadan once eksik `CODEX_HOME`
-dizinini hazirlar. Kilit dizini cakismasi eszamanli islem olarak fail-closed
-kalir. Normal tamamlanma journal'i acikca bitirir ve yalniz sahip kimligi mevcut
-installer ile eslesen kilidi serbest birakir; exit trap hata ve kesinti yollarinda
-ayni temizligi korur.
+Unix'te installer eksik bir managed home dizinini atomik kilit almadan once
+hazirlar. Herhangi bir kilit-dizini cakismasi eszamanli islem olarak fail-closed
+olur. Normal tamamlanma journal'i acikca bitirir ve yalniz sahip kimligi mevcut
+installer ile eslesen kilitleri serbest birakir; exit trap hata ve kesinti
+yollarinda ayni temizligi korur.
 
 Installer şu managed target'ları replace etmeden önce yedekler:
 

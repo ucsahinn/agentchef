@@ -393,6 +393,40 @@ function runSafetyPreflight(codexHome, agentsHome, extraArgs = [], extraEnv = {}
   });
 }
 
+function runInstallSurfacePreflight(codexHome, agentsHome) {
+  return spawnSync(process.execPath, [
+    "scripts/assert-install-surface.mjs",
+    "--codex-home",
+    codexHome,
+    "--agents-home",
+    agentsHome
+  ], {
+    cwd: root,
+    env: process.env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+    windowsHide: true
+  });
+}
+
+function runDirectSkillTargetPreflight(source, target, allowAdopt = false) {
+  return spawnSync(process.execPath, [
+    "scripts/manage-direct-skill-target.mjs",
+    source,
+    target,
+    "--check",
+    ...(allowAdopt ? ["--allow-adopt"] : [])
+  ], {
+    cwd: root,
+    env: process.env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30000,
+    windowsHide: true
+  });
+}
+
 function assertNoBackupInventoryGate() {
   const scenarios = [
     {
@@ -819,9 +853,13 @@ function initializeCuratedSkillInstallerFixture() {
   };
 }
 
-const zeroRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [zero] #-"));
-const zeroCodexHome = path.join(zeroRoot, ".codex");
-const zeroAgentsHome = path.join(zeroRoot, ".agents");
+// A clean install with independently rooted homes covers both the zero-config
+// and split-home contracts. Keep the homes in separate temp roots rather than
+// repeating the same full installation later in this smoke suite.
+const zeroCodexRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [zero-codex] #-"));
+const zeroAgentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [zero-agents] #-"));
+const zeroCodexHome = path.join(zeroCodexRoot, ".codex");
+const zeroAgentsHome = path.join(zeroAgentsRoot, ".agents");
 const previewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [preview] #-"));
 const previewCodexHome = path.join(previewRoot, ".codex");
 const previewAgentsHome = path.join(previewRoot, ".agents");
@@ -915,6 +953,9 @@ progress("zero-config install");
 const zeroOutput = assertRunOk(runInstaller(zeroCodexHome, zeroAgentsHome), "Installer zero-config smoke");
 assertInstalledBaseline(zeroCodexHome, zeroAgentsHome, "Installer zero-config smoke");
 assertDefaultBoundaries(zeroOutput, "Installer zero-config smoke");
+if (canonicalPathForCompare(path.dirname(zeroCodexHome)) === canonicalPathForCompare(path.dirname(zeroAgentsHome))) {
+  fail("Installer zero-config smoke must use independent CODEX_HOME and AGENTS_HOME roots.");
+}
 
 const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [existing] #-"));
 const codexHome = path.join(existingRoot, ".codex");
@@ -973,25 +1014,13 @@ if (!fs.existsSync(pluginExtraPath)) {
   fail("Installer idempotent smoke must preserve extra files in the managed plugin directory unless prune is explicit.");
 }
 
-const splitCodexRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [split-codex] #-"));
-const splitAgentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [split-agents] #-"));
-const splitCodexHome = path.join(splitCodexRoot, ".codex");
-const splitAgentsHome = path.join(splitAgentsRoot, ".agents");
-progress("independent-home install");
-const splitOutput = assertRunOk(
-  runInstaller(splitCodexHome, splitAgentsHome),
-  "Installer independent-home smoke"
-);
-assertInstalledBaseline(splitCodexHome, splitAgentsHome, "Installer independent-home smoke");
-assertDefaultBoundaries(splitOutput, "Installer independent-home smoke");
-
 if (process.argv.includes("--core")) {
   if (failures.length > 0) {
     console.error("Installer core smoke validation failed:");
     for (const failure of failures) console.error(`- ${failure}`);
     process.exit(1);
   }
-  console.log("Installer core smoke validation passed: preview, zero-config, existing-config, idempotent, and independent-home scenarios.");
+  console.log("Installer core smoke validation passed: preview, zero-config with independent homes, existing-config, and idempotent scenarios.");
   process.exit(0);
 }
 
@@ -1020,6 +1049,7 @@ const directAdoptionScenarios = [
       : ["--adopt-direct-skill=context-budget-planner"]
   }
 ];
+const foreignSkillFixtures = [];
 for (const scenario of directAdoptionScenarios) {
   const collisionRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), `Codex Chef Install Smoke [foreign-${scenario.name}] #-`)
@@ -1051,12 +1081,31 @@ for (const scenario of directAdoptionScenarios) {
   ) {
     fail(`Installer foreign ${scenario.display} collision must preserve every user-owned file byte-for-byte.`);
   }
-  const adoptedOutput = assertRunOk(
-    runInstaller(collisionCodexHome, collisionAgentsHome, scenario.flagArgs),
-    `Installer explicit ${scenario.display} adoption smoke`
-  );
-  assertInstalledBaseline(collisionCodexHome, collisionAgentsHome, `Installer explicit ${scenario.display} adoption smoke`);
-  assertDefaultBoundaries(adoptedOutput, `Installer explicit ${scenario.display} adoption smoke`);
+  foreignSkillFixtures.push({ scenario, foreignSkill, foreignSentinel });
+}
+
+// Keep the fail-closed check independent for every managed skill, then run
+// all explicit adoption flags together once. The installer still performs a
+// real preflight and writes every selected target; this avoids repeating the
+// same full baseline install four times.
+const adoptionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [foreign-adoption] #-"));
+collisionRoots.push(adoptionRoot);
+const adoptionCodexHome = path.join(adoptionRoot, ".codex");
+const adoptionAgentsHome = path.join(adoptionRoot, ".agents");
+for (const { scenario, foreignSkill, foreignSentinel } of foreignSkillFixtures) {
+  const foreignSkillRoot = path.join(adoptionAgentsHome, "skills", scenario.name);
+  ensureDir(foreignSkillRoot);
+  fs.writeFileSync(path.join(foreignSkillRoot, "SKILL.md"), foreignSkill, "utf8");
+  fs.writeFileSync(path.join(foreignSkillRoot, "user-owned.txt"), foreignSentinel, "utf8");
+}
+const adoptedOutput = assertRunOk(
+  runInstaller(adoptionCodexHome, adoptionAgentsHome, directAdoptionScenarios.flatMap((scenario) => scenario.flagArgs)),
+  "Installer explicit direct-skill adoption smoke"
+);
+assertInstalledBaseline(adoptionCodexHome, adoptionAgentsHome, "Installer explicit direct-skill adoption smoke");
+assertDefaultBoundaries(adoptedOutput, "Installer explicit direct-skill adoption smoke");
+for (const { scenario, foreignSentinel } of foreignSkillFixtures) {
+  const foreignSkillRoot = path.join(adoptionAgentsHome, "skills", scenario.name);
   if (
     read(path.join(foreignSkillRoot, "SKILL.md"))
     !== read(path.join(root, "plugins", "codex-chef-workflows", "skills", scenario.name, "SKILL.md"))
@@ -1092,7 +1141,16 @@ for (const variant of ["root-link", "nested-link"]) {
   const before = variant === "root-link"
     ? read(path.join(externalRoot, "SKILL.md"))
     : read(path.join(externalRoot, "agents", "openai.yaml"));
-  const linkedResult = runInstaller(linkCodexHome, linkAgentsHome, [adoptFlag]);
+  const linkedResult = variant === "root-link"
+    // Keep one end-to-end installer invocation for the direct-skill linked
+    // target boundary. The nested case below calls the exact preflight helper
+    // that install.ps1/install.sh invoke before acquiring a write lock.
+    ? runInstaller(linkCodexHome, linkAgentsHome, [adoptFlag])
+    : runDirectSkillTargetPreflight(
+      path.join(root, "plugins", "codex-chef-workflows", "skills", "fetch"),
+      linkFetchRoot,
+      true
+    );
   if (linkedResult.error) {
     fail(`Installer ${variant} Fetch collision could not run: ${linkedResult.error.message}`);
   } else if (linkedResult.status === 0) {
@@ -1120,7 +1178,11 @@ const missingExternalRoot = path.join(danglingRoot, "missing-external-fetch");
 ensureDir(path.dirname(danglingFetchRoot));
 fs.symlinkSync(missingExternalRoot, danglingFetchRoot, process.platform === "win32" ? "junction" : "dir");
 for (const args of [[], [adoptFlag]]) {
-  const danglingResult = runInstaller(danglingCodexHome, danglingAgentsHome, args);
+  const danglingResult = runDirectSkillTargetPreflight(
+    path.join(root, "plugins", "codex-chef-workflows", "skills", "fetch"),
+    danglingFetchRoot,
+    args.length > 0
+  );
   if (danglingResult.error) {
     fail(`Installer dangling Fetch collision could not run: ${danglingResult.error.message}`);
   } else if (danglingResult.status === 0) {
@@ -1154,7 +1216,11 @@ for (const scenario of [
   ensureDir(selectedHome);
   fs.symlinkSync(externalRoot, path.join(selectedHome, "plugins"), process.platform === "win32" ? "junction" : "dir");
 
-  const linkedAncestorResult = runInstaller(linkedAncestorCodexHome, linkedAncestorAgentsHome);
+  const linkedAncestorResult = scenario.home === "codex"
+    // Retain one end-to-end installer assertion for the install-surface
+    // boundary; the agents-path variant exercises the same canonical helper.
+    ? runInstaller(linkedAncestorCodexHome, linkedAncestorAgentsHome)
+    : runInstallSurfacePreflight(linkedAncestorCodexHome, linkedAncestorAgentsHome);
   if (linkedAncestorResult.error) {
     fail(`Installer ${scenario.name} safety check could not run: ${linkedAncestorResult.error.message}`);
   } else if (linkedAncestorResult.status === 0) {
@@ -1182,7 +1248,7 @@ for (const home of ["codex", "agents"]) {
   fs.writeFileSync(path.join(externalRoot, "sentinel.txt"), "unchanged\n", "utf8");
   fs.symlinkSync(externalRoot, selectedHome, process.platform === "win32" ? "junction" : "dir");
 
-  const linkedHomeResult = runInstaller(linkedHomeCodex, linkedHomeAgents);
+  const linkedHomeResult = runInstallSurfacePreflight(linkedHomeCodex, linkedHomeAgents);
   if (linkedHomeResult.error) {
     fail(`Installer ${home} home-link safety check could not run: ${linkedHomeResult.error.message}`);
   } else if (linkedHomeResult.status === 0) {
@@ -1205,4 +1271,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Installer smoke validation passed with temp targets: ${previewRoot}, ${zeroRoot}, ${existingRoot}, ${splitCodexRoot}, ${splitAgentsRoot}, ${collisionRoots.join(", ")}`);
+console.log(`Installer smoke validation passed with temp targets: ${previewRoot}, ${zeroCodexRoot}, ${zeroAgentsRoot}, ${existingRoot}, ${collisionRoots.join(", ")}`);

@@ -9,8 +9,24 @@ function sha256(filePath) {
 
 function atomicWrite(filePath, value) {
   const temporary = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+  const file = fs.openSync(temporary, "wx");
+  try {
+    fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8" });
+    fs.fsyncSync(file);
+  } finally {
+    fs.closeSync(file);
+  }
   fs.renameSync(temporary, filePath);
+  try {
+    const directory = fs.openSync(path.dirname(filePath), "r");
+    try {
+      fs.fsyncSync(directory);
+    } finally {
+      fs.closeSync(directory);
+    }
+  } catch (error) {
+    if (!["EINVAL", "EPERM", "EISDIR"].includes(error?.code)) throw error;
+  }
 }
 
 function fingerprint(targetPath) {
@@ -47,10 +63,44 @@ function readInProgressJournal(backupRoot) {
   return { journalPath, journal };
 }
 
+function assertBackupWithinRoot(backupRoot, backup) {
+  const resolvedBackup = backup && backup !== "-" ? path.resolve(backup) : null;
+  if (resolvedBackup && resolvedBackup !== backupRoot && !resolvedBackup.startsWith(`${backupRoot}${path.sep}`)) {
+    throw new Error("Operation journal backup path escapes its backup root.");
+  }
+  return resolvedBackup;
+}
+
+function prepareMutation(journal, journalPath, backupRoot, { target, backup = null }) {
+  const resolvedTarget = path.resolve(target);
+  const resolvedBackup = assertBackupWithinRoot(backupRoot, backup);
+  if (journal.mutations.some((entry) => entry.target === resolvedTarget)) {
+    throw new Error(`Operation journal already prepared target: ${resolvedTarget}`);
+  }
+  journal.mutations.push({ target: resolvedTarget, backup: resolvedBackup, before: fingerprint(resolvedTarget), output: null, phase: "prepared" });
+  atomicWrite(journalPath, journal);
+}
+
+function markAppliedMutation(journal, journalPath, target) {
+  const resolvedTarget = path.resolve(target);
+  const mutation = journal.mutations.find((entry) => entry.target === resolvedTarget);
+  if (!mutation || mutation.phase !== "prepared") throw new Error(`Operation journal has no prepared mutation: ${resolvedTarget}`);
+  mutation.output = fingerprint(resolvedTarget);
+  mutation.phase = "applied";
+  atomicWrite(journalPath, journal);
+}
+
+function assertReadyToComplete(journal) {
+  if (journal.mutations.some((mutation) => mutation.phase === "prepared")) {
+    throw new Error("Operation journal cannot complete with prepared mutations.");
+  }
+}
+
 export function createOperationJournal({ backupRoot, operation }) {
   if (!backupRoot || !operation) throw new TypeError("backupRoot and operation are required.");
-  fs.mkdirSync(backupRoot, { recursive: true });
-  const journalPath = path.join(backupRoot, ".codex-chef-operation-journal.json");
+  const resolvedBackupRoot = path.resolve(backupRoot);
+  fs.mkdirSync(resolvedBackupRoot, { recursive: true });
+  const journalPath = path.join(resolvedBackupRoot, ".codex-chef-operation-journal.json");
   if (fs.existsSync(journalPath)) {
     throw new Error(`Operation journal already exists: ${journalPath}`);
   }
@@ -77,12 +127,19 @@ export function createOperationJournal({ backupRoot, operation }) {
           return;
         }
         if (!fileStat.isFile()) throw new Error(`Operation journal can record regular files only: ${filePath}`);
-        journal.backups.push({ path: path.relative(backupRoot, filePath).split(path.sep).join("/"), size: fileStat.size, sha256: sha256(filePath) });
+        journal.backups.push({ path: path.relative(resolvedBackupRoot, filePath).split(path.sep).join("/"), size: fileStat.size, sha256: sha256(filePath) });
       };
       record(backupPath);
       atomicWrite(journalPath, journal);
     },
+    prepareMutation({ target, backup = null }) {
+      prepareMutation(journal, journalPath, resolvedBackupRoot, { target, backup });
+    },
+    markApplied(target) {
+      markAppliedMutation(journal, journalPath, target);
+    },
     finish(state = "complete") {
+      if (state === "complete") assertReadyToComplete(journal);
       journal.state = state;
       journal.finishedAt = new Date().toISOString();
       atomicWrite(journalPath, journal);
@@ -94,8 +151,8 @@ export function createOperationJournal({ backupRoot, operation }) {
 // It intentionally has no delete or recovery command.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, backupRoot, value, extra] = process.argv.slice(2);
-  if (!backupRoot || !value || !["start", "record", "track", "track-tree", "finish", "rollback"].includes(command)) {
-    console.error("Usage: node operation-journal.mjs <start|record|track|track-tree|finish|rollback> <backup-root> <operation|backup-path|target|complete|failed> [backup-path|source-root|allowed-root ...]");
+  if (!backupRoot || !value || !["start", "record", "prepare", "applied", "track", "track-tree", "prepare-tree", "applied-tree", "finish", "rollback"].includes(command)) {
+    console.error("Usage: node operation-journal.mjs <start|record|prepare|applied|track|track-tree|prepare-tree|applied-tree|finish|rollback> <backup-root> <operation|backup-path|target|complete|failed> [backup-path|source-root|allowed-root ...]");
     process.exitCode = 2;
   } else {
     const resolvedBackupRoot = path.resolve(backupRoot);
@@ -105,6 +162,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const { journalPath, journal } = readInProgressJournal(resolvedBackupRoot);
       if (command === "finish") {
         if (!["complete", "failed"].includes(value)) throw new Error("Operation journal finish state must be complete or failed.");
+        if (value === "complete") assertReadyToComplete(journal);
         journal.state = value;
         journal.finishedAt = new Date().toISOString();
         atomicWrite(journalPath, journal);
@@ -125,13 +183,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         };
         record(target);
         atomicWrite(journalPath, journal);
-      } else if (command === "track" || command === "track-tree") {
+      } else if (command === "prepare") {
+        prepareMutation(journal, journalPath, resolvedBackupRoot, { target: value, backup: extra });
+      } else if (command === "applied") {
+        markAppliedMutation(journal, journalPath, value);
+      } else if (["track", "track-tree", "prepare-tree", "applied-tree"].includes(command)) {
         const target = path.resolve(value);
         const track = (trackedTarget, backupValue) => {
-          const backup = backupValue && backupValue !== "-" ? path.resolve(backupValue) : null;
-          if (backup && (backup !== resolvedBackupRoot && !backup.startsWith(`${resolvedBackupRoot}${path.sep}`))) {
-            throw new Error("Operation journal backup path escapes its backup root.");
-          }
+          const backup = assertBackupWithinRoot(resolvedBackupRoot, backupValue);
           const existing = journal.mutations.find((entry) => entry.target === trackedTarget);
           const mutation = { target: trackedTarget, backup: existing?.backup || backup, output: fingerprint(trackedTarget) };
           if (existing) Object.assign(existing, mutation);
@@ -140,9 +199,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         if (command === "track") {
           track(target, extra);
         } else {
-          if (!extra) throw new Error("Operation journal track-tree requires a source root.");
+          if (!extra) throw new Error(`Operation journal ${command} requires a source root.`);
           const sourceRoot = path.resolve(extra);
-          const backupRootForTree = process.argv[6] && process.argv[6] !== "-" ? path.resolve(process.argv[6]) : null;
+          const backupRootForTree = command === "applied-tree" || !process.argv[6] || process.argv[6] === "-"
+            ? null
+            : path.resolve(process.argv[6]);
           const walk = (directory) => {
             for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
               const sourcePath = path.join(directory, entry.name);
@@ -154,7 +215,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
                 const backupPath = backupRootForTree && fs.existsSync(path.join(backupRootForTree, relative))
                   ? path.join(backupRootForTree, relative)
                   : null;
-                track(targetPath, backupPath);
+                if (command === "prepare-tree") prepareMutation(journal, journalPath, resolvedBackupRoot, { target: targetPath, backup: backupPath });
+                else if (command === "applied-tree") markAppliedMutation(journal, journalPath, targetPath);
+                else track(targetPath, backupPath);
               }
             }
           };

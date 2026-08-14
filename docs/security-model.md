@@ -339,12 +339,16 @@ as a recovery manifest only when every recorded path, size, and SHA-256 value
 still matches the archive. This does not broaden the restore allowlist or
 permit unrecorded files.
 
-The Unix installer creates a missing selected `CODEX_HOME` before atomically
-acquiring the per-home operation lock. It never removes a pre-existing lock;
-cleanup releases only the lock whose recorded owner identity matches the
-current installer. Successful, failed, and interrupted paths share that
-ownership check, so a later install is not blocked by an owned stale lock and a
-foreign concurrent lock is not removed.
+Before mutation, installers create the atomic operation journal and acquire
+separately owned locks under both canonical managed homes when they are
+distinct. Each mutation is journal-prepared before it is made and marked
+applied only after it completes. On Unix, a missing managed home is created
+before its atomic lock is acquired. A lock collision fails closed; cleanup
+releases only locks whose recorded owner identity matches the current
+installer. Successful, failed, and interrupted paths share that ownership
+check, so foreign concurrent locks are never removed. A failed install also
+uses compensation receipts to roll back completed commit-pinned skill installs
+before journal recovery.
 
 Restore treats backup archives as untrusted input. `npm run chef -- --backups
 --backup <id> --restore` is a preview. The apply path requires `--apply`,

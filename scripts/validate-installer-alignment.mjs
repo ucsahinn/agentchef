@@ -492,9 +492,12 @@ function validateResolvedInstallContract() {
   if (JSON.stringify(safety.contract.actions) !== JSON.stringify(semanticLedger)) {
     fail("Installer preflight operation ledger must exactly match resolved IDs, kinds, destinations, keys, backup semantics, and order.");
   }
+  const canonicalDefaultOrder = manifest.operations
+    .filter((operation) => manifest.profiles.default.includes(operation.id))
+    .map((operation) => operation.id);
   if (JSON.stringify(contract.selectedComponents.map((operation) => operation.id))
-    !== JSON.stringify(manifest.profiles.default)) {
-    fail("Resolved default installer components must preserve exact manifest profile order.");
+    !== JSON.stringify(canonicalDefaultOrder)) {
+    fail("Resolved default installer components must use canonical manifest operation order.");
   }
 
   const actionById = new Map(contract.operations.map((action) => [action.id, action]));

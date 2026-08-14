@@ -398,15 +398,22 @@ export function buildPackPlan({ target, out, maxPartBytes = DEFAULT_PART_BYTES }
 export function applyPack(plan) {
   if (fs.existsSync(plan.out)) fail(`Output already exists; refusing to overwrite: ${plan.out}`);
   assertOutputOutsideTarget(plan.target, plan.out);
-  fs.mkdirSync(plan.out, { recursive: true });
-  assertOutputOutsideTarget(plan.target, plan.out);
-  for (const part of plan.parts) {
-    if (path.basename(part.name) !== part.name) {
-      fail(`Unsafe review part name: ${part.name}`, "UNSAFE_OUTPUT_PATH");
+  const staging = path.join(path.dirname(plan.out), `.${path.basename(plan.out)}.staging-${crypto.randomUUID()}`);
+  try {
+    fs.mkdirSync(staging, { recursive: false });
+    for (const part of plan.parts) {
+      if (path.basename(part.name) !== part.name) {
+        fail(`Unsafe review part name: ${part.name}`, "UNSAFE_OUTPUT_PATH");
+      }
+      fs.writeFileSync(path.join(staging, part.name), part.content, { encoding: "utf8", flag: "wx" });
     }
-    fs.writeFileSync(path.join(plan.out, part.name), part.content, { encoding: "utf8", flag: "wx" });
+    fs.writeFileSync(path.join(staging, MANIFEST_NAME), `${JSON.stringify(plan.manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    if (fs.existsSync(plan.out)) fail(`Output appeared during pack; refusing to replace: ${plan.out}`);
+    fs.renameSync(staging, plan.out);
+  } catch (error) {
+    fs.rmSync(staging, { force: true, recursive: true });
+    throw error;
   }
-  fs.writeFileSync(path.join(plan.out, MANIFEST_NAME), `${JSON.stringify(plan.manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
   return path.join(plan.out, MANIFEST_NAME);
 }
 

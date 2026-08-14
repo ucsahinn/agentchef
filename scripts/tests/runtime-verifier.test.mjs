@@ -5,6 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { resolveInstallContract } from "../lib/install-contract.mjs";
+import { writeDirectSkillMarker } from "../manage-direct-skill-target.mjs";
+import { writeMarketplaceEntry } from "../upsert-marketplace-entry.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 let baselineFixtureRoot = null;
@@ -20,16 +23,48 @@ function run(command, args, options = {}) {
   });
 }
 
+function buildRuntimeFixture(codexHome, agentsHome) {
+  const fixtureRoot = path.dirname(codexHome);
+  const contract = resolveInstallContract({
+    root,
+    platform: process.platform === "win32" ? "windows" : "unix",
+    codexHome,
+    agentsHome,
+    home: fixtureRoot
+  });
+
+  for (const action of contract.operations) {
+    const source = action.source && path.join(root, action.source);
+    if (action.kind === "copy-file") {
+      fs.mkdirSync(path.dirname(action.destination), { recursive: true });
+      fs.copyFileSync(source, action.destination);
+    } else if (action.kind === "copy-directory") {
+      fs.cpSync(source, action.destination, { recursive: true, force: false, errorOnExist: true });
+    } else if (action.kind === "generate-mcp-profile") {
+      const rendered = run(process.execPath, [
+        "scripts/merge-codex-config.mjs",
+        "--render-mcp-profile",
+        "--source", action.configSource,
+        "--template", source,
+        "--output", action.destination
+      ]);
+      assert.equal(rendered.status, 0, rendered.stderr || rendered.stdout);
+    } else if (action.kind === "write-ownership-marker") {
+      writeDirectSkillMarker(source, path.dirname(action.destination));
+    } else if (action.kind === "write-marketplace") {
+      writeMarketplaceEntry(action.destination, action.pluginTarget);
+    }
+  }
+}
+
 function installFixture(codexHome, agentsHome) {
   if (!baselineFixtureRoot) {
+    process.stderr.write("[runtime-verifier] building reusable installed fixture baseline\n");
     baselineFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-baseline-"));
     const baselineCodexHome = path.join(baselineFixtureRoot, ".codex");
     const baselineAgentsHome = path.join(baselineFixtureRoot, ".agents");
-    const env = { ...process.env, CODEX_HOME: baselineCodexHome, AGENTS_HOME: baselineAgentsHome, NO_COLOR: "1", FORCE_COLOR: "0" };
-    const result = process.platform === "win32"
-      ? run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\scripts\\install.ps1", "-PlainOutput"], { env })
-      : run("bash", ["scripts/install.sh", "--plain-output"], { env });
-    assert.equal(result.status, 0, result.stderr || result.stdout);
+    buildRuntimeFixture(baselineCodexHome, baselineAgentsHome);
+    process.stderr.write("[runtime-verifier] reusable installed fixture baseline ready\n");
   }
   fs.cpSync(path.join(baselineFixtureRoot, ".codex"), codexHome, { recursive: true, force: false, errorOnExist: true });
   fs.cpSync(path.join(baselineFixtureRoot, ".agents"), agentsHome, { recursive: true, force: false, errorOnExist: true });
@@ -55,6 +90,20 @@ test("runtime verifier help documents its effective timeout defaults", () => {
   assert.match(result.stdout, /--probe-timeout-ms <n>\s+Default timeout for non-live helper probes \(default: 30000\)/);
   assert.match(result.stdout, /--doctor-timeout-ms <n>\s+Per-doctor timeout \(default: 12000\)/);
   assert.match(result.stdout, /--mcp-timeout-ms <n>\s+MCP list timeout \(default: 15000\)/);
+});
+
+test("runtime fixture builder produces a self-contained installed baseline", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-fixture-builder-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    buildRuntimeFixture(codexHome, agentsHome);
+
+    const result = verifyOffline(codexHome, agentsHome);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 function writeEmptyMcpCodex(binDir, codexHome) {

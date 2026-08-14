@@ -53,7 +53,19 @@ export function createSerenaPool({
     if (starting.has(key)) return starting.get(key);
     const pending = (async () => {
       const backend = await startBackend(root, key);
-      entries.set(key, { key, root, backend, startedAt: clock(), lastUsedAt: clock() });
+      const child = backend?.child;
+      if ((child?.exitCode !== null && child?.exitCode !== undefined) || (child?.signalCode !== null && child?.signalCode !== undefined)) {
+        throw new Error("Serena backend exited before it became available.");
+      }
+      const entry = { key, root, backend, startedAt: clock(), lastUsedAt: clock() };
+      entries.set(key, entry);
+      const evict = () => {
+        if (entries.get(key) === entry) entries.delete(key);
+      };
+      if (backend?.child && typeof backend.child.once === "function") {
+        backend.child.once("exit", evict);
+        backend.child.once("error", evict);
+      }
       return Object.assign(backend, { key, root });
     })();
     starting.set(key, pending);
@@ -82,9 +94,20 @@ export function createSerenaPool({
     for (const entry of entriesToClose) await stopBackend(entry.backend, entry);
   }
 
+  async function discard(backend) {
+    for (const [key, entry] of entries) {
+      if (entry.backend !== backend) continue;
+      entries.delete(key);
+      await stopBackend(entry.backend, entry);
+      return true;
+    }
+    return false;
+  }
+
   return {
     ensure,
     reclaimIdle,
+    discard,
     close,
     snapshot: () => [...entries.values()].map(({ key, root, startedAt, lastUsedAt, backend }) => ({ key, root, startedAt, lastUsedAt, pid: backend?.pid ?? null }))
   };
@@ -314,7 +337,7 @@ function postMcp(endpoint, payload, sessionId) {
   });
 }
 
-async function waitForSession(backend, clientId) {
+export async function waitForSession(backend, clientId) {
   const existing = backend.sessions.get(clientId);
   if (existing?.sessionId) return existing.sessionId;
   if (existing?.pending) return existing.pending;
@@ -325,6 +348,10 @@ async function waitForSession(backend, clientId) {
     const deadline = Date.now() + 180000;
     let lastError;
     while (Date.now() < deadline) {
+      if ((backend.child?.exitCode !== null && backend.child?.exitCode !== undefined)
+        || (backend.child?.signalCode !== null && backend.child?.signalCode !== undefined)) {
+        throw new Error("Pinned Serena exited before it became ready.");
+      }
       try {
         const initialized = await postMcp(backend.endpoint, { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "codex-chef-serena-pool", version: "0.1.0" } } });
         const sessionId = initialized.sessionId;
@@ -352,6 +379,40 @@ function enqueueBackendCall(backend, operation) {
   const queued = (backend.queue || Promise.resolve()).catch(() => {}).then(operation);
   backend.queue = queued.catch(() => {});
   return queued;
+}
+
+function backendExited(backend) {
+  return (backend?.child?.exitCode !== null && backend?.child?.exitCode !== undefined)
+    || (backend?.child?.signalCode !== null && backend?.child?.signalCode !== undefined);
+}
+
+// reserveLoopbackPort cannot transfer its listening socket to Serena: the
+// pinned upstream CLI accepts a numeric --port, not an inherited handle. If a
+// competing local process wins that small handoff window, retrying once starts
+// a new child with a newly reserved port without hiding persistent failures.
+export async function recoverFromStartupExit(pool, projectRoot, operation) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let backend;
+    try {
+      backend = await pool.ensure(projectRoot);
+    } catch (error) {
+      if (!/exited before it became available/.test(error.message) || attempt === 1) {
+        if (attempt === 1) throw new Error(`Pinned Serena exited during startup after retrying once with a fresh loopback port: ${error.message}`);
+        throw error;
+      }
+      continue;
+    }
+    try {
+      return await operation(backend);
+    } catch (error) {
+      if (!backendExited(backend)) throw error;
+      await pool.discard(backend);
+      if (attempt === 1) {
+        throw new Error(`Pinned Serena exited during startup after retrying once with a fresh loopback port: ${error.message}`);
+      }
+    }
+  }
+  throw new Error("Pinned Serena startup retry exhausted unexpectedly.");
 }
 
 async function runManager() {
@@ -382,11 +443,10 @@ async function runManager() {
     try {
       const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
       if (!TOOL_NAMES.includes(body.toolName) || typeof body.clientId !== "string" || typeof body.projectRoot !== "string") throw new Error("Invalid Serena pool request.");
-      const backend = await pool.ensure(body.projectRoot);
-      const forwarded = await enqueueBackendCall(backend, async () => {
+      const forwarded = await recoverFromStartupExit(pool, body.projectRoot, (backend) => enqueueBackendCall(backend, async () => {
         const sessionId = await waitForSession(backend, body.clientId);
         return postMcp(backend.endpoint, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: body.toolName, arguments: body.arguments || {} } }, sessionId);
-      });
+      }));
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ response: forwarded.response }));
     } catch (error) {
       response.writeHead(500, { "content-type": "application/json" }).end(JSON.stringify({ error: error.message }));

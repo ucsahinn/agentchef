@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { acquireOperationLock } from "../lib/operation-lock.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -164,6 +165,37 @@ test("repair restores a drifted Serena bridge with a backup", () => {
   const serenaAction = payload.actions.find((action) => action.id === "codex-serena-pool");
   assert.equal(serenaAction?.status, "applied");
   assert.equal(typeof serenaAction?.backup, "string");
+});
+
+test("repair journals every managed write through durable prepared and applied phases", () => {
+  const target = fixture("journal-phases");
+  const agentsPath = path.join(target.codexHome, "AGENTS.md");
+  write(agentsPath, "# drifted\n");
+
+  const result = runRepair(target, ["--apply"]);
+  const payload = report(result);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const journalPath = path.join(payload.backupRoot, ".codex-chef-operation-journal.json");
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+  const agentsMutation = journal.mutations.find((mutation) => mutation.target === agentsPath);
+  assert.equal(journal.state, "complete");
+  assert.equal(agentsMutation?.phase, "applied");
+  assert.equal(agentsMutation?.before.kind, "file");
+  assert.ok(journal.mutations.every((mutation) => mutation.phase === "applied"));
+});
+
+test("repair apply contends on AGENTS_HOME before it mutates CODEX_HOME", () => {
+  const target = fixture("agents-home-lock");
+  const lock = acquireOperationLock({ root: target.agentsHome, operation: "another-operation" });
+  try {
+    const result = runRepair(target, ["--apply"]);
+    const payload = report(result);
+    assert.equal(result.status, 1);
+    assert.match(payload.failures.join("\n"), /already in progress/i);
+    assert.equal(fs.existsSync(path.join(target.codexHome, "AGENTS.md")), false);
+  } finally {
+    lock.release();
+  }
 });
 
 test("a second repair apply is a persistent no-op after convergence", () => {

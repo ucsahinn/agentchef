@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { assertNoSecretLikeContent } from "./secret-classifier.mjs";
 
 export const BRAIN_SCHEMA_VERSION = "codex-chef.brain.v1";
 export const BRAIN_CANDIDATE_SCHEMA_VERSION = "codex-chef.brain-candidate.v1";
@@ -47,6 +48,16 @@ function normalize(filePath) {
 function samePath(left, right) {
   const normalizeCase = (value) => process.platform === "win32" ? value.toLowerCase() : value;
   return normalizeCase(normalize(left)) === normalizeCase(normalize(right));
+}
+
+function isPortableSourceRef(value) {
+  if (typeof value !== "string" || value.length < 3 || value.length > 500 || value.trim() !== value) return false;
+  if (/[\u0000-\u001f]/.test(value) || /^[A-Za-z]:[\\/]/.test(value) || /^(?:[\\/]{1,2}|\\\\[?.])/.test(value)) return false;
+  return !value.split(/[\\/]/).some((segment) => segment === "." || segment === "..");
+}
+
+function hasPortableSourceRefs(value) {
+  return Array.isArray(value) && value.length >= 1 && value.length <= 32 && value.every(isPortableSourceRef);
 }
 
 function walkFiles(root) {
@@ -127,15 +138,6 @@ function assertNoReparseBetween(root, destination) {
     const stat = fs.lstatSync(current);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error(`Brain path crosses a symbolic link, junction, or non-directory: ${current}`);
   }
-}
-
-function assertNoSecretLikeContent(text) {
-  const patterns = [
-    /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/i,
-    /\b(?:password|passwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|connection[_-]?string)\s*[:=]\s*[^\s]{12,}/i,
-    /\b(?:sk-(?:proj-)?|gh[pousr]_)[A-Za-z0-9_-]{16,}\b/
-  ];
-  if (patterns.some((pattern) => pattern.test(text))) throw new Error("Brain content contains a secret-like value and was rejected.");
 }
 
 function safeSlug(value) {
@@ -285,7 +287,7 @@ export function buildCapturePlan({ target, candidate, now = new Date().toISOStri
   if (typeof candidate.title !== "string" || candidate.title.trim().length < 3 || candidate.title.length > 160) throw new Error("Candidate title must be 3-160 characters.");
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/i.test(candidate.projectId || "")) throw new Error("Candidate projectId is invalid.");
   if (!PRIVACY_CLASSES.has(candidate.privacy) || !CONFIDENCE_CLASSES.has(candidate.confidence) || !RETENTION_CLASSES.has(candidate.retention)) throw new Error("Candidate policy metadata is invalid.");
-  if (!Array.isArray(candidate.sourceRefs) || candidate.sourceRefs.length === 0 || candidate.sourceRefs.some((ref) => typeof ref !== "string" || /^[A-Za-z]:[\\/]|^\\\\/.test(ref))) throw new Error("Candidate sourceRefs must contain portable provenance.");
+  if (!hasPortableSourceRefs(candidate.sourceRefs)) throw new Error("Candidate sourceRefs must contain portable provenance.");
   if (candidate.agentRoles !== undefined && (!Array.isArray(candidate.agentRoles) || candidate.agentRoles.length > 12 || candidate.agentRoles.some((role) => typeof role !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(role)) || new Set(candidate.agentRoles).size !== candidate.agentRoles.length)) {
     throw new Error("Candidate agentRoles must be distinct lowercase role IDs.");
   }
@@ -411,7 +413,7 @@ export function buildRestorePlan({ target, backupId }) {
   return { schemaVersion: "codex-chef.brain-restore-plan.v1", kind: "restore", target: root, backupId, operations, approvalRequired: true };
 }
 
-export function applyRestorePlan(plan) {
+export function applyRestorePlan(plan, { beforePublish = null } = {}) {
   assertSafeBrainTarget(plan.target);
   if (plan.operations.length === 0) return { backupId: plan.backupId, restored: [], rollbackBackupId: null };
   const backupRoot = resolveInside(plan.target, `.brain/backups/${plan.backupId}`);
@@ -435,6 +437,14 @@ export function applyRestorePlan(plan) {
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       const temporary = `${destination}.brain-restore-${crypto.randomUUID()}.tmp`;
       fs.copyFileSync(entry.sourcePath, temporary, fs.constants.COPYFILE_EXCL);
+      if (beforePublish) beforePublish(entry);
+      const currentHash = fs.existsSync(destination) && fs.lstatSync(destination).isFile()
+        ? sha256(fs.readFileSync(destination))
+        : null;
+      if (currentHash !== entry.currentHash) {
+        fs.rmSync(temporary, { force: true });
+        throw new Error(`Vault changed during restore before publish: ${entry.relativePath}`);
+      }
       fs.renameSync(temporary, destination);
       applied.push({ ...entry, outputHash: entry.backupHash, existedBefore: entry.currentHash !== null });
       restored.push(entry.relativePath);
@@ -613,7 +623,7 @@ export function validateBrainVault(target) {
     if (!Number.isFinite(created)) errors.push(`${relativePath} has invalid created timestamp.`);
     if (!Number.isFinite(updated)) errors.push(`${relativePath} has invalid updated timestamp.`);
     if (Number.isFinite(created) && Number.isFinite(updated) && updated < created) errors.push(`${relativePath} has updated before created.`);
-    if (!Array.isArray(note.data.source_refs) || note.data.source_refs.length < 1 || note.data.source_refs.length > 32 || note.data.source_refs.some((ref) => typeof ref !== "string" || ref.length < 3 || ref.length > 500)) {
+    if (!hasPortableSourceRefs(note.data.source_refs)) {
       errors.push(`${relativePath} has invalid source_refs.`);
     }
     if (note.data.agent_roles !== undefined && (!Array.isArray(note.data.agent_roles) || note.data.agent_roles.length > 12 || note.data.agent_roles.some((role) => typeof role !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(role)) || new Set(note.data.agent_roles).size !== note.data.agent_roles.length)) {

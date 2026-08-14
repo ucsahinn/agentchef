@@ -125,10 +125,17 @@ jobs:
           scripts/tests/brain-foundation.test.mjs
           scripts/tests/brain-cli.test.mjs
           scripts/tests/brain-permissions-windows.test.mjs
+          scripts/tests/coordination-runtime.test.mjs
           scripts/tests/growth-skills.test.mjs
           scripts/tests/cli-error-contract.test.mjs
           scripts/tests/release-readiness.test.mjs
           scripts/tests/external-review.test.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-export.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-delivery.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-delivery-extra-artifact.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-export-memory.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-status.mjs
+          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-zip.mjs
       - run: npm run validate:chef-cli
       - run: npm run validate:status
       - run: npm run validate:fetch-skill

@@ -3,10 +3,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-const exporter = path.resolve(import.meta.dirname, "project-export.mjs");
+const exporter = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "project-export.mjs");
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
 function write(root, relative, content) {

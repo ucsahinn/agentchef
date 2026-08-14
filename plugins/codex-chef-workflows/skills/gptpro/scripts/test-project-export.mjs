@@ -4,9 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const exporter = path.resolve(import.meta.dirname, "project-export.mjs");
+const exporter = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "project-export.mjs");
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
 function write(root, relative, content) {
@@ -27,6 +28,12 @@ function manifestFor(root, paths, reviewId = "20260809T120000Z-deadbeef") {
     parts: [{ name: "review-bundle-part-001.txt", bytes: 1, sha256: sha256("x") }]
   };
 }
+
+test("uses a Node 18-compatible module directory resolution", () => {
+  const source = fs.readFileSync(exporter, "utf8");
+  assert.doesNotMatch(source, /import\.meta\.dirname/);
+  assert.match(source, /fileURLToPath\(import\.meta\.url\)/);
+});
 
 test("creates named, directly uploadable text bundles including root project context", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-export-"));

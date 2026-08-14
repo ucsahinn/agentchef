@@ -431,19 +431,22 @@ New backups also include `.codex-chef-backup.json`, a small manifest with the
 operation, package version, platform, backup-relative paths, sizes, hashes, and
 any archive issues detected while writing metadata.
 
-Before the first managed write, a per-home operation lock and an atomic
-`.codex-chef-operation-journal.json` are created. Each completed managed write
-records its post-write hash and the exact backup (when one existed). If a later
-installer step fails, only targets that still match the installer-written hash
-are restored or removed; a target changed after the write is preserved and the
-journal remains as recovery evidence. An interrupted journal can supply the
-same hash-validated restore inventory when the final manifest was not written.
+Before the first managed write, the installer creates an atomic
+`.codex-chef-operation-journal.json` and takes separately owned operation locks
+under both canonical managed homes when they are distinct. A write is durably
+prepared in the journal before mutation, then marked applied only after the
+write completes. If a later installer step fails, only targets that still match
+the installer-written hash are restored or removed; a target changed after the
+write is preserved and the journal remains as recovery evidence. Completed
+commit-pinned skill installs are also rolled back from their compensation
+receipts before journal recovery. An interrupted journal can supply the same
+hash-validated restore inventory when the final manifest was not written.
 
-On Unix, the installer prepares a missing `CODEX_HOME` before attempting the
-atomic per-home lock. A lock-directory collision still fails closed as a
-concurrent operation. Normal completion explicitly finishes the journal and
-releases only the lock whose owner identity matches the current installer; the
-exit trap retains the same cleanup path for failures and interruptions.
+On Unix, the installer prepares a missing managed home before taking its atomic
+lock. Any lock-directory collision fails closed as a concurrent operation.
+Normal completion explicitly finishes the journal and releases only locks whose
+owner identity matches the current installer; the exit trap retains the same
+cleanup path for failures and interruptions.
 
 The installer backs up managed targets before replacing them:
 

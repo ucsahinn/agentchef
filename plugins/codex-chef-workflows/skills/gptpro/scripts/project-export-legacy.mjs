@@ -255,28 +255,35 @@ function contextIndex(plan, outputs) {
 function applyPlan(plan) {
   if (fs.existsSync(plan.output)) fail(`Output already exists; refusing to overwrite: ${plan.output}`);
   assertOutputOutside(plan.target, plan.output);
-  fs.mkdirSync(plan.output, { recursive: true });
-  assertOutputOutside(plan.target, plan.output);
-  const outputs = [];
-  for (const bundle of plan.bundles) {
-    const file = `${plan.prefix}-${bundle.name}.txt`;
-    const content = renderBundle(bundle, plan.review);
-    fs.writeFileSync(path.join(plan.output, file), content, { flag: "wx" });
-    outputs.push({ name: bundle.name, description: bundle.description, file, bytes: content.length, sha256: hash(content), files: bundle.files.map((item) => ({ path: item.path, bytes: item.bytes, sha256: item.sha256 })) });
+  const staging = path.join(path.dirname(plan.output), `.${path.basename(plan.output)}.staging-${crypto.randomUUID()}`);
+  try {
+    fs.mkdirSync(staging);
+    const outputs = [];
+    for (const bundle of plan.bundles) {
+      const file = `${plan.prefix}-${bundle.name}.txt`;
+      const content = renderBundle(bundle, plan.review);
+      fs.writeFileSync(path.join(staging, file), content, { flag: "wx" });
+      outputs.push({ name: bundle.name, description: bundle.description, file, bytes: content.length, sha256: hash(content), files: bundle.files.map((item) => ({ path: item.path, bytes: item.bytes, sha256: item.sha256 })) });
+    }
+    const instructions = Buffer.from(PROJECT_INSTRUCTIONS, "utf8");
+    fs.writeFileSync(path.join(staging, "gptpro-project-instructions.md"), instructions, { flag: "wx" });
+    const index = Buffer.from(contextIndex(plan, outputs), "utf8");
+    fs.writeFileSync(path.join(staging, "gptpro-context-index.md"), index, { flag: "wx" });
+    const manifest = {
+      schemaVersion: "1.0.0", kind: "gptpro-project-context", generatedAt: new Date().toISOString(),
+      sourceReview: { manifestSha256: plan.review.sha256, reviewId: plan.review.manifest.reviewId, snapshotCommit: plan.review.manifest.snapshot.commit },
+      projectInstructions: { file: "gptpro-project-instructions.md", bytes: instructions.length, sha256: hash(instructions) },
+      contextIndex: { file: "gptpro-context-index.md", bytes: index.length, sha256: hash(index) },
+      bundles: outputs
+    };
+    fs.writeFileSync(path.join(staging, "gptpro-context-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    if (fs.existsSync(plan.output)) fail(`Output appeared during export; refusing to replace: ${plan.output}`);
+    fs.renameSync(staging, plan.output);
+    return manifest;
+  } catch (error) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    throw error;
   }
-  const instructions = Buffer.from(PROJECT_INSTRUCTIONS, "utf8");
-  fs.writeFileSync(path.join(plan.output, "gptpro-project-instructions.md"), instructions, { flag: "wx" });
-  const index = Buffer.from(contextIndex(plan, outputs), "utf8");
-  fs.writeFileSync(path.join(plan.output, "gptpro-context-index.md"), index, { flag: "wx" });
-  const manifest = {
-    schemaVersion: "1.0.0", kind: "gptpro-project-context", generatedAt: new Date().toISOString(),
-    sourceReview: { manifestSha256: plan.review.sha256, reviewId: plan.review.manifest.reviewId, snapshotCommit: plan.review.manifest.snapshot.commit },
-    projectInstructions: { file: "gptpro-project-instructions.md", bytes: instructions.length, sha256: hash(instructions) },
-    contextIndex: { file: "gptpro-context-index.md", bytes: index.length, sha256: hash(index) },
-    bundles: outputs
-  };
-  fs.writeFileSync(path.join(plan.output, "gptpro-context-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
-  return manifest;
 }
 
 function checkFile(root, expected) {

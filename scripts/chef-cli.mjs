@@ -1676,6 +1676,116 @@ function runUpdateValidation(extra = {}) {
   });
 }
 
+function updateRecoveryReceiptPath() {
+  return path.join(logRoot, "update-recovery.json");
+}
+
+function worktreeFingerprint(dirty) {
+  return crypto.createHash("sha256").update(String(dirty?.output || "")).digest("hex");
+}
+
+function atomicWriteUpdateRecoveryReceipt(receipt) {
+  const receiptPath = updateRecoveryReceiptPath();
+  fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+  const temporaryPath = `${receiptPath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  const descriptor = fs.openSync(temporaryPath, "wx", 0o600);
+  try {
+    fs.writeFileSync(descriptor, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    fs.fsyncSync(descriptor);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  fs.renameSync(temporaryPath, receiptPath);
+  try {
+    const directory = fs.openSync(path.dirname(receiptPath), "r");
+    try {
+      fs.fsyncSync(directory);
+    } finally {
+      fs.closeSync(directory);
+    }
+  } catch (error) {
+    if (!['EINVAL', 'EPERM', 'EISDIR'].includes(error?.code)) throw error;
+  }
+  return receiptPath;
+}
+
+function prepareUpdateRecoveryReceipt({ beforeHead, candidateHead, expectedPackageVersion, dirty }) {
+  const receipt = {
+    schemaVersion: "codex-chef.update-recovery.v1",
+    phase: "prepared",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    beforeHead,
+    candidateHead,
+    expectedPackageVersion,
+    worktreeFingerprint: worktreeFingerprint(dirty),
+    recoveryCommand: "npm run chef -- --update --apply",
+    transitions: [{ phase: "prepared", at: new Date().toISOString() }]
+  };
+  receipt.path = atomicWriteUpdateRecoveryReceipt(receipt);
+  return receipt;
+}
+
+function advanceUpdateRecoveryReceipt(receipt, phase, extra = {}) {
+  receipt.phase = phase;
+  receipt.updatedAt = new Date().toISOString();
+  receipt.transitions.push({ phase, at: receipt.updatedAt });
+  Object.assign(receipt, extra);
+  receipt.path = atomicWriteUpdateRecoveryReceipt(receipt);
+  return receipt;
+}
+
+function findRecoverableUpdateReceipt(beforeHead, expectedPackageVersion, dirty) {
+  const receiptPath = updateRecoveryReceiptPath();
+  if (!fs.existsSync(receiptPath)) return null;
+  try {
+    const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
+    const resumable = receipt?.schemaVersion === "codex-chef.update-recovery.v1"
+      && ["source-advanced", "managed-refresh-started"].includes(receipt.phase)
+      && receipt.candidateHead === beforeHead
+      && receipt.expectedPackageVersion === expectedPackageVersion
+      && receipt.worktreeFingerprint === worktreeFingerprint(dirty);
+    if (!resumable) return null;
+    receipt.path = receiptPath;
+    return receipt;
+  } catch {
+    return null;
+  }
+}
+
+function recordUpdateRecoveryFailure(receipt, failure, stage) {
+  const message = failure?.error || failure?.message || failure?.output || `Update ${stage} failed.`;
+  receipt.lastFailure = {
+    stage,
+    at: new Date().toISOString(),
+    message: redactSensitiveOutput(String(message)).slice(0, 1000)
+  };
+  receipt.updatedAt = receipt.lastFailure.at;
+  receipt.path = atomicWriteUpdateRecoveryReceipt(receipt);
+  const sourceAdvanced = receipt.phase !== "prepared";
+  if (!options.json) {
+    console.log(`${ICONS.warn} ${sourceAdvanced
+      ? localText(
+        "Source update succeeded, but the managed runtime is not verified. The recovery receipt preserves the exact retry state.",
+        "Kaynak güncellemesi başarılı oldu ancak yönetilen runtime doğrulanmadı. Kurtarma makbuzu tam yeniden deneme durumunu koruyor."
+      )
+      : localText(
+        "Source update did not complete. The recovery receipt preserves the prepared candidate for inspection.",
+        "Kaynak güncellemesi tamamlanmadı. Kurtarma makbuzu incelenmek üzere hazırlanan adayı koruyor."
+      )}`);
+    console.log(`${ICONS.info} ${localText("Recovery receipt", "Kurtarma makbuzu")}: ${toPosix(path.relative(root, receipt.path))}`);
+    console.log(`${ICONS.info} ${localText("Retry", "Yeniden dene")}: ${receipt.recoveryCommand}`);
+  }
+  return {
+    ...(failure || { ok: false }),
+    ok: false,
+    sourceAdvanced,
+    runtimeVerified: false,
+    recoveryReceiptPath: receipt.path,
+    recoveryCommand: receipt.recoveryCommand
+  };
+}
+
 function resolveGitRef(ref) {
   const result = spawnSync("git", ["rev-parse", "--verify", `${ref}^{commit}`], {
     cwd: root,
@@ -1848,7 +1958,7 @@ function printUpdateContext() {
   console.log(`- ${localText("Release notes", "Release notu")}: ${latestReleaseNoteTitle()}`);
   console.log(styleMuted(localText(
     "Preview does not contact the remote. Apply checks the available version first, fast-forwards when newer, and refreshes managed files even when the source is current.",
-    "Ön izleme remote'a bağlanmaz. Apply önce uygun sürümü kontrol eder; daha yeni değilse hiçbir şeyi değiştirmez."
+    "Ön izleme remote'a bağlanmaz. Apply önce uygun sürümü kontrol eder; daha yeniyse fast-forward yapar, kaynak güncelse bile managed dosyaları yeniler."
   )));
 }
 
@@ -1979,14 +2089,16 @@ async function runUpdate(interaction = {}) {
     console.log(`${ICONS.warn} ${localText(`Cannot read available version: ${remoteVersion.message}`, `Uygun sürüm okunamadı: ${remoteVersion.message}`)}`);
     return { ok: false };
   }
+  const candidateIsCurrent = candidate.value === beforeHead.value;
   const versionOrder = compareReleaseVersions(beforeVersion, remoteVersion.value);
+  const resumableReceipt = findRecoverableUpdateReceipt(beforeHead.value, beforeVersion, dirty);
   console.log(`${styleLabel(localText("Local version", "Yerel sürüm"))}: ${beforeVersion}`);
   console.log(`${styleLabel(localText("Available version", "Uygun sürüm"))}: ${remoteVersion.value}`);
   if (versionOrder === null) {
     console.log(`${ICONS.warn} ${localText("Versions could not be compared safely; update stopped.", "Sürümler güvenle karşılaştırılamadı; güncelleme durduruldu.")}`);
     return { ok: false };
   }
-  if (versionOrder === 0) {
+  if (versionOrder === 0 && candidateIsCurrent) {
     printProgress(20, localText(
       `Already current: v${beforeVersion}. Continuing with validation and managed refresh.`,
       `Zaten güncel: v${beforeVersion}. Validation ve managed refresh ile devam ediliyor.`
@@ -2001,14 +2113,17 @@ async function runUpdate(interaction = {}) {
     );
     if (!allowed) return { ok: false, skipped: true, upToDate: true, localVersion: beforeVersion, availableVersion: remoteVersion.value };
     const validation = runUpdateValidation({ quiet: !options.details });
-    if (!validation.ok) return validation;
+    if (!validation.ok) return resumableReceipt
+      ? recordUpdateRecoveryFailure(resumableReceipt, validation, "recovery validation")
+      : validation;
     let applied;
+    if (resumableReceipt) advanceUpdateRecoveryReceipt(resumableReceipt, "managed-refresh-started", { sourceHead: beforeHead.value });
     if (process.platform === "win32") {
       applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput"], { quiet: !options.details });
     } else {
       applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"], { quiet: !options.details });
     }
-    return completeAppliedAction(applied, false, {
+    const completed = completeAppliedAction(applied, false, {
       kind: "update",
       quiet: !options.details,
       beforeVersion,
@@ -2016,17 +2131,36 @@ async function runUpdate(interaction = {}) {
       beforeHead: beforeHead.value,
       afterHead: beforeHead.value
     });
+    if (!resumableReceipt) return completed;
+    if (!completed.ok) return recordUpdateRecoveryFailure(resumableReceipt, completed, "managed refresh or runtime verification");
+    advanceUpdateRecoveryReceipt(resumableReceipt, "verified", {
+      sourceHead: beforeHead.value,
+      verifiedAt: new Date().toISOString()
+    });
+    completed.recoveryReceiptPath = resumableReceipt.path;
+    return completed;
   }
   if (versionOrder > 0) {
     printProgress(100, localText("Local version is newer; update skipped.", "Yerel sürüm daha yeni; güncelleme atlandı."), "done");
     return { ok: true, skipped: true, localVersion: beforeVersion, availableVersion: remoteVersion.value };
   }
-  printProgress(20, localText(`New version found: v${remoteVersion.value}`, `Yeni sürüm bulundu: v${remoteVersion.value}`));
+  printProgress(20, localText(
+    versionOrder === 0
+      ? `New source revision found for v${remoteVersion.value}`
+      : `New version found: v${remoteVersion.value}`,
+    versionOrder === 0
+      ? `v${remoteVersion.value} için yeni kaynak revizyonu bulundu`
+      : `Yeni sürüm bulundu: v${remoteVersion.value}`
+  ));
   const allowed = await confirmWriteAction(
     localText("Update", "Guncelleme"),
     localText(
-      `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef from v${beforeVersion} to v${remoteVersion.value} and refreshes managed files.`,
-      `Güncelleme Codex Chef'i v${beforeVersion} sürümünden v${remoteVersion.value} sürümüne fast-forward eder, doğrular ve managed Codex dosyalarını yeniler.`
+      versionOrder === 0
+        ? `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef to a newer source revision at v${remoteVersion.value} and refreshes managed files.`
+        : `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef from v${beforeVersion} to v${remoteVersion.value} and refreshes managed files.`,
+      versionOrder === 0
+        ? `Güncelleme alınan ${candidate.value.slice(0, 12)} commit'ini doğrular, ardından Codex Chef'i v${remoteVersion.value} sürümündeki daha yeni kaynak revizyonuna fast-forward eder ve managed Codex dosyalarını yeniler.`
+        : `Güncelleme Codex Chef'i v${beforeVersion} sürümünden v${remoteVersion.value} sürümüne fast-forward eder, doğrular ve managed Codex dosyalarını yeniler.`
     ),
     interaction
   );
@@ -2034,16 +2168,23 @@ async function runUpdate(interaction = {}) {
   printProgress(30, localText("Downloading source update", "Kaynak güncelleme indiriliyor"));
   const candidateValidation = runFetchedUpdateValidation(candidate.value, { quiet: !options.details });
   if (!candidateValidation.ok) return candidateValidation;
+  const recoveryReceipt = prepareUpdateRecoveryReceipt({
+    beforeHead: beforeHead.value,
+    candidateHead: candidate.value,
+    expectedPackageVersion: remoteVersion.value,
+    dirty
+  });
   const pull = runLoggedCommand("update-merge", "git", ["merge", "--ff-only", candidate.value], {
     timeout: 300000,
     quiet: true
   });
-  if (!pull.ok) return pull;
+  if (!pull.ok) return recordUpdateRecoveryFailure(recoveryReceipt, pull, "source merge");
+  advanceUpdateRecoveryReceipt(recoveryReceipt, "source-advanced", { sourceHead: candidate.value });
   printProgress(40, localText("Source update complete", "Kaynak güncelleme tamamlandı"));
   const afterHead = gitHead();
   if (!afterHead.ok) {
     console.log(`${ICONS.warn} ${localText(`Cannot inspect updated Git HEAD: ${afterHead.message}`, `Guncel Git HEAD incelenemedi: ${afterHead.message}`)}`);
-    return { ok: false };
+    return recordUpdateRecoveryFailure(recoveryReceipt, { ok: false, error: afterHead.message }, "source inspection");
   }
   if (beforeHead.value !== afterHead.value) {
     console.log(`${ICONS.update} ${localText(`Repository updated from ${beforeHead.value.slice(0, 7)} to ${afterHead.value.slice(0, 7)}.`, `Repo ${beforeHead.value.slice(0, 7)} -> ${afterHead.value.slice(0, 7)} güncellendi.`)}`);
@@ -2052,17 +2193,18 @@ async function runUpdate(interaction = {}) {
       "Güncel ağaçtan yeni ön izleme çalıştırılıyor; ardından doğrulama ve managed yenileme bu onaylı oturumda sürecek."
     )}`);
     const preview = runPreview(true, false);
-    if (!preview.ok) return preview;
+    if (!preview.ok) return recordUpdateRecoveryFailure(recoveryReceipt, preview, "updated-tree preview");
   } else {
     console.log(`${ICONS.ok} ${localText("Repository already up to date; applying the reviewed managed refresh.", "Repo zaten güncel; incelenmiş managed refresh uygulanıyor.")}`);
   }
   const afterVersion = currentPackageVersion();
   printProgress(55, localText("Validating repository", "Repo doğrulanıyor"));
   const validation = runUpdateValidation({ quiet: !options.details });
-  if (!validation.ok) return validation;
+  if (!validation.ok) return recordUpdateRecoveryFailure(recoveryReceipt, validation, "updated-tree validation");
   printProgress(70, localText("Repository valid", "Repo doğrulandı"));
   let applied;
   printProgress(80, localText("Refreshing managed files", "Managed dosyalar yenileniyor"));
+  advanceUpdateRecoveryReceipt(recoveryReceipt, "managed-refresh-started", { sourceHead: afterHead.value });
   if (process.platform === "win32") {
     applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput"], { quiet: !options.details });
   } else {
@@ -2077,6 +2219,15 @@ async function runUpdate(interaction = {}) {
     beforeHead: beforeHead.value,
     afterHead: afterHead.value
   });
+  if (completed.ok) {
+    advanceUpdateRecoveryReceipt(recoveryReceipt, "verified", {
+      sourceHead: afterHead.value,
+      verifiedAt: new Date().toISOString()
+    });
+    completed.recoveryReceiptPath = recoveryReceipt.path;
+  } else {
+    return recordUpdateRecoveryFailure(recoveryReceipt, completed, "managed refresh or runtime verification");
+  }
   printProgress(100, completed.ok ? localText("Update complete", "Güncelleme tamamlandı") : localText("Update failed", "Güncelleme başarısız"), completed.ok ? "done" : "failed");
   return completed;
 }
@@ -2345,6 +2496,7 @@ async function runRepair(interaction = {}) {
 
 const BACKUP_MANIFEST_NAME = ".codex-chef-backup.json";
 const OPERATION_JOURNAL_NAME = ".codex-chef-operation-journal.json";
+const PINNED_SKILL_ROLLBACK_RECEIPT_NAME = ".codex-chef-pinned-skill-rollback.json";
 const BACKUP_ID_PATTERN = /^codex-chef-[A-Za-z0-9._-]+$/;
 
 function codexHome() {
@@ -2463,7 +2615,11 @@ function listArchiveFiles(archivePath, includeHashes = false) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       const relative = toPosix(path.relative(archivePath, fullPath));
-      if (relative === BACKUP_MANIFEST_NAME || relative === OPERATION_JOURNAL_NAME) continue;
+      if (
+        relative === BACKUP_MANIFEST_NAME
+        || relative === OPERATION_JOURNAL_NAME
+        || relative === PINNED_SKILL_ROLLBACK_RECEIPT_NAME
+      ) continue;
       if (!validateArchiveRelativePath(relative)) {
         issues.push(`Rejected unsafe backup path: ${relative}`);
         continue;
@@ -2788,6 +2944,47 @@ function writeBackupManifest(backupPath, extra = {}) {
   fs.writeFileSync(path.join(backupPath, BACKUP_MANIFEST_NAME), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
 
+function stageRestoreFile(targetPath, data) {
+  const stagePath = path.join(
+    path.dirname(targetPath),
+    `.codex-chef-restore-stage-${path.basename(targetPath)}-${process.pid}-${crypto.randomUUID()}.tmp`
+  );
+  const descriptor = fs.openSync(stagePath, "wx", 0o600);
+  try {
+    fs.writeSync(descriptor, data);
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    try {
+      fs.closeSync(descriptor);
+    } finally {
+      fs.rmSync(stagePath, { force: true });
+    }
+    throw error;
+  }
+  fs.closeSync(descriptor);
+  return stagePath;
+}
+
+function recoverStaleRestoreStages(items) {
+  const scanned = new Set();
+  for (const item of items) {
+    const directory = path.dirname(item.target);
+    const prefix = `.codex-chef-restore-stage-${path.basename(item.target)}-`;
+    const key = `${directory}\0${prefix}`;
+    if (scanned.has(key) || !fs.existsSync(directory)) continue;
+    scanned.add(key);
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.name.startsWith(prefix) || !entry.name.endsWith(".tmp")) continue;
+      const candidate = path.join(directory, entry.name);
+      const stat = fs.lstatSync(candidate);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        throw new Error(`Refusing stale restore staging entry that is not a regular file: ${redactLocalPaths(candidate)}`);
+      }
+      fs.unlinkSync(candidate);
+    }
+  }
+}
+
 function restoreBackupArchiveUnlocked(archivePath, plan) {
   if (plan.files.length === 0) {
     throw new Error("Selected backup archive has no restorable managed Codex Chef files.");
@@ -2807,6 +3004,7 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
     assertManagedRestoreTarget(item.target);
     verified.push({ ...item, data });
   }
+  recoverStaleRestoreStages(verified);
   const rollbackPath = createRollbackBackup(plan, archivePath);
   if (plan.replaceRoot) {
     const targetRoot = plan.replaceRoot.targetRoot;
@@ -2855,19 +3053,35 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
       ? path.join("codex", path.relative(codexHome(), item.target))
       : path.join("agents", path.relative(agentsHome(), item.target))
   }));
-  const touched = [];
+  const staged = [];
   try {
     for (const original of originals) {
       fs.mkdirSync(path.dirname(original.item.target), { recursive: true });
-      touched.push(original);
+      original.stagePath = stageRestoreFile(original.item.target, original.item.data);
+      staged.push(original);
       if (
         process.env.CODEX_CHEF_TEST_MODE === "1"
-        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_DURING_WRITE) === touched.length
+        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_STAGING) === staged.length
       ) {
-        fs.writeFileSync(original.item.target, Buffer.alloc(0));
+        throw new Error("Injected restore staging failure.");
+      }
+      if (
+        process.env.CODEX_CHEF_TEST_MODE === "1"
+        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_DURING_WRITE) === staged.length
+      ) {
         throw new Error("Injected restore in-write failure.");
       }
-      fs.writeFileSync(original.item.target, original.item.data);
+    }
+  } catch (error) {
+    for (const original of staged) fs.rmSync(original.stagePath, { force: true });
+    throw error;
+  }
+
+  const touched = [];
+  try {
+    for (const original of originals) {
+      touched.push(original);
+      fs.renameSync(original.stagePath, original.item.target);
       if (
         process.env.CODEX_CHEF_TEST_MODE === "1"
         && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_WRITES) === touched.length
@@ -2889,6 +3103,12 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
       }
     }
     throw error;
+  } finally {
+    for (const original of originals) {
+      if (original.stagePath && fs.existsSync(original.stagePath)) {
+        fs.rmSync(original.stagePath, { force: true });
+      }
+    }
   }
   return { restored: verified.length, rollbackPath };
 }

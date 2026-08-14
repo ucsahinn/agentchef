@@ -478,6 +478,178 @@ test("full-depth pinned installation omits the shallow fetch boundary", () => {
   }
 });
 
+test("pinned installer reuses a verified immutable source checkout across invocations", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-cache-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const tracePath = path.join(tempRoot, "git-trace.log");
+
+    const first = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome,
+      codexHome,
+      tracePath,
+      extraArgs: ["--verify-only"]
+    });
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+
+    const second = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome,
+      codexHome,
+      tracePath,
+      extraArgs: ["--verify-only"]
+    });
+    assert.equal(second.status, 0, second.stderr || second.stdout);
+
+    const fetches = fs.readFileSync(tracePath, "utf8").match(/\bfetch\b/g) || [];
+    assert.equal(fetches.length, 1, "an immutable source should be fetched once per cache key");
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("pinned installer emits a one-time receipt that safely compensates an unchanged install", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const target = path.join(agentsHome, "skills", "example-skill");
+    const installed = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome,
+      codexHome,
+      extraArgs: ["--json"]
+    });
+    assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+    const receipt = JSON.parse(installed.stdout);
+    assert.equal(receipt.outcome, "installed");
+    assert.equal(receipt.compensation.kind, "pinned-skill-rollback");
+    assert.equal(fs.existsSync(receipt.compensation.receiptPath), true);
+
+    const compensated = spawnSync(process.execPath, [
+      pinnedInstaller,
+      "--rollback-receipt",
+      receipt.compensation.receiptPath,
+      "--json"
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30000,
+      windowsHide: true,
+      env: { ...process.env, AGENTS_HOME: agentsHome, CODEX_HOME: codexHome }
+    });
+    assert.equal(compensated.status, 0, compensated.stderr || compensated.stdout);
+    assert.equal(JSON.parse(compensated.stdout).outcome, "compensated");
+    assert.equal(fs.existsSync(target), false);
+    assert.equal(fs.existsSync(receipt.compensation.receiptPath), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("pinned skill compensation preserves a target changed after installation", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-guard-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const target = path.join(agentsHome, "skills", "example-skill");
+    const installed = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome,
+      codexHome,
+      extraArgs: ["--json"]
+    });
+    assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+    const receipt = JSON.parse(installed.stdout);
+    fs.writeFileSync(path.join(target, "user-change.txt"), "do not remove\n", "utf8");
+
+    const compensated = spawnSync(process.execPath, [
+      pinnedInstaller,
+      "--rollback-receipt",
+      receipt.compensation.receiptPath,
+      "--json"
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30000,
+      windowsHide: true,
+      env: { ...process.env, AGENTS_HOME: agentsHome, CODEX_HOME: codexHome }
+    });
+    assert.notEqual(compensated.status, 0);
+    assert.match(`${compensated.stdout}\n${compensated.stderr}`, /changed since installation/i);
+    assert.equal(fs.readFileSync(path.join(target, "user-change.txt"), "utf8"), "do not remove\n");
+    assert.equal(fs.existsSync(receipt.compensation.receiptPath), true);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("pinned skill compensation restores the replaced managed skill from its backup", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-restore-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const target = path.join(agentsHome, "skills", "example-skill");
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(
+      path.join(target, "SKILL.md"),
+      "---\nname: example-skill\ndescription: Previous managed version.\n---\n",
+      "utf8"
+    );
+    fs.writeFileSync(path.join(target, "previous.txt"), "restore this\n", "utf8");
+    writePinnedSkillProvenance(target, {
+      package: "owner/repository",
+      commit: "a".repeat(40),
+      skill: "example-skill",
+      cliVersion: "1.5.19",
+      sourceTreeSha256: hashSkillTree(target)
+    });
+
+    const installed = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome,
+      codexHome,
+      extraArgs: ["--json"]
+    });
+    assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+    const receipt = JSON.parse(installed.stdout);
+    assert.equal(receipt.outcome, "upgraded");
+
+    const compensated = spawnSync(process.execPath, [
+      pinnedInstaller,
+      "--rollback-receipt",
+      receipt.compensation.receiptPath,
+      "--json"
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30000,
+      windowsHide: true,
+      env: { ...process.env, AGENTS_HOME: agentsHome, CODEX_HOME: codexHome }
+    });
+    assert.equal(compensated.status, 0, compensated.stderr || compensated.stdout);
+    assert.equal(JSON.parse(compensated.stdout).restoredPreviousTarget, true);
+    assert.equal(fs.readFileSync(path.join(target, "previous.txt"), "utf8"), "restore this\n");
+    assert.equal(fs.existsSync(receipt.compensation.receiptPath), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("pinned installer preserves and skips an unowned same-name skill", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-skip-"));
   try {

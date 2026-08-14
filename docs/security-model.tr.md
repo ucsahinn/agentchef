@@ -313,12 +313,15 @@ degeri archive ile hala eslesiyorsa atomik operation journal'i recovery manifest
 olarak kullanabilir. Bu durum restore allowlist'i genisletmez ve kayitsiz
 dosyalara izin vermez.
 
-Unix installer secilen eksik `CODEX_HOME` dizinini home-bazli islem kilidini
-atomik almadan once olusturur. Onceden var olan kilidi kaldirmaz; cleanup yalniz
-kayitli sahip kimligi mevcut installer ile eslesen kilidi serbest birakir.
-Basarili, basarisiz ve kesintili yollar ayni sahiplik kontrolunu kullanir;
-sonraki kurulum owned stale lock ile engellenmez, yabanci eszamanli kilit de
-kaldirilmaz.
+Installer mutation oncesinde atomik operation journal'i olusturur; canonical
+managed home'lar farkliysa ikisi altinda da ayri sahipli kilit alir. Her
+mutation once journal'a prepare edilir, ancak tamamlaninca applied olarak
+isaretlenir. Unix'te eksik managed home atomik kilit oncesinde olusturulur.
+Kilit cakismasi fail-closed olur; cleanup yalniz kayitli sahip kimligi mevcut
+installer ile eslesen kilitleri serbest birakir. Basarili, basarisiz ve
+kesintili yollar ayni sahiplik kontrolunu kullanir; yabanci eszamanli kilitler
+asla kaldirilmaz. Basarisiz install, journal recovery'den once tamamlanmis
+commit-pinned skill kurulumlarini compensation receipt'leriyle geri alir.
 
 Restore backup archive'larini untrusted input kabul eder. `npm run chef --
 --backups --backup <id> --restore` preview'dir. Apply path'i `--apply` ister,

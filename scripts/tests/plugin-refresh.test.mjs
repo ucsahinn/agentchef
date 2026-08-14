@@ -122,6 +122,28 @@ test("fails instead of claiming success when a stale plugin cannot be refreshed"
   );
 });
 
+test("reports a post-commit plugin refresh as uncertain instead of claiming rollback", () => {
+  let listCount = 0;
+  const result = refreshInstalledPlugin({
+    apply: true,
+    expectedVersion,
+    runCodex(args) {
+      if (args[1] === "add") {
+        return { status: 0, stdout: "", stderr: "" };
+      }
+      listCount += 1;
+      return listCount === 1
+        ? listResult([installedPlugin("0.5.57")])
+        : { status: 1, stdout: "", stderr: "post-refresh fixture failure" };
+    }
+  });
+
+  assert.equal(result.status, "refresh-uncertain");
+  assert.equal(result.externalMutationApplied, true);
+  assert.equal(result.previousVersion, "0.5.57");
+  assert.match(result.warning, /post-refresh verification/i);
+});
+
 test("treats a missing Codex CLI as a safe no-op", () => {
   const result = refreshInstalledPlugin({
     expectedVersion,

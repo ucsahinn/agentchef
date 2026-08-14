@@ -24,12 +24,13 @@ test("Unix installer releases its lock so a fresh home can be installed twice", 
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-unix-lock-"));
   const relativeFixture = path.relative(root, fixtureRoot).replaceAll(path.sep, "/");
   const codexHome = path.join(fixtureRoot, "codex");
+  const agentsHome = path.join(fixtureRoot, "agents");
   const lockPath = path.join(codexHome, ".codex-chef-operation.lock");
   const env = {
     ...process.env,
-    HOME: `${relativeFixture}/home`,
-    CODEX_HOME: `${relativeFixture}/codex`,
-    AGENTS_HOME: `${relativeFixture}/agents`,
+    HOME: process.platform === "win32" ? path.join(fixtureRoot, "home") : `${relativeFixture}/home`,
+    CODEX_HOME: process.platform === "win32" ? codexHome : `${relativeFixture}/codex`,
+    AGENTS_HOME: process.platform === "win32" ? agentsHome : `${relativeFixture}/agents`,
     CODEX_CHEF_CODEX_COMMAND: "codex-chef-test-missing-command",
     PATH: process.platform === "win32"
       ? `${path.dirname(process.execPath)};${process.env.PATH || process.env.Path || ""}`

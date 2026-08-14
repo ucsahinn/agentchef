@@ -429,18 +429,18 @@ for (const [operationId, adoptionFlag] of gitGuardAdoptionFlags) {
 
 const operationOrder = manifest.operations.map((operation) => operation.id);
 const normativeOptionalOrder = [
-  "installed-plugin-cache-refresh",
   "git-ignore-global",
   "git-pre-commit-hook",
   "git-pre-commit-hook-executable",
   "git-config-excludesfile",
   "git-config-hooks-path",
-  "curated-skills"
+  "curated-skills",
+  "installed-plugin-cache-refresh"
 ];
 const optionalIndexes = normativeOptionalOrder.map((id) => operationOrder.indexOf(id));
 if (optionalIndexes.some((index) => index < 0)
   || optionalIndexes.some((index, position) => position > 0 && index <= optionalIndexes[position - 1])) {
-  fail("Manifest optional operation order must keep Git guards after cache refresh and curated skills last");
+  fail("Manifest optional operation order must keep Git guards and curated skills before terminal cache refresh");
 }
 
 for (const skill of skillsCatalog?.skills?.filter((entry) => entry.directInstall === true) || []) {

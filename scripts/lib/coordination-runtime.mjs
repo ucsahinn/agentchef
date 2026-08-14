@@ -1,8 +1,14 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { secretLikeCategory } from "./secret-classifier.mjs";
 
-export const STATE_SCHEMA_VERSION = 1;
+export const STATE_SCHEMA_VERSION = 2;
 const LIFECYCLE = ["backlog", "todo", "in_progress", "review", "done"];
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const catalogPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../catalog/agents.json");
+const COORDINATORS = new Set(JSON.parse(fs.readFileSync(catalogPath, "utf8")).coordinators.map((entry) => entry.name));
 
 function fail(message) {
   throw new Error(message);
@@ -22,6 +28,8 @@ function safeId(value, label) {
 
 function redactText(value) {
   let text = required(value, "Text").slice(0, 1000);
+  const category = secretLikeCategory(text);
+  if (category) fail(`Coordination content contains a ${category} and was rejected.`);
   text = text.replace(/(?:[A-Za-z]:\\|\\\\|\/)[^\s"']+/g, "[redacted-path]");
   text = text.replace(/\b(?:token|api[_-]?key|password|secret)\s*[=:]\s*[^\s]+/gi, "[redacted-secret]");
   text = text.replace(/\b(?:session|memory)\b[^\n]*/gi, "[redacted-private-content]");
@@ -30,8 +38,8 @@ function redactText(value) {
 
 function coordinator(value, label) {
   const id = safeId(value, label);
-  if (!id.toLowerCase().endsWith("coordinator")) {
-    fail(`${label} must identify a coordinator; worker-to-worker and worker delegation handoffs are forbidden.`);
+  if (!COORDINATORS.has(id)) {
+    fail(`${label} must identify a coordinator listed in the canonical catalog; worker-to-worker and unknown coordinator handoffs are forbidden.`);
   }
   return id;
 }
@@ -43,7 +51,7 @@ function taskById(state, id) {
 }
 
 export function createState() {
-  return { schemaVersion: STATE_SCHEMA_VERSION, tasks: [] };
+  return { schemaVersion: STATE_SCHEMA_VERSION, revision: 0, tasks: [] };
 }
 
 export function readState(statePath) {
@@ -53,9 +61,11 @@ export function readState(statePath) {
   } catch (error) {
     fail(`Cannot read coordination state: ${error.message}`);
   }
-  if (state?.schemaVersion !== STATE_SCHEMA_VERSION || !Array.isArray(state.tasks)) {
+  if ((state?.schemaVersion !== 1 && state?.schemaVersion !== STATE_SCHEMA_VERSION) || !Array.isArray(state.tasks)) {
     fail("Unsupported coordination state format.");
   }
+  if (state.schemaVersion === 1) return { ...state, schemaVersion: STATE_SCHEMA_VERSION, revision: 0 };
+  if (!Number.isInteger(state.revision) || state.revision < 0) fail("Coordination state has an invalid revision.");
   return state;
 }
 
@@ -65,7 +75,26 @@ export function writeInitialState(statePath) {
 }
 
 export function writeState(statePath, state) {
-  fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  const next = { ...state, schemaVersion: STATE_SCHEMA_VERSION, revision: (state.revision ?? 0) + 1 };
+  const temporary = `${statePath}.coordination-${crypto.randomUUID()}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+  fs.renameSync(temporary, statePath);
+  return next;
+}
+
+export function acquireCoordinationStateLock(statePath) {
+  const lockPath = `${path.resolve(statePath)}.coordination.lock`;
+  try {
+    fs.mkdirSync(lockPath);
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      const lockError = new Error("Another coordination mutation is already in progress for this state file.");
+      lockError.code = "COORDINATION_LOCKED";
+      throw lockError;
+    }
+    throw error;
+  }
+  return { release: () => fs.rmSync(lockPath, { recursive: true, force: true }) };
 }
 
 export function createTask(state, input) {

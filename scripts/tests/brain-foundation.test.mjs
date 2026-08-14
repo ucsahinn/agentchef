@@ -335,6 +335,58 @@ test("capture is preview-first, rejects secrets, and retrieve stays project-scop
     candidate: { ...candidate, candidateId: "22222222-2222-4222-8222-222222222222", bodyMarkdown: "password = super-secret-value-123456" },
     now: "2026-07-22T12:00:00.000Z"
   }), /secret/i);
+  const githubTokenFixture = ["github", "pat", "abcdefghijklmnopqrstuvwxyz123456"].join("_");
+  assert.throws(() => buildCapturePlan({
+    target,
+    candidate: { ...candidate, candidateId: "33333333-3333-4333-8333-333333333333", bodyMarkdown: `Credential: ${githubTokenFixture}` },
+    now: "2026-07-22T12:00:00.000Z"
+  }), /github-token|secret/i);
+});
+
+test("capture and vault validation share portable source reference rules", async () => {
+  const { applyBrainPlan, buildBrainPlan, buildCapturePlan, validateBrainVault } = await loadFoundation();
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-brain-source-ref-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  applyBrainPlan(buildBrainPlan({ templateRoot, target }));
+  const candidate = {
+    schemaVersion: "codex-chef.brain-candidate.v1",
+    candidateId: "55555555-5555-4555-8555-555555555555",
+    type: "knowledge",
+    title: "Portable source reference",
+    projectId: "codex-chef",
+    bodyMarkdown: "Portable provenance must remain safe.",
+    privacy: "local",
+    confidence: "confirmed",
+    retention: "project",
+    sourceRefs: ["user:2026-08-14"]
+  };
+
+  assert.doesNotThrow(() => buildCapturePlan({ target, candidate }));
+  for (const sourceRefs of [["/tmp/private"], ["C:\\fixture\\private"], ["../../private"], ["\\\\server\\share"], ["ab"]]) {
+    assert.throws(() => buildCapturePlan({ target, candidate: { ...candidate, sourceRefs } }), /sourceRefs/i);
+  }
+
+  const invalidNote = path.join(target, "40-knowledge", "unsafe-source-ref.md");
+  fs.writeFileSync(invalidNote, `---
+brain_schema: "codex-chef.brain-note.v1"
+id: "brn_66666666-6666-4666-8666-666666666666"
+type: "knowledge"
+title: "Unsafe source ref"
+project_id: "codex-chef"
+status: "active"
+privacy: "local"
+confidence: "confirmed"
+retention: "project"
+created: "2026-08-14T00:00:00.000Z"
+updated: "2026-08-14T00:00:00.000Z"
+source_refs: ["/tmp/private"]
+---
+
+Unsafe provenance fixture.
+`, "utf8");
+  const validation = validateBrainVault(target);
+  assert.equal(validation.ok, false);
+  assert.ok(validation.errors.some((error) => /unsafe-source-ref\.md.*source_refs/i.test(error)));
 });
 
 test("identical capture is rechecked at apply time", async () => {
@@ -409,4 +461,27 @@ test("restore preflights every file before changing any vault content", async ()
   assert.throws(() => applyRestorePlan(restorePlan), /changed after restore preview/i);
   assert.equal(fs.readFileSync(first, "utf8"), "first changed\n");
   assert.equal(fs.readFileSync(second, "utf8"), "second changed after preview\n");
+});
+
+test("restore detects a change immediately before a later publish and rolls back earlier writes", async () => {
+  const { applyBackupPlan, applyBrainPlan, applyRestorePlan, buildBackupPlan, buildBrainPlan, buildRestorePlan } = await loadFoundation();
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-brain-restore-late-race-"));
+  const target = path.join(sandbox, "CodexChefBrain");
+  applyBrainPlan(buildBrainPlan({ templateRoot, target }));
+  const first = path.join(target, "80-memory", "current-context.md");
+  const second = path.join(target, "80-memory", "decisions.md");
+  fs.writeFileSync(first, "first original\n", "utf8");
+  fs.writeFileSync(second, "second original\n", "utf8");
+  applyBackupPlan(buildBackupPlan({ target, backupId: "late-race-test" }));
+  fs.writeFileSync(first, "first changed\n", "utf8");
+  fs.writeFileSync(second, "second changed\n", "utf8");
+  const plan = buildRestorePlan({ target, backupId: "late-race-test" });
+
+  assert.throws(() => applyRestorePlan(plan, {
+    beforePublish(entry) {
+      if (entry.relativePath === "80-memory/decisions.md") fs.writeFileSync(second, "second concurrent edit\n", "utf8");
+    }
+  }), /changed during restore/i);
+  assert.equal(fs.readFileSync(first, "utf8"), "first changed\n");
+  assert.equal(fs.readFileSync(second, "utf8"), "second concurrent edit\n");
 });

@@ -28,6 +28,17 @@ const allowedKinds = new Set([
 const allowedManifestKinds = new Set([...allowedKinds, "copy-glob"]);
 const allowedRisks = new Set(["low", "medium", "high"]);
 
+function canonicalSelectedIds(profileName, { platform = "windows", installGitGuards = false } = {}) {
+  const selected = new Set(manifest.profiles[profileName] || []);
+  for (const operation of manifest.operations || []) {
+    if (operation.requiresFlag === "InstallGitGuards" && installGitGuards) selected.add(operation.id);
+  }
+  return (manifest.operations || [])
+    .filter((operation) => selected.has(operation.id))
+    .filter((operation) => operation.platforms.includes(platform))
+    .map((operation) => operation.id);
+}
+
 function fail(message) {
   failures.push(message);
 }
@@ -421,7 +432,7 @@ if (operationList && (!operationList.includes("codex-config") || !operationList.
 
 validatePlan(runPlan(["--json"], "Default plan"), "Default plan", {
   noHighRisk: true,
-  selectedIds: manifest.profiles.default,
+  selectedIds: canonicalSelectedIds("default"),
   options: {
     all: false,
     installSkills: false,
@@ -432,7 +443,7 @@ validatePlan(runPlan(["--json"], "Default plan"), "Default plan", {
 });
 
 validatePlan(runPlan(["--all", "--json"], "All plan"), "All plan", {
-  selectedIds: manifest.profiles.all,
+  selectedIds: canonicalSelectedIds("all"),
   options: {
     all: true,
     installSkills: true,
@@ -441,7 +452,7 @@ validatePlan(runPlan(["--all", "--json"], "All plan"), "All plan", {
 });
 
 validatePlan(runPlan(["--all", "--force", "--no-backup", "--json"], "All force no-backup plan"), "All force no-backup plan", {
-  selectedIds: manifest.profiles.all,
+  selectedIds: canonicalSelectedIds("all"),
   options: {
     all: true,
     force: true,
@@ -451,7 +462,7 @@ validatePlan(runPlan(["--all", "--force", "--no-backup", "--json"], "All force n
 
 validatePlan(runPlan(["--platform", "unix", "--all", "--json"], "Unix all plan"), "Unix all plan", {
   platform: "unix",
-  selectedIds: manifest.profiles.all,
+  selectedIds: canonicalSelectedIds("all", { platform: "unix" }),
   options: {
     all: true
   }
@@ -532,14 +543,9 @@ const allWithGitGuards = runPlan(
   "All plus Git guards plan"
 );
 if (allWithGitGuards) {
-  const expected = [...manifest.profiles.all];
-  const curatedIndex = expected.indexOf("curated-skills");
-  const gitGuardIds = manifest.operations
-    .filter((operation) => operation.requiresFlag === "InstallGitGuards" && operation.platforms.includes("unix"))
-    .map((operation) => operation.id);
-  expected.splice(curatedIndex, 0, ...gitGuardIds);
+  const expected = canonicalSelectedIds("all", { platform: "unix", installGitGuards: true });
   if (JSON.stringify(allWithGitGuards.selectedComponentIds) !== JSON.stringify(expected)) {
-    fail("All plus Git guards plan must insert Git guards after cache refresh and keep curated skills last");
+    fail("All plus Git guards plan must preserve canonical operation order");
   }
 }
 

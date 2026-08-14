@@ -3,10 +3,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-const exporter = path.resolve(import.meta.dirname, "project-export.mjs");
+const exporter = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "project-export.mjs");
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 function write(root, relative, content) { const target = path.join(root, relative); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, content, "utf8"); }
 function manifestFor(root, paths) { return { schemaVersion: "1.0.0", reviewId: "20260809T120000Z-ziptest", snapshot: { commit: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", branch: "main", dirty: false }, files: paths.map((relative) => { const content = fs.readFileSync(path.join(root, relative)); return { path: relative, bytes: content.length, sha256: sha256(content) }; }), parts: [{ name: "review-bundle-part-001.txt", bytes: 1, sha256: sha256("x") }] }; }

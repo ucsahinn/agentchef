@@ -903,6 +903,23 @@ function runBackupsFixtureSmokes() {
     expected: pinnedExpected,
     allowAdopt: true
   });
+  const pinnedPreview = runCliSmokeRaw(
+    "backups-pinned-skill-control-receipt-preview",
+    ["--backups", "--backup", pinnedSkillId, "--restore", "--json", "--no-log"],
+    { env }
+  );
+  if (!pinnedPreview.ok) {
+    fail(`chef-cli pinned skill backup control receipt must not block restore preview: ${pinnedPreview.output.trim()}`);
+  } else {
+    try {
+      const parsed = JSON.parse(pinnedPreview.stdout);
+      if (parsed.outcome !== "preview" || parsed.manifestVerified !== true || parsed.unsupported.length !== 0) {
+        fail("chef-cli pinned skill backup control receipt must remain outside the restorable archive payload.");
+      }
+    } catch (error) {
+      fail(`chef-cli pinned skill backup control receipt preview did not emit parseable JSON: ${error.message}`);
+    }
+  }
   const pinnedInjectedFailure = runCliSmokeRaw(
     "backups-pinned-skill-rollback-fixture",
     ["--backups", "--backup", pinnedSkillId, "--restore", "--apply", "--json", "--no-log"],
@@ -925,8 +942,11 @@ function runBackupsFixtureSmokes() {
       fail(`chef-cli pinned restore failure did not emit parseable JSON: ${error.message}`);
     }
   }
-  if (
-    fs.readFileSync(path.join(pinnedSkillTarget, "new-only.txt"), "utf8") !== "new\n"
+  if (!fs.existsSync(pinnedSkillTarget)) {
+    fail("chef-cli pinned skill restore failure must restore the displaced current target instead of removing it.");
+  } else if (
+    !fs.existsSync(path.join(pinnedSkillTarget, "new-only.txt"))
+    || fs.readFileSync(path.join(pinnedSkillTarget, "new-only.txt"), "utf8") !== "new\n"
     || fs.existsSync(path.join(pinnedSkillTarget, "legacy-only.txt"))
     || !fs.existsSync(path.join(pinnedSkillTarget, pinnedSkillProvenanceFileName))
   ) {
@@ -937,7 +957,9 @@ function runBackupsFixtureSmokes() {
     ["--backups", "--backup", pinnedSkillId, "--restore", "--apply", "--json", "--no-log"],
     { env }
   );
-  if (pinnedRestore.ok) {
+  if (!pinnedRestore.ok) {
+    fail(`chef-cli pinned skill backup round-trip restore failed: ${pinnedRestore.output.trim()}`);
+  } else {
     try {
       const parsed = JSON.parse(pinnedRestore.stdout);
       if (parsed.outcome !== "restored" || parsed.applied !== true) {
@@ -946,16 +968,35 @@ function runBackupsFixtureSmokes() {
     } catch (error) {
       fail(`chef-cli pinned skill restore did not emit parseable JSON: ${error.message}`);
     }
+    const restoredPinnedFiles = fs.readdirSync(pinnedSkillTarget).sort();
+    const expectedPinnedFiles = ["SKILL.md", "legacy-only.txt"].sort();
+    if (JSON.stringify(restoredPinnedFiles) !== JSON.stringify(expectedPinnedFiles)) {
+      fail(
+        `chef-cli pinned skill restore must replace the active tree exactly; got ${restoredPinnedFiles.join(", ")}`
+      );
+    }
+    if (fs.readFileSync(path.join(pinnedSkillTarget, "legacy-only.txt"), "utf8") !== "legacy\n") {
+      fail("chef-cli pinned skill restore did not recover the prior tree bytes.");
+    }
   }
-  const restoredPinnedFiles = fs.readdirSync(pinnedSkillTarget).sort();
-  const expectedPinnedFiles = ["SKILL.md", "legacy-only.txt"].sort();
-  if (JSON.stringify(restoredPinnedFiles) !== JSON.stringify(expectedPinnedFiles)) {
-    fail(
-      `chef-cli pinned skill restore must replace the active tree exactly; got ${restoredPinnedFiles.join(", ")}`
-    );
-  }
-  if (fs.readFileSync(path.join(pinnedSkillTarget, "legacy-only.txt"), "utf8") !== "legacy\n") {
-    fail("chef-cli pinned skill restore did not recover the prior tree bytes.");
+
+  fs.writeFileSync(path.join(pinnedSkillBackup, "unexpected-root-file.txt"), "unexpected\n", "utf8");
+  const pinnedUnexpectedRoot = runCliSmokeRaw(
+    "backups-pinned-skill-unexpected-root-file",
+    ["--backups", "--backup", pinnedSkillId, "--restore", "--json", "--no-log"],
+    { env, expectedStatus: 1 }
+  );
+  if (!pinnedUnexpectedRoot.ok) {
+    fail(`chef-cli pinned skill backup must reject arbitrary root files: ${pinnedUnexpectedRoot.output.trim()}`);
+  } else {
+    try {
+      const parsed = JSON.parse(pinnedUnexpectedRoot.stdout);
+      if (parsed.outcome !== "blocked" || !parsed.unsupported.includes("unexpected-root-file.txt")) {
+        fail("chef-cli pinned skill backup must report arbitrary root files as unsupported.");
+      }
+    } catch (error) {
+      fail(`chef-cli pinned skill arbitrary-root preview did not emit parseable JSON: ${error.message}`);
+    }
   }
 
   const unsupportedId = "codex-chef-20990101-000001";

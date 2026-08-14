@@ -167,19 +167,37 @@ export function refreshInstalledPlugin({
     );
   }
 
-  const after = parseInstalledPlugins(
-    execute(["plugin", "list", "--json"]),
-    codexHome,
-    "post-refresh verification"
-  );
-  if (after.unavailable) {
-    throw new Error(`Codex plugin post-refresh verification failed: ${after.warning}`);
-  }
-  const refreshedPlugin = findManagedPlugin(after.installed);
-  if (!refreshedPlugin || refreshedPlugin.version !== expectedVersion) {
-    throw new Error(
-      `Codex plugin cache refresh did not activate expected version ${expectedVersion}; found ${refreshedPlugin?.version || "not installed"}.`
+  let after;
+  let refreshedPlugin;
+  try {
+    after = parseInstalledPlugins(
+      execute(["plugin", "list", "--json"]),
+      codexHome,
+      "post-refresh verification"
     );
+    refreshedPlugin = after.unavailable ? null : findManagedPlugin(after.installed);
+  } catch (error) {
+    return {
+      inspected: true,
+      status: "refresh-uncertain",
+      externalMutationApplied: true,
+      previousVersion: plugin.version || null,
+      expectedVersion,
+      warning: `Codex plugin refresh completed but post-refresh verification is uncertain: ${commandFailure({ stderr: error.message }, error.message, codexHome)}`
+    };
+  }
+  if (after.unavailable || !refreshedPlugin || refreshedPlugin.version !== expectedVersion) {
+    const detail = after.unavailable
+      ? after.warning
+      : `expected ${expectedVersion}; found ${refreshedPlugin?.version || "not installed"}`;
+    return {
+      inspected: true,
+      status: "refresh-uncertain",
+      externalMutationApplied: true,
+      previousVersion: plugin.version || null,
+      expectedVersion,
+      warning: `Codex plugin refresh completed but post-refresh verification is uncertain: ${detail}`
+    };
   }
 
   return {
@@ -263,6 +281,8 @@ function main(argv) {
     console.log(`Plugin cache: would refresh ${result.currentVersion || "unknown"} -> ${result.expectedVersion}`);
   } else if (result.status === "unavailable") {
     console.log(`Plugin cache: skipped (${result.warning})`);
+  } else if (result.status === "refresh-uncertain") {
+    console.warn(`Plugin cache: refresh completed but verification is uncertain (${result.warning})`);
   } else {
     console.log(`Plugin cache: ${result.status}`);
   }

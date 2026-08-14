@@ -404,32 +404,62 @@ $OperationJournalScript = Join-Path $RepoRoot "scripts\lib\operation-journal.mjs
 $OperationJournalActive = $false
 $LastBackupPath = $null
 $GitGuardReceipt = $null
-$OperationLockPath = Join-Path $CodexHome ".codex-chef-operation.lock"
-$OperationLockOwnerPath = Join-Path $OperationLockPath "owner"
+$SkillCompensationReceipts = @()
 $OperationLockId = [guid]::NewGuid().ToString()
+$OperationLockPaths = @()
+
+function Get-CanonicalOperationLockRoots {
+  $roots = @($CodexHome, $AgentsHome) |
+    ForEach-Object { [System.IO.Path]::GetFullPath($_).TrimEnd('\', '/') } |
+    Sort-Object { $_.ToLowerInvariant() } -Unique
+  if ($roots.Count -eq 0) { throw "Codex Chef operation lock requires at least one managed home." }
+  return @($roots)
+}
 
 function Release-OperationLock {
-  if (-not (Test-Path -LiteralPath $OperationLockOwnerPath)) { return }
-  try {
-    $owner = Get-Content -LiteralPath $OperationLockOwnerPath -Raw -ErrorAction Stop | ConvertFrom-Json
-    if ($owner.id -eq $OperationLockId) {
-      Remove-Item -LiteralPath $OperationLockOwnerPath -Force -ErrorAction Stop
-      Remove-Item -LiteralPath $OperationLockPath -Force -ErrorAction Stop
+  foreach ($lockPath in @($Script:OperationLockPaths | Sort-Object -Descending)) {
+    $ownerPath = Join-Path $lockPath "owner.json"
+    if (-not (Test-Path -LiteralPath $ownerPath)) { continue }
+    try {
+      $owner = Get-Content -LiteralPath $ownerPath -Raw -ErrorAction Stop | ConvertFrom-Json
+      if ($owner.id -eq $OperationLockId) {
+        Remove-Item -LiteralPath $ownerPath -Force -ErrorAction Stop
+        Remove-Item -LiteralPath $lockPath -Force -ErrorAction Stop
+      }
+    } catch {
+      # Preserve a lock we cannot prove belongs to this process.
     }
-  } catch {
-    # Preserve a lock we cannot prove belongs to this process.
   }
+  $Script:OperationLockPaths = @()
 }
 
 function Acquire-OperationLock {
-if (-not $WhatIfPreference) {
+  if ($WhatIfPreference) { return }
+  $acquired = @()
   try {
-    New-Item -ItemType Directory -Path $OperationLockPath -ErrorAction Stop | Out-Null
+    foreach ($root in Get-CanonicalOperationLockRoots) {
+      [System.IO.Directory]::CreateDirectory($root) | Out-Null
+      $lockPath = Join-Path $root ".codex-chef-operation.lock"
+      New-Item -ItemType Directory -Path $lockPath -ErrorAction Stop | Out-Null
+      $acquired += $lockPath
+      $ownerPath = Join-Path $lockPath "owner.json"
+      @{ id = $OperationLockId; pid = $PID; operation = "install"; startedAt = (Get-Date).ToUniversalTime().ToString("o") } |
+        ConvertTo-Json -Compress | Set-Content -LiteralPath $ownerPath -NoNewline -Encoding utf8 -ErrorAction Stop
+    }
   } catch {
-    throw "Another Codex Chef operation is already in progress for $CodexHome; refusing concurrent install."
+    foreach ($lockPath in @($acquired | Sort-Object -Descending)) {
+      $ownerPath = Join-Path $lockPath "owner.json"
+      try {
+        $owner = Get-Content -LiteralPath $ownerPath -Raw -ErrorAction Stop | ConvertFrom-Json
+        if ($owner.id -eq $OperationLockId) { Remove-Item -LiteralPath $lockPath -Force -ErrorAction Stop }
+      } catch {
+        # The directory was created by this acquisition before its owner record could be written.
+        Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
+      }
+    }
+    throw "Another Codex Chef operation is already in progress for a managed Codex home; refusing concurrent install."
   }
-  @{ id = $OperationLockId; pid = $PID; operation = "install"; startedAt = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json -Compress | Set-Content -LiteralPath $OperationLockOwnerPath -NoNewline -Encoding utf8
-}
+  $Script:OperationLockPaths = @($acquired)
 }
 
 function Start-OperationJournal {
@@ -447,28 +477,50 @@ function Finish-OperationJournal {
   $Script:OperationJournalActive = $false
 }
 
-function Track-InstallWrite {
+function Prepare-InstallWrite {
   param(
     [Parameter(Mandatory=$true)][string]$Path,
     [string]$BackupPath = "-"
   )
   if ($WhatIfPreference -or $NoBackup) { return }
-  & node $OperationJournalScript track $BackupRoot $Path $BackupPath
-  if ($LASTEXITCODE -ne 0) { throw "Could not record the completed install mutation for $Path." }
+  & node $OperationJournalScript prepare $BackupRoot $Path $BackupPath
+  if ($LASTEXITCODE -ne 0) { throw "Could not durably prepare install mutation for $Path." }
 }
 
-function Track-InstallTree {
+function Mark-InstallWriteApplied {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if ($WhatIfPreference -or $NoBackup) { return }
+  & node $OperationJournalScript applied $BackupRoot $Path
+  if ($LASTEXITCODE -ne 0) { throw "Could not mark completed install mutation for $Path." }
+}
+
+function Prepare-InstallTree {
   param(
     [Parameter(Mandatory=$true)][string]$Destination,
     [Parameter(Mandatory=$true)][string]$Source,
     [string]$BackupPath = "-"
   )
   if ($WhatIfPreference -or $NoBackup) { return }
-  & node $OperationJournalScript track-tree $BackupRoot $Destination $Source $BackupPath
-  if ($LASTEXITCODE -ne 0) { throw "Could not record completed managed directory mutations for $Destination." }
+  & node $OperationJournalScript prepare-tree $BackupRoot $Destination $Source $BackupPath
+  if ($LASTEXITCODE -ne 0) { throw "Could not durably prepare managed directory mutations for $Destination." }
+}
+
+function Mark-InstallTreeApplied {
+  param(
+    [Parameter(Mandatory=$true)][string]$Destination,
+    [Parameter(Mandatory=$true)][string]$Source
+  )
+  if ($WhatIfPreference -or $NoBackup) { return }
+  & node $OperationJournalScript applied-tree $BackupRoot $Destination $Source
+  if ($LASTEXITCODE -ne 0) { throw "Could not mark completed managed directory mutations for $Destination." }
 }
 
 trap {
+  $compensationReceipts = @($Script:SkillCompensationReceipts)
+  [array]::Reverse($compensationReceipts)
+  foreach ($receiptPath in $compensationReceipts) {
+    & node (Join-Path $RepoRoot "scripts\install-pinned-skill.mjs") --rollback-receipt $receiptPath --json 2>&1 | Write-Warning
+  }
   if ($Script:OperationJournalActive) {
     & node $OperationJournalScript rollback $BackupRoot - $CodexHome $AgentsHome 2>&1 | Write-Warning
   }
@@ -617,12 +669,14 @@ function Install-File {
 
   Ensure-Dir (Split-Path -Parent $Destination)
   Backup-Target $Destination
+  $backupPath = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
   $changed = Invoke-Change -Target $Destination -Action "Install file from $Source" -ScriptBlock {
     Assert-ManagedWriteTarget $Destination
+    Prepare-InstallWrite -Path $Destination -BackupPath $backupPath
     Copy-Item -LiteralPath $Source -Destination $Destination -Force
   }
   if ($changed) {
-    Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
+    Mark-InstallWriteApplied -Path $Destination
     Write-Action -Status "installed" -Message $Destination
   }
 }
@@ -651,15 +705,17 @@ function Install-CodexConfig {
       } | Out-Null
       return
     }
+    $backupPath = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
     $changed = Invoke-Change -Target $Destination -Action $Action -ScriptBlock {
       Assert-ManagedWriteTarget $Destination
+      Prepare-InstallWrite -Path $Destination -BackupPath $backupPath
       & node @MergeArgs
       if ($LASTEXITCODE -ne 0) {
         throw "Codex config merge failed with code $LASTEXITCODE"
       }
     }
     if ($changed) {
-      Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
+      Mark-InstallWriteApplied -Path $Destination
       Write-Action -Status $(if ($Update) { "updated config" } else { "merged config" }) -Message $Destination
     }
     return
@@ -689,15 +745,17 @@ function Install-McpProfile {
   if ($WhatIfPreference) {
     $RenderArgs += "--dry-run"
   }
+  $backupPath = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
   $changed = Invoke-Change -Target $Destination -Action $Action -ScriptBlock {
     Assert-ManagedWriteTarget $Destination
+    Prepare-InstallWrite -Path $Destination -BackupPath $backupPath
     & node @RenderArgs
     if ($LASTEXITCODE -ne 0) {
       throw "MCP profile generation failed with code $LASTEXITCODE"
     }
   }
   if ($changed) {
-    Track-InstallWrite -Path $Destination -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
+    Mark-InstallWriteApplied -Path $Destination
     Write-Action -Status "generated profile" -Message $Destination
   }
 }
@@ -713,7 +771,9 @@ function Install-Directory {
   $directoryBackup = $Script:LastBackupPath
   Ensure-Dir $Destination
   Assert-ManagedDirectoryTarget $Destination
+  $backupPath = if ($directoryBackup) { $directoryBackup } else { "-" }
   $changed = Invoke-Change -Target $Destination -Action "Sync source-owned files from $Source while preserving unrelated extras" -ScriptBlock {
+    Prepare-InstallTree -Destination $Destination -Source $Source -BackupPath $backupPath
     $sourceFull = [System.IO.Path]::GetFullPath($Source).TrimEnd([char[]]@('\', '/'))
     $destinationFull = [System.IO.Path]::GetFullPath($Destination)
     Get-ChildItem -LiteralPath $Source -Recurse -File -Force | ForEach-Object {
@@ -730,7 +790,7 @@ function Install-Directory {
     }
   }
   if ($changed) {
-    Track-InstallTree -Destination $Destination -Source $Source -BackupPath $(if ($directoryBackup) { $directoryBackup } else { "-" })
+    Mark-InstallTreeApplied -Destination $Destination -Source $Source
     Write-Action -Status "synced directory" -Message $Destination
   }
 }
@@ -819,15 +879,16 @@ foreach ($DirectSkill in $DirectSkills) {
     if ($DirectSkill.Adopt) {
       $DirectMarkArgs += "--allow-adopt"
     }
-    & node @DirectMarkArgs | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-      throw "Cannot record Codex Chef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
-    }
     $markerBackup = "-"
     if ($Script:LastBackupPath -and (Test-Path -LiteralPath (Join-Path $Script:LastBackupPath ".codex-chef-managed.json"))) {
       $markerBackup = Join-Path $Script:LastBackupPath ".codex-chef-managed.json"
     }
-    Track-InstallWrite -Path (Join-Path $DirectTarget ".codex-chef-managed.json") -BackupPath $markerBackup
+    Prepare-InstallWrite -Path (Join-Path $DirectTarget ".codex-chef-managed.json") -BackupPath $markerBackup
+    & node @DirectMarkArgs | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Cannot record Codex Chef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
+    }
+    Mark-InstallWriteApplied -Path (Join-Path $DirectTarget ".codex-chef-managed.json")
   }
 }
 
@@ -840,15 +901,17 @@ Assert-ManagedWriteTarget $MarketplacePath
 $marketplaceCheckExit = $LASTEXITCODE
 if ($marketplaceCheckExit -eq 2) {
   Backup-Target $MarketplacePath
+  $marketplaceBackup = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
   $changed = Invoke-Change -Target $MarketplacePath -Action "Upsert Codex Chef plugin marketplace entry" -ScriptBlock {
     Assert-ManagedWriteTarget $MarketplacePath
+    Prepare-InstallWrite -Path $MarketplacePath -BackupPath $marketplaceBackup
     & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --write
     if ($LASTEXITCODE -ne 0) {
       throw "Cannot update plugin marketplace because the helper failed with code $LASTEXITCODE`: $MarketplacePath"
     }
   }
   if ($changed) {
-    Track-InstallWrite -Path $MarketplacePath -BackupPath $(if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" })
+    Mark-InstallWriteApplied -Path $MarketplacePath
     Write-Action -Status "updated marketplace" -Message $MarketplacePath
   }
 } elseif ($marketplaceCheckExit -eq 0) {
@@ -947,6 +1010,9 @@ if ($InstallSkills) {
       } catch {
         $Output | ForEach-Object { Write-Host $_ }
         throw "Skill install returned an invalid status receipt for $($Skill.name)"
+      }
+      if ($SkillResult.compensation -and $SkillResult.compensation.receiptPath) {
+        $Script:SkillCompensationReceipts += [string]$SkillResult.compensation.receiptPath
       }
       switch ($SkillResult.outcome) {
         "installed" { Write-Action -Status "installed skill" -Message $Skill.name }

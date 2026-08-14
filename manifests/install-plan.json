@@ -1,6 +1,6 @@
 {
   "schemaVersion": "codex-chef.install-plan.v1",
-  "description": "Codex-only install surface used for dry-run planning, validation, and collision review. Profile arrays define the normative base operation order; explicitly enabled flag-gated operations append in manifest order, with Git guards after plugin-cache refresh and curated skills last.",
+  "description": "Codex-only install surface used for dry-run planning, validation, and collision review. Profiles select the base operation set; every resolved plan uses the canonical operations-array order, with optional Git guards and curated skills completed before the terminal plugin-cache refresh.",
   "profiles": {
     "default": [
       "codex-agents-md",
@@ -50,8 +50,8 @@
       "evidence-research-direct-skill",
       "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
-      "installed-plugin-cache-refresh",
-      "curated-skills"
+      "curated-skills",
+      "installed-plugin-cache-refresh"
     ]
   },
   "operations": [
@@ -340,19 +340,6 @@
       "conflictPolicy": "Only the Codex Chef plugin entry is added or updated after backup; unrelated marketplace plugins are preserved and invalid marketplace JSON fails closed."
     },
     {
-      "id": "installed-plugin-cache-refresh",
-      "kind": "refresh-plugin-cache",
-      "summary": "Refresh an already-installed Codex Chef plugin cache when its version is stale.",
-      "source": "${CODEX_HOME}/plugins/codex-chef-workflows",
-      "destination": "${CODEX_HOME}/plugins/cache",
-      "pluginId": "codex-chef-workflows@codex-chef",
-      "platforms": ["windows", "unix"],
-      "collision": "inspect-installed-plugin-refresh-only-when-stale",
-      "backup": false,
-      "risk": "medium",
-      "conflictPolicy": "The cache helper only refreshes the managed plugin when Codex reports it installed and stale; missing Codex or an uninstalled plugin produces no cache write."
-    },
-    {
       "id": "git-ignore-global",
       "kind": "copy-file",
       "summary": "Optionally install global Git ignore rules.",
@@ -437,6 +424,19 @@
       "backup": true,
       "risk": "high",
       "conflictPolicy": "Only locked package/skill pairs are allowed. Unmarked, foreign, or locally drifted same-name targets are preserved and skipped by default. A valid Codex Chef provenance marker permits a mandatory-backup managed upgrade; replacing any other exact target requires a separately reviewed per-skill --adopt-existing invocation."
+    },
+    {
+      "id": "installed-plugin-cache-refresh",
+      "kind": "refresh-plugin-cache",
+      "summary": "Refresh an already-installed Codex Chef plugin cache when its version is stale.",
+      "source": "${CODEX_HOME}/plugins/codex-chef-workflows",
+      "destination": "${CODEX_HOME}/plugins/cache",
+      "pluginId": "codex-chef-workflows@codex-chef",
+      "platforms": ["windows", "unix"],
+      "collision": "inspect-installed-plugin-refresh-only-when-stale",
+      "backup": false,
+      "risk": "medium",
+      "conflictPolicy": "The cache helper only refreshes the managed plugin when Codex reports it installed and stale; missing Codex or an uninstalled plugin produces no cache write."
     }
   ]
 }

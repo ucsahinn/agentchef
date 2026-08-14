@@ -1,10 +1,14 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
-import { activatePinnedSkill } from "./lib/pinned-skill-activation.mjs";
+import {
+  activatePinnedSkill,
+  compensatePinnedSkillInstall
+} from "./lib/pinned-skill-activation.mjs";
 import {
   hashSkillTree,
   inspectPinnedSkillOwnership,
@@ -33,8 +37,12 @@ const options = {
   fullDepth: false,
   adoptExisting: false,
   verifyOnly: false,
-  json: false
+  json: false,
+  rollbackReceipt: ""
 };
+
+const PINNED_SOURCE_RECEIPT = ".codex-chef-pinned-source.json";
+const PINNED_SOURCE_RECEIPT_SCHEMA = "codex-chef.pinned-skill-source.v1";
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
@@ -42,12 +50,13 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--adopt-existing") options.adoptExisting = true;
   else if (arg === "--verify-only") options.verifyOnly = true;
   else if (arg === "--json") options.json = true;
-  else if (["--package", "--commit", "--skill", "--cli-version"].includes(arg)) {
+  else if (["--package", "--commit", "--skill", "--cli-version", "--rollback-receipt"].includes(arg)) {
     const key = {
       "--package": "package",
       "--commit": "commit",
       "--skill": "skill",
-      "--cli-version": "cliVersion"
+      "--cli-version": "cliVersion",
+      "--rollback-receipt": "rollbackReceipt"
     }[arg];
     options[key] = requireCliValue(args, index, arg);
     index += 1;
@@ -56,25 +65,74 @@ for (let index = 0; index < args.length; index += 1) {
   }
 }
 
-if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(options.package)) {
+if (options.rollbackReceipt && (options.package || options.commit || options.skill || options.cliVersion || options.fullDepth || options.adoptExisting || options.verifyOnly)) {
+  throw new CliUsageError("--rollback-receipt cannot be combined with installation arguments.");
+}
+if (!options.rollbackReceipt && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(options.package)) {
   throw new CliUsageError("--package must be a single owner/repo identifier.");
 }
-if (!/^[a-f0-9]{40}$/.test(options.commit)) {
+if (!options.rollbackReceipt && !/^[a-f0-9]{40}$/.test(options.commit)) {
   throw new CliUsageError("--commit must be a full lowercase Git commit SHA.");
 }
-if (!/^[A-Za-z0-9._-]+$/.test(options.skill)) {
+if (!options.rollbackReceipt && !/^[A-Za-z0-9._-]+$/.test(options.skill)) {
   throw new CliUsageError("--skill must be a single safe skill name.");
 }
-if (!/^\d+\.\d+\.\d+$/.test(options.cliVersion)) {
+if (!options.rollbackReceipt && !/^\d+\.\d+\.\d+$/.test(options.cliVersion)) {
   throw new CliUsageError("--cli-version must be an exact semantic version.");
 }
 
-const checkout = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-skill-"));
+const codexHome = path.resolve(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
+if (options.rollbackReceipt) {
+  const agentsHome = path.resolve(process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"));
+  const result = compensatePinnedSkillInstall({
+    receiptPath: options.rollbackReceipt,
+    managedRoots: [agentsHome, codexHome]
+  });
+  if (options.json) {
+    console.log(JSON.stringify({
+      schemaVersion: "codex-chef.pinned-skill-install-compensation.v1",
+      status: "ok",
+      outcome: "compensated",
+      ...result
+    }));
+  } else {
+    console.log("Pinned skill installation compensated.");
+  }
+} else {
 const githubUrl = `https://github.com/${options.package}.git`;
+const sourceCacheKey = crypto
+  .createHash("sha256")
+  .update(`${options.package}@${options.commit}:${options.fullDepth ? "full" : "shallow"}`)
+  .digest("hex");
+const sourceCacheRoot = path.join(codexHome, "cache", "pinned-skill-sources");
+const sourceCachePath = path.join(sourceCacheRoot, sourceCacheKey);
+let checkout = null;
+let temporaryCheckout = false;
+
+function sourceReceiptMatches(checkoutPath) {
+  try {
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(checkoutPath, PINNED_SOURCE_RECEIPT), "utf8")
+    );
+    if (
+      receipt.schemaVersion !== PINNED_SOURCE_RECEIPT_SCHEMA
+      || receipt.package !== options.package
+      || receipt.commit !== options.commit
+      || receipt.fullDepth !== options.fullDepth
+    ) {
+      return false;
+    }
+    return run("git", ["rev-parse", "HEAD"], "Cached pinned commit verification", {
+      cwd: checkoutPath
+    }).toLowerCase() === options.commit;
+  } catch {
+    return false;
+  }
+}
 
 function run(command, args, label, extra = {}) {
   const result = spawnSync(command, args, {
-    cwd: extra.cwd || checkout,
+    cwd: extra.cwd || checkout || process.cwd(),
     encoding: "utf8",
     env: {
       ...process.env,
@@ -136,6 +194,7 @@ function inspectInstalledTarget(target, expectedHash, requireProvenance = true) 
 }
 
 function removeCheckout() {
+  if (!temporaryCheckout || !checkout) return;
   const tempRoot = path.resolve(os.tmpdir());
   const resolved = path.resolve(checkout);
   const relative = path.relative(tempRoot, resolved);
@@ -149,24 +208,16 @@ function removeCheckout() {
   fs.rmSync(resolved, { recursive: true, force: true });
 }
 
-function emitResult(outcome, message) {
-  if (options.json) {
-    console.log(JSON.stringify({
-      schemaVersion: "codex-chef.pinned-skill-install-result.v1",
-      status: "ok",
-      outcome,
-      skill: options.skill,
-      package: options.package,
-      commit: options.commit,
-      message
-    }));
-    return;
+function checkoutPinnedSource() {
+  assertManagedTargetPath(sourceCacheRoot, [codexHome]);
+  assertManagedTargetPath(sourceCachePath, [codexHome]);
+  if (fs.existsSync(sourceCachePath) && sourceReceiptMatches(sourceCachePath)) {
+    checkout = sourceCachePath;
+    return { cacheHit: true };
   }
-  console.log(message);
-}
 
-let operationError = null;
-try {
+  checkout = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-skill-"));
+  temporaryCheckout = true;
   run("git", ["init", "--quiet"], "Git initialization");
   run("git", ["remote", "add", "origin", githubUrl], "Git remote configuration");
   const fetchArgs = ["-c", "http.sslBackend=openssl", "fetch", "--quiet"];
@@ -178,7 +229,52 @@ try {
   if (actualCommit !== options.commit) {
     throw new Error(`Pinned checkout mismatch: expected ${options.commit}, received ${actualCommit}.`);
   }
+  return { cacheHit: false };
+}
 
+function publishPinnedSourceCache() {
+  if (!temporaryCheckout || fs.existsSync(sourceCachePath)) return;
+  fs.mkdirSync(sourceCacheRoot, { recursive: true });
+  assertManagedTargetPath(sourceCacheRoot, [codexHome]);
+  fs.writeFileSync(
+    path.join(checkout, PINNED_SOURCE_RECEIPT),
+    `${JSON.stringify({
+      schemaVersion: PINNED_SOURCE_RECEIPT_SCHEMA,
+      package: options.package,
+      commit: options.commit,
+      fullDepth: options.fullDepth
+    })}\n`,
+    "utf8"
+  );
+  try {
+    fs.renameSync(checkout, sourceCachePath);
+    checkout = sourceCachePath;
+    temporaryCheckout = false;
+  } catch (error) {
+    if (error.code !== "EEXIST" && error.code !== "ENOTEMPTY") throw error;
+  }
+}
+
+function emitResult(outcome, message, compensation = null) {
+  if (options.json) {
+    console.log(JSON.stringify({
+      schemaVersion: "codex-chef.pinned-skill-install-result.v1",
+      status: "ok",
+      outcome,
+      skill: options.skill,
+      package: options.package,
+      commit: options.commit,
+      message,
+      compensation
+    }));
+    return;
+  }
+  console.log(message);
+}
+
+let operationError = null;
+try {
+  checkoutPinnedSource();
   const matches = findSkillDirectories(checkout);
   if (matches.length !== 1) {
     throw new Error(
@@ -186,6 +282,9 @@ try {
     );
   }
   const sourceHash = hashSkillTree(matches[0]);
+  const sourceRelativePath = path.relative(checkout, matches[0]);
+  publishPinnedSourceCache();
+  const source = path.join(checkout, sourceRelativePath);
 
   if (options.verifyOnly) {
     emitResult(
@@ -194,7 +293,6 @@ try {
     );
   } else {
     const agentsHome = path.resolve(process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"));
-    const codexHome = path.resolve(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
     const target = path.join(agentsHome, "skills", options.skill);
     const backupRoot = path.join(
       codexHome,
@@ -225,8 +323,8 @@ try {
       );
       process.exitCode = 0;
     } else {
-      activatePinnedSkill({
-        source: matches[0],
+      const activation = activatePinnedSkill({
+        source,
         target,
         backupRoot,
         managedRoots: [agentsHome, codexHome],
@@ -246,7 +344,8 @@ try {
         : "installed";
       emitResult(
         outcome,
-        `Installed pinned skill ${options.skill} by native copy from ${options.package}@${options.commit}.`
+        `Installed pinned skill ${options.skill} by native copy from ${options.package}@${options.commit}.`,
+        activation.compensation
       );
     }
   }
@@ -263,4 +362,5 @@ try {
       throw cleanupError;
     }
   }
+}
 }

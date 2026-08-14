@@ -20,7 +20,7 @@ import {
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
 import { PLUGIN_ID, refreshInstalledPlugin } from "./refresh-installed-plugin.mjs";
-import { acquireOperationLock } from "./lib/operation-lock.mjs";
+import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
 import { createOperationJournal } from "./lib/operation-journal.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -281,6 +281,7 @@ function trackTransactionWrite(targetPath) {
   if (!options.apply) return;
   const key = path.resolve(targetPath);
   assertManagedTarget(key);
+  operationJournal?.markApplied(key);
   transactionWrites.set(key, {
     output: fingerprintTarget(key),
     backup: transactionOriginals.get(key) || null
@@ -289,6 +290,14 @@ function trackTransactionWrite(targetPath) {
   if (process.env.CODEX_CHEF_TEST_MODE === "1" && Number.isInteger(failAfter) && failAfter > 0 && transactionWrites.size >= failAfter) {
     throw new Error("Injected repair post-write failure");
   }
+}
+
+function prepareTransactionWrite(targetPath) {
+  if (!options.apply) return;
+  const key = path.resolve(targetPath);
+  assertManagedTarget(key);
+  operationJournal ||= createOperationJournal({ backupRoot, operation: "repair-install" });
+  operationJournal.prepareMutation({ target: key, backup: transactionOriginals.get(key) || null });
 }
 
 function reconcileTransaction() {
@@ -349,6 +358,7 @@ function migrateLegacyProfilePins() {
     };
     if (options.apply) {
       action.backup = backupTarget(target);
+      prepareTransactionWrite(target);
       fs.writeFileSync(target, updated, "utf8");
       trackTransactionWrite(target);
     }
@@ -409,6 +419,7 @@ function repairFile(sourceRel, targetPath, id) {
     assertManagedTarget(targetPath);
     ensureDir(path.dirname(targetPath));
     action.backup = backupTarget(targetPath);
+    prepareTransactionWrite(targetPath);
     fs.copyFileSync(sourcePath, targetPath);
     trackTransactionWrite(targetPath);
   }
@@ -465,6 +476,7 @@ function repairGeneratedMcpProfile(templateRel, targetPath, id) {
   if (options.apply) {
     ensureDir(path.dirname(targetPath));
     action.backup = backupTarget(targetPath);
+    prepareTransactionWrite(targetPath);
     fs.writeFileSync(targetPath, rendered, "utf8");
     trackTransactionWrite(targetPath);
   }
@@ -525,6 +537,7 @@ function repairRulesFile(sourceRel, targetPath, id) {
       notes.push(`Removed ${problemRules.length} conflicting local approval rule(s) from ${redact(targetPath)} during repair.`);
     }
     const next = extra ? `${sourceText.trimEnd()}\n\n# Local approval rules preserved by Codex Chef repair.\n${extra}\n` : sourceText;
+    prepareTransactionWrite(targetPath);
     fs.writeFileSync(targetPath, next, "utf8");
     trackTransactionWrite(targetPath);
   }
@@ -613,6 +626,7 @@ function repairManagedFiles(contract) {
       const status = options.apply ? "applied" : "planned";
       if (options.apply) {
         if (fs.existsSync(action.destination)) backupTarget(action.destination);
+        prepareTransactionWrite(action.destination);
         writeDirectSkillMarker(sourceRoot, targetRoot, {
           allowAdopt: shouldAdoptDirectSkill(directSkill)
         });
@@ -658,6 +672,7 @@ function repairManagedFiles(contract) {
       throw new Error(`Refusing to prune file outside managed plugin mirror: ${extraPath}`);
     }
     const backup = backupTarget(extraPath);
+    prepareTransactionWrite(extraPath);
     fs.rmSync(extraPath, { force: true });
     trackTransactionWrite(extraPath);
     pruned.push(redact(extraPath));
@@ -778,6 +793,7 @@ function runConfigMerge() {
   if (options.apply && configNeedsApply) {
     if (fs.existsSync(destination)) backupTarget(destination);
     ensureDir(path.dirname(destination));
+    prepareTransactionWrite(destination);
     const apply = spawnSync(process.execPath, [
       "scripts/merge-codex-config.mjs",
       template,
@@ -859,6 +875,7 @@ function repairMarketplace() {
   if (options.apply) {
     ensureDir(path.dirname(marketplacePath));
     const backup = backupTarget(marketplacePath);
+    prepareTransactionWrite(marketplacePath);
     writeMarketplaceEntry(marketplacePath, pluginTarget);
     trackTransactionWrite(marketplacePath);
     recordAction({
@@ -1063,7 +1080,10 @@ try {
     throw new Error("Repair preflight failed; refusing to plan or apply managed global changes until validators pass.");
   }
   if (options.apply) {
-    operationLock = acquireOperationLock({ root: options.codexHome, operation: "repair-install" });
+    operationLock = acquireOperationLockSet({
+      roots: [options.codexHome, options.agentsHome],
+      operation: "repair-install"
+    });
   }
   managedFiles = repairManagedFiles(repairContract);
   legacyProfileMigration = migrateLegacyProfilePins();

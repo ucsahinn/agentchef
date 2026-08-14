@@ -459,10 +459,77 @@ export function buildOwnedCleanupPlan(processes, snapshot) {
       rootPid: root.pid,
       rootCreatedAt: root.createdAt,
       server: root.server,
-      processCount: memberPids.length
+      processCount: memberPids.length,
+      ownershipReceipt: {
+        schemaVersion: 1,
+        ownerPid: snapshot.ownerPid,
+        ownerChain: (snapshot.ownerChain || []).map((owner) => ({
+          pid: owner.pid,
+          createdAt: owner.createdAt
+        })),
+        rootPid: root.pid,
+        rootCreatedAt: root.createdAt,
+        server: root.server,
+        processes: snapshot.processes
+          .filter((entry) => (
+            entry.server === root.server
+            && snapshotServerRoot(entry, snapshotByPid).pid === root.pid
+          ))
+          .map((entry) => ({
+            pid: entry.pid,
+            parentPid: entry.parentPid,
+            server: entry.server,
+            createdAt: entry.createdAt
+          }))
+      }
     });
   }
   return plan.sort((left, right) => left.rootPid - right.rootPid);
+}
+
+function receiptMatchesPlan(item, byPid) {
+  const receipt = item?.ownershipReceipt;
+  if (!receipt || receipt.schemaVersion !== 1 || !Array.isArray(receipt.processes)) return null;
+  const rootPid = Number(item?.rootPid);
+  const root = byPid.get(rootPid);
+  if (!sameProcessIdentity(root, { pid: rootPid, createdAt: normalizeCreatedAt(item?.rootCreatedAt) })) return null;
+  if (receipt.rootPid !== rootPid
+    || normalizeCreatedAt(receipt.rootCreatedAt) !== normalizeCreatedAt(item?.rootCreatedAt)
+    || receipt.server !== item?.server
+    || mcpServerFor(root) !== item?.server
+    || highestTaggedAncestor(root, item.server, byPid)?.pid !== rootPid
+    || nearestCodexAncestor(root, byPid)) return null;
+  if (!Array.isArray(receipt.ownerChain) || receipt.ownerChain.length === 0
+    || Number(receipt.ownerPid) !== Number(receipt.ownerChain[0]?.pid)
+    || receipt.ownerChain.some((owner) => !Number.isInteger(Number(owner?.pid)) || !normalizeCreatedAt(owner?.createdAt))) return null;
+  if (receipt.ownerChain.some((owner) => sameProcessIdentity(byPid.get(Number(owner?.pid)), owner))) return null;
+
+  const members = receipt.processes.map((member) => byPid.get(Number(member?.pid)));
+  if (members.length === 0 || members.some((member, index) => (
+    !sameProcessIdentity(member, receipt.processes[index])
+    || mcpServerFor(member) !== item.server
+  ))) return null;
+  if (!members.some((member) => member.pid === rootPid)) return null;
+  return members;
+}
+
+function descendantsFirst(members, rootPid) {
+  const memberIds = new Set(members.map((member) => member.pid));
+  const children = new Map();
+  for (const member of members) {
+    if (!memberIds.has(member.parentPid)) continue;
+    if (!children.has(member.parentPid)) children.set(member.parentPid, []);
+    children.get(member.parentPid).push(member);
+  }
+  const ordered = [];
+  const visit = (pid, visited = new Set()) => {
+    if (visited.has(pid)) return;
+    visited.add(pid);
+    for (const child of children.get(pid) || []) visit(child.pid, visited);
+    if (pid !== rootPid) ordered.push(pid);
+  };
+  visit(rootPid);
+  return ordered;
 }
 
 function parsePowerShellSnapshot(stdout) {
@@ -619,14 +686,15 @@ export function terminateCleanupPlan(plan, options = {}) {
       error: `Process identity recheck unavailable: ${collected.error}`
     }));
   }
-  const verifiedKeys = new Set(verifyCleanupPlan(collected.processes, plan).map(
-    (item) => `${Number(item.rootPid)}:${item.server}`
-  ));
+  const { byPid } = processMaps(collected.processes);
+  const platform = options.platform || process.platform;
+  const run = options.spawnSync || spawnSync;
   const results = [];
   for (const item of Array.isArray(plan) ? plan : []) {
     const pid = Number(item?.rootPid);
     if (!Number.isInteger(pid) || pid <= 0 || pid === process.pid) continue;
-    if (!verifiedKeys.has(`${pid}:${item.server}`)) {
+    const members = receiptMatchesPlan(item, byPid);
+    if (!members) {
       results.push({
         rootPid: pid,
         server: item.server,
@@ -634,24 +702,27 @@ export function terminateCleanupPlan(plan, options = {}) {
         stopped: false,
         exitCode: null,
         error: null,
-        skippedReason: "Process exited, changed identity, gained an active Codex owner, or no longer matched the MCP root."
+        skippedReason: "Process lacked a trusted ownership receipt, exited, changed identity, gained an active Codex owner, or no longer matched the captured MCP tree."
       });
       continue;
     }
-    const command = process.platform === "win32" ? "taskkill.exe" : "kill";
-    const args = process.platform === "win32"
-      ? ["/PID", String(pid), "/T"]
-      : ["-TERM", String(pid)];
-    const result = spawnSync(command, args, {
-      encoding: "utf8",
-      windowsHide: true,
-      timeout: Number(options.timeoutMs || 15_000)
-    });
+    const targets = platform === "win32" ? [pid] : [...descendantsFirst(members, pid), pid];
+    const command = platform === "win32" ? "taskkill.exe" : "kill";
+    const commandResults = targets.map((targetPid) => run(
+      command,
+      platform === "win32" ? ["/PID", String(targetPid), "/T"] : ["-TERM", String(targetPid)],
+      {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: Number(options.timeoutMs || 15_000)
+      }
+    ));
+    const result = commandResults.find((entry) => entry.error || entry.status !== 0) || commandResults.at(-1);
     results.push({
       rootPid: pid,
       server: item.server,
-      ok: !result.error && result.status === 0,
-      stopped: !result.error && result.status === 0,
+      ok: commandResults.every((entry) => !entry.error && entry.status === 0),
+      stopped: commandResults.every((entry) => !entry.error && entry.status === 0),
       exitCode: result.status,
       error: result.error?.message || (result.status === 0 ? null : String(result.stderr || result.stdout || "").trim())
     });

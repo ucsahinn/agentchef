@@ -175,6 +175,15 @@ normalize_install_path() {
     "~"/*) target="$HOME/${target#"~/"}" ;;
   esac
   case "$target" in
+    [A-Za-z]:[\\/]*)
+      # Node/PowerShell callers can pass native paths through Git Bash. Convert
+      # them before treating relative paths as repository-relative.
+      if command -v cygpath >/dev/null 2>&1; then
+        cygpath -u "$target"
+      else
+        printf "%s" "$target"
+      fi
+      ;;
     /*) printf "%s" "$target" ;;
     *) printf "%s/%s" "$PWD" "$target" ;;
   esac
@@ -385,17 +394,48 @@ OPERATION_JOURNAL="$REPO_ROOT/scripts/lib/operation-journal.mjs"
 OPERATION_JOURNAL_ACTIVE=0
 LAST_BACKUP_PATH=""
 GIT_GUARD_RECEIPT=""
+SKILL_COMPENSATION_RECEIPT_LOG="$BACKUP_ROOT/.codex-chef-skill-compensations"
 
-# A global install must not race another install/repair/restore for this CODEX_HOME.
-# mkdir is atomic; a pre-existing lock is deliberately never removed automatically.
-OPERATION_LOCK_DIR="$CODEX_HOME_DIR/.codex-chef-operation.lock"
-OPERATION_LOCK_OWNER="$OPERATION_LOCK_DIR/owner"
+# A global install must not race another install/repair/restore for either
+# managed home. Roots are canonicalized and ordered by the shared lock module's
+# protocol before Bash takes atomic mkdir locks.
+OPERATION_LOCK_ROOTS=()
+OPERATION_LOCK_DIRS=()
 OPERATION_LOCK_ID="install-$$-$(date -u +%Y%m%dT%H%M%SZ)"
 OPERATION_LOCK_HELD=0
+
+release_operation_locks() {
+  local lock_dir owner_path
+  for ((lock_index=${#OPERATION_LOCK_DIRS[@]} - 1; lock_index >= 0; lock_index--)); do
+    lock_dir="${OPERATION_LOCK_DIRS[$lock_index]}"
+    owner_path="$lock_dir/owner.json"
+    if [ -f "$owner_path" ] && node -e 'const fs=require("fs"); try { const owner=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(owner.id === process.argv[2] ? 0 : 1); } catch { process.exit(1); }' "$owner_path" "$OPERATION_LOCK_ID"; then
+      rm -f "$owner_path"
+      rmdir "$lock_dir" 2>/dev/null || true
+    fi
+  done
+  OPERATION_LOCK_HELD=0
+}
+
+rollback_skill_compensations() {
+  if [ ! -f "$SKILL_COMPENSATION_RECEIPT_LOG" ]; then return; fi
+  local receipts=()
+  mapfile -t receipts < "$SKILL_COMPENSATION_RECEIPT_LOG"
+  local receipt_path
+  for ((receipt_index=${#receipts[@]} - 1; receipt_index >= 0; receipt_index--)); do
+    receipt_path="${receipts[$receipt_index]}"
+    if [ -n "$receipt_path" ]; then
+      node "$REPO_ROOT/scripts/install-pinned-skill.mjs" --rollback-receipt "$receipt_path" --json >&2 || true
+    fi
+  done
+}
 
 cleanup_operation_lock() {
   operation_status=$?
   trap - EXIT HUP INT TERM
+  if [ "$operation_status" -ne 0 ]; then
+    rollback_skill_compensations
+  fi
   if [ "$OPERATION_JOURNAL_ACTIVE" -eq 1 ]; then
     if [ "$operation_status" -eq 0 ]; then
       node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" complete >/dev/null 2>&1 || true
@@ -409,31 +449,46 @@ cleanup_operation_lock() {
       node "$OPERATION_JOURNAL" finish "$BACKUP_ROOT" failed >/dev/null 2>&1 || true
     fi
   fi
-  if [ "$OPERATION_LOCK_HELD" -eq 1 ] && [ -f "$OPERATION_LOCK_OWNER" ] && grep -Fqx "id=$OPERATION_LOCK_ID" "$OPERATION_LOCK_OWNER"; then
-    rm -f "$OPERATION_LOCK_OWNER"
-    rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
-  fi
+  if [ "$OPERATION_LOCK_HELD" -eq 1 ]; then release_operation_locks; fi
   return "$operation_status"
 }
 
 acquire_operation_lock() {
-if [ "$DRY_RUN" -eq 0 ]; then
-  if ! mkdir -p "$CODEX_HOME_DIR"; then
-    echo "Could not prepare the Codex home for the operation lock: $CODEX_HOME_DIR" >&2
+  if [ "$DRY_RUN" -eq 1 ]; then return; fi
+  mapfile -t OPERATION_LOCK_ROOTS < <(node --input-type=module -e '
+    import { pathToFileURL } from "node:url";
+    const { canonicalizeOperationLockRoots } = await import(pathToFileURL(process.argv[1]).href);
+    for (const root of canonicalizeOperationLockRoots({ roots: process.argv.slice(2) })) console.log(root);
+  ' "$REPO_ROOT/scripts/lib/operation-lock.mjs" "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR")
+  if [ "${#OPERATION_LOCK_ROOTS[@]}" -eq 0 ]; then
+    echo "Could not resolve managed roots for the Codex Chef operation lock." >&2
     exit 1
   fi
-  if ! mkdir "$OPERATION_LOCK_DIR" 2>/dev/null; then
-    echo "Another Codex Chef operation is already in progress for $CODEX_HOME_DIR; refusing concurrent install." >&2
-    exit 1
-  fi
-  if ! printf 'id=%s\npid=%s\noperation=install\nstarted_at=%s\n' "$OPERATION_LOCK_ID" "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$OPERATION_LOCK_OWNER"; then
-    rmdir "$OPERATION_LOCK_DIR" 2>/dev/null || true
-    echo "Could not record the Codex Chef operation lock owner." >&2
-    exit 1
-  fi
+  local root lock_dir owner_path
+  for root in "${OPERATION_LOCK_ROOTS[@]}"; do
+    if command -v cygpath >/dev/null 2>&1 && [[ "$root" =~ ^[A-Za-z]: ]]; then root="$(cygpath -u "$root")"; fi
+    if ! mkdir -p "$root"; then
+      release_operation_locks
+      echo "Could not prepare a managed home for the operation lock: $root" >&2
+      exit 1
+    fi
+    lock_dir="$root/.codex-chef-operation.lock"
+    if ! mkdir "$lock_dir" 2>/dev/null; then
+      release_operation_locks
+      echo "Another Codex Chef operation is already in progress for $root; refusing concurrent install." >&2
+      exit 1
+    fi
+    OPERATION_LOCK_DIRS+=("$lock_dir")
+    owner_path="$lock_dir/owner.json"
+    if ! node -e 'const fs=require("fs"); fs.writeFileSync(process.argv[1], `${JSON.stringify({ pid: Number(process.argv[3]), operation: "install", startedAt: new Date().toISOString(), id: process.argv[2] })}\n`, { encoding: "utf8", flag: "wx" });' "$owner_path" "$OPERATION_LOCK_ID" "$$"; then
+      rmdir "$lock_dir" 2>/dev/null || true
+      release_operation_locks
+      echo "Could not record the Codex Chef operation lock owner." >&2
+      exit 1
+    fi
+  done
   OPERATION_LOCK_HELD=1
   trap 'cleanup_operation_lock' EXIT HUP INT TERM
-fi
 }
 
 run_change() {
@@ -481,20 +536,35 @@ start_operation_journal() {
   fi
 }
 
-track_install_write() {
+prepare_install_write() {
   local target="$1"
   local backup="${2:--}"
   if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
-    node "$OPERATION_JOURNAL" track "$BACKUP_ROOT" "$target" "$backup"
+    node "$OPERATION_JOURNAL" prepare "$BACKUP_ROOT" "$target" "$backup"
   fi
 }
 
-track_install_tree() {
+mark_install_write_applied() {
+  local target="$1"
+  if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" applied "$BACKUP_ROOT" "$target"
+  fi
+}
+
+prepare_install_tree() {
   local destination="$1"
   local source="$2"
   local backup="${3:--}"
   if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
-    node "$OPERATION_JOURNAL" track-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"
+    node "$OPERATION_JOURNAL" prepare-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"
+  fi
+}
+
+mark_install_tree_applied() {
+  local destination="$1"
+  local source="$2"
+  if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
+    node "$OPERATION_JOURNAL" applied-tree "$BACKUP_ROOT" "$destination" "$source"
   fi
 }
 
@@ -572,8 +642,9 @@ install_file() {
   fi
   ensure_dir "$(dirname "$destination")"
   backup_target "$destination"
+  prepare_install_write "$destination" "$LAST_BACKUP_PATH"
   if run_change "$destination" "install file from $source" managed_copy_file "$source" "$destination"; then
-    track_install_write "$destination" "$LAST_BACKUP_PATH"
+    mark_install_write_applied "$destination"
     action "installed" "$destination"
   elif [ "$DRY_RUN" -ne 1 ]; then
     echo "Failed to install file from $source to $destination" >&2
@@ -600,8 +671,9 @@ install_codex_config() {
       return
     fi
     assert_managed_write_target "$destination"
+    prepare_install_write "$destination" "$LAST_BACKUP_PATH"
     if run_change "$destination" "$merge_action" node "${merge_args[@]}"; then
-      track_install_write "$destination" "$LAST_BACKUP_PATH"
+      mark_install_write_applied "$destination"
       if [ "$UPDATE" -eq 1 ]; then
         action "updated config" "$destination"
       else
@@ -630,8 +702,9 @@ install_mcp_profile() {
   if [ "$DRY_RUN" -eq 1 ]; then
     render_args+=("--dry-run")
   fi
+  prepare_install_write "$destination" "$LAST_BACKUP_PATH"
   if run_change "$destination" "$render_action" node "${render_args[@]}"; then
-    track_install_write "$destination" "$LAST_BACKUP_PATH"
+    mark_install_write_applied "$destination"
     action "generated profile" "$destination"
   elif [ "$DRY_RUN" -ne 1 ]; then
     echo "Failed to generate MCP profile: $destination" >&2
@@ -647,13 +720,14 @@ install_directory() {
   local directory_backup="$LAST_BACKUP_PATH"
   ensure_dir "$destination"
   assert_managed_directory_target "$destination"
+  prepare_install_tree "$destination" "$source" "$directory_backup"
   if run_change "$destination" "sync source-owned files from $source while preserving unrelated extras" true; then
     (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
       rel="${rel#./}"
       ensure_dir "$(dirname "$destination/$rel")"
       managed_copy_file "$source/$rel" "$destination/$rel"
     done
-    track_install_tree "$destination" "$source" "$directory_backup"
+    mark_install_tree_applied "$destination" "$source"
     action "synced directory" "$destination"
   fi
 }
@@ -756,12 +830,13 @@ while IFS= read -r DIRECT_SKILL_NAME; do
     if [ "$DIRECT_SKILL_ADOPT" -eq 1 ]; then
       DIRECT_MARK_ARGS+=("--allow-adopt")
     fi
-    node "${DIRECT_MARK_ARGS[@]}" >/dev/null
     DIRECT_MARK_BACKUP="-"
     if [ -n "$LAST_BACKUP_PATH" ] && [ -e "$LAST_BACKUP_PATH/.codex-chef-managed.json" ]; then
       DIRECT_MARK_BACKUP="$LAST_BACKUP_PATH/.codex-chef-managed.json"
     fi
-    track_install_write "$DIRECT_SKILL_TARGET/.codex-chef-managed.json" "$DIRECT_MARK_BACKUP"
+    prepare_install_write "$DIRECT_SKILL_TARGET/.codex-chef-managed.json" "$DIRECT_MARK_BACKUP"
+    node "${DIRECT_MARK_ARGS[@]}" >/dev/null
+    mark_install_write_applied "$DIRECT_SKILL_TARGET/.codex-chef-managed.json"
   fi
 done < <(direct_skill_names)
 
@@ -782,8 +857,9 @@ else
   if [ "$marketplace_status" -eq 2 ]; then
     backup_target "$MARKETPLACE_PATH"
     assert_managed_write_target "$MARKETPLACE_PATH"
+    prepare_install_write "$MARKETPLACE_PATH" "$LAST_BACKUP_PATH"
     node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --write
-    track_install_write "$MARKETPLACE_PATH" "$LAST_BACKUP_PATH"
+    mark_install_write_applied "$MARKETPLACE_PATH"
     action "updated marketplace" "$MARKETPLACE_PATH"
   elif [ "$marketplace_status" -eq 0 ]; then
     SKIPPED_EXISTING_COUNT=$((SKIPPED_EXISTING_COUNT + 1))
@@ -870,7 +946,7 @@ for (const skill of catalog.skills.filter((item) => item.install)) {
 NODE
     echo "Skipped skill installation because --dry-run is active."
   else
-  node - "$CURATED_SKILLS_CATALOG" "$REPO_ROOT" <<'NODE'
+  node - "$CURATED_SKILLS_CATALOG" "$REPO_ROOT" "$SKILL_COMPENSATION_RECEIPT_LOG" <<'NODE'
 const fs = require("fs");
 const { spawnSync } = require("child_process");
 const catalog = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -926,6 +1002,9 @@ for (const skill of catalog.skills.filter((item) => item.install)) {
     process.stderr.write(result.stderr || "");
     console.error(`Skill install returned an invalid status receipt for ${skill.name}`);
     process.exit(1);
+  }
+  if (receipt.compensation?.receiptPath) {
+    fs.appendFileSync(process.argv[4], `${receipt.compensation.receiptPath}\n`, { encoding: "utf8" });
   }
   const statusByOutcome = {
     "installed": "installed skill",

@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const RECEIPT_SCHEMA = "codex-chef.global-git-guards-receipt";
-export const RECEIPT_VERSION = 1;
+export const RECEIPT_VERSION = 2;
+export const LEGACY_RECEIPT_VERSION = 1;
 export const MAX_GUARD_FILE_BYTES = 1_048_576;
 export const MAX_RECEIPT_BYTES = 3_145_728;
 
@@ -349,6 +350,8 @@ function captureReceipt(home, gitConfigGlobal, applied = {}) {
     schema: RECEIPT_SCHEMA,
     version: RECEIPT_VERSION,
     createdAt: new Date().toISOString(),
+    operationId: crypto.randomUUID(),
+    state: applied.state ?? "applying",
     home,
     files: FILE_TARGETS.map((definition) => {
       const state = readTargetState(home, pathFromHome(home, definition.relativePath));
@@ -360,7 +363,8 @@ function captureReceipt(home, gitConfigGlobal, applied = {}) {
         mode: state.present ? state.mode : null,
         appliedSha256: applied.fileSha256?.get(definition.id)
           ?? (state.present ? sha256(state.bytes) : null),
-        appliedMode: applied.fileMode?.get(definition.id) ?? null
+        appliedMode: applied.fileMode?.get(definition.id) ?? null,
+        progress: applied.fileProgress?.get(definition.id) ?? "pending"
       };
     }),
     gitConfig: GIT_CONFIG_KEYS.map((key) => {
@@ -369,7 +373,8 @@ function captureReceipt(home, gitConfigGlobal, applied = {}) {
         key,
         present: values.length > 0,
         values,
-        appliedValues: applied.configValues?.get(key) ?? [...values]
+        appliedValues: applied.configValues?.get(key) ?? [...values],
+        progress: applied.configProgress?.get(key) ?? "pending"
       };
     })
   };
@@ -403,16 +408,25 @@ export function validateGlobalGitGuardReceipt(receipt, { home } = {}) {
   if (serializedBytes > MAX_RECEIPT_BYTES) {
     throw new Error(`Global Git guard receipt is too large (maximum ${MAX_RECEIPT_BYTES} bytes).`);
   }
+  const isLegacy = receipt?.version === LEGACY_RECEIPT_VERSION;
   assertExactObjectKeys(
     receipt,
-    ["schema", "version", "createdAt", "home", "files", "gitConfig"],
+    isLegacy
+      ? ["schema", "version", "createdAt", "home", "files", "gitConfig"]
+      : ["schema", "version", "createdAt", "operationId", "state", "home", "files", "gitConfig"],
     "Global Git guard receipt"
   );
-  if (receipt.schema !== RECEIPT_SCHEMA || receipt.version !== RECEIPT_VERSION) {
+  if (receipt.schema !== RECEIPT_SCHEMA || ![LEGACY_RECEIPT_VERSION, RECEIPT_VERSION].includes(receipt.version)) {
     throw new Error("Global Git guard receipt schema or version is unsupported.");
   }
   if (typeof receipt.createdAt !== "string" || !Number.isFinite(Date.parse(receipt.createdAt))) {
     throw new Error("Global Git guard receipt createdAt is invalid.");
+  }
+  if (!isLegacy && (typeof receipt.operationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(receipt.operationId))) {
+    throw new Error("Global Git guard receipt operationId is invalid.");
+  }
+  if (!isLegacy && !["applying", "applied", "rolled-back"].includes(receipt.state)) {
+    throw new Error("Global Git guard receipt state is invalid.");
   }
   const expectedHome = normalizeHome(home ?? receipt.home);
   if (typeof receipt.home !== "string" || !samePath(receipt.home, expectedHome)) {
@@ -433,7 +447,9 @@ export function validateGlobalGitGuardReceipt(receipt, { home } = {}) {
     const entry = matches[0];
     assertExactObjectKeys(
       entry,
-      ["id", "relativePath", "present", "bytesBase64", "mode", "appliedSha256", "appliedMode"],
+      isLegacy
+        ? ["id", "relativePath", "present", "bytesBase64", "mode", "appliedSha256", "appliedMode"]
+        : ["id", "relativePath", "present", "bytesBase64", "mode", "appliedSha256", "appliedMode", "progress"],
       `Receipt file ${definition.id}`
     );
     if (entry.relativePath !== definition.relativePath) {
@@ -457,14 +473,21 @@ export function validateGlobalGitGuardReceipt(receipt, { home } = {}) {
     if (entry.appliedMode !== null && (!Number.isInteger(entry.appliedMode) || entry.appliedMode < 0 || entry.appliedMode > 0o777)) {
       throw new Error(`Receipt file ${definition.id} applied mode is invalid.`);
     }
-    return { ...entry };
+    if (!isLegacy && !["pending", "prepared", "applied"].includes(entry.progress)) {
+      throw new Error(`Receipt file ${definition.id} progress is invalid.`);
+    }
+    return isLegacy ? { ...entry } : { ...entry, progress: entry.progress };
   });
 
   const normalizedConfig = GIT_CONFIG_KEYS.map((key) => {
     const matches = receipt.gitConfig.filter((entry) => entry?.key === key);
     if (matches.length !== 1) throw new Error(`Receipt Git config key is not allowlisted exactly once: ${key}`);
     const entry = matches[0];
-    assertExactObjectKeys(entry, ["key", "present", "values", "appliedValues"], `Receipt Git config ${key}`);
+    assertExactObjectKeys(
+      entry,
+      isLegacy ? ["key", "present", "values", "appliedValues"] : ["key", "present", "values", "appliedValues", "progress"],
+      `Receipt Git config ${key}`
+    );
     if (typeof entry.present !== "boolean" || !Array.isArray(entry.values) || !Array.isArray(entry.appliedValues)) {
       throw new Error(`Receipt Git config ${key} state is invalid.`);
     }
@@ -479,32 +502,58 @@ export function validateGlobalGitGuardReceipt(receipt, { home } = {}) {
         throw new Error(`Receipt Git config ${key} contains an invalid or too large value.`);
       }
     }
+    if (!isLegacy && !["pending", "prepared", "applied"].includes(entry.progress)) {
+      throw new Error(`Receipt Git config ${key} progress is invalid.`);
+    }
     return {
       key,
       present: entry.present,
       values: [...entry.values],
-      appliedValues: [...entry.appliedValues]
+      appliedValues: [...entry.appliedValues],
+      ...(isLegacy ? {} : { progress: entry.progress })
     };
   });
 
   return {
     schema: RECEIPT_SCHEMA,
-    version: RECEIPT_VERSION,
+    version: receipt.version,
     createdAt: receipt.createdAt,
+    ...(isLegacy ? {} : { operationId: receipt.operationId, state: receipt.state }),
     home: expectedHome,
     files: normalizedFiles,
     gitConfig: normalizedConfig
   };
 }
 
+function writeReceiptAtomically(receiptPath, receipt, { mustExist = false } = {}) {
+  const resolved = assertSafeReceiptPath(receiptPath, { mustExist });
+  const temporary = path.join(
+    path.dirname(resolved),
+    `.${path.basename(resolved)}.${crypto.randomUUID()}.tmp`
+  );
+  let descriptor;
+  try {
+    descriptor = fs.openSync(temporary, "wx", 0o600);
+    fs.writeFileSync(descriptor, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.renameSync(temporary, resolved);
+  } catch (error) {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    try { fs.unlinkSync(temporary); } catch (cleanupError) { if (cleanupError.code !== "ENOENT") throw cleanupError; }
+    throw error;
+  }
+}
+
 function persistReceipt(receiptPath, receipt) {
   if (!receiptPath) return;
-  const resolved = assertSafeReceiptPath(receiptPath);
-  fs.writeFileSync(resolved, `${JSON.stringify(receipt, null, 2)}\n`, {
-    encoding: "utf8",
-    flag: "wx",
-    mode: 0o600
-  });
+  writeReceiptAtomically(receiptPath, receipt);
+}
+
+function updateReceipt(receiptPath, receipt) {
+  if (!receiptPath) return;
+  writeReceiptAtomically(receiptPath, receipt, { mustExist: true });
 }
 
 function receiptFileState(entry) {
@@ -699,6 +748,8 @@ export function applyGlobalGitGuards(options) {
         nextStep: step + 1
       });
       assertTargetUnchanged(built.home, entry.targetPath, entry.current);
+      receipt.files.find((candidate) => candidate.id === entry.definition.id).progress = "prepared";
+      updateReceipt(options.receiptPath, receipt);
       mutatedFileIds.add(entry.definition.id);
       if (entry.public.action !== "chmod") {
         fs.mkdirSync(path.dirname(entry.targetPath), { recursive: true });
@@ -708,6 +759,8 @@ export function applyGlobalGitGuards(options) {
       }
       if (entry.desiredMode !== null) fs.chmodSync(entry.targetPath, entry.desiredMode);
       appliedFileStates.set(entry.definition.id, readTargetState(built.home, entry.targetPath));
+      receipt.files.find((candidate) => candidate.id === entry.definition.id).progress = "applied";
+      updateReceipt(options.receiptPath, receipt);
       step += 1;
       injectFailure(options.failAfterStep, step);
     }
@@ -719,9 +772,13 @@ export function applyGlobalGitGuards(options) {
         nextStep: step + 1
       });
       assertConfigUnchanged(built.home, built.gitConfigGlobal, entry.key, entry.values);
+      receipt.gitConfig.find((candidate) => candidate.key === entry.key).progress = "prepared";
+      updateReceipt(options.receiptPath, receipt);
       mutatedConfigKeys.add(entry.key);
       setConfigValues(built.home, built.gitConfigGlobal, entry.key, [entry.proposedValue]);
       appliedConfigValues.set(entry.key, readConfigValues(built.home, built.gitConfigGlobal, entry.key));
+      receipt.gitConfig.find((candidate) => candidate.key === entry.key).progress = "applied";
+      updateReceipt(options.receiptPath, receipt);
       step += 1;
       injectFailure(options.failAfterStep, step);
     }
@@ -734,6 +791,8 @@ export function applyGlobalGitGuards(options) {
     if (!verified.ok || [...verified.files, ...verified.gitConfig].some((entry) => entry.action !== "noop")) {
       throw new Error("Global Git guard apply verification failed.");
     }
+    receipt.state = "applied";
+    updateReceipt(options.receiptPath, receipt);
   } catch (error) {
     try {
       restoreReceiptSafely({
@@ -744,6 +803,8 @@ export function applyGlobalGitGuards(options) {
         configKeys: mutatedConfigKeys,
         expectedCurrent: expectedCurrentFromMaps(appliedFileStates, appliedConfigValues)
       });
+      receipt.state = "rolled-back";
+      updateReceipt(options.receiptPath, receipt);
     } catch (rollbackError) {
       throw new AggregateError([error, rollbackError], `Global Git guard apply failed and rollback also failed: ${error.message}`);
     }
@@ -758,11 +819,96 @@ export function applyGlobalGitGuards(options) {
   };
 }
 
-export function restoreGlobalGitGuards({ home, gitConfigGlobal, receipt }) {
+function sameFileState(left, right) {
+  return left.present === right.present
+    && (!left.present || (left.mode === right.mode && left.bytes.equals(right.bytes)));
+}
+
+function isAppliedFileState(current, entry) {
+  return current.present
+    && sha256(current.bytes) === entry.appliedSha256
+    && (entry.appliedMode === null || current.mode === entry.appliedMode);
+}
+
+function recoverInterruptedReceipt(home, gitConfigGlobal, receipt) {
+  const fileIds = new Set();
+  const configKeys = new Set();
+  const expectedFileStates = new Map();
+  const expectedConfigValues = new Map();
+
+  for (const entry of receipt.files) {
+    const targetPath = pathFromHome(home, entry.relativePath);
+    const current = readTargetState(home, targetPath);
+    const original = receiptFileState(entry);
+    const originalMatches = sameFileState(current, original);
+    const appliedMatches = isAppliedFileState(current, entry);
+    if (receipt.state === "rolled-back") {
+      if (originalMatches) continue;
+      throw new Error(`Current Git guard state no longer matches the expected original file ${entry.relativePath}; refusing recovery.`);
+    }
+    if (entry.progress === "pending") {
+      if (originalMatches) continue;
+      throw new Error(`Current Git guard state no longer matches the expected original file ${entry.relativePath}; refusing recovery.`);
+    }
+    if (entry.progress === "applied") {
+      if (!appliedMatches) {
+        throw new Error(`Current Git guard state no longer matches the expected managed file ${entry.relativePath}; refusing recovery.`);
+      }
+    } else if (originalMatches) {
+      continue;
+    } else if (!appliedMatches) {
+      throw new Error(`Current Git guard state no longer matches an expected original or managed file ${entry.relativePath}; refusing recovery.`);
+    }
+    fileIds.add(entry.id);
+    expectedFileStates.set(entry.id, current);
+  }
+  for (const entry of receipt.gitConfig) {
+    const current = readConfigValues(home, gitConfigGlobal, entry.key);
+    const originalMatches = JSON.stringify(current) === JSON.stringify(entry.values);
+    const appliedMatches = JSON.stringify(current) === JSON.stringify(entry.appliedValues);
+    if (receipt.state === "rolled-back") {
+      if (originalMatches) continue;
+      throw new Error(`Current Git guard state no longer matches the expected original config ${entry.key}; refusing recovery.`);
+    }
+    if (entry.progress === "pending") {
+      if (originalMatches) continue;
+      throw new Error(`Current Git guard state no longer matches the expected original config ${entry.key}; refusing recovery.`);
+    }
+    if (entry.progress === "applied") {
+      if (!appliedMatches) {
+        throw new Error(`Current Git guard state no longer matches the expected managed config ${entry.key}; refusing recovery.`);
+      }
+    } else if (originalMatches) {
+      continue;
+    } else if (!appliedMatches) {
+      throw new Error(`Current Git guard state no longer matches an expected original or managed config ${entry.key}; refusing recovery.`);
+    }
+    configKeys.add(entry.key);
+    expectedConfigValues.set(entry.key, current);
+  }
+  restoreReceiptUnsafe({
+    home,
+    gitConfigGlobal,
+    receipt,
+    fileIds,
+    configKeys,
+    expectedCurrent: expectedCurrentFromMaps(expectedFileStates, expectedConfigValues)
+  });
+  return { recovered: true, fileIds, configKeys };
+}
+
+export function restoreGlobalGitGuards({ home, gitConfigGlobal, receipt, receiptPath }) {
   const normalizedHome = normalizeHome(home);
   const normalizedReceipt = validateGlobalGitGuardReceipt(receipt, { home: normalizedHome });
+  const normalizedGitConfigGlobal = gitConfigGlobal ? path.resolve(gitConfigGlobal) : undefined;
+  if (normalizedReceipt.version === RECEIPT_VERSION && normalizedReceipt.state !== "applied") {
+    const recovery = recoverInterruptedReceipt(normalizedHome, normalizedGitConfigGlobal, normalizedReceipt);
+    normalizedReceipt.state = "rolled-back";
+    updateReceipt(receiptPath, normalizedReceipt);
+    return { restored: true, recovered: recovery.recovered, receipt: normalizedReceipt };
+  }
   const current = validateGlobalGitGuardReceipt(
-    captureReceipt(normalizedHome, gitConfigGlobal ? path.resolve(gitConfigGlobal) : undefined),
+    captureReceipt(normalizedHome, normalizedGitConfigGlobal),
     { home: normalizedHome }
   );
   assertManagedCurrentState(current, normalizedReceipt);
@@ -771,7 +917,7 @@ export function restoreGlobalGitGuards({ home, gitConfigGlobal, receipt }) {
   try {
     restoreReceiptUnsafe({
       home: normalizedHome,
-      gitConfigGlobal: gitConfigGlobal ? path.resolve(gitConfigGlobal) : undefined,
+      gitConfigGlobal: normalizedGitConfigGlobal,
       receipt: normalizedReceipt,
       expectedCurrent: current,
       mutatedFileIds,
@@ -781,7 +927,7 @@ export function restoreGlobalGitGuards({ home, gitConfigGlobal, receipt }) {
     try {
       restoreReceiptSafely({
         home: normalizedHome,
-        gitConfigGlobal: gitConfigGlobal ? path.resolve(gitConfigGlobal) : undefined,
+        gitConfigGlobal: normalizedGitConfigGlobal,
         receipt: current,
         fileIds: mutatedFileIds,
         configKeys: mutatedConfigKeys,
@@ -792,5 +938,9 @@ export function restoreGlobalGitGuards({ home, gitConfigGlobal, receipt }) {
     }
     throw error;
   }
-  return { restored: true, receipt: normalizedReceipt };
+  if (normalizedReceipt.version === RECEIPT_VERSION) {
+    normalizedReceipt.state = "rolled-back";
+    updateReceipt(receiptPath, normalizedReceipt);
+  }
+  return { restored: true, recovered: false, receipt: normalizedReceipt };
 }

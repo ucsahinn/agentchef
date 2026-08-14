@@ -14,6 +14,8 @@ import {
 } from "./skill-provenance.mjs";
 
 const BACKUP_MANIFEST_NAME = ".codex-chef-backup.json";
+const ROLLBACK_RECEIPT_NAME = ".codex-chef-pinned-skill-rollback.json";
+const ROLLBACK_RECEIPT_SCHEMA = "codex-chef.pinned-skill-rollback.v1";
 
 function removeRealDirectory(target, managedRoots) {
   if (!fs.existsSync(target)) return;
@@ -79,6 +81,88 @@ function createPinnedSkillBackup(target, backupRoot, skill, expected, managedRoo
     "utf8"
   );
   return backupTarget;
+}
+
+function writeRollbackReceipt({ target, backupRoot, backedUp, expected, managedRoots }) {
+  assertManagedTargetPath(backupRoot, managedRoots);
+  fs.mkdirSync(backupRoot, { recursive: true });
+  const receiptPath = path.join(backupRoot, ROLLBACK_RECEIPT_NAME);
+  fs.writeFileSync(
+    receiptPath,
+    `${JSON.stringify({
+      schemaVersion: ROLLBACK_RECEIPT_SCHEMA,
+      kind: "pinned-skill-rollback",
+      target,
+      backupRoot,
+      backedUp,
+      expected
+    }, null, 2)}\n`,
+    { encoding: "utf8", flag: "wx" }
+  );
+  return { kind: "pinned-skill-rollback", receiptPath };
+}
+
+function readRollbackReceipt(receiptPath, managedRoots) {
+  const receiptState = assertManagedTargetPath(receiptPath, managedRoots);
+  const stat = fs.lstatSync(receiptState.canonicalTarget);
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    throw new Error(`Refusing a non-file pinned skill rollback receipt: ${receiptPath}`);
+  }
+  const receipt = JSON.parse(fs.readFileSync(receiptState.canonicalTarget, "utf8"));
+  if (
+    receipt?.schemaVersion !== ROLLBACK_RECEIPT_SCHEMA
+    || receipt?.kind !== "pinned-skill-rollback"
+    || typeof receipt.target !== "string"
+    || typeof receipt.backupRoot !== "string"
+    || typeof receipt.backedUp !== "boolean"
+    || !receipt.expected
+    || typeof receipt.expected.package !== "string"
+    || typeof receipt.expected.commit !== "string"
+    || typeof receipt.expected.skill !== "string"
+    || typeof receipt.expected.cliVersion !== "string"
+    || typeof receipt.expected.sourceTreeSha256 !== "string"
+  ) {
+    throw new Error("Pinned skill rollback receipt is invalid.");
+  }
+  const backupState = assertManagedTargetPath(receipt.backupRoot, managedRoots);
+  const expectedReceiptPath = path.join(backupState.canonicalTarget, ROLLBACK_RECEIPT_NAME);
+  if (receiptState.canonicalTarget !== expectedReceiptPath) {
+    throw new Error("Pinned skill rollback receipt is not located in its declared backup root.");
+  }
+  return { receipt, receiptPath: receiptState.canonicalTarget, backupRoot: backupState.canonicalTarget };
+}
+
+export function compensatePinnedSkillInstall({ receiptPath, managedRoots }) {
+  const { receipt, receiptPath: resolvedReceiptPath, backupRoot } = readRollbackReceipt(
+    receiptPath,
+    managedRoots
+  );
+  assertManagedTargetPath(receipt.target, managedRoots);
+  const installed = inspectPinnedSkillTarget(receipt.target, receipt.expected);
+  if (!installed.valid) {
+    throw new Error(
+      `Refusing pinned skill compensation because target changed since installation: ${receipt.expected.skill} (${installed.reason}).`
+    );
+  }
+
+  if (receipt.backedUp) {
+    const backupTarget = path.join(backupRoot, "agents", "skills", receipt.expected.skill);
+    assertManagedTargetPath(backupTarget, managedRoots);
+    if (!fs.existsSync(backupTarget)) {
+      throw new Error(`Pinned skill compensation backup is missing: ${receipt.expected.skill}.`);
+    }
+    removeRealDirectory(receipt.target, managedRoots);
+    fs.cpSync(backupTarget, receipt.target, {
+      recursive: true,
+      errorOnExist: true,
+      dereference: false
+    });
+  } else {
+    removeRealDirectory(receipt.target, managedRoots);
+  }
+  fs.unlinkSync(resolvedReceiptPath);
+  if (!receipt.backedUp) removeRealDirectory(backupRoot, managedRoots);
+  return { compensated: true, restoredPreviousTarget: receipt.backedUp };
 }
 
 export function activatePinnedSkill({
@@ -168,7 +252,14 @@ export function activatePinnedSkill({
     if (!installed.valid) {
       throw new Error(`Pinned skill activation verification failed: ${installed.reason}.`);
     }
-    return { installed, backedUp, backupRoot: backedUp ? backupRoot : null };
+    const compensation = writeRollbackReceipt({
+      target,
+      backupRoot,
+      backedUp,
+      expected,
+      managedRoots
+    });
+    return { installed, backedUp, backupRoot: backedUp ? backupRoot : null, compensation };
   } catch (error) {
     if (fs.existsSync(staging)) removeRealDirectory(staging, managedRoots);
     if (activated && fs.existsSync(target)) removeRealDirectory(target, managedRoots);

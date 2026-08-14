@@ -7,7 +7,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(testDir, "..", "..");
-const hygieneModuleUrl = pathToFileURL(path.join(root, "scripts", "codex-process-hygiene.mjs")).href;
+const hygieneModuleUrl = pathToFileURL(path.join(
+  root,
+  "plugins",
+  "codex-chef-workflows",
+  "scripts",
+  "codex-process-hygiene.mjs"
+)).href;
 const now = Date.parse("2026-07-29T13:00:00.000Z");
 const old = "2026-07-29T12:00:00.000Z";
 const recent = "2026-07-29T12:59:45.000Z";
@@ -150,7 +156,10 @@ test("process CLI reports sessions, MCP instances, and unrelated runtimes separa
       cwd: root,
       encoding: "utf8",
       windowsHide: true,
-      timeout: 30_000
+      // The CLI enumerates the live process table. Under the full parallel
+      // suite, that table includes the test workers themselves, so allow the
+      // same bounded command a little more time without weakening assertions.
+      timeout: 60_000
     }
   );
 
@@ -245,6 +254,30 @@ test("manual cleanup rechecks exact identity and active ownership before termina
   assert.deepEqual(verifyCleanupPlan(newlyOwned, report.cleanupCandidates), []);
 });
 
+test("signature-only orphan findings remain advisory and cannot authorize termination", async () => {
+  const {
+    analyzeProcessSnapshot,
+    terminateCleanupPlan
+  } = await import(hygieneModuleUrl);
+  const processes = fixtureProcesses();
+  const report = analyzeProcessSnapshot(processes, { now, orphanGraceMs: 60_000 });
+  const calls = [];
+
+  const results = terminateCleanupPlan(report.cleanupCandidates, {
+    processes,
+    platform: "linux",
+    spawnSync(command, args) {
+      calls.push([command, args]);
+      return { status: 0, stdout: "", stderr: "" };
+    }
+  });
+
+  assert.deepEqual(calls, []);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].stopped, false);
+  assert.match(results[0].skippedReason, /trusted ownership receipt/i);
+});
+
 test("SessionEnd ownership snapshot selects only MCP descendants of its Codex owner", async () => {
   const { captureSessionOwnedSnapshot } = await import(hygieneModuleUrl);
   const processes = [
@@ -304,4 +337,66 @@ test("SessionEnd cleanup keeps same-server roots and process counts separate", a
 
   assert.deepEqual(plan.map((item) => item.rootPid), [200, 210]);
   assert.deepEqual(plan.map((item) => item.processCount), [2, 2]);
+});
+
+test("Unix cleanup rechecks receipt-bound descendants and sends TERM children before root", async () => {
+  const {
+    buildOwnedCleanupPlan,
+    captureSessionOwnedSnapshot,
+    terminateCleanupPlan
+  } = await import(hygieneModuleUrl);
+  const startProcesses = [
+    ...fixtureProcesses(),
+    proc(700, 701, "node.exe", "node codex-process-hygiene.mjs --session-end"),
+    proc(701, 101, "cmd.exe", "cmd /c node codex-process-hygiene.mjs --session-end")
+  ];
+  const snapshot = captureSessionOwnedSnapshot(startProcesses, 700);
+  const ownerEnded = startProcesses.filter((item) => ![100, 101, 700, 701].includes(item.pid));
+  const plan = buildOwnedCleanupPlan(ownerEnded, snapshot).filter((item) => item.rootPid === 200);
+  const calls = [];
+
+  const results = terminateCleanupPlan(plan, {
+    processes: ownerEnded,
+    platform: "linux",
+    spawnSync(command, args) {
+      calls.push([command, args]);
+      return { status: 0, stdout: "", stderr: "" };
+    }
+  });
+
+  assert.deepEqual(calls, [
+    ["kill", ["-TERM", "201"]],
+    ["kill", ["-TERM", "200"]]
+  ]);
+  assert.deepEqual(results.map((item) => item.stopped), [true]);
+});
+
+test("cleanup rejects a receipt whose claimed owner identity no longer matches its owner chain", async () => {
+  const {
+    buildOwnedCleanupPlan,
+    captureSessionOwnedSnapshot,
+    terminateCleanupPlan
+  } = await import(hygieneModuleUrl);
+  const startProcesses = [
+    ...fixtureProcesses(),
+    proc(700, 701, "node.exe", "node codex-process-hygiene.mjs --session-end"),
+    proc(701, 101, "cmd.exe", "cmd /c node codex-process-hygiene.mjs --session-end")
+  ];
+  const snapshot = captureSessionOwnedSnapshot(startProcesses, 700);
+  const ownerEnded = startProcesses.filter((item) => ![100, 101, 700, 701].includes(item.pid));
+  const plan = buildOwnedCleanupPlan(ownerEnded, snapshot).filter((item) => item.rootPid === 200);
+  plan[0].ownershipReceipt.ownerPid = 999;
+  const calls = [];
+
+  const results = terminateCleanupPlan(plan, {
+    processes: ownerEnded,
+    platform: "linux",
+    spawnSync(command, args) {
+      calls.push([command, args]);
+      return { status: 0, stdout: "", stderr: "" };
+    }
+  });
+
+  assert.deepEqual(calls, []);
+  assert.equal(results[0].stopped, false);
 });

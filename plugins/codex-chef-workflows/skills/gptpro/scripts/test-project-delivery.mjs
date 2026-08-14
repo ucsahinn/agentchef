@@ -5,8 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-const exporter = path.resolve(import.meta.dirname, "project-export.mjs");
+const exporter = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "project-export.mjs");
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 function write(root, relative, content) { const target = path.join(root, relative); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, content, "utf8"); }
 function manifestFor(root, paths) { return { schemaVersion: "1.0.0", reviewId: "20260809T120000Z-delivery", snapshot: { commit: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", branch: "main", dirty: false }, files: paths.map((relative) => { const content = fs.readFileSync(path.join(root, relative)); return { path: relative, bytes: content.length, sha256: sha256(content) }; }), parts: [{ name: "review-bundle-part-001.txt", bytes: 1, sha256: sha256("x") }] }; }
@@ -14,3 +15,18 @@ function exportFixture() { const temp = fs.mkdtempSync(path.join(os.tmpdir(), "g
 
 test("creates original-style subsystem ZIPs and a deterministic single delivery ZIP", () => { const fixture = exportFixture(); try { const delivery = JSON.parse(fs.readFileSync(path.join(fixture.output, "gptpro-delivery-manifest.json"), "utf8")); assert.deepEqual(delivery.subsystemArchives.map((archive) => archive.file), ["repo-app-web.zip", "repo-package-core.zip", "repo-application.zip", "repo-docs.zip"]); assert.equal(fs.existsSync(path.join(fixture.output, "subsystem-zips", "repo-app-web.zip")), true); assert.equal(fs.existsSync(path.join(fixture.output, "subsystem-zips", "repo-package-core.zip")), true); assert.equal(delivery.projectArchive.file, "repo-gptpro-context.zip"); assert.ok(delivery.projectArchive.entries.some((entry) => entry.name === "subsystem-zips/repo-app-web.zip")); assert.ok(delivery.projectArchive.entries.some((entry) => entry.name === "upload-text/repo-app-web.txt")); } finally { fs.rmSync(fixture.temp, { recursive: true, force: true }); } });
 test("status rejects a one-byte mutation of the single delivery ZIP", () => { const fixture = exportFixture(); try { const archive = path.join(fixture.output, "repo-gptpro-context.zip"); const data = fs.readFileSync(archive); data[data.length - 1] ^= 0x01; fs.writeFileSync(archive, data); const status = spawnSync(process.execPath, [...fixture.args, "--status"], { encoding: "utf8" }); assert.notEqual(status.status, 0, status.stdout || status.stderr); assert.match(`${status.stdout}\n${status.stderr}`, /archive|changed|fresh/i); } finally { fs.rmSync(fixture.temp, { recursive: true, force: true }); } });
+test("delivery generation is atomic when a delivery artifact write fails", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-delivery-atomic-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    const paths = ["src/index.ts", "README.md", "package.json"];
+    write(target, paths[0], "export const value = 1;\n"); write(target, paths[1], "# Example\n"); write(target, paths[2], "{\"name\":\"example\"}\n");
+    const review = path.join(temp, "external-review-manifest.json"); fs.writeFileSync(review, `${JSON.stringify(manifestFor(target, paths), null, 2)}\n`);
+    const output = path.join(temp, "gptpro-project"); const preload = path.join(temp, "fail-delivery-write.cjs");
+    fs.writeFileSync(preload, `const fs = require("node:fs"); const path = require("node:path"); const original = fs.writeFileSync; fs.writeFileSync = function (file, data, options) { if (path.basename(file) === "SHA256SUMS") throw new Error("injected delivery write failure"); return original.call(this, file, data, options); };\n`);
+    const applied = spawnSync(process.execPath, ["--require", preload, exporter, "--target", target, "--manifest", review, "--out", output, "--apply"], { encoding: "utf8" });
+    assert.notEqual(applied.status, 0, applied.stdout || applied.stderr);
+    assert.equal(fs.existsSync(output), false, "failed delivery must not publish a partial final export");
+    assert.deepEqual(fs.readdirSync(temp).filter((name) => name.includes("gptpro-project.staging-")), [], "failed delivery must clean its staging directory");
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});

@@ -2,6 +2,7 @@
 import process from "node:process";
 import {
   addHandoff,
+  acquireCoordinationStateLock,
   attachReport,
   createTask,
   readState,
@@ -34,37 +35,44 @@ function output(payload, json) {
   else console.log(JSON.stringify(payload, null, 2));
 }
 
+function mutate(statePath, callback) {
+  const lock = acquireCoordinationStateLock(statePath);
+  try {
+    const state = readState(statePath);
+    const result = callback(state);
+    writeState(statePath, state);
+    return result;
+  } finally {
+    lock.release();
+  }
+}
+
 try {
   const { command, options } = parse(process.argv.slice(2));
   let state;
   let task;
   switch (command) {
     case "init":
-      state = writeInitialState(options.state);
+      {
+        const lock = acquireCoordinationStateLock(options.state);
+        try { state = writeInitialState(options.state); } finally { lock.release(); }
+      }
       output({ ok: true, state }, options.json);
       break;
     case "create":
-      state = readState(options.state);
-      task = createTask(state, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"] });
-      writeState(options.state, state);
+      task = mutate(options.state, (current) => createTask(current, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"] }));
       output({ ok: true, task }, options.json);
       break;
     case "transition":
-      state = readState(options.state);
-      task = transitionTask(state, { taskId: options.task, status: options.status });
-      writeState(options.state, state);
+      task = mutate(options.state, (current) => transitionTask(current, { taskId: options.task, status: options.status }));
       output({ ok: true, task }, options.json);
       break;
     case "handoff":
-      state = readState(options.state);
-      task = addHandoff(state, { taskId: options.task, sourceCoordinator: options["source-coordinator"], targetCoordinator: options["target-coordinator"], question: options.question, evidence: options.evidence, conflict: options.conflict, decisionNeeded: options["decision-needed"], verificationNeed: options["verification-need"] });
-      writeState(options.state, state);
+      task = mutate(options.state, (current) => addHandoff(current, { taskId: options.task, sourceCoordinator: options["source-coordinator"], targetCoordinator: options["target-coordinator"], question: options.question, evidence: options.evidence, conflict: options.conflict, decisionNeeded: options["decision-needed"], verificationNeed: options["verification-need"] }));
       output({ ok: true, task }, options.json);
       break;
     case "attach-report":
-      state = readState(options.state);
-      task = attachReport(state, { taskId: options.task, reportId: options["report-id"] });
-      writeState(options.state, state);
+      task = mutate(options.state, (current) => attachReport(current, { taskId: options.task, reportId: options["report-id"] }));
       output({ ok: true, task }, options.json);
       break;
     case "show":

@@ -164,13 +164,15 @@ test("apply receipt and restore preserve exact multi-value, unset, bytes, and ab
     key: "core.excludesfile",
     present: true,
     values: ["first", "second value"],
-    appliedValues: [targets.ignore]
+    appliedValues: [targets.ignore],
+    progress: "applied"
   });
   assert.deepEqual(receipt.gitConfig.find((entry) => entry.key === "core.hooksPath"), {
     key: "core.hooksPath",
     present: false,
     values: [],
-    appliedValues: [path.dirname(targets.hook)]
+    appliedValues: [path.dirname(targets.hook)],
+    progress: "applied"
   });
   assert.equal(receipt.files.find((entry) => entry.id === "gitignore-global").bytesBase64, foreignIgnore.toString("base64"));
   assert.equal(receipt.files.find((entry) => entry.id === "pre-commit-hook").present, false);
@@ -408,10 +410,15 @@ test("JSON CLI previews, applies with a receipt, and restores it", () => {
   assert.deepEqual(applyPayload.receipt, {
     path: receiptPath,
     schema: "codex-chef.global-git-guards-receipt",
-    version: 1
+    version: 2
   });
   assert.equal(apply.stdout.includes("bytesBase64"), false);
   assert.equal(fs.existsSync(receiptPath), true);
+  const persistedApplyReceipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
+  assert.match(persistedApplyReceipt.operationId, /^[0-9a-f-]{36}$/i);
+  assert.equal(persistedApplyReceipt.state, "applied");
+  assert.equal(persistedApplyReceipt.files.every((entry) => entry.progress === "applied"), true);
+  assert.equal(persistedApplyReceipt.gitConfig.every((entry) => entry.progress === "applied"), true);
   if (process.platform !== "win32") {
     assert.equal(fs.statSync(receiptPath).mode & 0o777, 0o600);
   }
@@ -426,7 +433,123 @@ test("JSON CLI previews, applies with a receipt, and restores it", () => {
   ], { encoding: "utf8", windowsHide: true });
   assert.equal(restore.status, 0, restore.stderr);
   assert.equal(JSON.parse(restore.stdout).restored, true);
+  assert.equal(JSON.parse(restore.stdout).recovered, false);
   assert.equal(restore.stdout.includes("bytesBase64"), false);
+  assert.equal(JSON.parse(fs.readFileSync(receiptPath, "utf8")).state, "rolled-back");
   assert.equal(fs.existsSync(targetPaths(fx).ignore), false);
   assert.deepEqual(configValues(fx, "core.excludesfile"), []);
+});
+
+test("v2 receipt recovers crash-like pre- and post-mutation prepared states without touching pending surfaces", () => {
+  const fx = fixture();
+  const targets = targetPaths(fx);
+  const applied = applyGlobalGitGuards(options(fx));
+  restoreGlobalGitGuards({ ...options(fx), receipt: applied.receipt });
+
+  const interrupted = structuredClone(applied.receipt);
+  interrupted.version = 2;
+  interrupted.operationId = "4dc24b09-9cb6-4c10-9a64-d2a5d0a39e82";
+  interrupted.state = "applying";
+  for (const entry of interrupted.files) entry.progress = "pending";
+  for (const entry of interrupted.gitConfig) entry.progress = "pending";
+  interrupted.files.find((entry) => entry.id === "gitignore-global").progress = "prepared";
+  interrupted.files.find((entry) => entry.id === "pre-commit-hook").progress = "prepared";
+
+  fs.writeFileSync(targets.ignore, fs.readFileSync(fx.ignoreSource));
+  const result = restoreGlobalGitGuards({ ...options(fx), receipt: interrupted });
+
+  assert.equal(result.recovered, true);
+  assert.equal(fs.existsSync(targets.ignore), false);
+  assert.equal(fs.existsSync(targets.hook), false);
+  assert.deepEqual(configValues(fx, "core.excludesfile"), []);
+  assert.deepEqual(configValues(fx, "core.hooksPath"), []);
+});
+
+test("v2 interrupted receipt fails closed when a prepared target has concurrent foreign content", () => {
+  const fx = fixture();
+  const targets = targetPaths(fx);
+  const applied = applyGlobalGitGuards(options(fx));
+  restoreGlobalGitGuards({ ...options(fx), receipt: applied.receipt });
+
+  const interrupted = structuredClone(applied.receipt);
+  interrupted.version = 2;
+  interrupted.operationId = "4dc24b09-9cb6-4c10-9a64-d2a5d0a39e82";
+  interrupted.state = "applying";
+  for (const entry of interrupted.files) entry.progress = "pending";
+  for (const entry of interrupted.gitConfig) entry.progress = "pending";
+  interrupted.files.find((entry) => entry.id === "gitignore-global").progress = "prepared";
+
+  fs.writeFileSync(targets.ignore, "concurrent foreign content\n", "utf8");
+  assert.throws(
+    () => restoreGlobalGitGuards({ ...options(fx), receipt: interrupted }),
+    /expected original or managed file.*refusing recovery/i
+  );
+  assert.equal(fs.readFileSync(targets.ignore, "utf8"), "concurrent foreign content\n");
+});
+
+test("v2 interrupted receipt rejects managed content for a surface never prepared", () => {
+  const fx = fixture();
+  const targets = targetPaths(fx);
+  const applied = applyGlobalGitGuards(options(fx));
+  restoreGlobalGitGuards({ ...options(fx), receipt: applied.receipt });
+
+  const interrupted = structuredClone(applied.receipt);
+  interrupted.version = 2;
+  interrupted.operationId = "4dc24b09-9cb6-4c10-9a64-d2a5d0a39e82";
+  interrupted.state = "applying";
+  for (const entry of interrupted.files) entry.progress = "pending";
+  for (const entry of interrupted.gitConfig) entry.progress = "pending";
+
+  fs.writeFileSync(targets.ignore, fs.readFileSync(fx.ignoreSource));
+  assert.throws(
+    () => restoreGlobalGitGuards({ ...options(fx), receipt: interrupted }),
+    /expected original.*refusing recovery/i
+  );
+  assert.equal(fs.readFileSync(targets.ignore, "utf8"), fs.readFileSync(fx.ignoreSource, "utf8"));
+});
+
+test("JSON CLI recover persists the rolled-back state for an interrupted receipt", () => {
+  const fx = fixture();
+  const targets = targetPaths(fx);
+  const applied = applyGlobalGitGuards(options(fx));
+  restoreGlobalGitGuards({ ...options(fx), receipt: applied.receipt });
+  const receipt = structuredClone(applied.receipt);
+  receipt.operationId = "4dc24b09-9cb6-4c10-9a64-d2a5d0a39e82";
+  receipt.state = "applying";
+  for (const entry of receipt.files) entry.progress = "pending";
+  for (const entry of receipt.gitConfig) entry.progress = "pending";
+  receipt.files.find((entry) => entry.id === "gitignore-global").progress = "prepared";
+  fs.writeFileSync(targets.ignore, fs.readFileSync(fx.ignoreSource));
+  const receiptPath = path.join(fx.root, "interrupted-receipt.json");
+  fs.writeFileSync(receiptPath, `${JSON.stringify(receipt)}\n`, "utf8");
+
+  const result = spawnSync(process.execPath, [
+    cliPath,
+    "recover",
+    "--home", fx.home,
+    "--git-config-global", fx.gitConfigGlobal,
+    "--receipt", receiptPath,
+    "--json"
+  ], { encoding: "utf8", windowsHide: true });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).recovered, true);
+  assert.equal(JSON.parse(fs.readFileSync(receiptPath, "utf8")).state, "rolled-back");
+  assert.equal(fs.existsSync(targets.ignore), false);
+});
+
+test("legacy v1 receipts retain strict final-state restore behavior", () => {
+  const fx = fixture();
+  const applied = applyGlobalGitGuards(options(fx));
+  const legacy = structuredClone(applied.receipt);
+  legacy.version = 1;
+  delete legacy.operationId;
+  delete legacy.state;
+  for (const entry of legacy.files) delete entry.progress;
+  for (const entry of legacy.gitConfig) delete entry.progress;
+
+  const result = restoreGlobalGitGuards({ ...options(fx), receipt: legacy });
+  assert.equal(result.restored, true);
+  assert.equal(result.recovered, false);
+  assert.equal(fs.existsSync(targetPaths(fx).ignore), false);
 });

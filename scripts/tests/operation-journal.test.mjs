@@ -24,6 +24,63 @@ test("operation journal durably records a completed backup before mutation", () 
   }
 });
 
+test("operation journal records mutation intent before a target is changed", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-prepared-"));
+  try {
+    const target = path.join(root, "codex", "AGENTS.md");
+    const backup = path.join(root, "backup", "AGENTS.md");
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.writeFileSync(target, "original\n", "utf8");
+    fs.writeFileSync(backup, "original\n", "utf8");
+    const journal = createOperationJournal({ backupRoot: root, operation: "repair-install" });
+    journal.prepareMutation({ target, backup });
+    const prepared = JSON.parse(fs.readFileSync(journal.journalPath, "utf8")).mutations[0];
+    assert.equal(prepared.phase, "prepared");
+    assert.equal(prepared.before.kind, "file");
+    assert.equal(prepared.output, null);
+
+    fs.writeFileSync(target, "new output\n", "utf8");
+    journal.markApplied(target);
+    const applied = JSON.parse(fs.readFileSync(journal.journalPath, "utf8")).mutations[0];
+    assert.equal(applied.phase, "applied");
+    assert.equal(applied.output.kind, "file");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("journal CLI persists prepared intent before a mutation and applied output after it", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-cli-phases-"));
+  const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
+  const target = path.join(root, "codex", "config.toml");
+  const backup = path.join(root, "backup", "codex", "config.toml");
+  const run = (...args) => spawnSync(process.execPath, [journalScript, ...args], { encoding: "utf8" });
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.writeFileSync(target, "before\\n", "utf8");
+    fs.writeFileSync(backup, "before\\n", "utf8");
+    assert.equal(run("start", root, "install").status, 0);
+    assert.equal(run("prepare", root, target, backup).status, 0);
+    assert.notEqual(run("finish", root, "complete").status, 0);
+
+    const prepared = JSON.parse(fs.readFileSync(path.join(root, ".codex-chef-operation-journal.json"), "utf8")).mutations[0];
+    assert.equal(prepared.phase, "prepared");
+    assert.equal(prepared.before.kind, "file");
+    assert.equal(prepared.output, null);
+
+    fs.writeFileSync(target, "after\\n", "utf8");
+    assert.equal(run("applied", root, target).status, 0);
+    assert.equal(run("finish", root, "complete").status, 0);
+    const applied = JSON.parse(fs.readFileSync(path.join(root, ".codex-chef-operation-journal.json"), "utf8")).mutations[0];
+    assert.equal(applied.phase, "applied");
+    assert.equal(applied.output.kind, "file");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("journal CLI records directory backups and closes only once", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-cli-"));
   const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
@@ -86,6 +143,31 @@ test("journal track-tree records source-owned files without recording directory 
     assert.equal(run("track-tree", root, target, source, "-").status, 0);
     const journal = JSON.parse(fs.readFileSync(path.join(root, ".codex-chef-operation-journal.json"), "utf8"));
     assert.deepEqual(journal.mutations.map((entry) => path.basename(entry.target)), ["managed.txt"]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("journal tree phases durably surround every source-owned managed write", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-tree-phases-"));
+  const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
+  const source = path.join(root, "source");
+  const target = path.join(root, "target");
+  const run = (...args) => spawnSync(process.execPath, [journalScript, ...args], { encoding: "utf8" });
+  try {
+    writeTreeFile(source, "nested/managed.txt", "after\\n");
+    writeTreeFile(target, "nested/managed.txt", "before\\n");
+    assert.equal(run("start", root, "install").status, 0);
+    assert.equal(run("prepare-tree", root, target, source, "-").status, 0);
+    const prepared = JSON.parse(fs.readFileSync(path.join(root, ".codex-chef-operation-journal.json"), "utf8")).mutations[0];
+    assert.equal(prepared.phase, "prepared");
+    assert.equal(prepared.output, null);
+
+    writeTreeFile(target, "nested/managed.txt", "after\\n");
+    assert.equal(run("applied-tree", root, target, source).status, 0);
+    const applied = JSON.parse(fs.readFileSync(path.join(root, ".codex-chef-operation-journal.json"), "utf8")).mutations[0];
+    assert.equal(applied.phase, "applied");
+    assert.equal(applied.output.kind, "file");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

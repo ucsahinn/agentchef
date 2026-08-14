@@ -106,11 +106,15 @@ export function selectInstallComponents(manifest, options) {
     selectedSet.add(operation.id);
   }
 
-  const selected = selectedIds.map((id) => {
-    const operation = byId.get(id);
-    if (!operation) throw new Error(`Install profile ${profileName} references unknown operation: ${id}`);
-    return operation;
-  }).filter((operation) => operation.platforms.includes(options.platform));
+  for (const id of selectedIds) {
+    if (!byId.has(id)) {
+      throw new Error(`Install profile ${profileName} references unknown operation: ${id}`);
+    }
+  }
+
+  const selected = manifest.operations
+    .filter((operation) => selectedSet.has(operation.id))
+    .filter((operation) => operation.platforms.includes(options.platform));
   const selectedPlatformIds = new Set(selected.map((operation) => operation.id));
   const skipped = manifest.operations.filter((operation) => !selectedPlatformIds.has(operation.id));
   return { profileName, selected, skipped };
