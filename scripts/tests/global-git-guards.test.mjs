@@ -99,6 +99,7 @@ test("preview classifies absent, exact, and foreign guard state without writes",
   fs.mkdirSync(path.dirname(targets.hook), { recursive: true });
   fs.copyFileSync(fx.ignoreSource, targets.ignore);
   fs.copyFileSync(fx.hookSource, targets.hook);
+  if (process.platform !== "win32") fs.chmodSync(targets.hook, 0o755);
   runGit(fx, ["config", "--global", "--add", "core.excludesfile", targets.ignore]);
   runGit(fx, ["config", "--global", "--add", "core.hooksPath", path.dirname(targets.hook)]);
 

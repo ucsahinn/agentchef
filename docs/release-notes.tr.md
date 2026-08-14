@@ -2,19 +2,20 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
-## v0.5.73 - 2026-08-14
+## v0.5.74 - 2026-08-14
 
-Codex Chef 0.5.73 son bagimsiz Codex Chef bakim surumudur. Bagimsiz kurulum
-sozlesmesini degistirmeden, 0.5.72'de macOS CI tarafinda gorulen regresyonu
-duzeltir.
+Codex Chef 0.5.74 son bagimsiz Codex Chef bakim surumudur. Bagimsiz kurulum
+sozlesmesini korurken, bu sozlesmeyi her desteklenen CI hostunda kanitlamak
+icin gereken platformlar arasi test fixture'larini duzeltir.
 
 ### Neler Degisti?
 
-- Unix installer'daki Bash 4'e ozel `mapfile` cagrilarini, operation-lock root
-  ve pinned-skill rollback receipt'leri icin Bash 3.2 uyumlu okumalarla
-  degistirir.
-- Installer smoke calismadan once macOS sistem Bash uyumlulugunu kontrol eden
-  bir portability regression kapisi ekler.
+- Platformlar arasi fixture'larda POSIX gecici home'lara Windows yol kurallari
+  uygulamak yerine, calisan hostun repair sozlesmesini kullanir.
+- Tam yonetilen durum assertion'undan once Unix Git-hook fixture'ini
+  calistirilabilir yapar ve Windows ACL denetiminin desteklenmedigi
+  platformlardaki belgelenmis unavailable Brain-health projeksiyonunu kabul
+  eder.
 
 ### Urun Siniri
 
@@ -25,6 +26,19 @@ cutover sonrasinda Kitchen tek public installer ve release train olacak;
 Chef, [ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
 uyumluluk ve migration kurallariyla yonetilen versioned bir dahili modul
 olacak.
+
+## v0.5.73 - 2026-08-14
+
+Codex Chef 0.5.73, bagimsiz kurulum sozlesmesini degistirmeden 0.5.72'de
+macOS CI tarafinda gorulen regresyonu duzeltir.
+
+### Neler Degisti?
+
+- Unix installer'daki Bash 4'e ozel `mapfile` cagrilarini, operation-lock root
+  ve pinned-skill rollback receipt'leri icin Bash 3.2 uyumlu okumalarla
+  degistirir.
+- Installer smoke calismadan once macOS sistem Bash uyumlulugunu kontrol eden
+  bir portability regression kapisi ekler.
 
 ## v0.5.72 - 2026-08-14
 

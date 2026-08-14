@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+## 0.5.74 - 2026-08-14
+
+- Finalize the standalone maintenance release with host-correct repair fixtures,
+  executable Unix Git-hook fixtures, and an explicit unavailable Brain-health
+  projection branch. These changes make the cross-platform test contract match
+  its documented platform behavior without weakening installer or repair gates.
+
 ## 0.5.73 - 2026-08-14
 
-- Finalize the last standalone Codex Chef maintenance release with macOS system
+- Prepare the standalone maintenance hotfix with macOS system
   Bash 3.2 compatibility: replace Bash 4-only `mapfile` use in lock-root and
   rollback-receipt collection with portable array reads, and gate the
   portability workflow with a regression test before installer smoke runs.

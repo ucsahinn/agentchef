@@ -2,7 +2,7 @@
 
 These settings shape the project’s public first impression. Apply them manually only after the source tree is verified and the account-level change is explicitly approved.
 
-Release candidate baseline: **v0.5.73**.
+Release candidate baseline: **v0.5.74**.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private
@@ -72,11 +72,11 @@ validated locally but is not yet uploaded to the account-level setting.
 
 ## Release Metadata
 
-For v0.5.73:
+For v0.5.74:
 
 ```text
-Title: Codex Chef v0.5.73
-Tag: v0.5.73
+Title: Codex Chef v0.5.74
+Tag: v0.5.74
 Notes: tmp/release-notes-current.md
 ```
 

@@ -28,7 +28,7 @@ function runRepair(target, flags, extraEnv = {}) {
     path.join(root, "scripts", "repair-install.mjs"),
     "--json",
     "--platform",
-    "windows",
+    process.platform === "win32" ? "windows" : "unix",
     "--codex-home",
     target.codexHome,
     "--agents-home",

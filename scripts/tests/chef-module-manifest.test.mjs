@@ -6,7 +6,7 @@ import { validateChefModuleManifest } from "../validate-chef-module-manifest.mjs
 const valid = {
   schemaVersion: "1.0",
   module: "chef",
-  version: "0.5.73",
+  version: "0.5.74",
   runtime: { nodeCompatibility: ">=18" },
   contracts: { events: [1], capabilities: [1], proposals: [1] },
   health: { commandId: "chef.health.v1", mode: "read-only" },

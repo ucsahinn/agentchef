@@ -216,6 +216,16 @@ test("CLI health emits only the safe Brain owner aggregate", () => {
   assert.ok(["available", "unavailable"].includes(projection.status));
   assert.ok(["ok", "attention", "unavailable"].includes(projection.securityStatus));
   assert.equal(projection.observedAt === null || Number.isFinite(Date.parse(projection.observedAt)), true);
+  if (projection.status === "unavailable") {
+    assert.deepEqual(projection, {
+      schemaVersion: 1,
+      status: "unavailable",
+      securityStatus: "unavailable",
+      observedAt: null
+    });
+    assert.deepEqual(snapshotVault(target), before);
+    return;
+  }
   for (const field of ["canonicalNoteCount", "collectionCount", "resolvedLinkCount", "brokenLinkCount", "orphanNoteCount", "staleNoteCount"]) {
     assert.equal(Number.isSafeInteger(projection[field]) && projection[field] >= 0, true, field);
   }
