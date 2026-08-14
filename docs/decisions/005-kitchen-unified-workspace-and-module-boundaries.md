@@ -79,6 +79,17 @@ Existing standalone repositories are migration sources and legacy maintenance
 surfaces until their code and contracts are absorbed; they are not new public
 install targets after the Kitchen migration cutover.
 
+### Standalone release freeze
+
+Codex Chef `0.5.72` is the final standalone maintenance release. It remains a
+complete, independently installable product with its existing preview,
+backup, repair, and verification guarantees. This decision does not authorize
+removing its installers, repointing its documentation to Kitchen, or coupling
+its runtime to Kitchen. Those changes happen only in the Kitchen repository
+after Kitchen's root installer and module compatibility gates have the
+evidence listed below. Until then, the repositories remain isolated so an
+unfinished Kitchen integration cannot regress a working Chef installation.
+
 The installer is preview-first. It moves source-controlled code, lockfiles,
 reviewed configuration templates, and explicit export/import payloads only. It
 does not copy auth, sessions, caches, local memories, Brain content, approval

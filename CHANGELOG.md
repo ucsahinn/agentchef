@@ -4,6 +4,22 @@
 
 ## 0.5.72 - 2026-08-14
 
+- Finalize the last standalone Codex Chef maintenance release. Its reviewed
+  PowerShell and Bash installers, safe preview, backup, repair, and runtime
+  verification paths remain supported for this release; the later Kitchen
+  cutover does not alter this release or copy user-global state into Kitchen.
+- Harden installer, repair, and update mutations with canonical managed-home
+  locks, durable operation progress, recovery receipts, and safe compensation
+  for a later failed curated-skill step.
+- Make restore and GPT Pro delivery paths stage output before publication;
+  reject ambiguous backup payloads, preserve user changes on failed rollback,
+  and retain strict ownership/provenance checks.
+- Add recovery for early Serena startup loss, durable Git-guard progress
+  receipts, safer owned-process cleanup, and regression coverage for the
+  corresponding interruption and contention paths.
+- Reduce full verification time without weakening installer coverage: the
+  smoke suite keeps representative real installs while reusing exact preflight
+  helpers for equivalent fail-closed boundary cases.
 - Prepare a missing Unix `CODEX_HOME` before atomically acquiring its operation lock, and cover a fresh install plus an immediate second install with a real Git Bash regression test.
 - Report the isolated AgentSpace worker runtime profile (`workspace-write`, `on-request`, `auto_review`) separately from each specialist's narrower role sandbox.
 - Add the versioned suite, threat, and portability contracts plus a private, fail-closed observation-envelope package and Chef module manifest/compatibility validation that ship in the reviewed source surface and run in the full check.

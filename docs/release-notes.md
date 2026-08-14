@@ -4,7 +4,10 @@ This page follows the release users should install now. Older engineering histor
 
 ## v0.5.72 - 2026-08-14
 
-Codex Chef 0.5.72 lets the Unix installer safely start from a Codex home that does not exist yet and proves the operation lock is released before an immediate reinstall.
+Codex Chef 0.5.72 is the final standalone Codex Chef maintenance release. It
+keeps the reviewed independent installation, preview, backup, repair, and
+runtime verification flows intact while the next product phase moves Chef
+behind Kitchen's internal module boundary.
 
 ### What Changed
 
@@ -12,6 +15,26 @@ Codex Chef 0.5.72 lets the Unix installer safely start from a Codex home that do
 - Makes routing output distinguish the isolated AgentSpace worker session policy (`workspace-write`, `on-request`, `auto_review`) from the specialist role's own sandbox boundary.
 - Adds reviewed suite, threat, and portability contracts plus a private fail-closed observation-envelope package and Chef module manifest/compatibility validation included in the source package and full test gate.
 - Keeps the legacy GPT Pro project exporter compatible with external-review manifest schemas `1.0.0` and `1.1.0`.
+- Adds canonical managed-home locks, durable operation/update recovery
+  receipts, safe pinned-skill compensation, and atomic staging for restore and
+  GPT Pro delivery. Interrupted operations now fail closed with a recovery
+  record instead of silently presenting a partially published result.
+- Hardens Git-guard receipts, owned stale-process cleanup, and Serena's early
+  startup failure handling; expands the related contention, rollback, and
+  lifecycle regression coverage.
+- Retains representative real installer smoke coverage while removing only
+  redundant launcher invocations, reducing the full verification duration
+  without changing the supported installer contract.
+
+### Product Boundary
+
+This release remains independently installable and receives the compatibility
+promises documented in this repository. It does **not** install Kitchen or move
+global Codex, Agents, Git, Brain, session, credential, or cache state into
+Kitchen. After the Kitchen migration cutover, Kitchen will be the only public
+installer and release train; Chef will be a versioned internal module governed
+by the compatibility and migration rules in
+[ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md).
 
 ## v0.5.71 - 2026-08-14
 
