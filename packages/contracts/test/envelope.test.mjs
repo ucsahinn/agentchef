@@ -110,6 +110,11 @@ test("rejects a timestamp that is parseable but not an RFC 3339 date-time", () =
   assert.deepEqual(result, { ok: false, code: "malformed-envelope" });
 });
 
+test("rejects a calendar-invalid date-time in a documented event payload fixture", async () => {
+  const fixture = await readFixture("suite.snapshot.malformed-observed-at.json");
+  assert.deepEqual(validateEnvelope(fixture), { ok: false, code: "malformed-payload" });
+});
+
 test("the JSON Schema closes every event payload branch used by the validator fixtures", async () => {
   const schema = await readSchema();
   const payloadDefinitions = Object.values(schema.$defs ?? {});
