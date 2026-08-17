@@ -9,6 +9,8 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/ucsahinn/codex-chef?color=0f766e" /></a>
   <a href="README.md"><img alt="Six README languages" src="https://img.shields.io/badge/readme-6%20languages-0f766e" /></a>
 </p>
+<p align="center"><a href="https://github.com/ucsahinn/codex-chef/releases/tag/v0.5.74">Codex Chef v0.5.74 — final standalone release</a></p>
+
 
 <p align="center">
   <a href="README.de.md">Deutsch</a> |

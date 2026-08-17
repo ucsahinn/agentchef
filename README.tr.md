@@ -10,6 +10,8 @@
   <a href="README.md"><img alt="Altı README dili" src="https://img.shields.io/badge/readme-6%20languages-0f766e" /></a>
   <img alt="Windows, macOS, Linux ve WSL" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-164e63" />
 </p>
+<p align="center"><a href="https://github.com/ucsahinn/codex-chef/releases/tag/v0.5.74">Codex Chef v0.5.74 — son bağımsız standalone sürüm</a></p>
+
 
 <p align="center">
   <strong>Dil:</strong>
