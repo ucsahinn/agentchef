@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,10 +25,13 @@ const requiredHeadings = [
   "Açık sorular",
   "Sonraki adım"
 ];
-const reports = fs.readdirSync(resultsDirectory, { withFileTypes: true })
-  .filter((entry) => entry.isFile() && /^(?:TASK|ADP)-.+\.md$/.test(entry.name))
-  .map((entry) => entry.name)
-  .sort(compareNames);
+function trackedReports() {
+  const probe = spawnSync("git", ["-C", root, "ls-files", "--", "docs/agent-results"], { encoding: "utf8", windowsHide: true });
+  if (probe.status !== 0) return null;
+  const names = probe.stdout.split(/\r?\n/).filter((entry) => entry && /^(?:docs\/agent-results\/)(?:TASK|ADP)-.+\.md$/.test(entry)).map((entry) => entry.slice("docs/agent-results/".length));
+  return names.length > 0 ? names : [];
+}
+const reports = (trackedReports() ?? fs.readdirSync(resultsDirectory, { withFileTypes: true }).filter((entry) => entry.isFile() && /^(?:TASK|ADP)-.+\.md$/.test(entry.name)).map((entry) => entry.name)).sort(compareNames);
 function reportContractFailure(report) {
   const text = fs.readFileSync(path.join(resultsDirectory, report), "utf8");
   for (const heading of requiredHeadings) {

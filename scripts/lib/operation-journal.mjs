@@ -244,7 +244,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             continue;
           }
           const current = fingerprint(target);
-          if (!sameFingerprint(current, mutation.output)) {
+          const unmarkedCreate = mutation.output === null
+            && mutation.before?.kind === "absent"
+            && current.kind === "file"
+            && !mutation.backup;
+          if (!sameFingerprint(current, mutation.output) && !unmarkedCreate) {
             unresolved.push(`preserved changed target: ${target}`);
             continue;
           }

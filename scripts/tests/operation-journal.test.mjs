@@ -101,6 +101,25 @@ test("journal CLI records directory backups and closes only once", () => {
   }
 });
 
+test("journal rollback removes a newly created file when the applied marker was not persisted", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-unmarked-create-"));
+  const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
+  const codexHome = path.join(root, "codex-home");
+  const backupRoot = path.join(codexHome, "backups", "operation");
+  const target = path.join(codexHome, "config.toml");
+  const run = (...args) => spawnSync(process.execPath, [journalScript, ...args], { encoding: "utf8" });
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    assert.equal(run("start", backupRoot, "install").status, 0);
+    assert.equal(run("prepare", backupRoot, target, "-").status, 0);
+    fs.writeFileSync(target, "installer output\n", "utf8");
+    assert.equal(run("rollback", backupRoot, "-", codexHome).status, 0);
+    assert.equal(fs.existsSync(target), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("journal rollback restores only a target still matching the transaction output", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-operation-journal-rollback-"));
   const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
