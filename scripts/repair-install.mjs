@@ -644,6 +644,25 @@ function repairManagedFiles(contract) {
     }
   }
 
+  // Direct-skill directory actions must account for every nested source file.
+  // Keep this invariant explicit so a platform-specific contract expansion can
+  // never leave a managed support file behind while still writing the marker.
+  for (const directSkill of directSkills) {
+    const sourceRoot = path.join(root, "plugins", "codex-chef-workflows", "skills", directSkill.name);
+    const targetRoot = path.join(options.agentsHome, "skills", directSkill.name);
+    for (const relativePath of listFilesRecursive(sourceRoot, { rejectLinks: true })) {
+      const sourcePath = path.join(sourceRoot, relativePath);
+      const targetPath = path.join(targetRoot, relativePath);
+      if (!fileEquals(sourcePath, targetPath)) {
+        expected += 1;
+        account(repairFile(
+          toPosix(path.join("plugins/codex-chef-workflows/skills", directSkill.name, relativePath)),
+          targetPath,
+          `direct-skill-reconcile:${directSkill.name}:${relativePath}`
+        ));
+      }
+    }
+  }
   const extraPluginFiles = pluginMirrors.flatMap((mirror) =>
     listFilesRecursive(mirror.root, { rejectLinks: true })
       .filter((file) => !mirror.sourceFiles.has(file))
