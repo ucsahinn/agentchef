@@ -33,7 +33,7 @@ function runRepair(args, codexHome, agentsHome, cwd = root) {
     path.join(root, "scripts", "repair-install.mjs"),
     "--json",
     "--platform",
-    "windows",
+    process.platform === "win32" ? "windows" : "unix",
     "--codex-home",
     codexHome,
     "--agents-home",
