@@ -567,7 +567,11 @@ prepare_install_tree() {
   local source="$2"
   local backup="${3:--}"
   if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
-    node "$OPERATION_JOURNAL" prepare-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"
+    if ! node "$OPERATION_JOURNAL" prepare-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"; then
+      echo "Could not durably prepare managed directory mutations for $destination." >&2
+      cleanup_operation_lock
+      exit 1
+    fi
   fi
 }
 
