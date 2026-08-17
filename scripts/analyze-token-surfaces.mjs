@@ -95,7 +95,7 @@ function isSecretLikePath(relativePath) {
   if (name === ".env.example") return false;
   return /^\.env(?:\.|$)/.test(name)
     || /\.(?:pem|key|p12|pfx|kdbx|sqlite|db|dump)$/i.test(name)
-    || /(?:^|\/)(?:auth|credentials?|cookies?|secrets?)(?:[./_-]|$)/i.test(normalized);
+    || /(?:^|\/)(?:auth|credentials?|cookies?|secrets?)(?:\/|(?:\.[^/]+)?$)/i.test(normalized);
 }
 
 function validateSourceFile(file) {

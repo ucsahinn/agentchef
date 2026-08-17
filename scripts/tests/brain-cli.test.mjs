@@ -133,6 +133,13 @@ test("CLI retrieves shared and Chef-role memory only for the requested role", ()
   assert.match(jsonError(invalidCapture), /role/i);
 });
 
+test("Brain context-pack schema describes the emitted role and untrusted markers", () => {
+  const schema = JSON.parse(fs.readFileSync(path.join(root, "schemas", "brain-context-pack.schema.json"), "utf8"));
+  assert.deepEqual(schema.properties.agentRole.type, ["string", "null"]);
+  assert.equal(schema.properties.untrusted.const, true);
+  assert.equal(schema.properties.notes.items.properties.agentRoles.type, "array");
+});
+
 test("CLI capture accepts a UTF-8 BOM candidate from Windows PowerShell", () => {
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "brain-cli-bom-candidate-"));
   const target = path.join(sandbox, "CodexChefBrain");
