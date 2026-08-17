@@ -945,8 +945,11 @@ if (rollbackResult.status === 0) {
 if (read(rollbackAgentsPath) !== "# user-owned pre-install AGENTS\n") {
   fail("Installer rollback smoke must restore an overwritten managed file after a later transaction failure.");
 }
-if (fs.existsSync(path.join(rollbackCodexHome, "config.toml"))) {
-  fail("Installer rollback smoke must remove a transaction-created target after a failure.");
+const rollbackConfigPath = path.join(rollbackCodexHome, "config.toml");
+if (fs.existsSync(rollbackConfigPath)) {
+  const residuals = fs.readdirSync(rollbackCodexHome).sort().join(",");
+  const stderr = String(rollbackResult.stderr || "").trim().split(/\r?\n/).slice(-3).join(" | ");
+  fail("Installer rollback smoke must remove a transaction-created target after a failure (status=" + rollbackResult.status + "; residuals=" + (residuals || "<empty>") + "; stderr=" + (stderr || "<empty>") + ").");
 }
 
 progress("zero-config install");

@@ -13,7 +13,7 @@ Proposed
 Codex Chef, Codex Chef Control, and Codex Chef Kitchen are separate authority
 layers, but a new Windows PC needs a coherent way to prepare all three. The
 portability investigation in
-[TASK-MSQCTM8VXR3HL](../agent-results/TASK-MSQCTM8VXR3HL-portability-matrix.md)
+Evidence task `TASK-MSQCTM8VXR3HL` (local agent result; not part of the public tracked source set).
 established that they have incompatible runtime and state contracts:
 
 - Chef is cross-platform and supports Node.js 18 or later. It owns reviewed
