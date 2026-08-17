@@ -433,7 +433,7 @@ rollback_skill_compensations() {
 }
 
 cleanup_operation_lock() {
-  operation_status=$?
+  local operation_status="${1:-$?}"
   trap - EXIT HUP INT TERM
   if [ "$operation_status" -ne 0 ]; then
     rollback_skill_compensations
@@ -569,7 +569,7 @@ prepare_install_tree() {
   if [ "$DRY_RUN" -eq 0 ] && [ "$NO_BACKUP" -eq 0 ]; then
     if ! node "$OPERATION_JOURNAL" prepare-tree "$BACKUP_ROOT" "$destination" "$source" "$backup"; then
       echo "Could not durably prepare managed directory mutations for $destination." >&2
-      cleanup_operation_lock
+      cleanup_operation_lock 1
       exit 1
     fi
   fi
