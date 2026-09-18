@@ -17,6 +17,10 @@ Use the smallest durable surface that matches the scope.
 | Routing evidence | `catalog/routing-profiles.json` and `npm run chef -- --routing` | Shows expected agents, skills, MCPs, validation gates, and final reporting contract |
 | Temporary override | `AGENTS.override.md` | Local short-lived override; remove when done |
 
+The Claude Code counterparts of these surfaces are listed in
+[Claude Code surfaces](claude-surfaces.md); the mapping between the two is the
+[target capability map](target-capability-map.md).
+
 Official references:
 
 - AGENTS.md: https://developers.openai.com/codex/guides/agents-md

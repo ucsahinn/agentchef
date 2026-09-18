@@ -4,6 +4,9 @@
 //                                          -> templates/claude/rules/agentchef-working-agreement.md
 //   catalog/agents.json + templates/codex/agents/*.toml -> plugins/codex-chef-workflows/agents/*.md
 //   templates/codex/rules/default.rules -> templates/claude/settings.fragment.json
+//   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
+// The Claude manifest declares no hooks: the SessionEnd process-hygiene hook
+// stays Codex-only until the Claude owner-detection branch ships.
 // `--check` (used by npm run check) fails when a committed artifact drifts.
 import fs from "node:fs";
 import path from "node:path";
@@ -14,11 +17,39 @@ import { emitClaudePermissions } from "./lib/emitters/claude-permissions.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
-const agentsOutputDirectory = "plugins/codex-chef-workflows/agents";
+const pluginDirectory = "plugins/codex-chef-workflows";
+const agentsOutputDirectory = `${pluginDirectory}/agents`;
+const codexPluginManifestPath = `${pluginDirectory}/.codex-plugin/plugin.json`;
+const claudePluginManifestPath = `${pluginDirectory}/.claude-plugin/plugin.json`;
 const settingsFragmentPath = "templates/claude/settings.fragment.json";
+const projectUrl = "https://github.com/ucsahinn/agentchef";
 
 function normalize(text) {
   return text.replace(/\r\n/g, "\n");
+}
+
+function readJson(repoRoot, relative) {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relative), "utf8"));
+}
+
+// Claude Code's plugin manifest lists agent files explicitly (a directory
+// value is rejected by `claude plugin validate`), so the list is generated
+// from the same emitter output that produces the files.
+export function renderClaudePluginManifest(repoRoot, agentFileNames) {
+  const codexManifest = readJson(repoRoot, codexPluginManifestPath);
+  const packageJson = readJson(repoRoot, "package.json");
+  return {
+    name: codexManifest.name,
+    version: codexManifest.version,
+    description: codexManifest.description,
+    author: { name: "AgentChef", url: projectUrl },
+    homepage: projectUrl,
+    repository: projectUrl,
+    license: packageJson.license,
+    keywords: ["agentchef", "claude-code", "codex", "workflows", "security-first"],
+    skills: "./skills/",
+    agents: [...agentFileNames].sort().map((fileName) => `./agents/${fileName}`)
+  };
 }
 
 export function renderAllTargetArtifacts(repoRoot = root) {
@@ -27,10 +58,13 @@ export function renderAllTargetArtifacts(repoRoot = root) {
   for (const target of Object.values(workingAgreementTargets)) {
     outputs.set(target.output, `${renderWorkingAgreement(source, target.id).trimEnd()}\n`);
   }
-  const catalog = JSON.parse(fs.readFileSync(path.join(repoRoot, "catalog", "agents.json"), "utf8"));
+  const catalog = readJson(repoRoot, "catalog/agents.json");
+  const agentFileNames = [];
   for (const [fileName, text] of emitClaudeAgents({ catalog, roleDirectory: path.join(repoRoot, "templates", "codex", "agents") })) {
     outputs.set(`${agentsOutputDirectory}/${fileName}`, text);
+    agentFileNames.push(fileName);
   }
+  outputs.set(claudePluginManifestPath, `${JSON.stringify(renderClaudePluginManifest(repoRoot, agentFileNames), null, 2)}\n`);
   const rules = fs.readFileSync(path.join(repoRoot, "templates", "codex", "rules", "default.rules"), "utf8");
   const permissions = emitClaudePermissions(rules);
   outputs.set(settingsFragmentPath, `${JSON.stringify({

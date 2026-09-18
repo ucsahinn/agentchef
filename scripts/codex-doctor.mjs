@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderWorkingAgreement } from "./lib/emitters/working-agreement.mjs";
 import {
   CliUsageError,
   installCliErrorBoundary
@@ -225,6 +226,58 @@ function inspectSkills() {
   };
 }
 
+// Claude Code target templates: the generated plugin manifest, subagent
+// files, permission fragment, and rendered working agreement must all be
+// present and current before an install can be trusted.
+function inspectClaudeTemplates(failures) {
+  const pluginRoot = "plugins/codex-chef-workflows";
+  const claudeManifestPath = `${pluginRoot}/.claude-plugin/plugin.json`;
+  const codexManifestPath = `${pluginRoot}/.codex-plugin/plugin.json`;
+  for (const required of [claudeManifestPath, "templates/claude/settings.fragment.json", "templates/claude/rules/agentchef-working-agreement.md", "templates/shared/working-agreement.md"]) {
+    if (!exists(required)) failures.push(`Missing Claude target template: ${required}`);
+  }
+  let agents = 0;
+  let version = null;
+  let allow = 0;
+  let ask = 0;
+  try {
+    const claudeManifest = readJson(claudeManifestPath);
+    const codexManifest = readJson(codexManifestPath);
+    version = claudeManifest.version;
+    if (claudeManifest.version !== codexManifest.version) failures.push(`Claude plugin manifest version ${claudeManifest.version} differs from the Codex plugin manifest version ${codexManifest.version}`);
+    const catalog = readJson("catalog/agents.json");
+    const expectedAgents = (catalog.agents || []).length + (catalog.coordinators || []).length;
+    agents = Array.isArray(claudeManifest.agents) ? claudeManifest.agents.length : 0;
+    if (agents !== expectedAgents) failures.push(`Claude plugin manifest lists ${agents} agents but the catalog defines ${expectedAgents}`);
+    for (const entry of claudeManifest.agents || []) {
+      if (!exists(`${pluginRoot}/${String(entry).replace(/^\.\//, "")}`)) failures.push(`Claude plugin manifest references a missing agent file: ${entry}`);
+    }
+    if (Object.hasOwn(claudeManifest, "hooks")) failures.push("Claude plugin manifest must not publish hooks in this release (process hygiene stays Codex-only)");
+  } catch (error) {
+    failures.push(`Claude plugin manifest is unreadable: ${error.message}`);
+  }
+  try {
+    const fragment = readJson("templates/claude/settings.fragment.json");
+    allow = Array.isArray(fragment.permissions?.allow) ? fragment.permissions.allow.length : 0;
+    ask = Array.isArray(fragment.permissions?.ask) ? fragment.permissions.ask.length : 0;
+    if (allow === 0 || ask === 0) failures.push("Claude settings fragment must carry generated allow and ask permission rules");
+    for (const rule of [...(fragment.permissions?.allow || []), ...(fragment.permissions?.ask || [])]) {
+      if (rule === "*" || rule === "Bash(*)" || /bypassPermissions/.test(rule)) failures.push(`Claude settings fragment contains a forbidden rule: ${rule}`);
+    }
+  } catch (error) {
+    failures.push(`Claude settings fragment is unreadable: ${error.message}`);
+  }
+  try {
+    const source = readText("templates/shared/working-agreement.md");
+    const rendered = `${renderWorkingAgreement(source, "claude").trimEnd()}\n`;
+    const committed = readText("templates/claude/rules/agentchef-working-agreement.md").replace(/\r\n/g, "\n");
+    if (rendered !== committed) failures.push("templates/claude/rules/agentchef-working-agreement.md is stale; run npm run render:targets");
+  } catch (error) {
+    failures.push(`Claude working agreement could not be rendered: ${error.message}`);
+  }
+  return { pluginManifestVersion: version, agents, permissionRules: { allow, ask } };
+}
+
 function inspectGlobalTargets() {
   if (!includeGlobal) {
     return {
@@ -292,6 +345,7 @@ try {
     skills: inspectSkills(),
     docs: inspectDocs(failures),
     installPlan: inspectInstallPlan(failures),
+    claudeTemplates: inspectClaudeTemplates(failures),
     globalTargets: inspectGlobalTargets(),
     warnings,
     failures
@@ -331,6 +385,9 @@ if (jsonOutput) {
   }
   if (report.installPlan) {
     console.log(`Install plan: ${report.installPlan.operations} operations, ${report.installPlan.globalWriteOperations} global-write operations`);
+  }
+  if (report.claudeTemplates) {
+    console.log(`Claude target templates: ${report.claudeTemplates.agents} agents, ${report.claudeTemplates.permissionRules.allow} allow / ${report.claudeTemplates.permissionRules.ask} ask rules, plugin manifest ${report.claudeTemplates.pluginManifestVersion || "missing"}`);
   }
   console.log(`Global targets: ${report.globalTargets?.inspected ? "inspected without writes" : "skipped"}`);
   for (const warning of warnings) console.log(`Warning: ${warning}`);

@@ -8,8 +8,8 @@ bilmen gerekiyorsa bu makaleyi kullan.
 
 - `templates/codex/rules/default.rules` dosyasından üretilen `permissions.allow`
   ve `permissions.ask` kuralları.
-- Yalnızca `--install-process-hygiene` sonrasında eklenen isteğe bağlı
-  `hooks.SessionEnd` süreç hijyeni handler'ı.
+- Başka hiçbir şey: `hooks`, `env`, `deny` listeleri ve diğer tüm anahtarlar
+  senin yazdığın gibi kalır. Bu sürümde Claude Code için hook kurulmaz.
 - `.claude.json` içindeki `mcpServers.context7` ve `mcpServers.serena`
   girdileri.
 

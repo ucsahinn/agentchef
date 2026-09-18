@@ -17,11 +17,14 @@ AgentChef keeps complete operator documentation in English and Turkish at full p
 | Keep concurrent Codex/MCP processes bounded | [Multi-session process hygiene](process-hygiene.md) |
 | Upgrade without losing local choices | [Upgrade guide](upgrade.md) |
 | Prove the repository or installed runtime | [Verification](verification.md) |
+| Choose or compare the Codex CLI and Claude Code targets | [Target capability map](target-capability-map.md) |
 
 ## Understand The Setup
 
+- [Target capability map (Codex CLI vs Claude Code)](target-capability-map.md)
 - [Codex capability map](codex-capability-map.md)
 - [Codex surfaces](codex-surfaces.md)
+- [Claude Code surfaces](claude-surfaces.md)
 - [CLI flags and commands](codex-flags.md)
 - [Specialist agents](agents.md)
 - [Skill catalog](skills.md)

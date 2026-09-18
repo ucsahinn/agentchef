@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { operationAppliesToTargets } from "./lib/targets/index.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
@@ -23,19 +24,26 @@ const allowedKinds = new Set([
   "refresh-plugin-cache",
   "git-config",
   "chmod",
-  "skill-install"
+  "skill-install",
+  "json-merge",
+  "link-directory",
+  "write-claude-marketplace",
+  "claude-plugin-register"
 ]);
 const allowedManifestKinds = new Set([...allowedKinds, "copy-glob"]);
+const allowedTargets = new Set(["codex", "claude", "shared"]);
 const allowedRisks = new Set(["low", "medium", "high"]);
 
-function canonicalSelectedIds(profileName, { platform = "windows", installGitGuards = false } = {}) {
+function canonicalSelectedIds(profileName, { platform = "windows", installGitGuards = false, targets = ["codex"] } = {}) {
   const selected = new Set(manifest.profiles[profileName] || []);
+  const targetSet = new Set(targets);
   for (const operation of manifest.operations || []) {
     if (operation.requiresFlag === "InstallGitGuards" && installGitGuards) selected.add(operation.id);
   }
   return (manifest.operations || [])
     .filter((operation) => selected.has(operation.id))
     .filter((operation) => operation.platforms.includes(platform))
+    .filter((operation) => operationAppliesToTargets(operation, targetSet))
     .map((operation) => operation.id);
 }
 
@@ -168,6 +176,11 @@ function validateDiscovery(discovery, label) {
   validateSource(discovery.source, label);
   if (!isObject(discovery.target) || !["windows", "unix"].includes(discovery.target.platform)) {
     fail(`${label} target.platform must be windows or unix`);
+  } else {
+    assertNoExtraKeys(discovery.target, ["platform", "targets"], `${label} target`);
+    if (!stringArray(discovery.target.targets) || discovery.target.targets.some((target) => !["codex", "claude"].includes(target))) {
+      fail(`${label} target.targets must list codex and/or claude`);
+    }
   }
 
   if (!Array.isArray(discovery.profiles) || discovery.profiles.length === 0) {
@@ -193,9 +206,10 @@ function validateDiscovery(discovery, label) {
     fail(`${label} operations must be a non-empty array`);
   } else {
     for (const operation of discovery.operations) {
-      assertNoExtraKeys(operation, ["id", "kind", "summary", "platforms", "requiresFlag", "risk", "backup", "collision"], `${label} operation ${operation.id}`);
+      assertNoExtraKeys(operation, ["id", "kind", "target", "summary", "platforms", "requiresFlag", "risk", "backup", "collision"], `${label} operation ${operation.id}`);
       if (!operationById.has(operation.id)) fail(`${label} operation references unknown id: ${operation.id}`);
       if (!allowedManifestKinds.has(operation.kind)) fail(`${label} operation ${operation.id} has invalid kind: ${operation.kind}`);
+      if (!allowedTargets.has(operation.target)) fail(`${label} operation ${operation.id} has invalid target: ${operation.target}`);
       if (!allowedRisks.has(operation.risk)) fail(`${label} operation ${operation.id} has invalid risk: ${operation.risk}`);
       if (!stringArray(operation.platforms)) fail(`${label} operation ${operation.id} platforms must be string array`);
       if (typeof operation.backup !== "boolean") fail(`${label} operation ${operation.id} backup must be boolean`);
@@ -289,10 +303,13 @@ function validateTarget(target, label, expectedPlatform) {
     fail(`${label} target must be object`);
     return;
   }
-  assertNoExtraKeys(target, ["platform", "codexHome", "agentsHome", "home"], `${label} target`);
+  assertNoExtraKeys(target, ["platform", "targets", "codexHome", "agentsHome", "claudeHome", "claudeJson", "home"], `${label} target`);
   if (!["windows", "unix"].includes(target.platform)) fail(`${label} target platform must be windows or unix`);
   if (expectedPlatform && target.platform !== expectedPlatform) fail(`${label} target platform should be ${expectedPlatform}`);
-  for (const key of ["codexHome", "agentsHome", "home"]) {
+  if (!stringArray(target.targets) || target.targets.length === 0 || target.targets.some((entry) => !["codex", "claude"].includes(entry))) {
+    fail(`${label} target.targets must be a non-empty list of codex and/or claude`);
+  }
+  for (const key of ["codexHome", "agentsHome", "claudeHome", "claudeJson", "home"]) {
     if (!nonEmptyString(target[key])) fail(`${label} target ${key} must be non-empty string`);
   }
 }
@@ -302,12 +319,13 @@ function validateOptions(options, label, expected) {
     fail(`${label} options must be object`);
     return;
   }
-  assertNoExtraKeys(options, ["all", "installSkills", "installGitGuards", "force", "noBackup", "redactPaths"], `${label} options`);
+  assertNoExtraKeys(options, ["all", "installSkills", "installGitGuards", "force", "noBackup", "redactPaths", "targets"], `${label} options`);
   for (const key of ["all", "installSkills", "installGitGuards", "force", "noBackup", "redactPaths"]) {
     if (!booleanValue(options[key])) fail(`${label} options.${key} must be boolean`);
   }
+  if (!stringArray(options.targets) || options.targets.length === 0) fail(`${label} options.targets must be a non-empty string array`);
   for (const [key, value] of Object.entries(expected.options || {})) {
-    if (options[key] !== value) fail(`${label} options.${key} should be ${value}`);
+    if (JSON.stringify(options[key]) !== JSON.stringify(value)) fail(`${label} options.${key} should be ${JSON.stringify(value)}`);
   }
 }
 
@@ -351,12 +369,24 @@ function validateOperation(operation, label, selected, noBackupRequested) {
   if (!operationById.has(operation.componentId)) fail(`${label} operation ${operation.id} references unknown componentId: ${operation.componentId}`);
   if (selected && !selected.has(operation.componentId)) fail(`${label} operation ${operation.id} componentId is not selected: ${operation.componentId}`);
 
+  if (!allowedTargets.has(operation.target)) fail(`${label} operation ${operation.id} has invalid target: ${operation.target}`);
+  if (manifestOperation && operation.target !== manifestOperation.target) {
+    fail(`${label} operation ${operation.id} target must match its manifest operation`);
+  }
   if (operation.risk === "high") {
-    if (!manifestOperation?.requiresFlag) {
-      fail(`${label} high-risk operation ${operation.id} must map to a manifest operation with requiresFlag`);
-    }
-    if (!["--all", "--install-skills", "InstallGitGuards"].includes(operation.selectedBy)) {
-      fail(`${label} high-risk operation ${operation.id} must be selected by an explicit optional flag`);
+    if (manifestOperation?.target === "claude") {
+      // Claude-side JSON merges are high risk because they touch user-owned
+      // files; the explicit --target claude selection is their opt-in flag.
+      if (operation.selectedBy !== "--target claude") {
+        fail(`${label} high-risk Claude operation ${operation.id} must be selected by --target claude`);
+      }
+    } else {
+      if (!manifestOperation?.requiresFlag) {
+        fail(`${label} high-risk operation ${operation.id} must map to a manifest operation with requiresFlag`);
+      }
+      if (!["--all", "--install-skills", "InstallGitGuards"].includes(operation.selectedBy)) {
+        fail(`${label} high-risk operation ${operation.id} must be selected by an explicit optional flag`);
+      }
     }
   }
 
@@ -390,6 +420,18 @@ function validateOperation(operation, label, selected, noBackupRequested) {
   if (operation.kind === "chmod") {
     if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
     if (operation.mode !== "+x") fail(`${label} ${operation.id} must use mode +x`);
+  }
+  if (["json-merge", "link-directory"].includes(operation.kind)) {
+    if (!nonEmptyString(operation.source)) fail(`${label} ${operation.id} must include source`);
+    if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
+  }
+  if (operation.kind === "write-claude-marketplace") {
+    if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);
+    if (!nonEmptyString(operation.pluginTarget)) fail(`${label} ${operation.id} must include pluginTarget`);
+  }
+  if (operation.kind === "claude-plugin-register") {
+    if (operation.pluginId !== "codex-chef-workflows@agentchef") fail(`${label} ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (!nonEmptyString(operation.command)) fail(`${label} ${operation.id} must include command`);
   }
   if (operation.kind === "skill-install") {
     if (!nonEmptyString(operation.command)) fail(`${label} ${operation.id} must include command`);
@@ -480,10 +522,43 @@ if (redactedPlan) {
   if (/C:\\\\Users\\\\|C:\/Users\/|\/Users\//i.test(serialized)) {
     fail("Redacted all plan must not expose local user home paths");
   }
-  for (const key of ["codexHome", "agentsHome", "home"]) {
+  for (const key of ["codexHome", "agentsHome", "claudeHome", "claudeJson", "home"]) {
     if (!String(redactedPlan.target?.[key] || "").startsWith("${HOME}")) {
       fail(`Redacted all plan target.${key} must use HOME placeholder`);
     }
+  }
+}
+
+validatePlan(runPlan(["--all", "--target", "both", "--json"], "Both targets plan"), "Both targets plan", {
+  selectedIds: canonicalSelectedIds("all", { targets: ["codex", "claude"] }),
+  options: {
+    all: true,
+    targets: ["codex", "claude"]
+  }
+});
+
+const claudePlan = runPlan(["--target", "claude", "--redact-paths", "--json"], "Claude target plan");
+validatePlan(claudePlan, "Claude target plan", {
+  selectedIds: canonicalSelectedIds("default", { targets: ["claude"] }),
+  options: {
+    all: false,
+    redactPaths: true,
+    targets: ["claude"]
+  }
+});
+if (claudePlan) {
+  const kinds = new Set(claudePlan.operations.map((operation) => operation.kind));
+  for (const kind of ["json-merge", "link-directory", "write-claude-marketplace", "claude-plugin-register"]) {
+    if (!kinds.has(kind)) fail(`Claude target plan must include a ${kind} operation`);
+  }
+  if (claudePlan.operations.some((operation) => operation.target === "codex")) {
+    fail("Claude target plan must not include codex-only operations");
+  }
+  if (!claudePlan.operations.some((operation) => operation.kind === "write-ownership-marker")) {
+    fail("Claude target plan must still include the shared direct-skill ownership markers");
+  }
+  if (JSON.stringify(claudePlan.target.targets) !== JSON.stringify(["claude"])) {
+    fail("Claude target plan must report targets=[claude]");
   }
 }
 

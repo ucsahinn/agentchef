@@ -29,10 +29,29 @@ function atomicWrite(filePath, value) {
   }
 }
 
-function fingerprint(targetPath) {
+// Links are refused everywhere by default. A mutation prepared with
+// { link: true } (the Claude skill links: a junction or directory symlink
+// that points into the AgentChef-managed skill tree) may have a link as its
+// top-level output; entries inside directories are still never links.
+function fingerprint(targetPath, { allowLink = false } = {}) {
+  const linkStat = fs.existsSync(targetPath) ? null : (() => {
+    try {
+      return fs.lstatSync(targetPath);
+    } catch {
+      return null;
+    }
+  })();
+  if (linkStat?.isSymbolicLink()) {
+    // A dangling link: existsSync follows the link and reports false.
+    if (!allowLink) throw new Error(`Operation journal refuses linked output: ${targetPath}`);
+    return { kind: "link", target: fs.readlinkSync(targetPath) };
+  }
   if (!fs.existsSync(targetPath)) return { kind: "absent" };
   const stat = fs.lstatSync(targetPath);
-  if (stat.isSymbolicLink()) throw new Error(`Operation journal refuses linked output: ${targetPath}`);
+  if (stat.isSymbolicLink()) {
+    if (!allowLink) throw new Error(`Operation journal refuses linked output: ${targetPath}`);
+    return { kind: "link", target: fs.readlinkSync(targetPath) };
+  }
   if (stat.isFile()) return { kind: "file", sha256: sha256(targetPath) };
   if (!stat.isDirectory()) throw new Error(`Operation journal refuses unsupported output: ${targetPath}`);
   const hash = crypto.createHash("sha256");
@@ -51,7 +70,7 @@ function fingerprint(targetPath) {
 }
 
 function sameFingerprint(left, right) {
-  return left?.kind === right?.kind && left?.sha256 === right?.sha256;
+  return left?.kind === right?.kind && left?.sha256 === right?.sha256 && left?.target === right?.target;
 }
 
 function readInProgressJournal(backupRoot) {
@@ -71,13 +90,15 @@ function assertBackupWithinRoot(backupRoot, backup) {
   return resolvedBackup;
 }
 
-function prepareMutation(journal, journalPath, backupRoot, { target, backup = null }) {
+function prepareMutation(journal, journalPath, backupRoot, { target, backup = null, link = false }) {
   const resolvedTarget = path.resolve(target);
   const resolvedBackup = assertBackupWithinRoot(backupRoot, backup);
   if (journal.mutations.some((entry) => entry.target === resolvedTarget)) {
     throw new Error(`Operation journal already prepared target: ${resolvedTarget}`);
   }
-  journal.mutations.push({ target: resolvedTarget, backup: resolvedBackup, before: fingerprint(resolvedTarget), output: null, phase: "prepared" });
+  const mutation = { target: resolvedTarget, backup: resolvedBackup, before: fingerprint(resolvedTarget, { allowLink: link }), output: null, phase: "prepared" };
+  if (link) mutation.link = true;
+  journal.mutations.push(mutation);
   atomicWrite(journalPath, journal);
 }
 
@@ -85,7 +106,7 @@ function markAppliedMutation(journal, journalPath, target) {
   const resolvedTarget = path.resolve(target);
   const mutation = journal.mutations.find((entry) => entry.target === resolvedTarget);
   if (!mutation || mutation.phase !== "prepared") throw new Error(`Operation journal has no prepared mutation: ${resolvedTarget}`);
-  mutation.output = fingerprint(resolvedTarget);
+  mutation.output = fingerprint(resolvedTarget, { allowLink: Boolean(mutation.link) });
   mutation.phase = "applied";
   atomicWrite(journalPath, journal);
 }
@@ -132,8 +153,8 @@ export function createOperationJournal({ backupRoot, operation }) {
       record(backupPath);
       atomicWrite(journalPath, journal);
     },
-    prepareMutation({ target, backup = null }) {
-      prepareMutation(journal, journalPath, resolvedBackupRoot, { target, backup });
+    prepareMutation({ target, backup = null, link = false }) {
+      prepareMutation(journal, journalPath, resolvedBackupRoot, { target, backup, link });
     },
     markApplied(target) {
       markAppliedMutation(journal, journalPath, target);
@@ -243,16 +264,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             unresolved.push(`refused target outside allowed roots: ${target}`);
             continue;
           }
-          const current = fingerprint(target);
+          const current = fingerprint(target, { allowLink: Boolean(mutation.link) });
           const unmarkedCreate = mutation.output === null
             && mutation.before?.kind === "absent"
-            && current.kind === "file"
+            && (current.kind === "file" || (mutation.link && current.kind === "link"))
             && !mutation.backup;
           if (!sameFingerprint(current, mutation.output) && !unmarkedCreate) {
             unresolved.push(`preserved changed target: ${target}`);
             continue;
           }
-          fs.rmSync(target, { recursive: true, force: true });
+          // A link is removed as a link so the managed tree it points at is never touched.
+          if (current.kind === "link") fs.unlinkSync(target);
+          else fs.rmSync(target, { recursive: true, force: true });
           if (mutation.backup) {
             fs.mkdirSync(path.dirname(target), { recursive: true });
             fs.cpSync(mutation.backup, target, { recursive: true, force: true });

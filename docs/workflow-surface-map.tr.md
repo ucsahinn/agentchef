@@ -122,3 +122,7 @@ Ciddi islerde bu sirayi kullan:
 Ana thread sentez, editler, kullaniciya gorunen kararlar ve final kanittan
 sorumludur. Subagent'lar approval, sandbox, credential veya external-state
 kontrollerini bypass etmek icin kullanilmaz.
+
+Aynı zincir Claude Code'da `agentchef:<rol>` subagent'ları ve `/<skill>`
+çağrılarıyla uygulanır; aktarılmayan yüzeyler için
+[hedef yetenek haritasına](target-capability-map.tr.md) bak.

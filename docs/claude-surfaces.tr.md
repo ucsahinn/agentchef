@@ -27,7 +27,7 @@ Geliştirme ve testler üçünü de bir scratch köküne yönlendirmelidir;
 | Çalışma sözleşmesi | `~/.claude/rules/agentchef-working-agreement.md` | AgentChef dosyası, içerik hash'i | yedekle, sonra render edilen kaynak değiştiyse yenile |
 | Serena bridge | `~/.claude/agentchef/serena-pool.mjs` | AgentChef dosyası | yedekle, sonra yenile; durum `CODEX_HOME/serena-pool` altında yaşar, böylece iki ajan tek tembel backend'i paylaşır |
 | İzinler | `~/.claude/settings.json` → `permissions.allow`, `permissions.ask` | yan receipt `~/.claude/agentchef/receipts/claude-settings-merge-receipt.json` | yalnızca toplamsal; mevcut kurallar, `deny` listeleri, `env` ve hook'lar asla kaldırılmaz ya da yeniden sıralanmaz |
-| Süreç hijyeni hook'u | `~/.claude/settings.json` → `hooks.SessionEnd` | aynı receipt | varsayılan kapalı; `--install-process-hygiene` ile açılır |
+| Süreç hijyeni hook'u | bu sürümde yayınlanmaz | yalnızca Codex plugin'i | Claude Code oturum sonunda kendi MCP alt süreçlerini durdurur; Claude dalı sonraki bir sürüm için planlıdır |
 | MCP sunucuları | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | aynı ada sahip bir sunucuya dokunulmaz |
 | Skill bağlantıları | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | dizin bağlantısı (Windows'ta junction) | yabancı gerçek dizinler atlanır; AgentChef marker'lı kopyalar yalnız `--adopt-skill-links` ile benimsenir |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef dosyası | yedekle, sonra yenile |

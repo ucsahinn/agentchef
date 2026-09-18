@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { inspectMarketplaceEntry, writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
 import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { inspectInstallerSafety } from "./lib/installer-safety-preflight.mjs";
+import { claudeInstallActionIds } from "./install-claude-target.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
@@ -466,6 +467,99 @@ for (const [surface, label] of [
 }
 runMarketplaceHelperSmokes();
 
+// Claude Code target alignment: the manifest's claude operations mirror the
+// helper's action ids, every operation names a target, the surfaces both
+// harnesses read are shared, and both shell installers hand the Claude surface
+// to scripts/install-claude-target.mjs only when -Target/--target selects it.
+const claudeManifestIds = manifest.operations.filter((item) => item.target === "claude").map((item) => item.id);
+if (JSON.stringify(claudeManifestIds) !== JSON.stringify([...claudeInstallActionIds])) {
+  fail(`Manifest claude operations must mirror install-claude-target.mjs action ids: [${claudeManifestIds.join(", ")}] vs [${claudeInstallActionIds.join(", ")}]`);
+}
+for (const item of manifest.operations) {
+  if (!["codex", "claude", "shared"].includes(item.target)) fail(`Operation ${item.id} must declare target codex, claude, or shared.`);
+}
+for (const id of [
+  "codex-plugin-marketplace-source",
+  "curated-skills",
+  "git-ignore-global",
+  "git-pre-commit-hook",
+  "git-pre-commit-hook-executable",
+  "git-config-excludesfile",
+  "git-config-hooks-path"
+]) {
+  if (operation(id)?.target !== "shared") fail(`Operation ${id} must be shared between install targets.`);
+}
+for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall === true)) {
+  if (operation(`${skill.name}-direct-skill`)?.target !== "shared") fail(`Direct skill ${skill.name} must be a shared install operation.`);
+}
+for (const id of ["codex-agents-md", "codex-config", "codex-plugin", "plugin-marketplace", "installed-plugin-cache-refresh"]) {
+  if (operation(id)?.target !== "codex") fail(`Operation ${id} must stay a codex-only operation.`);
+}
+for (const snippet of [
+  '[ValidateSet("codex", "claude", "both")][string]$Target = "codex"',
+  "[switch]$AdoptSkillLinks",
+  "[switch]$SkipClaudePluginRegister",
+  '$InstallClaude = $Target -in @("claude", "both")',
+  "install-claude-target.mjs",
+  "--agents-lock-held",
+  "Shared agent surfaces",
+  "Claude Code target",
+  "if ($InstallCodex) {",
+  "if ($InstallClaude) {"
+]) {
+  requireText(ps, snippet, "PowerShell installer");
+}
+for (const snippet of [
+  'TARGET="codex"',
+  "--target=*)",
+  "--adopt-skill-links",
+  "--skip-claude-plugin-register",
+  "INSTALL_CLAUDE=1",
+  "install-claude-target.mjs",
+  "--agents-lock-held",
+  "Shared agent surfaces",
+  "Claude Code target",
+  'if [ "$INSTALL_CODEX" -eq 1 ]; then',
+  'if [ "$INSTALL_CLAUDE" -eq 1 ]; then'
+]) {
+  requireText(sh, snippet, "Bash installer");
+}
+requireOrderedText(ps, ["Claude Code target", "refresh-installed-plugin.mjs"], "PowerShell installer (Claude target runs before the Codex plugin cache refresh)");
+requireOrderedText(sh, ["Claude Code target", "PLUGIN_REFRESH_HELPER="], "Bash installer (Claude target runs before the Codex plugin cache refresh)");
+{
+  const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract-targets");
+  const bothContract = resolveInstallContract({
+    platform: process.platform === "win32" ? "windows" : "unix",
+    codexHome: path.join(fixtureRoot, "codex"),
+    agentsHome: path.join(fixtureRoot, "agents"),
+    claudeHome: path.join(fixtureRoot, "claude"),
+    home: fixtureRoot,
+    targets: "both"
+  });
+  const bothIds = bothContract.selectedComponents.map((item) => item.id);
+  const cacheIndex = bothIds.indexOf("installed-plugin-cache-refresh");
+  for (const id of claudeInstallActionIds) {
+    const index = bothIds.indexOf(id);
+    if (index < 0 || index > cacheIndex) fail(`Both-target contract must run ${id} before the Codex plugin cache refresh.`);
+  }
+  const sharedCount = bothIds.filter((id) => id === "codex-plugin-marketplace-source").length;
+  if (sharedCount !== 1) fail("Both-target contract must run the shared plugin source sync exactly once.");
+  const claudeOnly = resolveInstallContract({
+    platform: process.platform === "win32" ? "windows" : "unix",
+    codexHome: path.join(fixtureRoot, "codex"),
+    agentsHome: path.join(fixtureRoot, "agents"),
+    claudeHome: path.join(fixtureRoot, "claude"),
+    home: fixtureRoot,
+    targets: "claude"
+  });
+  if (claudeOnly.selectedComponents.some((item) => item.target === "codex")) {
+    fail("Claude-only contract must not select codex operations.");
+  }
+  if (!claudeOnly.operations.some((action) => action.kind === "write-ownership-marker")) {
+    fail("Claude-only contract must still write shared direct-skill ownership markers.");
+  }
+}
+
 function validateResolvedInstallContract() {
   const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract");
   const codexHome = path.join(fixtureRoot, "codex");
@@ -494,6 +588,7 @@ function validateResolvedInstallContract() {
   }
   const canonicalDefaultOrder = manifest.operations
     .filter((operation) => manifest.profiles.default.includes(operation.id))
+    .filter((operation) => (operation.target || "codex") !== "claude")
     .map((operation) => operation.id);
   if (JSON.stringify(contract.selectedComponents.map((operation) => operation.id))
     !== JSON.stringify(canonicalDefaultOrder)) {

@@ -27,6 +27,25 @@ existing 0.5.74 installation:
 The regular update flow below applies; the preview will show the renamed
 `AGENTS.md` text and the removed Brain skill step.
 
+## Upgrading From 0.6.0 To 0.9.0
+
+0.9.0 adds Claude Code as a second install target. For an existing Codex
+install nothing changes by default: the update flow below keeps managing
+`~/.codex` and `~/.agents` exactly as before, and on-disk identity still uses
+the `codex-chef` prefix. New in 0.9.0:
+
+- `--target codex|claude|both` on the installers, `npm run chef -- --install`,
+  `--preview`, `--reset`, and the new `--remove`. Interactive installs
+  detect the `codex` and `claude` CLIs and ask which targets to manage.
+- The Claude Code surface is installed by one transaction helper
+  (`scripts/install-claude-target.mjs`); see
+  [Claude Code surfaces](claude-surfaces.md).
+- `npm run chef -- --remove --target <t>` is a preview-first removal that
+  deletes only AgentChef-owned files, links, marketplace entries, and
+  receipt-recorded settings; user content, Git guards, and backups stay.
+- `npm run verify:install:runtime -- --target claude` and
+  `npm run codex:status -- --target both` verify the Claude side.
+
 ## Safe Upgrade Flow
 
 The guided CLI wraps the safe path:

@@ -116,8 +116,9 @@ actions pause for approval. Verification checks what actually happened.
 
 ## 🚀 Preview First, Install Second
 
-You need Git, Node.js 22.12 or newer, npm/npx, and the Codex CLI. If one is
-missing, use the [installation guide](docs/install.md) instead of guessing.
+You need Git, Node.js 22.12 or newer, npm/npx, and the Codex CLI and/or Claude
+Code. If one is missing, use the [installation guide](docs/install.md) instead
+of guessing.
 
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
@@ -137,6 +138,12 @@ npm run chef -- --install --apply
 The same commands work on macOS, Linux, and WSL. The installer backs up managed
 targets before replacement and does not prune user-owned skills, MCPs, profiles,
 or unrelated plugin files.
+
+The interactive install detects which CLIs you have and asks whether to manage
+the Codex CLI target, the Claude Code target, or both. Direct runs choose with
+`--target codex|claude|both`; the Claude Code target is never selected
+implicitly. See the [target capability map](docs/target-capability-map.md) for
+what each target gets.
 
 ### Four commands worth remembering
 

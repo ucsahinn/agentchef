@@ -129,6 +129,17 @@ with the question, inspected evidence, conflict, decision needed, and open
 verification need. Customer support/onboarding (`support_coordinator` with `devex_auditor`) is
 also advisory. Neither route grants database, customer-account, or production access.
 
+### The same roles in Claude Code
+
+The Claude Code target ships the same 32 roles as plugin subagents named
+`agentchef:<role>` (for example `agentchef:code-mapper`). They are generated
+from the catalog by `npm run render:targets`: read-only Codex roles become
+subagents with `Read`, `Grep`, and `Glob` tools and `Write`, `Edit`,
+`Bash` disallowed; workspace-write roles keep edit tools; coordinators may
+only spawn their catalog-bound workers through `Agent(agentchef:<worker>)`.
+AgentChef never writes `~/.claude/agents/` and never emits
+`bypassPermissions`.
+
 ## AgentSpace Ownership, Knowledge, And Worker Safety
 
 | Coordinator | Bounded specialist workers |

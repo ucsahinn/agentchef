@@ -130,9 +130,13 @@ function validateDocText(file) {
       }
       const enabledMcpCount = mcpCatalog.servers.filter((server) => server.defaultEnabled === true).length;
       const disabledMcpCount = mcpCatalog.servers.length - enabledMcpCount;
+      const targetOf = (id) => installPlan.operations.find((operation) => operation.id === id)?.target || "codex";
+      const countFor = (profile, targets) => installPlan.profiles[profile].filter((id) => targetOf(id) === "shared" || targets.includes(targetOf(id))).length;
       for (const derivedSnippet of [
-        `all | ${installPlan.profiles.all.length} |`,
-        `default | ${installPlan.profiles.default.length} |`,
+        `all | ${countFor("all", ["codex"])} |`,
+        `default | ${countFor("default", ["codex"])} |`,
+        `all | ${countFor("all", ["codex", "claude"])} |`,
+        `default | ${countFor("default", ["codex", "claude"])} |`,
         `Profiles: ${routingProfiles.profiles.length}`,
         `MCP ready by default (${enabledMcpCount})`,
         `MCP opt-in / disabled by default (${disabledMcpCount})`

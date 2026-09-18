@@ -16,7 +16,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | --- | --- | --- | --- |
 | Global working agreement | `~/.codex/AGENTS.md` (backup, then replace unless present) | `~/.claude/rules/agentchef-working-agreement.md` (user-level rule; the user's own `~/.claude/CLAUDE.md` is never edited) | mapped, same source text |
 | Repository-local precedence | repo `AGENTS.md` overrides global | project `CLAUDE.md` and `.claude/rules/` load after user rules | mapped |
-| Settings | `~/.codex/config.toml` (merge missing managed tables) | `~/.claude/settings.json` (additive merge of `permissions` and, on request, `hooks`; recorded in a sidecar receipt) | partial: different ownership model |
+| Settings | `~/.codex/config.toml` (merge missing managed tables) | `~/.claude/settings.json` (additive merge of `permissions`, recorded in a sidecar receipt; `hooks`, `env`, and `deny` lists are never touched) | partial: different ownership model |
 | MCP servers | `[mcp_servers.*]` tables in `config.toml` | user-scope `mcpServers` in `.claude.json` (additive merge, receipt) | mapped for `context7` and the Serena bridge; other catalog servers documented with `claude mcp add` commands |
 | Runtime MCP profiles (`full`, `multi-session`, `offline`, `token-safe`, ...) | generated `*.config.toml` profiles | no profile concept | **not mapped** |
 | Specialist agents | `~/.codex/agents/*.toml` (32 role files) | plugin subagents `agentchef:<role>` under `plugins/codex-chef-workflows/agents/*.md`; `~/.claude/agents/` untouched | mapped, namespaced |
@@ -25,7 +25,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | Curated commit-pinned skills | `~/.agents/skills/<name>` with provenance marker | same tree, exposed to Claude through the same directory links | mapped |
 | Plugin distribution | `~/.codex/plugins/codex-chef-workflows` copy plus `~/.agents/plugins/marketplace.json` written by AgentChef | `~/.agents/plugins/.claude-plugin/marketplace.json` written by AgentChef; installation only through `claude plugin marketplace add` and `claude plugin install`; Claude's own plugin cache is never hand-written | partial: different ownership model |
 | Approval rules | `~/.codex/rules/default.rules` prefix rules (`allow` / `prompt`) | `permissions.allow` and `permissions.ask` rules generated from the same file (`Bash(...)`, `PowerShell(...)`); nothing is emitted as `deny` | mapped (allow, prompt); see below for what does not carry over |
-| Session-end process hygiene hook | plugin hook `hooks/process-hygiene.json` trusted by Codex | plugin hook `hooks/hooks.json`, off by default in `settings.json`; opt in with `--install-process-hygiene` | partial |
+| Session-end process hygiene hook | plugin hook `hooks/process-hygiene.json` trusted by Codex | not published in this release (Claude Code ends its own MCP children at session end) | **not mapped** yet |
 | Global Git guards | shared `~/.githooks/pre-commit`, `~/.gitignore_global`, `core.hooksPath`, `core.excludesfile` | identical files; one global slot owned once for both targets | mapped, shared |
 | Backups, journal, lock | `~/.codex/backups/<prefix>-*` with journal and lock directories | `~/.claude/agentchef/backups/agentchef-*` with the same journal format; lock on `~/.claude` and `~/.agents` | mapped |
 | Runtime verification | `codex doctor`, `codex mcp list`, installed-file drift | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt verification, link verification | mapped |
@@ -43,7 +43,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | `[projects."path"].trust_level` | folder trust prompt and `.claude/settings.local.json` | **not mapped** by the installer |
 | `[features]`, `[memories]`, `[apps]` | no counterpart | **not mapped** |
 | `[mcp_servers.X.tools.Y]` approval tables | `mcp__X__Y` rules in `permissions` | mapped where the server is installed |
-| Hook trust: Codex reviews the full hook source before enabling it | Claude runs plugin hooks once the plugin is enabled and merged `settings.json` hooks immediately | **security difference**: AgentChef keeps the Claude hook off by default |
+| Hook trust: Codex reviews the full hook source before enabling it | Claude runs plugin hooks as soon as the plugin is enabled | **security difference**: AgentChef publishes no hook to Claude Code in this release |
 
 ## Ownership model differences
 

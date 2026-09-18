@@ -134,6 +134,26 @@ ikincil pencereleri `codex --profile multi-session` ile başlat. Açık temizlik
 ön izlemesinde yalnız eski ve sahipsiz adaylar görünebilir. Ayrıntı için
 [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
 
+## Claude Code Hedefi
+
+Kurulumdan sonra Claude Code AgentChef kuralını, plugin'ini, MCP sunucularını
+veya skill'lerini göstermiyorsa:
+
+```bash
+npm run verify:install:runtime -- --target claude
+claude plugin list
+claude mcp list
+```
+
+Yeni bir oturum başlat; Claude Code kuralları, plugin'leri ve skill'leri
+açılışta okur. `foreign` skill bağlantısı kararı, `~/.claude/skills/<ad>`
+altında sana ait gerçek bir dizin olduğu anlamına gelir; AgentChef onu asla
+değiştirmez. `user-changed` makbuz girdisi, AgentChef'in eklediği bir şeyi
+düzenlediğini gösterir; senin içeriğin olarak korunur. Bkz.
+[Claude skill bağlantıları](../kb/claude-skill-links.tr.md),
+[Claude ayar birleştirme](../kb/claude-settings-merge.tr.md) ve
+[Claude plugin önbelleği](../kb/claude-plugin-cache.tr.md).
+
 ## Windows Sandbox
 
 Güncel Codex Windows modları native elevated sandbox, native unelevated sandbox

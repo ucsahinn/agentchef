@@ -50,10 +50,12 @@ npm.cmd run verify:install:runtime -- --no-mcp-probe
 npx.cmd --version
 codex.cmd --version
 npm.cmd run chef -- --processes --no-log
+claude.cmd --version
+npm.cmd run verify:install:runtime -- --target claude
 ```
 
-AgentChef'in programatik command resolver'i Windows'ta `npm.cmd`, `npx.cmd`
-ve `codex.cmd`; Unix'te uzantisiz komutlari secer. Boylece interaktif shell'de
+AgentChef'in programatik command resolver'i Windows'ta `npm.cmd`, `npx.cmd`,
+`codex.cmd` ve `claude.cmd`; Unix'te uzantisiz komutlari secer. Boylece interaktif shell'de
 calisip ajan veya child process'te PowerShell script-policy ya da executable
 resolution farki nedeniyle bozulan komutlar onlenir.
 
@@ -63,6 +65,11 @@ Süreç denetimi `Win32_Process` parent/child ve oluşturulma zamanı metadata
 bilgisini okur; bu bilgi yoksa fail-closed kalır ve temizlik adayı üretmez.
 İkincil eşzamanlı pencerelerde `codex --profile multi-session` kullan ve
 [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
+
+Claude Code skill bağlantıları dizin junction'larıdır (`~/.claude/skills/<ad>`
+→ `~/.agents/skills/<ad>`). Junction için yönetici hakkı veya Developer Mode
+gerekmez. `CLAUDE_CONFIG_DIR`, `.claude.json` dahil tüm Claude home'unu taşır;
+scratch-home testleri bu sayede izole kalır.
 
 Bir oturum içinde geçici ek okuma izni gerekiyorsa:
 

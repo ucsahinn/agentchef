@@ -31,7 +31,7 @@ export function readJsonOrDefault(filePath, fallback) {
   if (stat.isSymbolicLink() || !stat.isFile()) {
     throw new Error(`Refusing to merge into a linked or non-regular file: ${filePath}`);
   }
-  const text = fs.readFileSync(filePath, "utf8").replace(/^﻿/, "");
+  const text = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
   if (text.trim() === "") return structuredClone(fallback);
   const parsed = JSON.parse(text);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -85,7 +85,7 @@ export function writeReceipt(receiptPath, receipt) {
 
 export function readReceipt(receiptPath) {
   if (!fs.existsSync(receiptPath)) return null;
-  const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8").replace(/^﻿/, ""));
+  const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8").replace(/^\uFEFF/, ""));
   if (receipt?.schemaVersion !== receiptSchemaVersion || !Array.isArray(receipt.entries)) {
     throw new Error(`Unsupported merge receipt: ${receiptPath}`);
   }
@@ -95,6 +95,10 @@ export function readReceipt(receiptPath) {
 // Inspect whether each recorded entry is still present and unchanged.
 export function inspectReceipt(receipt, document) {
   return receipt.entries.map((entry) => {
+    if (entry.kind === "container") {
+      const container = getAtPointer(document, entry.pointer);
+      return { ...entry, status: container && typeof container === "object" ? "present" : "missing" };
+    }
     if (entry.kind === "array-item") {
       const array = getAtPointer(document, entry.pointer);
       const present = Array.isArray(array) && array.some((item) => valueSha256(item) === entry.valueSha256);
@@ -106,12 +110,20 @@ export function inspectReceipt(receipt, document) {
   });
 }
 
+function isEmptyContainer(value) {
+  if (Array.isArray(value)) return value.length === 0;
+  return Boolean(value) && typeof value === "object" && Object.keys(value).length === 0;
+}
+
 // Remove only entries that are still exactly what the receipt recorded.
+// Containers the merge created are pruned last, and only when they are empty
+// again; a container the user filled with their own content is kept.
 export function removeRecordedEntries(receipt, document) {
   const next = structuredClone(document);
   const removed = [];
   const kept = [];
-  for (const entry of receipt.entries) {
+  const containers = receipt.entries.filter((entry) => entry.kind === "container");
+  for (const entry of receipt.entries.filter((entry) => entry.kind !== "container")) {
     if (entry.kind === "array-item") {
       const segments = pointerSegments(entry.pointer);
       const parent = getAtPointer(next, pointerFor(segments));
@@ -137,6 +149,22 @@ export function removeRecordedEntries(receipt, document) {
     }
     if (valueSha256(parent[key]) !== entry.valueSha256) {
       kept.push({ ...entry, reason: "user-changed" });
+      continue;
+    }
+    delete parent[key];
+    removed.push(entry);
+  }
+  // Deepest containers first so an emptied list lets its parent empty too.
+  for (const entry of [...containers].sort((left, right) => right.pointer.length - left.pointer.length)) {
+    const segments = pointerSegments(entry.pointer);
+    const key = segments.pop();
+    const parent = segments.length === 0 ? next : getAtPointer(next, pointerFor(segments));
+    if (!parent || typeof parent !== "object" || !(key in parent)) {
+      kept.push({ ...entry, reason: "key-missing" });
+      continue;
+    }
+    if (!isEmptyContainer(parent[key])) {
+      kept.push({ ...entry, reason: "user-content" });
       continue;
     }
     delete parent[key];

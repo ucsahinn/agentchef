@@ -23,6 +23,10 @@ Dil girişleri:
 | MCP connector listeleniyor ama tool göstermiyor. | [MCP connector araç göstermiyor](mcp-no-tools.tr.md) |
 | Managed dosyalar eksik veya stale görünüyor. | [Managed file drift](managed-file-drift.tr.md) |
 | Screenshot veya görsel commit edilmeli mi? | [Public görsel asset'ler](public-visual-assets.tr.md) |
+| AgentChef Claude Code settings.json veya .claude.json dosyama ne ekledi? | [Claude ayar birleştirme](claude-settings-merge.tr.md) |
+| Claude Code AgentChef plugin'ini görmüyor veya eski sürümü gösteriyor. | [Claude plugin önbelleği](claude-plugin-cache.tr.md) |
+| `CLAUDE_CONFIG_DIR` veya taşınmış bir Claude home sonuçları tutarsız gösteriyor. | [Custom Claude home ve ambient drift](claude-home-drift.tr.md) |
+| Claude Code'da bir skill eksik ya da `~/.claude/skills` gerçek bir kopya içeriyor. | [Claude skill bağlantıları](claude-skill-links.tr.md) |
 
 ## Çalışma Kuralları
 

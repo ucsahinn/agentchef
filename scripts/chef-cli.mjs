@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { platformCommand } from "./lib/platform-command.mjs";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import {
@@ -82,6 +83,21 @@ function isTr() {
   return options.lang === "tr";
 }
 
+// Install targets: codex (default), claude, or both. Kept as a canonical
+// string because the shell installers take the same value.
+function canonicalTarget(value) {
+  const parts = String(value || "").toLowerCase().split(/[,+\s]+/).filter(Boolean);
+  if (parts.length === 0) return "codex";
+  const set = new Set(parts.flatMap((part) => (part === "both" || part === "all" ? ["codex", "claude"] : [part])));
+  if ([...set].some((part) => !["codex", "claude"].includes(part))) return null;
+  return set.size === 2 ? "both" : [...set][0];
+}
+
+function installerTargetArgs(target) {
+  if (!target || target === "codex") return { plan: [], powershell: [], bash: [] };
+  return { plan: ["--target", target], powershell: ["-Target", target], bash: [`--target=${target}`] };
+}
+
 function localText(en, tr) {
   return isTr() ? tr : en;
 }
@@ -152,6 +168,7 @@ const ACTION_FLAGS = new Map([
   ["--repair", "repair"],
   ["--backups", "backups"],
   ["--install", "install"],
+  ["--remove", "remove"],
   ["--skills", "skills"],
   ["--mcp", "mcp"],
   ["--routing", "routing"],
@@ -205,6 +222,17 @@ for (let index = 0; index < args.length; index += 1) {
     options.profile = value;
     index += 1;
   }
+  else if (arg === "--target") {
+    const value = args[index + 1];
+    if (!value || value.startsWith("-")) {
+      cliError("--target requires codex, claude, or both.", "--target codex, claude veya both ister.");
+    }
+    options.target = canonicalTarget(value);
+    if (!options.target) {
+      cliError(`Unsupported install target ${value}. Supported targets: codex, claude, both.`, `Desteklenmeyen kurulum hedefi ${value}. Desteklenen hedefler: codex, claude, both.`);
+    }
+    index += 1;
+  }
   else if (ACTION_FLAGS.has(arg)) {
     requestedActionFlags.push(arg);
     options.action = ACTION_FLAGS.get(arg);
@@ -242,6 +270,18 @@ if (options.apply && options.action === "processes" && !options.cleanupStale) {
   cliError(
     "--processes --apply also requires --cleanup-stale.",
     "--processes --apply ayrıca --cleanup-stale ister."
+  );
+}
+if (options.target && !["install", "preview", "reset", "remove"].includes(options.action || "")) {
+  cliError(
+    "--target can only be used with --install, --preview, --reset, or --remove.",
+    "--target yalnızca --install, --preview, --reset veya --remove ile kullanılabilir."
+  );
+}
+if (options.action === "remove" && !options.target) {
+  cliError(
+    "--remove requires --target codex, claude, or both so the removal scope is explicit.",
+    "--remove kaldırma kapsamı açık olsun diye --target codex, claude veya both ister."
   );
 }
 
@@ -1095,7 +1135,8 @@ Kullanım:
 
 Komut kısayolları:
   Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
-  Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --processes --cleanup-stale --apply
+  Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --processes --cleanup-stale --apply
+  Kurulum hedefi: --install/--preview/--reset/--remove ile --target codex|claude|both (varsayılan codex; etkileşimli kurulum algılayıp onay ister)
   Süreç temizliği: --processes --cleanup-stale [--apply]; --apply olmadan yalnız önizleme
   Yedekler: --backups [--backup ID] [--restore|--delete --apply]
   Yönlendirme profili: --routing --profile starter-health
@@ -1116,7 +1157,8 @@ Seçenekler:
   --verbose-plan Preview ekranlarında tam install dry-run kanıtını basar
   --details      Özet ekranlarda tam tablo ve kanıt ayrıntılarını gösterir
   --cleanup-stale Süresi dolmuş, aktif Codex sahibi olmayan yerel MCP ağaçlarını önizler
-  --apply        Update, install, reset, repair, seçili skill install veya açık stale-process temizliği için write action izni verir
+  --apply        Update, install, reset, repair, remove, seçili skill install veya açık stale-process temizliği için write action izni verir
+  --target T     --install/--preview/--reset/--remove için kurulum hedefi: codex (varsayılan), claude veya both
   --help         Bu yardımı gösterir
 
 Ekranlar:
@@ -1143,7 +1185,8 @@ Usage:
 
 Reference actions:
   Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
-  Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --processes --cleanup-stale --apply
+  Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --processes --cleanup-stale --apply
+  Install target: --target codex|claude|both with --install/--preview/--reset/--remove (default codex; interactive installs detect and confirm)
   Process cleanup: --processes --cleanup-stale [--apply]; preview-only without --apply
   Backups: --backups [--backup ID] [--restore|--delete --apply]
   Routing: --routing --profile starter-health
@@ -1170,7 +1213,8 @@ Options:
   --verbose-plan Print the full install dry-run evidence for preview screens
   --details      Show full tables and evidence on summary screens
   --cleanup-stale Preview expired local MCP trees that have no active Codex owner
-  --apply        Allow write actions for update, install, reset, repair, selected skill install, or explicit stale-process cleanup
+  --apply        Allow write actions for update, install, reset, repair, remove, selected skill install, or explicit stale-process cleanup
+  --target T     Install target for --install/--preview/--reset/--remove: codex (default), claude, or both
   --help         Show this help
 
 Details:
@@ -1611,12 +1655,14 @@ function runDoctor() {
   });
 }
 
-function runPreview(force = false, includeSkills = true, compact = !options.verbosePlan) {
+function runPreview(force = false, includeSkills = true, compact = !options.verbosePlan, target = options.target) {
+  const targetArgs = installerTargetArgs(target);
   const plan = runNode("preview-plan", "scripts/plan-install.mjs", [
     ...(includeSkills ? ["--all"] : []),
     ...(force ? ["--force"] : []),
     ...(compact ? ["--summary"] : []),
     ...(options.json ? ["--json"] : []),
+    ...targetArgs.plan,
     "--redact-paths"
   ]);
   if (!plan.ok) return plan;
@@ -1625,6 +1671,7 @@ function runPreview(force = false, includeSkills = true, compact = !options.verb
     return runPowerShell("preview-installer", ".\\scripts\\install.ps1", [
       ...(includeSkills ? ["-All"] : []),
       ...(force ? ["-Force"] : []),
+      ...targetArgs.powershell,
       "-WhatIf",
       "-PlainOutput"
     ]);
@@ -1632,6 +1679,7 @@ function runPreview(force = false, includeSkills = true, compact = !options.verb
   return runBash("preview-installer", "scripts/install.sh", [
     ...(includeSkills ? ["--all"] : []),
     ...(force ? ["--force"] : []),
+    ...targetArgs.bash,
     "--dry-run",
     "--plain-output"
   ]);
@@ -2328,12 +2376,47 @@ function completeAppliedAction(applied, expectSkills = false, context = {}) {
   return result;
 }
 
+function detectHarnessCli(name) {
+  const command = platformCommand(name, process.platform === "win32" ? "windows" : "unix");
+  const probe = spawnSync(command, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 15000, shell: false });
+  return !probe.error && probe.status === 0;
+}
+
+// --target wins. Interactive runs detect the installed CLIs and confirm the
+// proposal; non-interactive runs keep the compatible codex default, so the
+// Claude surface is only ever touched after an explicit choice.
+async function resolveInstallTarget(interaction = {}) {
+  if (options.target) return options.target;
+  const interactive = process.stdin.isTTY || Boolean(interaction.question);
+  if (!interactive) return "codex";
+  const codexPresent = detectHarnessCli("codex");
+  const claudePresent = detectHarnessCli("claude");
+  const proposal = codexPresent && claudePresent ? "both" : claudePresent && !codexPresent ? "claude" : "codex";
+  console.log(`${ICONS.info} ${localText(
+    `Detected CLIs: codex=${codexPresent ? "yes" : "no"}, claude=${claudePresent ? "yes" : "no"}. Proposed install target: ${proposal}.`,
+    `Algılanan CLI'lar: codex=${codexPresent ? "evet" : "hayır"}, claude=${claudePresent ? "evet" : "hayır"}. Önerilen kurulum hedefi: ${proposal}.`
+  )}`);
+  const answer = await askInteractive(
+    `${ICONS.info} ${localText("Install target [codex/claude/both]", "Kurulum hedefi [codex/claude/both]")} (${proposal}): `,
+    interaction
+  );
+  const chosen = canonicalTarget(answer.trim() || proposal);
+  if (!chosen) {
+    console.log(`${ICONS.warn} ${localText("Unsupported target; expected codex, claude, or both.", "Desteklenmeyen hedef; codex, claude veya both bekleniyor.")}`);
+    return null;
+  }
+  return chosen;
+}
+
 async function runInstall(interaction = {}) {
+  const target = await resolveInstallTarget(interaction);
+  if (!target) return { ok: false, skipped: true };
+  const targetArgs = installerTargetArgs(target);
   const installation = inspectInstallState();
   if (!installation.ok) return installation;
   printInstallState(installation);
 
-  if (installation.kind === "current") {
+  if (installation.kind === "current" && target === "codex") {
     console.log(`${ICONS.ok} ${localText(
       "The complete AgentChef setup is already current; nothing needs to be installed.",
       "AgentChef kurulumu zaten eksiksiz ve güncel; kurulacak bir şey yok."
@@ -2370,7 +2453,7 @@ async function runInstall(interaction = {}) {
       ),
       ICONS.info
     );
-    return runPreview();
+    return runPreview(false, true, !options.verbosePlan, target);
   }
   if (isMenuInteraction(interaction)) {
     printSurfaceHeader(
@@ -2381,23 +2464,61 @@ async function runInstall(interaction = {}) {
       ),
       ICONS.info
     );
-    const preview = runPreview();
+    const preview = runPreview(false, true, !options.verbosePlan, target);
     if (!preview.ok) return preview;
   }
   const allowed = await confirmWriteAction(
     "Install",
-    "Full install can write managed Codex files after backup and can install curated global skills.",
+    target === "codex"
+      ? "Full install can write managed Codex files after backup and can install curated global skills."
+      : `Full install (target: ${target}) can write managed Codex and Claude Code files after backup, merge reviewed entries into Claude settings, and install curated global skills.`,
     interaction
   );
   if (!allowed) return { ok: false, skipped: true };
   let applied;
   if (process.platform === "win32") {
-    applied = runPowerShell("install", ".\\scripts\\install.ps1", ["-All", "-PlainOutput"]);
+    applied = runPowerShell("install", ".\\scripts\\install.ps1", ["-All", "-PlainOutput", ...targetArgs.powershell]);
   } else {
-    applied = runBash("install", "scripts/install.sh", ["--all", "--plain-output"]);
+    applied = runBash("install", "scripts/install.sh", ["--all", "--plain-output", ...targetArgs.bash]);
   }
   return completeAppliedAction(applied, true, {
     kind: "install",
+    beforeVersion: currentPackageVersion(),
+    afterVersion: currentPackageVersion()
+  });
+}
+
+async function runRemove(interaction = {}) {
+  const target = options.target;
+  const removeClaude = target !== "codex";
+  const removeCodex = target !== "claude";
+  printSurfaceHeader(
+    localText("Remove AgentChef", "AgentChef'i kaldır"),
+    localText(
+      `Target: ${target}. Only receipt- and marker-owned entries are removed; user content, Git guards, and backups stay in place.`,
+      `Hedef: ${target}. Yalnızca makbuz ve işaretçi sahipli girdiler kaldırılır; kullanıcı içeriği, Git guard'ları ve yedekler yerinde kalır.`
+    ),
+    ICONS.warn
+  );
+  const previews = [];
+  if (removeClaude) previews.push(runNode("remove-claude-preview", "scripts/install-claude-target.mjs", ["--remove", "--dry-run", "--redact-paths"]));
+  if (removeCodex) previews.push(runNode("remove-codex-preview", "scripts/remove-install.mjs", ["--redact-paths"]));
+  if (previews.some((preview) => !preview.ok)) return previews.find((preview) => !preview.ok);
+  if (!writeFlowRequested(interaction)) {
+    console.log(styleMuted(localText("No files were changed. Add --apply to run this removal.", "Hiçbir dosya değişmedi. Kaldırmayı çalıştırmak için --apply ekleyin.")));
+    return { ok: true, skipped: true };
+  }
+  const allowed = await confirmWriteAction(
+    "Remove",
+    `Remove (target: ${target}) deletes AgentChef-owned files and reverts receipt-listed entries after backup.`,
+    interaction
+  );
+  if (!allowed) return { ok: false, skipped: true };
+  let applied = { ok: true };
+  if (removeClaude) applied = runNode("remove-claude", "scripts/install-claude-target.mjs", ["--remove", "--apply", "--redact-paths"]);
+  if (applied.ok && removeCodex) applied = runNode("remove-codex", "scripts/remove-install.mjs", ["--apply", "--redact-paths"]);
+  return completeAppliedAction(applied, true, {
+    kind: "remove",
     beforeVersion: currentPackageVersion(),
     afterVersion: currentPackageVersion()
   });
@@ -2427,11 +2548,12 @@ async function runReset(interaction = {}) {
     interaction
   );
   if (!allowed) return { ok: false, skipped: true };
+  const resetTargetArgs = installerTargetArgs(options.target);
   let applied;
   if (process.platform === "win32") {
-    applied = runPowerShell("reset-apply", ".\\scripts\\install.ps1", ["-All", "-Force", "-PlainOutput"]);
+    applied = runPowerShell("reset-apply", ".\\scripts\\install.ps1", ["-All", "-Force", "-PlainOutput", ...resetTargetArgs.powershell]);
   } else {
-    applied = runBash("reset-apply", "scripts/install.sh", ["--all", "--force", "--plain-output"]);
+    applied = runBash("reset-apply", "scripts/install.sh", ["--all", "--force", "--plain-output", ...resetTargetArgs.bash]);
   }
   return completeAppliedAction(applied, true, {
     kind: "reset",
@@ -4828,6 +4950,8 @@ async function runAction(action, interaction = {}) {
       return runReset(interaction);
     case "install":
       return runInstall(interaction);
+    case "remove":
+      return runRemove(interaction);
     case "repair":
       return runRepair(interaction);
     case "backups":

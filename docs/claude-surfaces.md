@@ -27,7 +27,7 @@ Development and tests must point all three at a scratch root;
 | Working agreement | `~/.claude/rules/agentchef-working-agreement.md` | AgentChef file, content hash | backup, then refresh when the rendered source changed |
 | Serena bridge | `~/.claude/agentchef/serena-pool.mjs` | AgentChef file | backup, then refresh; state lives in `CODEX_HOME/serena-pool` so both agents share one lazy backend |
 | Permissions | `~/.claude/settings.json` → `permissions.allow`, `permissions.ask` | sidecar receipt `~/.claude/agentchef/receipts/claude-settings-merge-receipt.json` | additive only; existing rules, `deny` lists, `env`, and hooks are never removed or reordered |
-| Process-hygiene hook | `~/.claude/settings.json` → `hooks.SessionEnd` | same receipt | off by default; `--install-process-hygiene` opts in |
+| Process-hygiene hook | not published in this release | Codex plugin only | Claude Code stops its own MCP children at session end; the Claude branch is planned for a later release |
 | MCP servers | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | a server with the same name is left untouched |
 | Skill links | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | directory link (junction on Windows) | foreign real directories are skipped; AgentChef-marked copies are adopted only with `--adopt-skill-links` |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef file | backup, then refresh |

@@ -3,43 +3,63 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
-import { resolveInstallContract } from "./lib/install-contract.mjs";
+import { normalizeTargets, resolveInstallContract } from "./lib/install-contract.mjs";
 
-export function assertInstallSurface(codexHome, agentsHome) {
+function insideRoot(target, root) {
+  return path.relative(root, path.resolve(target)).split(path.sep)[0] !== "..";
+}
+
+export function assertInstallSurface(codexHome, agentsHome, { claudeHome = null, claudeJson = null, targets = "codex" } = {}) {
   const codexRoot = path.resolve(codexHome);
   const agentsRoot = path.resolve(agentsHome);
+  const selectedTargets = normalizeTargets(targets);
+  const home = os.homedir();
+  const claudeRoot = path.resolve(claudeHome || process.env.CLAUDE_CONFIG_DIR || path.join(home, ".claude"));
+  const claudeJsonPath = path.resolve(claudeJson || path.join(claudeRoot, ".claude.json"));
+  const claudeSelected = selectedTargets.has("claude");
   const contract = resolveInstallContract({
     platform: process.platform === "win32" ? "windows" : "unix",
     codexHome: codexRoot,
     agentsHome: agentsRoot,
-    home: os.homedir()
+    claudeHome: claudeRoot,
+    claudeJson: claudeJsonPath,
+    targets: selectedTargets,
+    home
   });
-  const codexTargets = contract.preflightTargets.filter((target) =>
-    path.relative(codexRoot, path.resolve(target)).split(path.sep)[0] !== ".."
-  );
-  const agentsTargets = contract.preflightTargets.filter((target) =>
-    path.relative(agentsRoot, path.resolve(target)).split(path.sep)[0] !== ".."
-  );
+  const roots = [codexRoot, agentsRoot, ...(claudeSelected ? [claudeRoot, path.dirname(claudeJsonPath)] : [])];
   for (const target of contract.preflightTargets) {
-    assertManagedTargetPath(target, [codexRoot, agentsRoot]);
+    assertManagedTargetPath(target, roots);
   }
-  return { codexTargets: codexTargets.length, agentsTargets: agentsTargets.length };
+  return {
+    targets: contract.targets,
+    codexTargets: contract.preflightTargets.filter((target) => insideRoot(target, codexRoot)).length,
+    agentsTargets: contract.preflightTargets.filter((target) => insideRoot(target, agentsRoot)).length,
+    claudeTargets: claudeSelected
+      ? contract.preflightTargets.filter((target) => insideRoot(target, claudeRoot) || path.resolve(target) === claudeJsonPath).length
+      : 0
+  };
 }
 
 function main() {
   const args = process.argv.slice(2);
-  const codexIndex = args.indexOf("--codex-home");
-  const agentsIndex = args.indexOf("--agents-home");
-  const codexHome = codexIndex >= 0 ? args[codexIndex + 1] : null;
-  const agentsHome = agentsIndex >= 0 ? args[agentsIndex + 1] : null;
-  const known = new Set(["--codex-home", "--agents-home"]);
+  const valueOf = (flag) => {
+    const index = args.indexOf(flag);
+    return index >= 0 ? args[index + 1] : null;
+  };
+  const codexHome = valueOf("--codex-home");
+  const agentsHome = valueOf("--agents-home");
+  const known = new Set(["--codex-home", "--agents-home", "--claude-home", "--claude-json", "--target"]);
   const unknown = args.filter((arg, index) => !known.has(arg) && !known.has(args[index - 1]));
   if (!codexHome || !agentsHome || unknown.length > 0) {
-    console.error("Usage: node scripts/assert-install-surface.mjs --codex-home <path> --agents-home <path>");
+    console.error("Usage: node scripts/assert-install-surface.mjs --codex-home <path> --agents-home <path> [--claude-home <path>] [--claude-json <path>] [--target codex|claude|both]");
     process.exit(2);
   }
   try {
-    console.log(JSON.stringify(assertInstallSurface(codexHome, agentsHome)));
+    console.log(JSON.stringify(assertInstallSurface(codexHome, agentsHome, {
+      claudeHome: valueOf("--claude-home"),
+      claudeJson: valueOf("--claude-json"),
+      targets: valueOf("--target") || "codex"
+    })));
   } catch (error) {
     console.error(error.message);
     process.exit(1);

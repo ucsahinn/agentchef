@@ -10,6 +10,8 @@ import {
   installCliErrorBoundary,
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
+import { parseTargetSelection } from "./lib/targets/index.mjs";
+import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -37,7 +39,9 @@ const options = {
   forceOutput: false,
   lang: "en",
   codexHome: process.env.CODEX_HOME || path.join(os.homedir(), ".codex"),
-  agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents")
+  agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"),
+  claudeHome: null,
+  targets: "codex"
 };
 
 for (let index = 0; index < args.length; index += 1) {
@@ -76,6 +80,12 @@ for (let index = 0; index < args.length; index += 1) {
   } else if (arg === "--agents-home") {
     options.agentsHome = path.resolve(requireCliValue(args, index, "--agents-home"));
     index += 1;
+  } else if (arg === "--claude-home") {
+    options.claudeHome = path.resolve(requireCliValue(args, index, "--claude-home"));
+    index += 1;
+  } else if (arg === "--target") {
+    options.targets = requireCliValue(args, index, "--target");
+    index += 1;
   } else if (arg === "--help" || arg === "-h") {
     printHelp();
     process.exit(0);
@@ -83,6 +93,14 @@ for (let index = 0; index < args.length; index += 1) {
     throw new CliUsageError(`Unknown argument: ${arg}`);
   }
 }
+let statusTargets;
+try {
+  statusTargets = parseTargetSelection(options.targets);
+} catch (error) {
+  throw new CliUsageError(error.message);
+}
+options.claudeHome = resolveClaudeHomes({ env: process.env, home: os.homedir(), claudeHome: options.claudeHome }).claudeHome;
+options.inspectClaude = statusTargets.has("claude");
 
 function printHelp() {
   console.log(`Usage: node scripts/codex-status.mjs [options]
@@ -102,8 +120,10 @@ Options:
   --skip-runtime               Skip installed runtime verification
   --skip-codex-doctor-checks   Skip direct Codex CLI doctor check summary
   --skip-codex-cli             Skip Codex CLI version/login/MCP probes
+  --target <selection>         codex (default), claude, or both: add the Claude Code target summary
   --codex-home <path>          Installed Codex home to inspect
   --agents-home <path>         Installed Agents home to inspect
+  --claude-home <path>         Installed Claude Code home to inspect (default CLAUDE_CONFIG_DIR or ~/.claude)
   --lang <en|tr>               Human-readable output language
   --tr                         Shortcut for --lang tr
   --redact-paths               Redact home and repository paths in output
@@ -1159,6 +1179,63 @@ const runtime = options.skipRuntime
       { timeout: RUNTIME_VERIFY_TIMEOUT_MS }
     );
 
+// Claude Code target: a receipt-based summary from the runtime verifier. It
+// is opt-in through --target so the default status stays Codex-shaped.
+const claudeTarget = !options.inspectClaude
+  ? { inspected: false, status: "skipped", note: "Add --target claude or --target both to inspect the Claude Code target." }
+  : options.skipRuntime
+    ? { inspected: false, status: "skipped", note: "Skipped by --skip-runtime." }
+    : (() => {
+        const result = runNodeScript(
+          "scripts/verify-install-runtime.mjs",
+          [
+            "--json",
+            ...(options.redactPaths ? ["--redact-paths"] : []),
+            "--target", "claude",
+            "--codex-home", options.codexHome,
+            "--agents-home", options.agentsHome,
+            "--claude-home", options.claudeHome,
+            "--skip-doctor-probe",
+            "--no-mcp-probe",
+            ...(options.skipCodexCli ? ["--skip-codex-cli"] : [])
+          ],
+          "verify:install:runtime --target claude",
+          { timeout: RUNTIME_VERIFY_TIMEOUT_MS }
+        );
+        const claude = result.report?.claude || {};
+        return {
+          inspected: true,
+          status: result.status,
+          installed: claude.installed === true,
+          claudeHome: claude.claudeHome || redact(options.claudeHome),
+          files: { current: (claude.files || []).filter((file) => file.status === "current").length, expected: (claude.files || []).length },
+          links: { current: (claude.links || []).filter((link) => link.status === "link-current").length, expected: (claude.links || []).length },
+          receipts: (claude.receipts || []).map((entry) => entry.status),
+          cli: claude.cli || { inspected: false },
+          failures: result.failures || [],
+          warnings: result.report?.warnings || []
+        };
+      })();
+
+// Beyin (dual-agent-brain) is a separate product; status only relays its own
+// read-only summary line when its launcher exists. Any failure stays silent.
+function inspectBeyin() {
+  if (process.platform !== "win32") return { inspected: false, note: "Beyin status relay is Windows-only in this release." };
+  const launcher = path.join(os.homedir(), ".beyin", "beyin.ps1");
+  if (!fs.existsSync(launcher)) return { inspected: false, note: "Beyin launcher not found; nothing to relay." };
+  const result = run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "durum"], { timeout: 20000 });
+  if (result.error || ![0, 2].includes(result.status)) return { inspected: false, note: "Beyin status command did not complete; see beyin doktor." };
+  const lines = String(result.stdout || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return {
+    inspected: true,
+    status: result.status === 0 ? "ok" : "attention",
+    headline: lines[0] || null,
+    health: lines.find((line) => /^Saglik|^Sağlık/i.test(line)) || null,
+    note: "Read-only relay of `beyin durum`; AgentChef never writes to the vault."
+  };
+}
+const beyin = inspectBeyin();
+
 const codexDoctor = summarizeCodexDoctor();
 const skipGlobalMetadata = skipInstalledRuntimeAndCliMetadata();
 const skillInventory = inspectSkillInventory(skipGlobalMetadata);
@@ -1208,6 +1285,7 @@ const attentionWarnings = warnings.filter((warning) => {
 
 const attentionReasons = [
   ...attentionWarnings,
+  ...(claudeTarget.inspected && claudeTarget.status !== "ok" ? [`Claude Code target: ${claudeTarget.failures[0] || claudeTarget.warnings[0] || claudeTarget.status}`] : []),
   ...(skillsContext.status === "attention" ? [skillsContext.impact] : []),
   ...(codexCliRuntime.status === "attention" ? codexCliRuntime.issues : []),
   ...(gitRepository.status === "ok" ? [] : [gitRepository.summary]),
@@ -1232,6 +1310,8 @@ const report = {
   repoDoctor,
   runtime,
   runtimeInstallState,
+  claudeTarget,
+  beyin,
   codexDoctor,
   codexCliRuntime,
   skillInventory,
@@ -1349,6 +1429,13 @@ if (options.json) {
       ? localText("skipped by this mode", "bu modda atlandı")
       : `${runtime.status}/${runtimeInstallState}`;
     console.log(`${localText("Installed runtime", "Kurulu ortam")}: ${runtimeText}`);
+  }
+  if (claudeTarget.inspected) {
+    const cliText = claudeTarget.cli?.inspected ? `${claudeTarget.cli.version || "cli"}` : localText("cli not probed", "cli problanmadı");
+    console.log(`${localText("Claude Code target", "Claude Code hedefi")}: ${stateText(claudeTarget.status)} (${claudeTarget.installed ? `${localText("files", "dosyalar")} ${claudeTarget.files.current}/${claudeTarget.files.expected}, ${localText("skill links", "skill bağlantıları")} ${claudeTarget.links.current}/${claudeTarget.links.expected}, ${localText("receipts", "makbuzlar")} ${claudeTarget.receipts.join("/") || "none"}, ${cliText}` : localText("not installed", "kurulu değil")})`);
+  }
+  if (beyin.inspected) {
+    console.log(`Beyin: ${stateText(beyin.status)} - ${beyin.health || beyin.headline}`);
   }
   if (!runtime.report?.skills?.inspected && skillInventory.inspected) {
     console.log(`${localText("Skills", "Skill'ler")}: ${skillInventory.installed} ${localText("total installed across global roots", "global köklerde toplam kurulu")} (${skillInventory.expected} AgentChef managed, ${skillInventory.missing.length} ${localText("missing", "eksik")}, ${skillInventory.extraCount} ${localText("other/user-installed", "diğer/kullanıcı kurulu")})`);

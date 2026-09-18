@@ -76,20 +76,37 @@ function managedSkillNames(agentsHome) {
     .sort();
 }
 
-export function claudeMarketplaceDocument(agentsHome) {
+// Shape verified with `claude plugin validate --strict` (Claude Code 2.1.276):
+// a relative-path string is the local plugin source, and the marketplace needs
+// a description to pass strict validation.
+export function claudeMarketplaceDocument() {
   const pluginSource = readJson(".agents/plugins/marketplace.json").plugins.find((plugin) => plugin.name === pluginName);
   return {
     name: claudeMarketplaceName,
-    owner: { name: "AgentChef" },
+    description: "AgentChef workflows for Claude Code: setup maintenance, planning, review, reconstruction, and verification.",
+    owner: { name: "AgentChef", url: "https://github.com/ucsahinn/agentchef" },
     plugins: [
       {
         name: pluginName,
         description: pluginSource?.interface?.shortDescription || "AgentChef workflows",
-        source: { type: "local-path", path: `./sources/${pluginName}` }
+        source: `./sources/${pluginName}`
       }
     ]
   };
 }
+
+// Every action id planClaudeInstall emits, in order. The install-plan manifest
+// mirrors these ids as target "claude" operations and the alignment validator
+// keeps both lists identical.
+export const claudeInstallActionIds = Object.freeze([
+  "claude-working-agreement",
+  "claude-serena-pool",
+  "claude-settings-merge",
+  "claude-mcp-merge",
+  "claude-skill-links",
+  "claude-plugin-marketplace",
+  "claude-plugin-register"
+]);
 
 export function planClaudeInstall(options) {
   const { claudeHome, claudeJson, agentsHome, platform } = options;
@@ -119,9 +136,8 @@ export function planClaudeInstall(options) {
 
   const settingsPath = path.join(claudeHome, "settings.json");
   const settingsFragment = readJson("templates/claude/settings.fragment.json");
-  const hooksFragment = options.installProcessHygiene ? readJson("templates/claude/hooks.fragment.json") : null;
   const settingsCurrent = readJsonOrDefault(settingsPath, {});
-  const settingsPlan = planSettingsMerge(settingsCurrent, { ...settingsFragment, hooks: hooksFragment?.hooks });
+  const settingsPlan = planSettingsMerge(settingsCurrent, { permissions: settingsFragment.permissions });
   actions.push({
     id: "claude-settings-merge",
     kind: "json-merge",
@@ -163,7 +179,7 @@ export function planClaudeInstall(options) {
   actions.push({ id: "claude-skill-links", kind: "link-directory", links, backup: true });
 
   const marketplacePath = path.join(agentsHome, "plugins", ".claude-plugin", "marketplace.json");
-  const marketplaceDesired = claudeMarketplaceDocument(agentsHome);
+  const marketplaceDesired = claudeMarketplaceDocument();
   const marketplaceState = fs.existsSync(marketplacePath)
     ? (JSON.stringify(readJsonOrDefault(marketplacePath, {})) === JSON.stringify(marketplaceDesired) ? "identical" : "drift")
     : "absent";
@@ -188,6 +204,10 @@ export function planClaudeInstall(options) {
     backup: false
   });
 
+  const emitted = actions.map((action) => action.id);
+  if (JSON.stringify(emitted) !== JSON.stringify(claudeInstallActionIds)) {
+    throw new Error(`Claude install plan drifted from claudeInstallActionIds: ${emitted.join(", ")}`);
+  }
   return { actions };
 }
 
@@ -251,12 +271,23 @@ function mergeReceiptEntries(previous, added) {
   return merged;
 }
 
+// A skill link is the one managed path that is allowed to be a link: its
+// parent must be a safe managed directory, and the link itself may only be
+// absent, a real directory (adoption), or a link that already points at the
+// managed skill tree. Links that point anywhere else are never followed.
+function assertSkillLinkPath(link, claudeHome) {
+  assertManagedTargetPath(path.dirname(link.link), [claudeHome]);
+  if (["link-elsewhere", "unreadable-link", "not-a-directory"].includes(link.status)) {
+    throw new Error(`Refusing to touch a foreign skill path under ${claudeHome}: ${link.link} [${link.status}]`);
+  }
+}
+
 export function applyClaudeInstall(options, plan) {
   const { claudeHome, claudeJson, agentsHome } = options;
   const roots = [claudeHome, agentsHome];
   for (const action of plan.actions) {
     if (action.destination) assertManagedTargetPath(action.destination, [...roots, path.dirname(claudeJson)]);
-    for (const link of action.links || []) assertManagedTargetPath(link.link, [claudeHome]);
+    for (const link of action.links || []) assertSkillLinkPath(link, claudeHome);
   }
   const foreignLinks = plan.actions.find((action) => action.kind === "link-directory").links.filter((link) => link.decision === "foreign");
   if (foreignLinks.length > 0) {
@@ -272,7 +303,7 @@ export function applyClaudeInstall(options, plan) {
   fs.mkdirSync(backupRoot, { recursive: true });
   fs.mkdirSync(receiptsRoot, { recursive: true });
 
-  const lockSet = acquireOperationLockSet({ roots, operation: "claude-install" });
+  const lockSet = acquireOperationLockSet({ roots: options.agentsLockHeld ? [claudeHome] : roots, operation: "claude-install" });
   const journal = createOperationJournal({ backupRoot, operation: "claude-install" });
   const installed = { files: [], links: [], receipts: [], commands: [] };
   const results = [];
@@ -280,6 +311,8 @@ export function applyClaudeInstall(options, plan) {
     for (const action of plan.actions) {
       if (action.kind === "copy-file") {
         if (action.state === "identical") {
+          // Still owned: the rewritten install receipt must keep listing it.
+          installed.files.push({ path: action.destination, sha256: fileSha256(action.destination), source: action.source });
           results.push({ id: action.id, status: "current" });
           continue;
         }
@@ -330,7 +363,7 @@ export function applyClaudeInstall(options, plan) {
             continue;
           }
           if (link.decision === "create") {
-            journal.prepareMutation({ target: link.link, backup: null });
+            journal.prepareMutation({ target: link.link, backup: null, link: true });
             createSkillLink(link.link, link.target);
             journal.markApplied(link.link);
             installed.links.push({ link: link.link, target: link.target });
@@ -340,7 +373,7 @@ export function applyClaudeInstall(options, plan) {
           if (link.decision === "replace-copy-with-link") {
             const backup = backupInto(backupRoot, claudeHome, agentsHome, link.link);
             journal.recordBackup(backup);
-            journal.prepareMutation({ target: link.link, backup });
+            journal.prepareMutation({ target: link.link, backup, link: true });
             fs.rmSync(link.link, { recursive: true, force: true });
             createSkillLink(link.link, link.target);
             journal.markApplied(link.link);
@@ -353,6 +386,7 @@ export function applyClaudeInstall(options, plan) {
       }
       if (action.kind === "write-claude-marketplace") {
         if (action.state === "identical") {
+          installed.files.push({ path: action.destination, sha256: fileSha256(action.destination), source: "generated:claude-marketplace" });
           results.push({ id: action.id, status: "current" });
           continue;
         }
@@ -460,7 +494,7 @@ export function applyClaudeRemoval(options, plan) {
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;
   const backupRoot = path.join(claudeHome, "agentchef", "backups", `agentchef-remove-${stamp}`);
   fs.mkdirSync(backupRoot, { recursive: true });
-  const lockSet = acquireOperationLockSet({ roots, operation: "claude-remove" });
+  const lockSet = acquireOperationLockSet({ roots: options.agentsLockHeld ? [claudeHome] : roots, operation: "claude-remove" });
   const journal = createOperationJournal({ backupRoot, operation: "claude-remove" });
   const results = [];
   try {
@@ -485,10 +519,10 @@ export function applyClaudeRemoval(options, plan) {
         results.push({ id: `unlink:${path.basename(link.link)}`, status: link.decision });
         continue;
       }
-      assertManagedTargetPath(link.link, [claudeHome]);
+      assertSkillLinkPath(link, claudeHome);
       const backup = backupInto(backupRoot, claudeHome, agentsHome, link.link);
       if (backup) journal.recordBackup(backup);
-      journal.prepareMutation({ target: link.link, backup });
+      journal.prepareMutation({ target: link.link, backup: null, link: true });
       removeSkillLink(link.link);
       journal.markApplied(link.link);
       results.push({ id: `unlink:${path.basename(link.link)}`, status: "removed" });
@@ -550,7 +584,7 @@ export function resolveClaudeInstallOptions(raw = {}) {
     apply: Boolean(raw.apply),
     remove: Boolean(raw.remove),
     noBackup: Boolean(raw.noBackup),
-    installProcessHygiene: Boolean(raw.installProcessHygiene),
+    agentsLockHeld: Boolean(raw.agentsLockHeld),
     adoptSkillLinks: Boolean(raw.adoptSkillLinks),
     skipPluginRegister: Boolean(raw.skipPluginRegister),
     redactPaths: Boolean(raw.redactPaths),
@@ -567,7 +601,7 @@ function parseArgs(argv) {
     else if (arg === "--remove") raw.remove = true;
     else if (arg === "--json") raw.json = true;
     else if (arg === "--no-backup") raw.noBackup = true;
-    else if (arg === "--install-process-hygiene") raw.installProcessHygiene = true;
+    else if (arg === "--agents-lock-held") raw.agentsLockHeld = true;
     else if (arg === "--adopt-skill-links") raw.adoptSkillLinks = true;
     else if (arg === "--skip-plugin-register") raw.skipPluginRegister = true;
     else if (arg === "--redact-paths") raw.redactPaths = true;
@@ -592,8 +626,8 @@ Options:
   --agents-home <path>        Override AGENTS_HOME (default ~/.agents)
   --home <path>               Override HOME for planning only
   --platform <name>           windows or unix (defaults to current platform)
-  --install-process-hygiene   Also merge the reviewed SessionEnd process-hygiene hook
   --adopt-skill-links         Replace AgentChef-marked skill copies under ~/.claude/skills with links
+  --agents-lock-held          Internal: the calling installer already holds the AGENTS_HOME operation lock
   --skip-plugin-register      Do not run the claude plugin CLI commands
   --no-backup                 Creation-only mode; refuses to replace existing targets
   --redact-paths              Replace home paths with placeholders in output

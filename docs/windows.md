@@ -50,10 +50,12 @@ npm.cmd run verify:install:runtime -- --no-mcp-probe
 npx.cmd --version
 codex.cmd --version
 npm.cmd run chef -- --processes --no-log
+claude.cmd --version
+npm.cmd run verify:install:runtime -- --target claude
 ```
 
-AgentChef's programmatic command resolver selects `npm.cmd`, `npx.cmd`, and
-`codex.cmd` on Windows and the un-suffixed commands on Unix. This avoids the
+AgentChef's programmatic command resolver selects `npm.cmd`, `npx.cmd`,
+`codex.cmd`, and `claude.cmd` on Windows and the un-suffixed commands on Unix. This avoids the
 PowerShell script-policy and executable-resolution differences that can make a
 command work interactively but fail in an agent or child process.
 
@@ -63,6 +65,11 @@ reads `Win32_Process` parent/child and creation-time metadata; if that metadata
 is unavailable it fails closed and produces no cleanup candidates. Use
 `codex --profile multi-session` for secondary concurrent windows and see
 [multi-session process hygiene](process-hygiene.md).
+
+Claude Code skill links are directory junctions (`~/.claude/skills/<name>`
+into `~/.agents/skills/<name>`). Junctions need no administrator rights or
+Developer Mode. `CLAUDE_CONFIG_DIR` relocates the whole Claude home,
+including `.claude.json`, which is how the scratch-home tests stay isolated.
 
 For additional temporary read access inside a session:
 

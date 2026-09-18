@@ -4,6 +4,11 @@ AgentChef mevcut kullanıcının Codex home dizinine kurulur. Varsayılan konum
 `~/.codex` dizinidir; `CODEX_HOME` tanımlıysa installer bunun yerine o path'i
 kullanır. İlk gerçek write sürpriz olmasın diye her zaman ön izlemeyle başla.
 
+AgentChef Claude Code home'unu da (`~/.claude` veya `CLAUDE_CONFIG_DIR`)
+yönetebilir. Codex hedefi varsayılan kalır; Claude Code hedefi `--target claude`
+ya da `--target both` ile açıkça seçilir veya etkileşimli kurulumda onaylanır.
+Bkz. [Hedef Seçimi](#hedef-seçimi).
+
 Uygulamanın veya hesabın yönettiği Codex profili bağımsız bir Codex home'dur;
 `~/.codex/config.toml` içindeki kök ayarları devralmaz. Bu nedenle AgentSpace
 worker profilleri kendi `config.toml` dosyasında `sandbox_mode = "workspace-write"`,
@@ -14,7 +19,10 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 
 ## Gereksinimler
 
-- Codex CLI veya Codex app.
+- Codex hedefi için Codex CLI veya Codex app.
+- Claude Code hedefi için Claude Code (`claude --version`); dosya tarafı onsuz
+  da kurulur, plugin kaydı ise daha sonra çalıştırman için `claude plugin`
+  komutlarını yazdırır.
 - Git.
 - Doğrulama ve isteğe bağlı skill kurulumu için Node.js 22.12 veya üzeri.
 - Varsayilan stdio MCP sunuculari ve skill kurulumu icin `npx`.
@@ -23,6 +31,32 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
   güncel Windows 11.
 - Varsayilan Serena semantic-code MCP acik kalacaksa `uvx`. `uvx` yoksa
   Serena'yi disable et veya status panosunda setup notu gormeyi bekle.
+
+## Hedef Seçimi
+
+| Seçim | Yönetilen yüzey |
+| --- | --- |
+| `codex` (varsayılan) | `~/.codex` dosyaları, paylaşılan `~/.agents` skill ve plugin ağaçları, isteğe bağlı Git guard'ları |
+| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri ve `.claude.json` MCP girdileri, skill bağlantıları, Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı |
+| `both` | yukarıdakilerin tamamı; paylaşılan işlemler bir kez koşar |
+
+`npm run chef -- --install`, `PATH` üzerindeki CLI'ları algılar, bir hedef
+önerir ve onayını ister. Doğrudan installer çağrıları ve etkileşimsiz koşular
+Claude hedefini asla örtük seçmez:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Target both -WhatIf
+node scripts/plan-install.mjs --all --target claude --summary --redact-paths
+npm run chef -- --install --target both
+```
+
+```bash
+./scripts/install.sh --all --target=claude --dry-run
+```
+
+Claude tarafının ayrıntıları, sahipliği ve kaldırılması
+[Claude Code yüzeyleri](claude-surfaces.tr.md) sayfasında; iki hedef arasındaki
+eşleme [hedef yetenek haritasında](target-capability-map.tr.md).
 
 ## PowerShell Kurulumu
 
@@ -174,6 +208,10 @@ npm run chef -- --backups --backup <id> --delete
 npm run chef -- --reset --apply
 npm run chef -- --repair --apply
 npm run chef -- --install --apply
+npm run chef -- --install --target both --apply
+npm run chef -- --preview --target claude
+npm run chef -- --remove --target claude
+npm run chef -- --remove --target claude --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
@@ -504,6 +542,20 @@ Codex içinde:
 /hooks
 ```
 
+Claude Code hedefi kurulduktan sonra yeni bir Claude Code oturumu açıp
+çalıştır:
+
+```bash
+npm run verify:install:runtime -- --target claude
+npm run codex:status -- --target both
+claude plugin list
+claude mcp list
+```
+
+Claude Code içinde `/context` AgentChef kural dosyasını memory dosyaları
+altında listeler, `/plugin` `agentchef` marketplace'ini gösterir ve
+`/skills` bağlantılı skill'leri listeler.
+
 ## Gerçek Kuruluma Dokunmadan Test
 
 PowerShell:
@@ -511,13 +563,15 @@ PowerShell:
 ```powershell
 $env:CODEX_HOME = "$PWD\tmp\codex-home"
 $env:AGENTS_HOME = "$PWD\tmp\agents-home"
-.\scripts\install.ps1 -Force -WhatIf
+$env:CLAUDE_CONFIG_DIR = "$PWD\tmp\claude-home"
+.\scripts\install.ps1 -Force -Target both -WhatIf
 ```
 
 Bash:
 
 ```bash
 CODEX_HOME="$PWD/tmp/codex-home" AGENTS_HOME="$PWD/tmp/agents-home" \
+CLAUDE_CONFIG_DIR="$PWD/tmp/claude-home" \
   ./scripts/install.sh --force --dry-run
 ```
 

@@ -124,3 +124,8 @@ Use this sequence for serious work:
 The main thread remains responsible for synthesis, edits, user-visible
 decisions, and final evidence. Subagents are not a way to bypass approvals,
 sandboxing, credentials, or external-state controls.
+
+The same chain applies in Claude Code with the `agentchef:<role>` subagents
+and `/<skill>` invocations; see the
+[target capability map](target-capability-map.md) for the surfaces that do not
+carry over.

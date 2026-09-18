@@ -61,6 +61,11 @@ Inside Codex, inspect:
 /hooks
 ```
 
+If you installed the Claude Code target as well, open a new Claude Code
+session and run `npm run verify:install:runtime -- --target claude`; inside
+the session, `/context`, `/plugin`, and `/skills` show the rule file, the
+plugin, and the linked skills.
+
 ## Operating Model
 
 Use the setup as a specialist team:

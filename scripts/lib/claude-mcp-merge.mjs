@@ -34,8 +34,7 @@ export function buildClaudeMcpEntry(server, { platform, claudeHome }) {
 
 export function planMcpMerge(current, catalog, { platform, claudeHome, serverNames = claudeDefaultServers }) {
   const next = structuredClone(current);
-  if (next.mcpServers === undefined || next.mcpServers === null) next.mcpServers = {};
-  if (typeof next.mcpServers !== "object" || Array.isArray(next.mcpServers)) {
+  if (next.mcpServers !== undefined && next.mcpServers !== null && (typeof next.mcpServers !== "object" || Array.isArray(next.mcpServers))) {
     throw new Error(".claude.json mcpServers must be an object to merge into it");
   }
   const entries = [];
@@ -43,11 +42,16 @@ export function planMcpMerge(current, catalog, { platform, claudeHome, serverNam
   for (const name of serverNames) {
     const server = (catalog.servers || []).find((entry) => entry.name === name);
     if (!server) throw new Error(`MCP catalog is missing ${name}`);
-    if (name in next.mcpServers) {
+    if (next.mcpServers && name in next.mcpServers) {
       skipped.push({ pointer: pointerFor(["mcpServers", name]), reason: "already-present" });
       continue;
     }
     const entry = buildClaudeMcpEntry(server, { platform, claudeHome });
+    if (next.mcpServers === undefined || next.mcpServers === null) {
+      // The container is created lazily and recorded so removal can prune it.
+      next.mcpServers = {};
+      entries.push({ kind: "container", pointer: pointerFor(["mcpServers"]), valueSha256: valueSha256(null), preview: "/mcpServers (created)" });
+    }
     next.mcpServers[name] = entry;
     entries.push({ kind: "object-key", pointer: pointerFor(["mcpServers", name]), valueSha256: valueSha256(entry), preview: name });
   }

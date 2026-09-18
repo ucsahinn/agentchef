@@ -8,8 +8,8 @@ entries AgentChef added.
 
 - `permissions.allow` and `permissions.ask` rules generated from
   `templates/codex/rules/default.rules`.
-- The optional `hooks.SessionEnd` process-hygiene handler, only after
-  `--install-process-hygiene`.
+- Nothing else: `hooks`, `env`, `deny` lists, and every other key stay as
+  you wrote them. No hook is installed for Claude Code in this release.
 - The `mcpServers.context7` and `mcpServers.serena` entries in `.claude.json`.
 
 Everything else in those two files belongs to you or to Claude Code. AgentChef

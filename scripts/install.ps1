@@ -16,6 +16,10 @@ param(
   [switch]$AdoptGitHooksPath,
   [switch]$NoBackup,
   [switch]$Interactive,
+  [ValidateSet("codex", "claude", "both")][string]$Target = "codex",
+  [string]$ClaudeHome,
+  [switch]$AdoptSkillLinks,
+  [switch]$SkipClaudePluginRegister,
   [switch]$PlainOutput
 )
 
@@ -40,6 +44,21 @@ if ($Repair -and $InstallGitGuards) {
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
 $AgentsHome = if ($env:AGENTS_HOME) { $env:AGENTS_HOME } else { Join-Path $HOME ".agents" }
+# Install targets: codex (default) keeps the 0.5.x behavior; claude adds the
+# Claude Code surface through scripts/install-claude-target.mjs; both runs the
+# shared operations once. Transaction state (lock, journal, backups) stays
+# under CODEX_HOME for every target.
+$InstallCodex = $Target -in @("codex", "both")
+$InstallClaude = $Target -in @("claude", "both")
+if (-not $ClaudeHome) {
+  $ClaudeHome = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME ".claude" }
+}
+if (($AdoptSkillLinks -or $SkipClaudePluginRegister) -and -not $InstallClaude) {
+  throw "-AdoptSkillLinks and -SkipClaudePluginRegister require -Target claude or both."
+}
+if ($Repair -and $InstallClaude) {
+  throw "-Repair reconciles the Codex surface only; rerun the installer with -Target claude to repair Claude Code files (the Claude target is idempotent)."
+}
 
 function Get-CuratedSkillsCatalogPath {
   if (
@@ -187,7 +206,9 @@ function Invoke-PreflightValidators {
 
 function Invoke-InstallTargetPreflight {
   $SurfaceHelper = Join-Path $RepoRoot "scripts\assert-install-surface.mjs"
-  & node $SurfaceHelper --codex-home $CodexHome --agents-home $AgentsHome | Out-Null
+  $SurfaceArgs = @($SurfaceHelper, "--codex-home", $CodexHome, "--agents-home", $AgentsHome, "--target", $Target)
+  if ($InstallClaude) { $SurfaceArgs += @("--claude-home", $ClaudeHome) }
+  & node @SurfaceArgs | Out-Null
   if ($LASTEXITCODE -ne 0) {
     throw "Managed install surface contains an unsafe linked path; refusing all writes."
   }
@@ -221,12 +242,14 @@ function Invoke-InstallTargetPreflight {
     }
   }
 
-  $MarketplacePath = Join-Path (Join-Path $AgentsHome "plugins") "marketplace.json"
-  $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\codex-chef-workflows"
-  $MarketplaceHelper = Join-Path $RepoRoot "scripts\upsert-marketplace-entry.mjs"
-  & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --check
-  if ($LASTEXITCODE -notin @(0, 2)) {
-    throw "Plugin marketplace preflight failed before any managed write: $MarketplacePath"
+  if ($InstallCodex) {
+    $MarketplacePath = Join-Path (Join-Path $AgentsHome "plugins") "marketplace.json"
+    $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\codex-chef-workflows"
+    $MarketplaceHelper = Join-Path $RepoRoot "scripts\upsert-marketplace-entry.mjs"
+    & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --check
+    if ($LASTEXITCODE -notin @(0, 2)) {
+      throw "Plugin marketplace preflight failed before any managed write: $MarketplacePath"
+    }
   }
 }
 
@@ -239,6 +262,8 @@ function Invoke-InstallerSafetyPreflight {
     "--agents-home",
     $AgentsHome
   )
+  $SafetyArgs += @("--target", $Target)
+  if ($InstallClaude) { $SafetyArgs += @("--claude-home", $ClaudeHome) }
   if ($NoBackup) { $SafetyArgs += "--no-backup" }
   if ($WhatIfPreference) { $SafetyArgs += "--dry-run" }
   if ($InstallSkills) { $SafetyArgs += "--install-skills" }
@@ -336,6 +361,10 @@ $CodexHome = Read-OptionalPath -Label "Codex home" -CurrentValue $CodexHome
 $AgentsHome = Read-OptionalPath -Label "Agents home" -CurrentValue $AgentsHome
 $CodexHome = Resolve-InstallPath $CodexHome
 $AgentsHome = Resolve-InstallPath $AgentsHome
+if ($InstallClaude) {
+  $ClaudeHome = Read-OptionalPath -Label "Claude home" -CurrentValue $ClaudeHome
+  $ClaudeHome = Resolve-InstallPath $ClaudeHome
+}
 
 if ($Repair) {
   Write-Section "AgentChef repair"
@@ -845,8 +874,12 @@ function Install-Directory {
 }
 
 Write-Section "AgentChef installer"
+Write-Note "Targets: $Target"
 Write-Note "Codex home: $CodexHome"
 Write-Note "Agents home: $AgentsHome"
+if ($InstallClaude) {
+  Write-Note "Claude home: $ClaudeHome"
+}
 if ($Update) {
   Write-Note "Mode: update managed targets after backup; preserve user config and synchronize AgentChef tables"
 } elseif ($Force) {
@@ -885,35 +918,39 @@ Invoke-InstallTargetPreflight
 Acquire-OperationLock
 Start-OperationJournal
 
-Write-Section "Managed Codex files"
-Ensure-Dir $CodexHome
-Ensure-Dir (Join-Path $CodexHome "agents")
-Ensure-Dir (Join-Path $CodexHome "rules")
-Ensure-Dir $AgentsHome
-
 $TemplateRoot = Join-Path $RepoRoot "templates\codex"
-
-Install-File -Source (Join-Path $TemplateRoot "AGENTS.md") -Destination (Join-Path $CodexHome "AGENTS.md")
-Install-CodexConfig -Source (Join-Path $TemplateRoot "config.windows.toml") -Destination (Join-Path $CodexHome "config.toml")
-Install-File -Source (Join-Path $TemplateRoot "codex-profile.mjs") -Destination (Join-Path $CodexHome "codex-profile.mjs")
-Install-File -Source (Join-Path $TemplateRoot "serena-pool.mjs") -Destination (Join-Path $CodexHome "serena-pool.mjs")
-Install-File -Source (Join-Path $TemplateRoot "rules\default.rules") -Destination (Join-Path $CodexHome "rules\default.rules")
-
-Get-ChildItem -Path (Join-Path $TemplateRoot "agents") -Filter "*.toml" | ForEach-Object {
-  Install-File -Source $_.FullName -Destination (Join-Path (Join-Path $CodexHome "agents") $_.Name)
-}
-
-Get-ChildItem -Path (Join-Path $TemplateRoot "profiles") -Filter "*.toml" | ForEach-Object {
-  if ($_.Name -in @("full.config.toml", "multi-session.config.toml", "offline.config.toml")) {
-    Install-McpProfile -Template $_.FullName -Destination (Join-Path $CodexHome $_.Name) -ConfigSource (Join-Path $CodexHome "config.toml")
-  } else {
-    Install-File -Source $_.FullName -Destination (Join-Path $CodexHome $_.Name)
-  }
-}
-
 $PluginSource = Join-Path $RepoRoot "plugins\codex-chef-workflows"
-$PluginTarget = Join-Path $CodexHome "plugins\codex-chef-workflows"
-Install-Directory -Source $PluginSource -Destination $PluginTarget
+
+if ($InstallCodex) {
+  Write-Section "Managed Codex files"
+  Ensure-Dir $CodexHome
+  Ensure-Dir (Join-Path $CodexHome "agents")
+  Ensure-Dir (Join-Path $CodexHome "rules")
+
+  Install-File -Source (Join-Path $TemplateRoot "AGENTS.md") -Destination (Join-Path $CodexHome "AGENTS.md")
+  Install-CodexConfig -Source (Join-Path $TemplateRoot "config.windows.toml") -Destination (Join-Path $CodexHome "config.toml")
+  Install-File -Source (Join-Path $TemplateRoot "codex-profile.mjs") -Destination (Join-Path $CodexHome "codex-profile.mjs")
+  Install-File -Source (Join-Path $TemplateRoot "serena-pool.mjs") -Destination (Join-Path $CodexHome "serena-pool.mjs")
+  Install-File -Source (Join-Path $TemplateRoot "rules\default.rules") -Destination (Join-Path $CodexHome "rules\default.rules")
+
+  Get-ChildItem -Path (Join-Path $TemplateRoot "agents") -Filter "*.toml" | ForEach-Object {
+    Install-File -Source $_.FullName -Destination (Join-Path (Join-Path $CodexHome "agents") $_.Name)
+  }
+
+  Get-ChildItem -Path (Join-Path $TemplateRoot "profiles") -Filter "*.toml" | ForEach-Object {
+    if ($_.Name -in @("full.config.toml", "multi-session.config.toml", "offline.config.toml")) {
+      Install-McpProfile -Template $_.FullName -Destination (Join-Path $CodexHome $_.Name) -ConfigSource (Join-Path $CodexHome "config.toml")
+    } else {
+      Install-File -Source $_.FullName -Destination (Join-Path $CodexHome $_.Name)
+    }
+  }
+
+  $PluginTarget = Join-Path $CodexHome "plugins\codex-chef-workflows"
+  Install-Directory -Source $PluginSource -Destination $PluginTarget
+}
+
+Write-Section "Shared agent surfaces"
+Ensure-Dir $AgentsHome
 $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\codex-chef-workflows"
 Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget
 $DirectSkillHelper = Join-Path $RepoRoot "scripts\manage-direct-skill-target.mjs"
@@ -941,32 +978,34 @@ foreach ($DirectSkill in $DirectSkills) {
   }
 }
 
-$MarketplaceDir = Join-Path $AgentsHome "plugins"
-Ensure-Dir $MarketplaceDir
-$MarketplacePath = Join-Path $MarketplaceDir "marketplace.json"
-$MarketplaceHelper = Join-Path $RepoRoot "scripts\upsert-marketplace-entry.mjs"
-Assert-ManagedWriteTarget $MarketplacePath
-& node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --check
-$marketplaceCheckExit = $LASTEXITCODE
-if ($marketplaceCheckExit -eq 2) {
-  Backup-Target $MarketplacePath
-  $marketplaceBackup = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
-  $changed = Invoke-Change -Target $MarketplacePath -Action "Upsert AgentChef plugin marketplace entry" -ScriptBlock {
-    Assert-ManagedWriteTarget $MarketplacePath
-    Prepare-InstallWrite -Path $MarketplacePath -BackupPath $marketplaceBackup
-    & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --write
-    if ($LASTEXITCODE -ne 0) {
-      throw "Cannot update plugin marketplace because the helper failed with code $LASTEXITCODE`: $MarketplacePath"
+if ($InstallCodex) {
+  $MarketplaceDir = Join-Path $AgentsHome "plugins"
+  Ensure-Dir $MarketplaceDir
+  $MarketplacePath = Join-Path $MarketplaceDir "marketplace.json"
+  $MarketplaceHelper = Join-Path $RepoRoot "scripts\upsert-marketplace-entry.mjs"
+  Assert-ManagedWriteTarget $MarketplacePath
+  & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --check
+  $marketplaceCheckExit = $LASTEXITCODE
+  if ($marketplaceCheckExit -eq 2) {
+    Backup-Target $MarketplacePath
+    $marketplaceBackup = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
+    $changed = Invoke-Change -Target $MarketplacePath -Action "Upsert AgentChef plugin marketplace entry" -ScriptBlock {
+      Assert-ManagedWriteTarget $MarketplacePath
+      Prepare-InstallWrite -Path $MarketplacePath -BackupPath $marketplaceBackup
+      & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --write
+      if ($LASTEXITCODE -ne 0) {
+        throw "Cannot update plugin marketplace because the helper failed with code $LASTEXITCODE`: $MarketplacePath"
+      }
     }
+    if ($changed) {
+      Mark-InstallWriteApplied -Path $MarketplacePath
+      Write-Action -Status "updated marketplace" -Message $MarketplacePath
+    }
+  } elseif ($marketplaceCheckExit -eq 0) {
+    $Script:SkippedExistingCount += 1
+  } else {
+    throw "Cannot update plugin marketplace because it is invalid or unreadable: $MarketplacePath"
   }
-  if ($changed) {
-    Mark-InstallWriteApplied -Path $MarketplacePath
-    Write-Action -Status "updated marketplace" -Message $MarketplacePath
-  }
-} elseif ($marketplaceCheckExit -eq 0) {
-  $Script:SkippedExistingCount += 1
-} else {
-  throw "Cannot update plugin marketplace because it is invalid or unreadable: $MarketplacePath"
 }
 
 if ($InstallGitGuards) {
@@ -1078,15 +1117,42 @@ if ($InstallSkills) {
   }
 }
 
-# The plugin cache is the final external mutation: later output/manifest work is non-mutating.
-$PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
-$PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
-if (-not $WhatIfPreference -and -not $NoBackup) {
-  $PluginRefreshArgs += "--apply"
+if ($InstallClaude) {
+  # One Node transaction owns every Claude-side mutation (files, additive JSON
+  # merges with receipts, skill links, marketplace manifest, plugin CLI). It
+  # rolls its own journal back on failure; the throw below then rolls back the
+  # Codex-side journal so -Target both stays all-or-nothing.
+  Write-Section "Claude Code target"
+  $ClaudeHelper = Join-Path $RepoRoot "scripts\install-claude-target.mjs"
+  $ClaudeArgs = @(
+    $ClaudeHelper,
+    "--claude-home", $ClaudeHome,
+    "--agents-home", $AgentsHome,
+    "--home", $HOME,
+    "--platform", "windows",
+    "--agents-lock-held"
+  )
+  if ($WhatIfPreference) { $ClaudeArgs += "--dry-run" } else { $ClaudeArgs += "--apply" }
+  if ($NoBackup) { $ClaudeArgs += "--no-backup" }
+  if ($AdoptSkillLinks) { $ClaudeArgs += "--adopt-skill-links" }
+  if ($SkipClaudePluginRegister) { $ClaudeArgs += "--skip-plugin-register" }
+  & node @ClaudeArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Claude Code target install failed with code $LASTEXITCODE; the helper rolled back its own changes."
+  }
 }
-& node @PluginRefreshArgs
-if ($LASTEXITCODE -ne 0) {
-  throw "Refresh installed AgentChef plugin cache failed with code $LASTEXITCODE."
+
+if ($InstallCodex) {
+  # The plugin cache is the final external mutation: later output/manifest work is non-mutating.
+  $PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
+  $PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
+  if (-not $WhatIfPreference -and -not $NoBackup) {
+    $PluginRefreshArgs += "--apply"
+  }
+  & node @PluginRefreshArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Refresh installed AgentChef plugin cache failed with code $LASTEXITCODE."
+  }
 }
 
 Write-Section "Capability board"
@@ -1123,12 +1189,20 @@ if ($WhatIfPreference) {
   Write-Action -Status "completed" -Message "AgentChef dry run"
 } else {
   Write-Action -Status "completed" -Message "AgentChef install"
-  Write-Note "Restart Codex, then run:"
-  Write-Host "    codex doctor --summary"
-  Write-Host "    npm run codex:routing"
-  Write-Host "    npm run codex:status"
-  Write-Host "    npm run verify:install:runtime"
-  Write-Host "    codex exec --strict-config `"Summarize the active Codex setup.`""
+  if ($InstallCodex) {
+    Write-Note "Restart Codex, then run:"
+    Write-Host "    codex doctor --summary"
+    Write-Host "    npm run codex:routing"
+    Write-Host "    npm run codex:status"
+    Write-Host "    npm run verify:install:runtime"
+    Write-Host "    codex exec --strict-config `"Summarize the active Codex setup.`""
+  }
+  if ($InstallClaude) {
+    Write-Note "Start a new Claude Code session, then run:"
+    Write-Host "    claude plugin list"
+    Write-Host "    claude mcp list"
+    Write-Host "    npm run verify:install:runtime -- --target claude"
+  }
 }
 if (-not $NoBackup -and (Test-Path -LiteralPath $BackupRoot)) {
   $ManifestScript = Join-Path $RepoRoot "scripts\write-backup-manifest.mjs"

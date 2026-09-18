@@ -16,7 +16,7 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | --- | --- | --- | --- |
 | Global çalışma sözleşmesi | `~/.codex/AGENTS.md` (yedekle, sonra mevcut değilse değiştir) | `~/.claude/rules/agentchef-working-agreement.md` (kullanıcı seviyesi kural; kullanıcının kendi `~/.claude/CLAUDE.md` dosyası asla düzenlenmez) | eşleniyor, aynı kaynak metin |
 | Repo-yerel öncelik | repo `AGENTS.md` global olanı ezer | proje `CLAUDE.md` ve `.claude/rules/` kullanıcı kurallarından sonra yüklenir | eşleniyor |
-| Ayarlar | `~/.codex/config.toml` (eksik yönetilen tabloları birleştir) | `~/.claude/settings.json` (`permissions` ve istek üzerine `hooks` için toplamsal birleştirme; yan receipt'e kaydedilir) | kısmi: farklı sahiplik modeli |
+| Ayarlar | `~/.codex/config.toml` (eksik yönetilen tabloları birleştir) | `~/.claude/settings.json` (`permissions` için toplamsal birleştirme, yan receipt'e kaydedilir; `hooks`, `env` ve `deny` listelerine asla dokunulmaz) | kısmi: farklı sahiplik modeli |
 | MCP sunucuları | `config.toml` içindeki `[mcp_servers.*]` tabloları | `.claude.json` içindeki user-scope `mcpServers` (toplamsal birleştirme, receipt) | `context7` ve Serena bridge için eşleniyor; diğer katalog sunucuları `claude mcp add` komutlarıyla belgelenir |
 | Runtime MCP profilleri (`full`, `multi-session`, `offline`, `token-safe`, ...) | üretilen `*.config.toml` profilleri | profil kavramı yok | **eşlenmiyor** |
 | Uzman ajanlar | `~/.codex/agents/*.toml` (32 rol dosyası) | `plugins/codex-chef-workflows/agents/*.md` altında `agentchef:<role>` plugin subagent'ları; `~/.claude/agents/` dokunulmaz | eşleniyor, ad-alanlı |
@@ -25,7 +25,7 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | Küratörlü commit-pinned skill'ler | provenance marker'lı `~/.agents/skills/<name>` | aynı ağaç, aynı dizin bağlantılarıyla Claude'a açılır | eşleniyor |
 | Plugin dağıtımı | `~/.codex/plugins/codex-chef-workflows` kopyası artı AgentChef'in yazdığı `~/.agents/plugins/marketplace.json` | AgentChef'in yazdığı `~/.agents/plugins/.claude-plugin/marketplace.json`; kurulum yalnız `claude plugin marketplace add` ve `claude plugin install` ile; Claude'un kendi plugin cache'i asla elle yazılmaz | kısmi: farklı sahiplik modeli |
 | Onay kuralları | `~/.codex/rules/default.rules` prefix kuralları (`allow` / `prompt`) | aynı dosyadan üretilen `permissions.allow` ve `permissions.ask` kuralları (`Bash(...)`, `PowerShell(...)`); hiçbir şey `deny` olarak üretilmez | eşleniyor (allow, prompt); taşınmayanlar için aşağıya bakın |
-| Oturum sonu süreç hijyeni hook'u | Codex'in güvendiği plugin hook'u `hooks/process-hygiene.json` | plugin hook'u `hooks/hooks.json`, `settings.json` içinde varsayılan kapalı; `--install-process-hygiene` ile açılır | kısmi |
+| Oturum sonu süreç hijyeni hook'u | Codex'in güvendiği plugin hook'u `hooks/process-hygiene.json` | bu sürümde yayınlanmaz (Claude Code oturum sonunda kendi MCP alt süreçlerini bitirir) | henüz **eşlenmedi** |
 | Global Git guard'ları | paylaşımlı `~/.githooks/pre-commit`, `~/.gitignore_global`, `core.hooksPath`, `core.excludesfile` | aynı dosyalar; iki hedef için bir kez sahiplenilen tek global slot | eşleniyor, paylaşımlı |
 | Yedekler, journal, kilit | journal ve kilit dizinleriyle `~/.codex/backups/<prefix>-*` | aynı journal biçimiyle `~/.claude/agentchef/backups/agentchef-*`; kilit `~/.claude` ve `~/.agents` üzerinde | eşleniyor |
 | Runtime doğrulama | `codex doctor`, `codex mcp list`, kurulu dosya drift'i | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt doğrulaması, bağlantı doğrulaması | eşleniyor |
@@ -43,7 +43,7 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | `[projects."path"].trust_level` | klasör güven istemi ve `.claude/settings.local.json` | installer tarafından **eşlenmiyor** |
 | `[features]`, `[memories]`, `[apps]` | karşılığı yok | **eşlenmiyor** |
 | `[mcp_servers.X.tools.Y]` onay tabloları | `permissions` içindeki `mcp__X__Y` kuralları | sunucunun kurulu olduğu yerde eşleniyor |
-| Hook güveni: Codex hook'u etkinleştirmeden önce tam kaynağını inceler | Claude, plugin etkinleştirilir etkinleştirilmez plugin hook'larını, birleştirilen `settings.json` hook'larını ise hemen çalıştırır | **güvenlik farkı**: AgentChef Claude hook'unu varsayılan olarak kapalı tutar |
+| Hook güveni: Codex hook'u etkinleştirmeden önce tam kaynağını inceler | Claude, plugin etkinleştirilir etkinleştirilmez plugin hook'larını çalıştırır | **güvenlik farkı**: AgentChef bu sürümde Claude Code'a hiç hook yayınlamaz |
 
 ## Sahiplik modeli farkları
 

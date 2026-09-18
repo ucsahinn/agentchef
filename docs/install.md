@@ -4,6 +4,11 @@ AgentChef installs into the current user's Codex home. That is `~/.codex` by
 default; when `CODEX_HOME` is set, the installer respects that path instead.
 Start with a preview so the first real write is never a surprise.
 
+AgentChef can also manage the Claude Code home (`~/.claude`, or
+`CLAUDE_CONFIG_DIR`). The Codex target stays the default; the Claude Code
+target is selected explicitly with `--target claude` or `--target both`, or
+confirmed interactively. See [Choosing A Target](#choosing-a-target).
+
 An app-managed or account-specific Codex profile is an independent Codex home;
 it does not inherit root settings from `~/.codex/config.toml`. AgentSpace worker
 profiles must therefore carry `sandbox_mode = "workspace-write"`,
@@ -14,7 +19,10 @@ want the preview and installer to target it.
 
 ## Prerequisites
 
-- Codex CLI or Codex app installed.
+- Codex CLI or Codex app installed for the Codex target.
+- Claude Code installed (`claude --version`) for the Claude Code target; the
+  file-side install works without it, but plugin registration then prints the
+  `claude plugin` commands for you to run later.
 - Git installed.
 - Node.js 22.12 or newer for validation and optional skill installation.
 - `npx` available for the default stdio MCP servers and verified public skill
@@ -25,6 +33,32 @@ want the preview and installer to target it.
 - `uvx` for the pinned Serena backend. The installed bridge itself is Node-based
   and starts without `uvx`; `uvx` is needed only when semantic navigation is
   actually requested.
+
+## Choosing A Target
+
+| Selection | What is managed |
+| --- | --- |
+| `codex` (default) | `~/.codex` files, the shared `~/.agents` skill and plugin trees, optional Git guards |
+| `claude` | the shared `~/.agents` trees plus the Claude Code surface: a user-level rule file, additive `settings.json` permissions and `.claude.json` MCP entries recorded in receipts, skill links, the Claude plugin marketplace, and plugin registration through the `claude plugin` CLI |
+| `both` | everything above; shared operations run once |
+
+`npm run chef -- --install` detects which CLIs are on `PATH`, proposes a
+target, and asks you to confirm it. Direct installer runs and non-interactive
+runs never select the Claude target implicitly:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Target both -WhatIf
+node scripts/plan-install.mjs --all --target claude --summary --redact-paths
+npm run chef -- --install --target both
+```
+
+```bash
+./scripts/install.sh --all --target=claude --dry-run
+```
+
+Claude-side details, ownership, and removal live in
+[Claude Code surfaces](claude-surfaces.md); the mapping between the two targets
+is in the [target capability map](target-capability-map.md).
 
 ## PowerShell Install
 
@@ -185,6 +219,10 @@ npm run chef -- --backups --backup <id> --delete
 npm run chef -- --reset --apply
 npm run chef -- --repair --apply
 npm run chef -- --install --apply
+npm run chef -- --install --target both --apply
+npm run chef -- --preview --target claude
+npm run chef -- --remove --target claude
+npm run chef -- --remove --target claude --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
@@ -513,6 +551,19 @@ Inside Codex, use:
 /hooks
 ```
 
+After a Claude Code target install, start a new Claude Code session and run:
+
+```bash
+npm run verify:install:runtime -- --target claude
+npm run codex:status -- --target both
+claude plugin list
+claude mcp list
+```
+
+Inside Claude Code, `/context` lists the AgentChef rule file under memory
+files, `/plugin` shows the `agentchef` marketplace, and `/skills` lists the
+linked skills.
+
 ## Test Without Touching Your Real Setup
 
 PowerShell:
@@ -520,15 +571,20 @@ PowerShell:
 ```powershell
 $env:CODEX_HOME = "$PWD\tmp\codex-home"
 $env:AGENTS_HOME = "$PWD\tmp\agents-home"
-.\scripts\install.ps1 -Force -WhatIf
+$env:CLAUDE_CONFIG_DIR = "$PWD\tmp\claude-home"
+.\scripts\install.ps1 -Force -Target both -WhatIf
 ```
 
 Bash:
 
 ```bash
 CODEX_HOME="$PWD/tmp/codex-home" AGENTS_HOME="$PWD/tmp/agents-home" \
-  ./scripts/install.sh --force --dry-run
+CLAUDE_CONFIG_DIR="$PWD/tmp/claude-home" \
+  ./scripts/install.sh --force --target=both --dry-run
 ```
+
+`npm run dev:assert-scratch` refuses to continue when any of the three homes
+still points into your live `~/.codex`, `~/.agents`, or `~/.claude`.
 
 Use non-dry-run temp homes only when you intentionally want a smoke install.
 Remove `tmp/` only when you created it intentionally.
