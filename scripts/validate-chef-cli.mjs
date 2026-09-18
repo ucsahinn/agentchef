@@ -790,7 +790,8 @@ function runBackupsFixtureSmokes() {
   if (!restoredProfile.includes("restored profile launcher")) {
     fail("chef-cli backup restore apply did not restore CODEX_HOME/codex-profile.mjs from the canonical archive path");
   }
-  if (!restoredMarketplace.includes("agentchef")) {
+  // The fixture is a pre-1.0.0 archive: restore must return its bytes unchanged.
+  if (!restoredMarketplace.includes("\"name\":\"codex-chef\"")) {
     fail("chef-cli backup restore apply did not restore AGENTS_HOME/plugins/marketplace.json from legacy marketplace backup");
   }
   const rollbackArchives = fs.readdirSync(path.join(codexHome, "backups"), { withFileTypes: true })
