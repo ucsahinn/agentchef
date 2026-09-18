@@ -13,6 +13,7 @@ import {
 import { activatePinnedSkill } from "./lib/pinned-skill-activation.mjs";
 import { acquireOperationLock } from "./lib/operation-lock.mjs";
 import { writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
+import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -205,7 +206,7 @@ function runMenuTranscriptSmoke() {
   const invalid = runCliSmokeRaw("menu-invalid-input-transcript", ["--plain", "--no-log"], {
     env: baseEnv,
     input: "\nabc\n999\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (invalid.ok) {
     if (!invalid.output.includes("Operator menu")) fail("chef-cli menu transcript must render the operator menu");
@@ -232,7 +233,7 @@ function runMenuTranscriptSmoke() {
   const language = runCliSmokeRaw("menu-language-toggle-transcript", ["--plain", "--no-log"], {
     env: baseEnv,
     input: "l\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (language.ok) {
     for (const snippet of ["Opening: Language", "Dil Türkçe olarak ayarlandı", "Dil: hazır", "Operatör menüsü"]) {
@@ -243,7 +244,7 @@ function runMenuTranscriptSmoke() {
   const action = runCliSmokeRaw("menu-action-return-transcript", ["--plain", "--no-log"], {
     env: baseEnv,
     input: "2\n\nq\n",
-    timeout: 180000
+    timeout: scaledTimeout(180000)
   });
   if (action.ok) {
     for (const snippet of ["Opening: Repo health", "Press Enter to return to the operator board.", "Repo health: ready"]) {
@@ -262,7 +263,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(interactiveWriteRoot, ".agents")
     },
     input: "8\nAPPLY\n\nq\n",
-    timeout: 120000
+    timeout: scaledTimeout(120000)
   });
   if (interactiveRepair.ok) {
     for (const snippet of ["Opening: Repair setup", "Type APPLY to continue", "Mode: apply"]) {
@@ -282,7 +283,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(interactiveWriteRoot, ".agents-latch-test")
     },
     input: "8\n\n\nq\n",
-    timeout: 120000
+    timeout: scaledTimeout(120000)
   });
   if (menuApplyStillConfirms.ok && !menuApplyStillConfirms.output.includes("Type APPLY to continue")) {
     fail("chef-cli menu must request per-action typed confirmation even when the process starts with --apply.");
@@ -291,7 +292,7 @@ function runMenuTranscriptSmoke() {
   const interactiveResetCancel = runCliSmokeRaw("menu-reset-typed-apply-transcript", ["--plain", "--no-log"], {
     env: baseEnv,
     input: "7\n\n\nq\n",
-    timeout: 120000
+    timeout: scaledTimeout(120000)
   });
   if (interactiveResetCancel.ok) {
     for (const snippet of ["Opening: Refresh setup", "Type APPLY to continue"]) {
@@ -312,13 +313,13 @@ function runMenuTranscriptSmoke() {
       ...installedSkillsEnv
     },
     input: "10\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (skillSelection.ok) {
     for (const snippet of [
       "Opening: Skill status & catalog",
       "Installed (ready)",
-      "All Codex Chef-managed skills are installed and ready.",
+      "All AgentChef-managed skills are installed and ready.",
       "Press Enter to return to the operator board."
     ]) {
       if (!skillSelection.output.includes(snippet)) {
@@ -341,7 +342,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(missingSkillsRoot, ".agents")
     },
     input: "10\n1\n\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (skillInstallCancel.ok) {
     if (!skillInstallCancel.output.includes("Type APPLY to continue")) {
@@ -371,7 +372,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(backupMenuRoot, ".agents")
     },
     input: "9\n1\n1\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (backupInspect.ok) {
     for (const snippet of ["Choose a backup number", "Backup action", "Backup details", "codex-chef-menu-test"]) {
@@ -391,7 +392,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(backupMenuRoot, ".agents")
     },
     input: "9\n1\n2\n\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (backupRestoreCancel.ok && !backupRestoreCancel.output.includes("Type APPLY to continue")) {
     fail("chef-cli backup restore menu must request typed APPLY confirmation in the current session.");
@@ -404,7 +405,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(backupMenuRoot, ".agents")
     },
     input: "9\n1\n3\nDELETE wrong-backup\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (backupDeleteWrong.ok) {
     if (!backupDeleteWrong.output.includes("Type DELETE codex-chef-menu-test")) {
@@ -422,7 +423,7 @@ function runMenuTranscriptSmoke() {
       AGENTS_HOME: path.join(backupMenuRoot, ".agents")
     },
     input: "9\n1\n3\nDELETE codex-chef-menu-test\n\nq\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (backupDeleteExact.ok) {
     if (!backupDeleteExact.output.includes("Backup archive deleted: codex-chef-menu-test")) {
@@ -437,7 +438,7 @@ function runMenuTranscriptSmoke() {
     env: baseEnv,
     input: "__ABORT__\n",
     expectedStatus: 130,
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (interrupt.ok) {
     if (!interrupt.output.includes("Interrupted by user.")) {
@@ -454,7 +455,7 @@ function runMenuTranscriptSmoke() {
       FORCE_COLOR: "1"
     },
     input: "q\n",
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (rich.ok) {
     for (const snippet of ["🍳", "📊", "OPERATOR BOARD", "SAFE", "APPLY-GATED", "ACCOUNT-GUIDED"]) {
@@ -479,7 +480,7 @@ function runCommandCenterSmoke() {
   });
   if (!result.ok) return;
   for (const snippet of [
-    "Codex Chef command center",
+    "AgentChef command center",
     "System dashboard",
     "Setup & update",
     "Capabilities",
@@ -490,7 +491,7 @@ function runCommandCenterSmoke() {
     "1 approval-gated / 1 account-guided",
     "Impact",
     "b = back",
-    "U.C.S. Codex Chef session closed."
+    "U.C.S. AgentChef session closed."
   ]) {
     if (!result.output.includes(snippet)) {
       fail(`chef-cli command center smoke must include ${JSON.stringify(snippet)}`);
@@ -513,7 +514,6 @@ function runCommandCenterSmoke() {
     "skills",
     "mcp",
     "routing",
-    "continuity",
     "backups",
     "diagnostics",
     "processes",
@@ -543,10 +543,10 @@ function runCommandCenterSmoke() {
       NO_COLOR: "1",
       ...readySkillsEnv
     },
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   if (readySkills.ok) {
-    if (!readySkills.output.includes("All Codex Chef-managed skills are installed and ready.")) {
+    if (!readySkills.output.includes("All AgentChef-managed skills are installed and ready.")) {
       fail("chef-cli command center must show an all-ready skill state without an install chooser.");
     }
     if (readySkills.output.includes("Choose a skill to install")) {
@@ -565,7 +565,7 @@ function runCommandCenterSmoke() {
       CODEX_HOME: path.join(freshInstallRoot, ".codex"),
       AGENTS_HOME: path.join(freshInstallRoot, ".agents")
     },
-    timeout: 120000
+    timeout: scaledTimeout(120000)
   });
   if (installPreview.ok) {
     for (const snippet of ["Installation state", "Fresh setup", "Install preview", "Type APPLY to continue"]) {
@@ -613,7 +613,7 @@ function runCliJsonEnvelopeSmoke(name, cliArgs, expectedSchema) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
-    timeout: 240000
+    timeout: scaledTimeout(240000)
   });
   if (result.error) {
     fail(`chef-cli JSON envelope smoke ${name} failed: ${result.error.message}`);
@@ -652,7 +652,7 @@ function runNpmSilentJsonSmoke(name, npmArgs, expectedPath = []) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
-    timeout: 180000
+    timeout: scaledTimeout(180000)
   });
   if (result.error) {
     fail(`npm silent JSON smoke ${name} failed: ${result.error.message}`);
@@ -1127,7 +1127,7 @@ function runCliErrorSmoke(name, cliArgs, expectedSnippets) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   const output = `${result.stdout || ""}\n${result.stderr || ""}`;
   if (result.error) {
@@ -1182,8 +1182,6 @@ if (!exists(cliPath)) {
     "--skills",
     "--mcp",
     "--routing",
-    "--continuity",
-    "--control-brain",
     "--diagnostics",
     "--diagnose",
     "--processes",
@@ -1201,7 +1199,6 @@ if (!exists(cliPath)) {
     "verify-skill-sources.mjs",
     "codex-routing-board.mjs",
     "runDiagnostics",
-    "runContinuity",
     "runProcesses",
     "processAuditPayload",
     "recentCliLogs",
@@ -1313,7 +1310,7 @@ if (!exists(cliPath)) {
     fail(`${cliPath} Bash update-install must not use broad --force config replacement`);
   }
   if (cli.includes("AGENTS_HOME/plugins/codex-chef-workflows")) {
-    fail(`${cliPath} must describe the Codex Chef plugin target under CODEX_HOME, not AGENTS_HOME`);
+    fail(`${cliPath} must describe the AgentChef plugin target under CODEX_HOME, not AGENTS_HOME`);
   }
 
   if (/TERM:\s*"dumb"/.test(cli)) {
@@ -1321,7 +1318,7 @@ if (!exists(cliPath)) {
   }
 
   const planInstall = read("scripts/plan-install.mjs");
-  for (const requiredPlanSurface of ["--summary", "printPlanSummary", "Codex Chef install plan summary"]) {
+  for (const requiredPlanSurface of ["--summary", "printPlanSummary", "AgentChef install plan summary"]) {
     if (!planInstall.includes(requiredPlanSurface)) fail(`scripts/plan-install.mjs missing concise preview surface: ${requiredPlanSurface}`);
   }
 
@@ -1342,7 +1339,7 @@ if (!exists(cliPath)) {
     "Auth notes",
     "Recent logs",
     "Language",
-    "Update Codex Chef"
+    "Update AgentChef"
   ]) {
     if (!new RegExp(`\\b${requiredLabel}\\b`).test(cli)) fail(`${cliPath} missing menu label: ${requiredLabel}`);
   }
@@ -1385,7 +1382,7 @@ if (!String(scripts.check || "").includes("node scripts/validate-chef-cli.mjs"))
 }
 
 runCliSmoke("help", ["--help", "--plain", "--no-log"], [
-  "Codex Chef CLI",
+  "AgentChef CLI",
   "--no-log",
   "--update [--apply]",
   "--backups [--backup ID] [--restore|--delete --apply]",
@@ -1401,7 +1398,7 @@ runCliSmoke("help", ["--help", "--plain", "--no-log"], [
   "tmp/chef-cli/logs"
 ], { forbidAnsi: true });
 runCliSmoke("help-tr", ["--help", "--lang", "tr", "--plain", "--no-log"], [
-  "Codex Chef CLI",
+  "AgentChef CLI",
   "Kullanım:",
   "Seçenekler:",
   "--diagnostics",
@@ -1430,32 +1427,32 @@ runMenuTranscriptSmoke();
 runCommandCenterSmoke();
 runBackupsFixtureSmokes();
 runCliErrorSmoke("unknown-option", ["--bad-flag", "--plain", "--no-log"], [
-  "Codex Chef CLI error: Unknown option --bad-flag",
+  "AgentChef CLI error: Unknown option --bad-flag",
   "npm run chef -- --help"
 ]);
 runCliErrorSmoke("unknown-option-tr", ["--bad-flag", "--tr", "--plain", "--no-log"], [
-  "Codex Chef CLI hatasi: Bilinmeyen seçenek --bad-flag",
+  "AgentChef CLI hatasi: Bilinmeyen seçenek --bad-flag",
   "npm run chef -- --help"
 ]);
 runCliErrorSmoke("missing-lang-value", ["--lang", "--plain", "--no-log"], [
-  "Codex Chef CLI error:",
+  "AgentChef CLI error:",
   "--lang requires"
 ]);
 runCliErrorSmoke("unsupported-lang", ["--lang", "de", "--plain", "--no-log"], [
-  "Codex Chef CLI error:",
+  "AgentChef CLI error:",
   "Supported languages"
 ]);
 runCliErrorSmoke("conflicting-actions", ["--install", "--repair", "--plain", "--no-log"], [
-  "Codex Chef CLI error:",
+  "AgentChef CLI error:",
   "Choose exactly one action",
   "--install, --repair"
 ]);
 runCliErrorSmoke("missing-profile-value", ["--routing", "--profile", "--plain", "--no-log"], [
-  "Codex Chef CLI error:",
+  "AgentChef CLI error:",
   "--profile requires"
 ]);
 runCliErrorSmoke("repo-only-doctor", ["--doctor", "--repo-only", "--plain", "--no-log"], [
-  "Codex Chef CLI error:",
+  "AgentChef CLI error:",
   "--repo-only can only be used with --status"
 ]);
 runCliJsonEnvelopeSmoke(
@@ -1464,7 +1461,7 @@ runCliJsonEnvelopeSmoke(
   "codex-chef.doctor-bundle.v1"
 );
 runCliSmoke("forced-color", ["--help", "--no-log"], [
-  "Codex Chef CLI"
+  "AgentChef CLI"
 ], {
   env: {
     FORCE_COLOR: "1"
@@ -1581,7 +1578,7 @@ const skillsWorkspaceMenu = runCliSmokeRaw("menu-skills-workspace", ["--plain", 
     NO_COLOR: "1"
   },
   input: "3\nb\nq\n",
-  timeout: 30000
+  timeout: scaledTimeout(30000)
 });
 if (skillsWorkspaceMenu.ok && !skillsWorkspaceMenu.output.includes("Skill status & catalog")) {
   fail("chef-cli skills workspace must advertise installed/missing status alongside the catalog.");
@@ -1592,7 +1589,7 @@ try {
   const readySkillStatusEnv = createCuratedSkillFixture(readySkillStatusRoot);
   runCliSmoke("skills", ["--skills", "--details", "--plain", "--no-log"], [
     "Skill status & catalog",
-    `${skillCounts.total} Codex Chef-managed skills:`,
+    `${skillCounts.total} AgentChef-managed skills:`,
     `${skillCounts.upstream} commit-pinned upstream`,
     "bundled/direct.",
     "How skill activation works",
@@ -1607,7 +1604,7 @@ try {
     maxVisualWidth: 72
   });
   runCliSmoke("skills-narrow", ["--skills", "--plain", "--no-log"], [
-    `${skillCounts.total} Codex Chef-managed skills`,
+    `${skillCounts.total} AgentChef-managed skills`,
     `${skillCounts.total} of ${skillCounts.total} Chef-managed skills ready`
   ], {
     env: { ...readySkillStatusEnv, COLUMNS: "72" },
@@ -1619,133 +1616,8 @@ try {
   fs.rmSync(readySkillStatusRoot, { recursive: true, force: true });
 }
 
-const continuityRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-continuity-"));
-try {
-  const continuityEnv = createCuratedSkillFixture(continuityRoot);
-  const routerRoot = path.join(continuityEnv.CODEX_HOME, "skills", "codex-control-router");
-  fs.mkdirSync(routerRoot, { recursive: true });
-  fs.writeFileSync(
-    path.join(routerRoot, "SKILL.md"),
-    "---\nname: codex-control-router\ndescription: Test Control routing fixture.\n---\n",
-    "utf8"
-  );
-  fs.mkdirSync(continuityEnv.CODEX_HOME, { recursive: true });
-  fs.writeFileSync(
-    path.join(continuityEnv.CODEX_HOME, "config.toml"),
-    "[mcp_servers.codex_control]\nenabled = true\n",
-    "utf8"
-  );
-  runCliSmoke("continuity-configured", ["--continuity", "--details", "--plain", "--no-log"], [
-    "Control & Brain continuity",
-    "Router skill: ready",
-    "codex_control MCP: configured and enabled",
-    "Brain skill: ready",
-    "Vault target: not configured",
-    "This CLI verifies installed Control configuration only",
-    "local CODEX_CHEF_BRAIN_HOME vault is separate",
-    "Immediate work stays in the current session",
-    "Automatic chat capture and automatic Brain writes are disabled by",
-    "codex-control console"
-  ], {
-    env: {
-      ...continuityEnv,
-      CODEX_CHEF_BRAIN_HOME: "",
-      COLUMNS: "72"
-    },
-    maxVisualWidth: 72
-  });
-
-  fs.writeFileSync(
-    path.join(continuityEnv.CODEX_HOME, "config.toml"),
-    "[mcp_servers.codex_control]\nenabled = false\n",
-    "utf8"
-  );
-  const disabledControl = runCliSmokeRaw(
-    "continuity-control-disabled-json",
-    ["--continuity", "--json", "--no-log"],
-    { env: { ...continuityEnv, CODEX_CHEF_BRAIN_HOME: "" } }
-  );
-  if (disabledControl.ok) {
-    try {
-      const parsed = JSON.parse(disabledControl.stdout);
-      if (parsed.control.configured !== true || parsed.control.enabled !== false) {
-        fail("chef-cli continuity JSON must distinguish configured-but-disabled Control.");
-      }
-      if (
-        parsed.control.liveProbe?.cliSubprocessCanProbe !== false
-        || parsed.control.liveProbe?.availableFrom !== "current-codex-session-mcp"
-        || parsed.brain.vault?.scope?.includes("separate from Control project Brain mappings") !== true
-        || parsed.boundaries?.controlProjectBrainMappingIsSeparateFromLocalVault !== true
-      ) {
-        fail("chef-cli continuity JSON must explain live MCP probing and the separate local/Control Brain scopes.");
-      }
-    } catch (error) {
-      fail(`chef-cli disabled Control continuity JSON was invalid: ${error.message}`);
-    }
-  }
-
-  fs.writeFileSync(path.join(continuityEnv.CODEX_HOME, "config.toml"), "", "utf8");
-  const missingControl = runCliSmokeRaw(
-    "continuity-control-not-configured-json",
-    ["--continuity", "--json", "--no-log"],
-    { env: { ...continuityEnv, CODEX_CHEF_BRAIN_HOME: "" } }
-  );
-  if (missingControl.ok) {
-    try {
-      const parsed = JSON.parse(missingControl.stdout);
-      if (parsed.control.configured !== false || parsed.control.enabled !== false) {
-        fail("chef-cli continuity JSON must distinguish Control that is not configured.");
-      }
-    } catch (error) {
-      fail(`chef-cli missing Control continuity JSON was invalid: ${error.message}`);
-    }
-  }
-
-  const brainVault = path.join(continuityRoot, "brain-vault");
-  const brainInit = spawnSync(process.execPath, [
-    path.join(root, "scripts", "brain-cli.mjs"),
-    "init",
-    "--target",
-    brainVault,
-    "--apply",
-    "--json"
-  ], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-    timeout: 30000
-  });
-  if (brainInit.error || brainInit.status !== 0) {
-    fail(`chef-cli continuity Brain fixture init failed: ${brainInit.error?.message || brainInit.stderr || brainInit.stdout}`);
-  } else {
-    const configuredBrain = runCliSmokeRaw(
-      "continuity-brain-configured-json",
-      ["--continuity", "--json", "--no-log"],
-      { env: { ...continuityEnv, CODEX_CHEF_BRAIN_HOME: brainVault } }
-    );
-    if (configuredBrain.ok) {
-      try {
-        const parsed = JSON.parse(configuredBrain.stdout);
-        if (
-          parsed.brain.vault.configured !== true
-          || parsed.brain.vault.exists !== true
-          || !["ok", "attention"].includes(parsed.brain.vault.status)
-          || parsed.brain.vault.contentOk !== true
-        ) {
-          fail("chef-cli continuity JSON must report an initialized Brain vault with valid content and explicit ACL status.");
-        }
-      } catch (error) {
-        fail(`chef-cli configured Brain continuity JSON was invalid: ${error.message}`);
-      }
-    }
-  }
-} finally {
-  fs.rmSync(continuityRoot, { recursive: true, force: true });
-}
-
 runCliSmoke("routing-rich-narrow", ["--routing", "--details", "--no-log"], [
-  "Codex Chef enterprise routing board",
+  "AgentChef enterprise routing board",
   "Routing visibility contract",
   "Lifecycle hygiene",
   "Routing plan",
@@ -1816,7 +1688,7 @@ runCliSmoke("processes-tr", ["--processes", "--tr", "--plain", "--no-log"], [
 runCliJsonSmoke("processes-json", ["--processes", "--json", "--no-log"]);
 runNpmSilentJsonSmoke("status-npm-silent-json", ["chef", "--", "--status", "--repo-only", "--json", "--no-log"], ["cliQuickStart", "readOnlyCommands"]);
 runCliSmoke("routing-profile-wrong-cwd", ["--routing", "--profile", "starter-health", "--plain", "--no-log"], [
-  "Codex Chef enterprise routing board",
+  "AgentChef enterprise routing board",
   "Profiles: 1",
   "starter-health",
   "Owner:",
@@ -1856,9 +1728,8 @@ runCliSmoke("update-preview-verbose", ["--update", "--verbose-plan", "--plain", 
 ], { env: managedPreviewEnv });
 runCliJsonSmoke("status-repo-only-json", ["--status", "--repo-only", "--json", "--no-log"]);
 runCliJsonSmoke("status-repo-only-json-tr", ["--status", "--repo-only", "--json", "--lang", "tr", "--no-log"]);
-runCliJsonSmoke("continuity-json", ["--continuity", "--json", "--no-log"]);
 runCliSmoke("status-repo-only", ["--status", "--repo-only", "--plain", "--no-log"], [
-  "Codex Chef status",
+  "AgentChef status",
   "Overall:",
   "Repo Git:",
   "Codex CLI: skipped",
@@ -1870,7 +1741,7 @@ runCliSmoke("status-repo-only", ["--status", "--repo-only", "--plain", "--no-log
   "Details: npm run chef -- --status --repo-only --details --no-log",
   "Log disabled by --no-log"
 ], {
-  timeout: 180000,
+  timeout: scaledTimeout(180000),
   forbiddenSnippets: [
     "MCP quick view:",
     "managed hooks=not inspected",
@@ -1878,7 +1749,7 @@ runCliSmoke("status-repo-only", ["--status", "--repo-only", "--plain", "--no-log
   ]
 });
 runCliSmoke("status-repo-only-details", ["--status", "--repo-only", "--details", "--plain", "--no-log"], [
-  "Codex Chef status",
+  "AgentChef status",
   "Codex CLI: skipped",
   "MCP probe skipped",
   "Installed runtime: skipped by this mode",
@@ -1887,11 +1758,11 @@ runCliSmoke("status-repo-only-details", ["--status", "--repo-only", "--details",
   "managed hooks=not inspected",
   "Codex skipped",
   "Log disabled by --no-log"
-], { timeout: 180000 });
+], { timeout: scaledTimeout(180000) });
 runCliSmoke("reset-preview", ["--reset", "--details", "--plain", "--no-log"], [
   "Refresh preview",
   "--force",
-  "completed: Codex Chef dry run",
+  "completed: AgentChef dry run",
   "Log disabled by --no-log"
 ], { env: managedPreviewEnv });
 fs.rmSync(managedPreviewRoot, { recursive: true, force: true });
@@ -1917,8 +1788,8 @@ for (const [file, snippets] of Object.entries({
     "npm run chef -- --routing",
     "npm run chef -- --status --repo-only --no-log",
     "operator documentation",
-    "Skills teach Codex how to handle a focused job",
-    "Codex spawns a subagent only"
+    "Skills teach the agent how to handle a focused job",
+    "the agent spawns a subagent"
   ],
   "README.tr.md": [
     "npm run chef",
@@ -1928,8 +1799,8 @@ for (const [file, snippets] of Object.entries({
     "npm run chef -- --routing",
     "npm run chef -- --status --repo-only --no-log",
     "operatör dokümantasyonunda",
-    "Skill, Codex'e belirli bir işi hangi adımlarla yapacağını anlatır",
-    "Codex ancak iş güvenli biçimde bölünebiliyorsa"
+    "Skill, ajana belirli bir işi hangi adımlarla yapacağını anlatır",
+    "ajan ancak iş"
   ],
   "docs/verification.md": [
     "npm run validate:chef-cli",
@@ -2066,16 +1937,16 @@ for (const [file, snippets] of Object.entries({
 })) {
   const text = read(file);
   for (const snippet of snippets) {
-    if (!text.includes(snippet)) fail(`${file} missing Codex Chef CLI documentation snippet: ${snippet}`);
+    if (!text.includes(snippet)) fail(`${file} missing AgentChef CLI documentation snippet: ${snippet}`);
   }
 }
 
 runNodeCheck("scripts/validate-chef-cli.mjs");
 
 if (failures.length > 0) {
-  console.error("Codex Chef CLI validation failed:");
+  console.error("AgentChef CLI validation failed:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log("Codex Chef CLI validation passed.");
+console.log("AgentChef CLI validation passed.");

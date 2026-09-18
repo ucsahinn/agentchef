@@ -89,15 +89,15 @@ Decision rationale: [ADR-001](decisions/001-adaptive-routing-and-user-owned-conf
 
 The public GStack repo demonstrates useful workflows such as browser pairing,
 cookie import, deploy automation, continuous checkpoint commits, domain memory,
-and raw CDP access. Those are intentionally not default Codex Chef installs
+and raw CDP access. Those are intentionally not default AgentChef installs
 because they introduce tokens, tunnels, persistent browser state, production
-systems, or auto-commit behavior. Codex Chef keeps the matching safe primitives:
+systems, or auto-commit behavior. AgentChef keeps the matching safe primitives:
 browser MCP entries are prompt-gated, release verification is separate from
 push/deploy, memory is secret-aware, and reusable workflows are packaged as
 skills rather than broad command shims.
 
 The public ECC repo demonstrates a much larger cross-harness operating-system
-surface. Codex Chef adopts manifest/state previews, catalogs, doctor checks,
+surface. AgentChef adopts manifest/state previews, catalogs, doctor checks,
 plugin packaging, and validation gates, but blocks wholesale cross-harness
 sync, hook prompt injection, enabled authenticated connectors, and unreviewed
 large skill catalogs.

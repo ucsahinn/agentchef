@@ -1,6 +1,6 @@
-# Codex Chef Maintenance Reference
+# AgentChef Maintenance Reference
 
-Use this reference for broad Codex Chef maintenance. Keep it aligned with the
+Use this reference for broad AgentChef maintenance. Keep it aligned with the
 repo's `AGENTS.md`, installer behavior, catalogs, and public documentation.
 
 ## Source Priority

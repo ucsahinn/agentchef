@@ -8,7 +8,7 @@ Python, shell veya browser yardımcı süreci başlatabilir. Beş ya da altı
 eşzamanlı oturumda her lokal MCP'yi her pencerede açmak, çoğu pencere bu
 araçları kullanmasa bile aynı ağaçları katlar.
 
-Codex Chef yetenekleri korur, yalnız ne zaman başlayacaklarını değiştirir:
+AgentChef yetenekleri korur, yalnız ne zaman başlayacaklarını değiştirir:
 
 - Dengeli ana config uzak `openaiDeveloperDocs` ile lokal `context7` ve
   `serena` sunucularını açar.

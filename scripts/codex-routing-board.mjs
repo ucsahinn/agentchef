@@ -16,7 +16,7 @@ installCliErrorBoundary({
   tool: "codex-routing-board",
   argv: args,
   root,
-  prefix: "Codex Chef routing error"
+  prefix: "AgentChef routing error"
 });
 const options = {
   json: false,
@@ -44,7 +44,7 @@ for (let index = 0; index < args.length; index += 1) {
 function printHelp() {
   console.log(`Usage: node scripts/codex-routing-board.mjs [options]
 
-Show the Codex Chef enterprise routing board.
+Show the AgentChef enterprise routing board.
 
 Options:
   --json                Emit machine-readable JSON
@@ -87,7 +87,7 @@ function printWrapped(value, { prefix = "", continuationPrefix = " ".repeat(pref
 const routing = readJson("catalog/routing-profiles.json");
 const agentCatalog = readJson("catalog/agents.json");
 const agentIndex = new Map(agentCatalog.agents.map((agent) => [agent.name, agent]));
-const ownerIndex = new Map(agentCatalog.agentSpaceRoles.flatMap((role) => role.specialists.map((name) => [name, role.id])));
+const ownerIndex = new Map(agentCatalog.coordinatorDomains.flatMap((role) => role.specialists.map((name) => [name, role.id])));
 const coordinatorByRole = new Map((agentCatalog.coordinators || []).map((coordinator) => [coordinator.roleId, coordinator]));
 function workerFor(name) {
   const agent = agentIndex.get(name);
@@ -181,7 +181,7 @@ const report = {
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log("Codex Chef enterprise routing board");
+  console.log("AgentChef enterprise routing board");
   console.log(`Profiles: ${profiles.length}`);
   if (options.task) {
     printWrapped(`Recommended for: ${options.task}`, { prefix: "[info] ", continuationPrefix: "       " });

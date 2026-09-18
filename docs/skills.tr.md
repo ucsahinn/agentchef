@@ -1,4 +1,4 @@
-# Codex Chef Skill'leri
+# AgentChef Skill'leri
 
 [English](skills.md) | [Türkçe](skills.tr.md)
 
@@ -14,10 +14,10 @@ ayrı gösterir.
 
 Resmi Codex kaynağı: [Skill oluşturma](https://developers.openai.com/codex/skills)
 
-## 🍱 Repo İle Gelen On Bir Workflow
+## 🍱 Repo İle Gelen On Workflow
 
-Bu skill'ler Codex Chef plugin'inin içindedir ve repo ile birlikte gelir.
-Installer on bir workflow'un tamamını aynı canonical kaynaktan
+Bu skill'ler AgentChef plugin'inin içindedir ve repo ile birlikte gelir.
+Installer on workflow'un tamamını aynı canonical kaynaktan
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
 `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
 <hedef>` ve `$evidence-research <soru>` gibi çağrılar doğrudan çalışır. Fetch
@@ -32,7 +32,6 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | Skill | Ne için kullanılır? |
 | --- | --- |
 | [`codex-chef-operator`](../plugins/codex-chef-workflows/skills/codex-chef-operator/SKILL.md) | Installer veya güvenlik sınırlarını gevşetmeden bu starter'ı bakımlı tutmak için. |
-| [`codex-chef-brain`](../plugins/codex-chef-workflows/skills/codex-chef-brain/SKILL.md) | Kullanıcıya ait Markdown vault içinde seçili proje bilgisini preview, capture, retrieve, backup ve restore etmek için. |
 | [`context-budget-planner`](../plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
 | [`adaptive-agent-routing`](../plugins/codex-chef-workflows/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
 | [`external-review-workflow`](../plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
@@ -69,7 +68,7 @@ uygundurlar; package/skill çifti katalogda sabitlenir ve online doğrulama bu
 
 ## 🧰 Katalogda Bulunan Diğer Workflow'lar
 
-Aşağıdaki isimler keşfedilebilir kalır; fakat Codex Chef bunları otomatik
+Aşağıdaki isimler keşfedilebilir kalır; fakat AgentChef bunları otomatik
 kurmaz. Bazıları lokal uyumluluk adlarıdır, bazılarıysa varsayılan skill
 listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçeneklerdir.
 
@@ -106,7 +105,7 @@ listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçenekle
 ## “Katalogda Var” Ne Demek?
 
 - Katalog kaydı incelenmiş metadata'dır; skill'in kurulu olduğunu kanıtlamaz.
-- Bundled skill bu repodaki plugin'in içinde yaşar. On bir bundled workflow'un
+- Bundled skill bu repodaki plugin'in içinde yaşar. On bundled workflow'un
   tamamı, repoda ikinci bir canonical kaynak oluşturmadan yönetilen direct
   skill olarak da senkronize edilir.
 - `install: true` kaydı full install profiline uygun demektir.

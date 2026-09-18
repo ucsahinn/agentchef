@@ -46,7 +46,7 @@
     { "name": "marketing_coordinator", "roleId": "marketing", "description": "Marketing coordinator that correlates discoverability and content evidence.", "configFile": "agents/marketing_coordinator.toml", "workers": ["google_seo_auditor", "docs_author"] },
     { "name": "support_coordinator", "roleId": "support", "description": "Customer-support coordinator that correlates onboarding and support-flow evidence.", "configFile": "agents/support_coordinator.toml", "workers": ["devex_auditor"] }
   ],
-  "agentSpaceRoles": [
+  "coordinatorDomains": [
     { "id": "backend", "specialists": ["code_mapper", "mcp_integrator", "root_cause_debugger"] },
     { "id": "data", "specialists": ["docs_researcher"] },
     { "id": "devops", "specialists": ["performance_auditor", "codex_doctor"] },

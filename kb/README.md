@@ -1,4 +1,4 @@
-# Codex Chef Knowledge Base
+# AgentChef Knowledge Base
 
 The knowledge base is for short, task-shaped answers that users need after the
 README. Use the docs for full reference, and use these articles when you need a

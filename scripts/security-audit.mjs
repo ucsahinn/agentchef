@@ -15,10 +15,6 @@ const ignoredRelativeFiles = new Set(["docs/.agent-notifications"]);
 const ignoredSourceDirs = new Set(["tmp", "temp", "node_modules", "dist", "build", "coverage", ".next", "out"]);
 const requiredPublicFiles = [
   "README.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
-  "README.pt-BR.md",
   "README.tr.md",
   "SECURITY.md",
   "PRIVACY.md",
@@ -39,8 +35,8 @@ const requiredPublicFiles = [
   "docs/release-notes.tr.md",
   "docs/expected-output.md",
   "docs/expected-output.tr.md",
-  "docs/ecc-compatibility.md",
-  "docs/ecc-compatibility.tr.md",
+  "docs/harness-compatibility.md",
+  "docs/harness-compatibility.tr.md",
   "docs/advisory-sources.md",
   "docs/advisory-sources.tr.md",
   "docs/agents.md",

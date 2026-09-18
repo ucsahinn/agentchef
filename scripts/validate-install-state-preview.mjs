@@ -115,7 +115,7 @@ function runPlannerJson(args, label) {
 }
 
 function validateSchemaDocument() {
-  if (schema.title !== "Codex Chef install-state preview") {
+  if (schema.title !== "AgentChef install-state preview") {
     fail("Install-state preview schema has unexpected title");
   }
   const required = new Set(schema.required || []);
@@ -369,7 +369,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
   }
   if (operation.kind === "write-ownership-marker"
     && !operation.destination.endsWith(".codex-chef-managed.json")) {
-    fail(`${label} ${operation.id} must target a Codex Chef ownership marker`);
+    fail(`${label} ${operation.id} must target a AgentChef ownership marker`);
   }
   if (operation.kind === "write-marketplace") {
     if (!nonEmptyString(operation.destination)) fail(`${label} ${operation.id} must include destination`);

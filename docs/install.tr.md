@@ -1,6 +1,6 @@
 # Kurulum Rehberi
 
-Codex Chef mevcut kullanıcının Codex home dizinine kurulur. Varsayılan konum
+AgentChef mevcut kullanıcının Codex home dizinine kurulur. Varsayılan konum
 `~/.codex` dizinidir; `CODEX_HOME` tanımlıysa installer bunun yerine o path'i
 kullanır. İlk gerçek write sürpriz olmasın diye her zaman ön izlemeyle başla.
 
@@ -16,7 +16,7 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 
 - Codex CLI veya Codex app.
 - Git.
-- Doğrulama ve isteğe bağlı skill kurulumu için Node.js 18 veya üzeri.
+- Doğrulama ve isteğe bağlı skill kurulumu için Node.js 22.12 veya üzeri.
 - Varsayilan stdio MCP sunuculari ve skill kurulumu icin `npx`.
 - İsteğe bağlı: daha güçlü secret taraması için Gitleaks.
 - Windows için isteğe bağlı: en iyi native sandbox deneyimi için `winget` ve
@@ -71,8 +71,8 @@ machine'de bu launcher yoksa `/mcp` icinde live gorunmesini beklemeden once
 Ön izleme doğruysa kur:
 
 ```powershell
-git clone https://github.com/ucsahinn/codex-chef.git
-cd codex-chef
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
 ```
 
@@ -89,16 +89,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair
 ```
 
-Repair modu, zaten Codex setup'i olan makineler icindir. Codex Chef'in
+Repair modu, zaten Codex setup'i olan makineler icindir. AgentChef'in
 yonettigi global guidance, rule, agent/profile dosyalari, bundled plugin,
-on bir yönetilen direct lokal workflow, `serena-pool.mjs`, eksik config bloklari ve local plugin
+on yönetilen direct lokal workflow, `serena-pool.mjs`, eksik config bloklari ve local plugin
 marketplace kaydi icin once no-write plan verir, sonra istenirse backup alarak
 onarir. Launcher, Serena köprüsü, üretilen/kopyalanan profiller, sahiplik
 işaretleri, marketplace ve seçilen diğer tüm kaynaklarla hedefler ilk yönetilen
 yazmadan önce ön kontrolden geçer; eksik, bağlantılı veya güvensiz bir yol varsa
 akış güvenli biçimde durur. Baska marketplace plugin'lerini korur ve user skill'lerini silmez;
 fazla veya duplicate global skill'leri cleanup adayi olarak raporlar.
-Namespaced Codex Chef plugin'i zaten kuruluysa preview eski versioned plugin
+Namespaced AgentChef plugin'i zaten kuruluysa preview eski versioned plugin
 cache'ini raporlar, apply ise cache'i yerinde yeniler. Repair, plugin'i daha
 once kurmamis bir kullanici icin kendiliginden kurmaz.
 
@@ -120,10 +120,10 @@ yönetilen dizinlerdeki ilgisiz ek dosyaları korur. Managed config tablolarini
 senkronlar ve kullaniciya ait `config.toml` ayarlarini korur. curated global skill veya
 opsiyonel global Git guard kurmaz; bunlar icin
 `--install --apply` veya `--skills --apply` yuzeylerini acikca kullan. Daha
-once kurulmus namespaced Codex Chef plugin'i managed kaynak senkronundan sonra
+once kurulmus namespaced AgentChef plugin'i managed kaynak senkronundan sonra
 yenilenir ve aktif surumu dogrulanir; kurulu olmayan plugin kurulu olmadan kalir.
 
-Codex Chef backup archive'larini ayni CLI ile incele veya geri yukle:
+AgentChef backup archive'larini ayni CLI ile incele veya geri yukle:
 
 ```powershell
 npm run chef -- --backups
@@ -152,9 +152,9 @@ dosyalari reddedilir. `--json` ayni davranisi izler; write isteklerinde
 `applyRequested`, `applied` ve `outcome` alanlari acikca yazilir ve preview
 uygulanmis gibi raporlanmaz. Delete de preview-first calisir: `--delete`
 resolved archive path'ini gosterir ama silmez; `--delete --apply` yalniz
-canonical backup root altindaki secili Codex Chef backup archive'ini kaldirir.
+canonical backup root altindaki secili AgentChef backup archive'ini kaldirir.
 
-## Codex Chef CLI Referansi
+## AgentChef CLI Referansi
 
 Root README ilk kurulumu kisa tutar. Tam operator referansi gerektiginde bu
 bolumu kullan.
@@ -177,7 +177,6 @@ npm run chef -- --install --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
-npm run chef -- --continuity
 npm run chef -- --diagnostics
 npm run chef -- --processes
 npm run chef -- --processes --cleanup-stale
@@ -203,7 +202,7 @@ alanları, 45 saniyelik bekleme ve ayrıca onaylı temizlik komutu için
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md) sayfasına bak.
 
 `Skill durumu ve katalog` ekranı commit-pinned upstream skill'leri,
-bundled/direct Codex Chef skill'lerini, kullanıcı tarafından eklenen diğer
+bundled/direct AgentChef skill'lerini, kullanıcı tarafından eklenen diğer
 skill'leri ve global köklerde görünen toplamı ayrı gösterir. Aynı adlı klasör
 yeterli değildir: upstream kayıtların kaynak provenance bilgisi, bundled
 kayıtların ise geçerli yönetilen sahipliği olmalıdır. Yalnız eksik veya
@@ -229,22 +228,6 @@ isleri icin `/ps` ve `/stop` kullan. `--diagnostics` Serena/MCP surec audit
 komutunu ve diger read-only kanit komutlarini gosterir, ama surec durdurmaz ve
 global dosya degistirmez.
 
-`--continuity`, Control veya Brain üzerinde değişiklik yapmadan ikisini de
-görünür kılar. `codex-control-router` skill'ini, kurulu `codex_control` MCP
-yapılandırmasını, bundled Brain skill'ini ve yalnız açıkça yapılandırılmış
-`CODEX_CHEF_BRAIN_HOME` vault'unu raporlar. Anlık işler mevcut oturumda kalır;
-Control yalnız açıkça gecikmeli, arka plan, tekrarlı, yeniden başlatmaya
-dayanıklı, izlenen veya Control yönetimli isteklerde etkinleşir. Brain otomatik
-capture kapalı kalır ve tüm Brain yazmaları önce ön izleme, sonra açık apply
-gerektirir.
-
-CLI alt süreci kurulu Control yapılandırmasını doğrulayabilir, ancak mevcut
-Codex oturumunun MCP araçlarını çağıramaz. Canlı proje sağlığını aktif Codex
-oturumundan Control MCP ile (veya owner terminalinden
-`codex-control status --json` ile) doğrulayın. Bir Control projesindeki
-`brainMapped: true` durumu, yerel `CODEX_CHEF_BRAIN_HOME` vault'undan ayrıdır;
-birini yapılandırmak diğerini sessizce yapılandırmaz veya ona yazmaz.
-
 Kurulu ve hazır skill'ler kendiliğinden çalışmaz. Kullanıcı skill adını
 yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer;
 canlı aktivasyon, asistanın `Skill selected` yazması ve işlemden önce ilgili
@@ -258,10 +241,10 @@ veya shell history'ye yapistirma.
 
 Kullanışlı parametreler:
 
-- `-All`: Codex template'lerini, yerel Codex Chef plugin'ini, uzman ajanları,
+- `-All`: Codex template'lerini, yerel AgentChef plugin'ini, uzman ajanları,
   profilleri, kuralları ve doğrulanmış public/first-party skill'leri kurar.
   Global Git config'i değiştirmez.
-- Her varsayılan yönetilen kurulum, on bir lokal workflow'un canonical
+- Her varsayılan yönetilen kurulum, on lokal workflow'un canonical
   kaynaklarını `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
   `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
   <hedef>` ve `$evidence-research <soru>` gibi çağrılar plugin kurulmadan
@@ -298,7 +281,7 @@ Kullanışlı parametreler:
   `skill` adı taşıyan kayıtları kurar. Installer exact commit'i fetch eder,
   seçilen skill'i doğrular, native copy'yi stage edip hash'ler ve atomik olarak
   etkinleştirir. Fetch edilen repo kodunu veya registry kaynaklı bir installer'ı
-  çalıştırmaz. Eşleşen geçerli Codex Chef provenance marker'ı backup alan
+  çalıştırmaz. Eşleşen geçerli AgentChef provenance marker'ı backup alan
   managed upgrade'e izin verir. Unmarked, foreign veya lokal olarak drift etmiş
   aynı adlı hedef korunur ve atlandı olarak raporlanır. `--adopt-existing`
   geniş installer flag'i değildir; yalnızca o exact hedef incelendikten sonra
@@ -315,7 +298,7 @@ Kullanışlı parametreler:
   İlgisiz ek dosyalar korunur. Bunu sadece bilinçli upgrade için, `-WhatIf` çıktısını inceledikten sonra
   kullan. Vermezsen mevcut `config.toml` önce yedeklenir ve sadece eksik Codex
   Chef bloklarını alır; mevcut ajan dosyaları ve rule dosyaları atlanır.
-  Kisisel plugin marketplace dosyasi komple degistirilmez; sadece Codex Chef
+  Kisisel plugin marketplace dosyasi komple degistirilmez; sadece AgentChef
   kaydi backup sonrasi eklenir veya guncellenir, ilgisiz plugin kayitlari
   korunur.
 - `-Repair`: ortak repair motoruyla mevcut setup'i onarir. `-WhatIf` ile
@@ -347,15 +330,15 @@ Yazmadan önce ön izle:
 Ön izleme doğruysa kur:
 
 ```bash
-git clone https://github.com/ucsahinn/codex-chef.git
-cd codex-chef
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
 chmod +x scripts/install.sh
 ./scripts/install.sh --all --interactive
 ```
 
 Kullanışlı flagler:
 
-- `--all`: global Git config'i değiştirmeyen önerilen tam Codex Chef kurulumu.
+- `--all`: global Git config'i değiştirmeyen önerilen tam AgentChef kurulumu.
 - `--install-skills`
 - `--adopt-fetch-skill`, `--adopt-seo-skill` ve
   `--adopt-evidence-research-skill`: yalnız adı verilen foreign direct hedefi
@@ -371,7 +354,7 @@ Kullanışlı flagler:
   dizinlerde yalnızca kaynakta sahip olunan girdileri senkronlar ve ilgisiz ek
   dosyaları korur. Vermezsen
   mevcut `config.toml` merge edilir ve diğer mevcut managed dosyalar atlanır.
-  Kisisel plugin marketplace dosyasi komple degistirilmez; sadece Codex Chef
+  Kisisel plugin marketplace dosyasi komple degistirilmez; sadece AgentChef
   kaydi backup sonrasi eklenir veya guncellenir, ilgisiz plugin kayitlari
   korunur.
 - `--repair`: mevcut global Codex setup'i icin backup'li repair uygular;
@@ -398,7 +381,7 @@ profil ve Codex runtime task'a uygun dengeyi secebilir; broad veya uzun islerde
 skill, agent ya da MCP kapatmadan daha dusuk verbosity ve daha dar tool-output
 limitleri icin `token-safe.config.toml` kullan.
 
-Codex Chef kendi template'ini canonical managed baseline, makinedeki mevcut
+AgentChef kendi template'ini canonical managed baseline, makinedeki mevcut
 config'i ise kullaniciya ait overlay olarak ele alir. Normal install ve repair;
 kullanicinin model/reasoning secimini, approval ve sandbox ayarlarini, project
 trust kayitlarini, ozel MCP server'larini ve ilgisiz personal plugin marketplace
@@ -551,11 +534,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Bu, portable Workspace OS kurulum testidir: `CODEX_HOME` ve `AGENTS_HOME`
 degerleri acik, repo-relative hedeflerdir; boylece ayni komutlar baska bir
-PC'de kullanicinin gercek Codex state'ini kopyalamadan calisir. Codex Chef
+PC'de kullanicinin gercek Codex state'ini kopyalamadan calisir. AgentChef
 yalniz kendi Codex runtime template'lerini, agent'larini, skill'lerini, MCP
-config'ini ve backup-backed managed dosyalarini bu hedeflere kurar. Codex Chef
-Control, Codex Chef Brain veya Kitchen'i kurmaz ya da yonetmez; bunlar ayri
-authority layer'lar olarak kalir.
+config'ini ve backup-backed managed dosyalarini bu hedeflere kurar. AgentChef
+yalnızca kendi yönettiği yüzeyleri kurar; ayrı kurulan hafıza motoru veya
+control plane gibi yardımcı araçlar ayrı authority layer'lar olarak kalır.
 
 Izole, non-dry-run smoke install icin sahip oldugun bos bir klasor sec; `--apply`
 eklemeden once plani incele:
@@ -567,8 +550,8 @@ $env:AGENTS_HOME = Join-Path $portableRoot "agents"
 node .\scripts\repair-install.mjs --preview --redact-paths --json
 ```
 
-Bu klasore baskasinin home dizinini, `auth.json` dosyasini, Brain notlarini,
-session'larini veya Control/Kitchen database'lerini kopyalama. Yeni bir PC ayni
+Bu klasore baskasinin home dizinini, `auth.json` dosyasini, hafiza motoru
+notlarini, session'larini veya yardimci arac database'lerini kopyalama. Yeni bir PC ayni
 preview'i kendi bos portable root'u ile calistirir; gercek user-home kurulumu
 icin ancak backup-backed plan incelendikten sonra onay verilir.
 
@@ -577,7 +560,7 @@ backup alınarak merge edilir; kullanıcıya ait tablolar korunur. Diğer mevcut
 managed dosyalar `-Force` / `--force` vermediğin sürece atlanır. Force yalnızca
 yönetilen tekil dosyaları değiştirir ve kaynakta sahip olunan dizin girdilerini
 senkronlar; ilgisiz ek dosyalar kalır. Kisisel
-plugin marketplace ilgisiz kayitlari korur ve sadece Codex Chef kaydini backup
+plugin marketplace ilgisiz kayitlari korur ve sadece AgentChef kaydini backup
 sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force
 senkronizasyonundan daha guvenli ilk adımdır.
 

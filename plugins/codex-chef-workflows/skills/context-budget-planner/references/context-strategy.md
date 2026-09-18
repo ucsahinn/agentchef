@@ -104,7 +104,7 @@ When a task may exceed context, keep a handoff with:
 - Use line-focused reads for code after finding the relevant function.
 - Summarize command output, but keep exact commands and failing lines.
 - Use references only when the selected skill or task needs them.
-- Run `npm run token:audit` in Codex Chef to identify the largest startup,
+- Run `npm run token:audit` in AgentChef to identify the largest startup,
   config, agent-role, skill, docs, and validator surfaces before optimizing.
 - Use `templates/codex/profiles/token-safe.config.toml` when a session needs
   lower verbosity, lower default reasoning, earlier compaction, and capped tool

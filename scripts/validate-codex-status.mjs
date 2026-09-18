@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const failures = [];
 const fixtureCodexHome = path.resolve("tmp/nonexistent-codex-status-codex-home");
@@ -28,7 +29,7 @@ function run(args, extra = {}) {
   ], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 120000,
+    timeout: scaledTimeout(120000),
     windowsHide: true,
     env: extra.env || process.env
   });
@@ -546,7 +547,7 @@ const doctorFromForeignCwd = spawnSync(process.execPath, [
   cwd: foreignCwd,
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
-  timeout: 120000,
+  timeout: scaledTimeout(120000),
   windowsHide: true
 });
 if (doctorFromForeignCwd.error) {
@@ -556,8 +557,9 @@ if (doctorFromForeignCwd.error) {
 } else {
   try {
     const foreignCwdReport = JSON.parse(doctorFromForeignCwd.stdout);
-    if (foreignCwdReport.status !== "ok" || foreignCwdReport.repo?.packageName !== "codex-chef") {
-      fail("codex doctor foreign-cwd validation must inspect the Codex Chef repository.");
+    const expectedPackageName = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8")).name;
+    if (foreignCwdReport.status !== "ok" || foreignCwdReport.repo?.packageName !== expectedPackageName) {
+      fail("codex doctor foreign-cwd validation must inspect the AgentChef repository.");
     }
   } catch (error) {
     fail(`codex doctor foreign-cwd validation did not emit parseable JSON: ${error.message}`);
@@ -606,7 +608,7 @@ if (textResult.error) {
 } else if (textResult.status !== 0) {
   fail(`codex status text validation exited ${textResult.status}: ${(textResult.stderr || textResult.stdout).trim()}`);
 } else {
-  for (const required of ["Codex Chef status", "Overall:", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
+  for (const required of ["AgentChef status", "Overall:", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
     if (!textResult.stdout.includes(required)) fail(`codex status text output missing: ${required}`);
   }
   for (const hiddenByDefault of ["Target Codex home:", "Ambient Codex:", "Enterprise routing:", "Effective controls:", "Context budget:", "Token-safe profile:", "MCP setup note:"]) {
@@ -642,7 +644,7 @@ if (turkishTextResult.error) {
 } else if (turkishTextResult.status !== 0) {
   fail(`codex status Turkish text validation exited ${turkishTextResult.status}: ${(turkishTextResult.stderr || turkishTextResult.stdout).trim()}`);
 } else {
-  for (const required of ["Codex Chef durumu", "Genel:", "Kurulu ortam:", "Skill'ler:", "MCP:", "Codex doctor kontrolleri:", "Sonraki adım:"]) {
+  for (const required of ["AgentChef durumu", "Genel:", "Kurulu ortam:", "Skill'ler:", "MCP:", "Codex doctor kontrolleri:", "Sonraki adım:"]) {
     if (!turkishTextResult.stdout.includes(required)) fail(`codex status Turkish text output missing: ${required}`);
   }
   for (const asciiWording of ["Kullanim", "Numarali menu", "calisiyor", "zaman siniri", "atlandi", "kaydi", "yonetilen dosyalar"]) {
@@ -672,7 +674,7 @@ if (turkishDetailedTextResult.error) {
 const routingResult = spawnSync(process.execPath, ["scripts/codex-routing-board.mjs", "--json"], {
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
-  timeout: 120000,
+  timeout: scaledTimeout(120000),
   windowsHide: true
 });
 if (routingResult.error) {

@@ -107,7 +107,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 .\scripts\install.ps1 -Repair
 ```
 
-Repair modu Codex Chef'in yönettiği drift'i backup alıp düzeltir; başka
+Repair modu AgentChef'in yönettiği drift'i backup alıp düzeltir; başka
 marketplace plugin'lerini ve user skill'lerini silmez. Force replacement'i
 sadece repair planını inceledikten ve tam managed-target replacement istediğine
 karar verdikten sonra kullan.

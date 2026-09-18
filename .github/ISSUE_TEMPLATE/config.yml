@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/ucsahinn/codex-chef/security/policy
+    url: https://github.com/ucsahinn/agentchef/security/policy
     about: Please do not open public issues for security vulnerabilities.
   - name: Güvenlik bildirimi
-    url: https://github.com/ucsahinn/codex-chef/security/policy
+    url: https://github.com/ucsahinn/agentchef/security/policy
     about: Güvenlik açıkları için public issue açmayın.

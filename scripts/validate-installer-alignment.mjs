@@ -75,7 +75,7 @@ function runMarketplaceHelperSmokes() {
             source: { source: "local", path: "C:/old/plugin" },
             policy: { installation: "AVAILABLE", authentication: "NONE" },
             category: "Productivity",
-            interface: { displayName: "Codex Chef Workflows", shortDescription: "Security-first Codex setup maintenance workflow." }
+            interface: { displayName: "AgentChef Workflows", shortDescription: "Security-first Codex setup maintenance workflow." }
           }
         ]
       },
@@ -86,7 +86,7 @@ function runMarketplaceHelperSmokes() {
   );
 
   const before = inspectMarketplaceEntry(marketplacePath, pluginTarget);
-  if (!before.changed) fail("Marketplace helper smoke must detect stale Codex Chef plugin path.");
+  if (!before.changed) fail("Marketplace helper smoke must detect stale AgentChef plugin path.");
 
   writeMarketplaceEntry(marketplacePath, pluginTarget);
   const written = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
@@ -99,7 +99,7 @@ function runMarketplaceHelperSmokes() {
     fail("Marketplace helper smoke must write a portable marketplace-root-relative plugin path.");
   }
   if (chef.interface?.shortDescription !== "Security-first Codex planning, maintenance, and verification workflows.") {
-    fail("Marketplace helper smoke must preserve Codex Chef interface metadata.");
+    fail("Marketplace helper smoke must preserve AgentChef interface metadata.");
   }
   if (chef.policy?.authentication !== "ON_INSTALL") {
     fail("Marketplace helper smoke must write the current Codex ON_INSTALL policy.");
@@ -251,10 +251,10 @@ requireText(ps, "AdoptDirectSkill", "PowerShell installer");
 requireText(ps, "Get-ManagedDirectSkills", "PowerShell installer");
 requireText(ps, "marketplace.json", "PowerShell installer");
 requireText(ps, "upsert-marketplace-entry.mjs", "PowerShell installer");
-requireText(ps, "Upsert Codex Chef plugin marketplace entry", "PowerShell installer");
+requireText(ps, "Upsert AgentChef plugin marketplace entry", "PowerShell installer");
 requireText(ps, "Cannot update plugin marketplace because it is invalid or unreadable", "PowerShell installer");
 requireText(ps, "refresh-installed-plugin.mjs", "PowerShell installer");
-requireText(ps, "Refresh installed Codex Chef plugin cache", "PowerShell installer");
+requireText(ps, "Refresh installed AgentChef plugin cache", "PowerShell installer");
 requireText(ps, "manage-global-git-guards.mjs", "PowerShell installer");
 requireText(ps, "-git-guards.json", "PowerShell installer");
 requireText(ps, "successful dry run or install", "PowerShell installer");
@@ -299,7 +299,7 @@ requireText(sh, "--repair", "Bash installer");
 requireText(sh, "INTERACTIVE=0", "Bash installer");
 requireText(sh, "--interactive", "Bash installer");
 requireText(sh, "require_command()", "Bash installer");
-requireText(sh, "Required command not found for Codex Chef Bash install", "Bash installer");
+requireText(sh, "Required command not found for AgentChef Bash install", "Bash installer");
 requireText(sh, "CODEX_HOME_DIR", "Bash installer");
 requireText(sh, "AGENTS_HOME_DIR", "Bash installer");
 requireText(sh, "backup_target", "Bash installer");
@@ -335,10 +335,10 @@ requireText(sh, "adopt-seo-skill", "Bash installer");
 requireText(sh, "adopt-evidence-research-skill", "Bash installer");
 requireText(sh, "marketplace.json", "Bash installer");
 requireText(sh, "upsert-marketplace-entry.mjs", "Bash installer");
-requireText(sh, "Would upsert Codex Chef plugin marketplace entry", "Bash installer");
+requireText(sh, "Would upsert AgentChef plugin marketplace entry", "Bash installer");
 requireText(sh, "Cannot update plugin marketplace because it is invalid or unreadable", "Bash installer");
 requireText(sh, "refresh-installed-plugin.mjs", "Bash installer");
-requireText(sh, "Refresh installed Codex Chef plugin cache", "Bash installer");
+requireText(sh, "Refresh installed AgentChef plugin cache", "Bash installer");
 requireText(sh, "manage-global-git-guards.mjs", "Bash installer");
 requireText(sh, "-git-guards.json", "Bash installer");
 requireText(sh, "Backup failed; refusing to replace managed target without a backup", "Bash installer");
@@ -580,8 +580,8 @@ function validateResolvedInstallContract() {
     "Install-Directory -Source $PluginSource -Destination $PluginTarget",
     "Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget",
     "Install-Directory -Source $DirectSource -Destination $DirectTarget",
-    "Upsert Codex Chef plugin marketplace entry",
-    "Refresh installed Codex Chef plugin cache"
+    "Upsert AgentChef plugin marketplace entry",
+    "Refresh installed AgentChef plugin cache"
   ], "PowerShell installer operation order");
   requireOrderedText(sh, [
     'AGENTS.md"',
@@ -594,8 +594,8 @@ function validateResolvedInstallContract() {
     'install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"',
     'install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"',
     'install_directory "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET"',
-    "Would upsert Codex Chef plugin marketplace entry",
-    "Refresh installed Codex Chef plugin cache"
+    "Would upsert AgentChef plugin marketplace entry",
+    "Refresh installed AgentChef plugin cache"
   ], "Bash installer operation order");
 }
 
@@ -709,7 +709,12 @@ function validatePortabilityContracts() {
   for (const runner of ["ubuntu-latest", "windows-latest", "macos-latest"]) {
     if (!workflow.includes(runner)) fail(`Validation workflow must cover ${runner}.`);
   }
-  for (const nodeVersion of ["18", "24"]) {
+  // The portability matrix must exercise the lowest supported Node major
+  // (derived from package.json engines) and the current LTS line.
+  const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const engineFloor = /(\d+)/.exec(String(packageJson.engines?.node || ""))?.[1];
+  if (!engineFloor) fail("package.json must declare a minimum Node.js engine version.");
+  for (const nodeVersion of [engineFloor, "24"].filter(Boolean)) {
     if (!new RegExp(`(?:node-version|node):\\s*${nodeVersion}\\b`).test(workflow)) {
       fail(`Validation workflow must cover supported Node.js ${nodeVersion}.`);
     }

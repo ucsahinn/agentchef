@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
-  <title id="title">Codex Chef social preview</title>
-  <desc id="desc">A GitHub social preview for Codex Chef, a cross-platform setup kit with specialist agents, curated skills, safe MCP defaults, approval boundaries, and clear verification.</desc>
+  <title id="title">AgentChef social preview</title>
+  <desc id="desc">A GitHub social preview for AgentChef, a cross-platform setup kit with specialist agents, curated skills, safe MCP defaults, approval boundaries, and clear verification.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0f172a"/>
@@ -32,8 +32,8 @@
     <text x="170" y="282" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="850" fill="#0f172a">Chef</text>
   </g>
   <g font-family="Segoe UI, Arial, sans-serif">
-    <text x="520" y="204" font-size="76" font-weight="850" fill="#ecfeff">Codex Chef</text>
-    <text x="526" y="272" font-size="32" font-weight="600" fill="#ccfbf1">A safer, clearer setup for Codex</text>
+    <text x="520" y="204" font-size="76" font-weight="850" fill="#ecfeff">AgentChef</text>
+    <text x="526" y="272" font-size="32" font-weight="600" fill="#ccfbf1">A safer, clearer setup for coding agents</text>
     <text x="526" y="322" font-size="29" fill="#dbeafe">Agents, skills, MCPs, and approval boundaries.</text>
     <text x="526" y="362" font-size="29" fill="#dbeafe">Preview first. Verify before you trust.</text>
     <g font-size="24" font-weight="750">

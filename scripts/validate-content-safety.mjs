@@ -51,10 +51,6 @@ const mojibakePatterns = [
 
 const publicHandoffDocs = new Set([
   "README.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
-  "README.pt-BR.md",
   "README.tr.md",
   "docs/best-practices.md",
   "docs/best-practices.tr.md"

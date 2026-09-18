@@ -2,7 +2,7 @@
 
 Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrulandıktan ve account-level değişiklik açıkça onaylandıktan sonra manuel uygula.
 
-Yayın adayı temel sürümü: **v0.5.74**.
+Yayın adayı temel sürümü: **v0.6.0**.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
@@ -13,20 +13,32 @@ kuraldan muaf. Custom social preview tek bekleyen hedeftir: GitHub upload'u
 authenticated web session üzerinden sunuyor, mevcut isolated browser session'ı
 anonim ve public GraphQL alanı hâlâ GitHub'ın ürettiği görseli döndürüyor.
 
+## Repo Yeniden Adlandırma
+
+Depo `gh repo rename agentchef` ile `codex-chef` adından `agentchef` adına
+taşındı. GitHub eski adresi yönlendirir; yıldızlar, fork'lar, issue'lar,
+release'ler ve tag'ler korunur. Yeniden adlandırmadan sonra her yerel klon
+`git remote set-url origin https://github.com/ucsahinn/agentchef.git`
+çalıştırmalı ve aşağıdaki dal koruması check adları yeniden uygulanmalıdır,
+çünkü portability job adları Node tabanıyla birlikte değişti.
+
 ## Açıklama
 
 ```text
-A cross-platform Codex setup kit with specialist agents, curated skills, safe MCP defaults, preview-first installation, and clear verification.
+An unofficial, cross-platform setup kit for OpenAI Codex CLI and Anthropic Claude Code: specialist agents, curated skills, safe MCP defaults, preview-first installation, and clear verification.
 ```
 
 ## Topic’ler
 
 ```text
+agentchef
 codex
-codex-chef
-openai
 codex-cli
+claude-code
+openai
+anthropic
 ai-agents
+agent-tooling
 mcp
 model-context-protocol
 agent-skills
@@ -62,7 +74,7 @@ doğrulandı fakat account-level ayara henüz yüklenmedi.
 
 - Default branch: `main`.
 - `main` protection; `validate`, `windows-installer`,
-  `portability (ubuntu-latest, Node 18)` ve
+  `portability (ubuntu-latest, Node 22)` ve
   `portability (macos-latest, Node 24)` check'lerini strict branch freshness ile
   zorunlu tutuyor.
 - Force-push ve branch silme kapalı; açıkça onaylanmış maintainer push'ı mümkün
@@ -72,11 +84,11 @@ doğrulandı fakat account-level ayara henüz yüklenmedi.
 
 ## Release Metadata
 
-v0.5.74 için:
+Bir sonraki release için (`<version>` değerini değiştir):
 
 ```text
-Title: Codex Chef v0.5.74
-Tag: v0.5.74
+Title: AgentChef v<version>
+Tag: v<version>
 Notes: tmp/release-notes-current.md
 ```
 

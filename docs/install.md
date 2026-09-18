@@ -1,6 +1,6 @@
 # Installation Guide
 
-Codex Chef installs into the current user's Codex home. That is `~/.codex` by
+AgentChef installs into the current user's Codex home. That is `~/.codex` by
 default; when `CODEX_HOME` is set, the installer respects that path instead.
 Start with a preview so the first real write is never a surprise.
 
@@ -16,7 +16,7 @@ want the preview and installer to target it.
 
 - Codex CLI or Codex app installed.
 - Git installed.
-- Node.js 18 or newer for validation and optional skill installation.
+- Node.js 22.12 or newer for validation and optional skill installation.
 - `npx` available for the default stdio MCP servers and verified public skill
   installation.
 - Optional: Gitleaks for stronger pre-commit and pre-push scanning.
@@ -77,8 +77,8 @@ missing, only that first semantic call fails; install `uvx` or disable Serena.
 Install after the preview is correct:
 
 ```powershell
-git clone https://github.com/ucsahinn/codex-chef.git
-cd codex-chef
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
 ```
 
@@ -96,8 +96,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 ```
 
 Repair mode is for machines that already have a Codex setup. It previews or
-applies backup-backed reconciliation for Codex Chef-managed guidance, rules,
-agent/profile files, the bundled plugin, all eleven managed direct local
+applies backup-backed reconciliation for AgentChef-managed guidance, rules,
+agent/profile files, the bundled plugin, all ten managed direct local
 workflows, `serena-pool.mjs`, missing config blocks, and the local plugin
 marketplace entry. The launcher, Serena bridge, generated/copied profiles,
 ownership markers, marketplace, and every other selected source and target are
@@ -105,7 +105,7 @@ preflighted before the first managed write; a missing, linked, or unsafe path
 fails closed. It
 preserves unrelated marketplace plugins and never deletes user skills; extra
 or duplicate global skills are reported as cleanup candidates. If the
-namespaced Codex Chef plugin is already installed, preview reports a stale
+namespaced AgentChef plugin is already installed, preview reports a stale
 versioned plugin cache and apply refreshes it in place. Repair never installs
 the plugin for a user who has not already installed it.
 
@@ -134,7 +134,7 @@ when you want those explicit surfaces. An already-installed namespaced Codex
 Chef plugin is refreshed and version-verified after its managed source is
 synchronized; update leaves an uninstalled plugin uninstalled.
 
-Inspect or restore Codex Chef backup archives through the same CLI:
+Inspect or restore AgentChef backup archives through the same CLI:
 
 ```powershell
 npm run chef -- --backups
@@ -152,7 +152,7 @@ without printing file contents. An archive is not labelled restorable until its
 manifest, full file set, hashes, and target allowlist all pass. Restore is a
 preview unless `--apply` is supplied. The apply path reads and verifies the
 exact source bytes, creates a new rollback backup of current targets, and then
-copies known Codex Chef-managed files back as a rollback-protected transaction.
+copies known AgentChef-managed files back as a rollback-protected transaction.
 Commit-pinned skill replacement backups use a namespaced manifest and restore
 the previous skill tree exactly, rather than leaving files from the replacement.
 Restore fails
@@ -163,9 +163,9 @@ rejected. `--json` follows the same behavior: write requests report explicit
 `applyRequested`, `applied`, and `outcome` fields and do not return a preview as
 an applied result. Delete is also preview-first: `--delete` prints the resolved
 archive path without removing it, and `--delete --apply` removes only the
-selected Codex Chef backup archive under the canonical backup root.
+selected AgentChef backup archive under the canonical backup root.
 
-## Codex Chef CLI Reference
+## AgentChef CLI Reference
 
 The root README keeps the first-run path short. Use this section when you need
 the full operator reference.
@@ -188,7 +188,6 @@ npm run chef -- --install --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
-npm run chef -- --continuity
 npm run chef -- --diagnostics
 npm run chef -- --processes
 npm run chef -- --processes --cleanup-stale
@@ -214,7 +213,7 @@ trust is intentionally not bypassed by the installer. See
 the 45-second grace period, and the separately gated cleanup command.
 
 `Skill status & catalog` separates commit-pinned upstream skills, bundled/direct
-Codex Chef skills, other user-installed skills, and the total visible global
+AgentChef skills, other user-installed skills, and the total visible global
 inventory. A same-named directory is not enough: upstream entries need matching
 source provenance and bundled entries need valid managed ownership. Only
 missing or invalid upstream entries are offered for individual installation;
@@ -239,22 +238,6 @@ Codex session. `--diagnostics` includes the Serena/MCP process-audit command
 and other read-only evidence commands, but it does not stop processes or mutate
 global files.
 
-`--continuity` makes Control and Brain visible without changing either system.
-It reports the `codex-control-router` skill, installed `codex_control` MCP
-configuration, bundled Brain skill, and an explicitly configured
-`CODEX_CHEF_BRAIN_HOME` vault. Immediate work remains in the current session;
-Control activates only for an explicit delayed, background, recurring,
-restart-resilient, monitored, or Control-managed request. Brain automatic
-capture stays disabled, and all Brain writes remain preview-first and
-apply-gated.
-
-The CLI subprocess can verify installed Control configuration but cannot call
-the current Codex session's MCP tools. Confirm live project health from the
-active Codex session with the Control MCP (or use `codex-control status --json`
-from the owner terminal). A Control project's `brainMapped: true` state is
-separate from the local `CODEX_CHEF_BRAIN_HOME` vault; configuring one does not
-silently configure or write the other.
-
 Installed and ready skills do not execute by themselves. A skill enters Codex
 context when the user names it or the task clearly matches its description;
 live activation is proven when the assistant prints `Skill selected` and reads
@@ -268,10 +251,10 @@ or shell history.
 
 Useful switches:
 
-- `-All`: install Codex templates, the local Codex Chef plugin, specialist
+- `-All`: install Codex templates, the local AgentChef plugin, specialist
   agents, profiles, rules, and verified public/first-party skills. It does not
   change global Git config.
-- Every default managed install synchronizes all eleven canonical local workflow
+- Every default managed install synchronizes all ten canonical local workflow
   sources to `AGENTS_HOME/skills/<name>`. This makes direct calls such as
   `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
   <target>`, and `$evidence-research <question>` available without installing
@@ -308,7 +291,7 @@ Useful switches:
   SHA, and a matching `skill` name. The installer fetches that exact commit,
   verifies the selected skill, stages and hashes a native copy, then atomically
   activates it. It does not execute fetched repository code or a
-  registry-delivered installer. A matching valid Codex Chef provenance marker
+  registry-delivered installer. A matching valid AgentChef provenance marker
   permits a backup-backed managed upgrade. An unmarked, foreign, or locally
   drifted same-name target is preserved and reported as skipped.
   `--adopt-existing` is intentionally not a broad installer flag: after
@@ -325,9 +308,9 @@ Useful switches:
   synchronize only source-owned entries in managed directories. Unrelated
   directory extras are preserved. Use this for deliberate upgrades only after
   reviewing `-WhatIf`; without it, existing
-  `config.toml` is backed up and receives only missing Codex Chef blocks, while
+  `config.toml` is backed up and receives only missing AgentChef blocks, while
   existing agent files and rules are skipped. The personal plugin marketplace
-  file is not replaced; only the Codex Chef entry is added or updated after
+  file is not replaced; only the AgentChef entry is added or updated after
   backup and unrelated plugin entries are preserved.
 - `-Repair`: repair an existing setup with the shared repair engine. With
   `-WhatIf`, it prints a no-write repair plan. Without `-WhatIf`, it backs up
@@ -357,15 +340,15 @@ Preview without writing:
 Install after the preview is correct:
 
 ```bash
-git clone https://github.com/ucsahinn/codex-chef.git
-cd codex-chef
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
 chmod +x scripts/install.sh
 ./scripts/install.sh --all --interactive
 ```
 
 Useful flags:
 
-- `--all`: recommended full Codex Chef setup without global Git config changes.
+- `--all`: recommended full AgentChef setup without global Git config changes.
 - `--install-skills`
 - `--adopt-fetch-skill`, `--adopt-seo-skill`, and
   `--adopt-evidence-research-skill`: adopt only the named foreign direct target
@@ -381,7 +364,7 @@ Useful flags:
   only source-owned directory entries while preserving unrelated extras;
   without it, existing
   `config.toml` is merged and other existing managed files are skipped. The
-  personal plugin marketplace file is not replaced; only the Codex Chef entry
+  personal plugin marketplace file is not replaced; only the AgentChef entry
   is added or updated after backup and unrelated plugin entries are preserved.
 - `--repair`: preview or apply backup-backed repair for an existing global
   Codex setup. Use it with `--dry-run` for a no-write plan.
@@ -409,7 +392,7 @@ active profile and Codex runtime choose the task-appropriate balance; use
 verbosity and tighter tool-output limits without disabling skills, agents, or
 MCPs.
 
-Codex Chef treats its template as the canonical managed baseline and the
+AgentChef treats its template as the canonical managed baseline and the
 existing machine configuration as a user-owned overlay. Normal install and
 repair preserve the user's model and reasoning choice, approval and sandbox
 settings, project trust entries, custom MCP servers, and unrelated personal
@@ -554,10 +537,11 @@ Remove `tmp/` only when you created it intentionally.
 
 This is a portable Workspace OS install test: `CODEX_HOME` and `AGENTS_HOME`
 are explicit, repository-relative targets, so the same commands work on another
-PC without copying a user's real Codex state. Codex Chef installs only its own
+PC without copying a user's real Codex state. AgentChef installs only its own
 Codex runtime templates, agents, skills, MCP configuration, and backup-backed
-managed files into those targets. It does not install or control Codex Chef
-Control, Codex Chef Brain, or Kitchen; those remain separate authority layers.
+managed files into those targets. It installs only its own managed surfaces;
+separately installed companion tools such as a memory engine or a control plane
+remain separate authority layers.
 
 For an isolated, non-dry-run smoke install, choose a fresh folder you own and
 review the plan before adding `--apply`:
@@ -569,8 +553,8 @@ $env:AGENTS_HOME = Join-Path $portableRoot "agents"
 node .\scripts\repair-install.mjs --preview --redact-paths --json
 ```
 
-Do not reuse another person's home, copy `auth.json`, Brain notes, sessions, or
-Control/Kitchen databases into this folder. A fresh machine can instead run the
+Do not reuse another person's home, copy `auth.json`, memory-engine notes,
+sessions, or companion-tool databases into this folder. A fresh machine can instead run the
 same preview with its own empty portable root, then opt into a real user-home
 install only after reviewing its backup-backed plan.
 
@@ -586,7 +570,7 @@ Other existing managed files are skipped unless you use `-Force` / `--force`
 after reviewing the preview. Force replaces only managed individual files and
 synchronizes source-owned directory entries; unrelated extras remain. The
 personal plugin marketplace keeps unrelated
-entries and receives only the Codex Chef entry upsert after backup. When managed
+entries and receives only the AgentChef entry upsert after backup. When managed
 drift exists, `-Repair` / `--repair` is the safer first step before force
 synchronization.
 

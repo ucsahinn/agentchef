@@ -1,8 +1,31 @@
 # Upgrade Rehberi
 
-Güncelleme, daha önce yaptığın tercihleri ezmeden Codex Chef'in yönetilen
+Güncelleme, daha önce yaptığın tercihleri ezmeden AgentChef'in yönetilen
 dosyalarını yenilemeli. Aşağıdaki akış gelen değişikliği önce gösterir, yedek
 alır, yalnız yönetilen yüzeyi uygular ve kurulu runtime'ı doğrular.
+
+## Codex Chef 0.5.74'ten AgentChef 0.6.0'a Geçiş
+
+0.6.0, AgentChef adıyla çıkan ilk sürümdür. Mevcut bir 0.5.74 kurulumu için
+değişenler:
+
+- Depo `https://github.com/ucsahinn/agentchef` adresine taşındı; eski adres
+  yönlendirir ama remote'unu güncelle:
+  `git remote set-url origin https://github.com/ucsahinn/agentchef.git`.
+- Node.js 22.12 veya üzeri gerekir (Node 18 ve 20 ömrünü tamamladı).
+- Yerleşik Brain workflow'u kaldırıldı (bkz. [Brain emekliliği](brain-retirement.tr.md)).
+  Installer artık `~/.agents/skills/codex-chef-brain` dizinini yönetmez; eski
+  kopya olduğu gibi bırakılır, istersen kendin silebilirsin. `--continuity` ve
+  `CODEX_CHEF_BRAIN_HOME` kaldırıldı.
+- Diskteki kimlik değişmedi: plugin id'si, sahiplik işaretçileri, yedek klasörü
+  adları ve şema stringleri hâlâ `codex-chef` önekini kullanır; 0.6.0 için göç
+  adımı gerekmez. Kimlik yeniden adlandırması, önce-ön-izle mantıklı özel bir
+  göç komutuyla 1.0.0'a planlandı.
+- Almanca, İspanyolca, Fransızca ve Brezilya Portekizcesi README özetleri
+  kaldırıldı; İngilizce ve Türkçe dokümantasyon tam paritede sürüyor.
+
+Aşağıdaki normal güncelleme akışı geçerlidir; ön izleme, yeniden adlandırılmış
+`AGENTS.md` metnini ve kaldırılan Brain skill adımını gösterir.
 
 ## Güvenli Upgrade Akışı
 
@@ -156,5 +179,5 @@ Codex içinde kontrol et:
 5. `codex doctor --summary` komutunu tekrar çalıştır.
 
 Restore apply once mevcut target'lar icin rollback backup olusturur. Yalniz
-bilinen Codex Chef managed dosyalarini restore eder ve eski backup archive'lari
+bilinen AgentChef managed dosyalarini restore eder ve eski backup archive'lari
 otomatik silmez.

@@ -80,7 +80,7 @@ risk pattern, not as the source of truth.
 - Expand the default installable skill set only where it adds a distinct,
   high-utility workflow: systematic debugging, request-refactor planning,
   Playwright-based webapp testing, MCP server building, and the three
-  first-party Codex Chef ecosystem skills are materially different from the
+  first-party AgentChef ecosystem skills are materially different from the
   existing skill list and complement the bundled agents.
 - Do not select a skill only because its install count is higher. SEO marketing,
   prompt-polish, release-only, and framework/vendor-specific skills can be

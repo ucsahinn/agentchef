@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { acquireOperationLock } from "../lib/operation-lock.mjs";
+import { scaledTimeout } from "../lib/test-timeouts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -38,7 +39,7 @@ function runRepair(target, flags, extraEnv = {}) {
     cwd: root,
     encoding: "utf8",
     windowsHide: true,
-    timeout: 120000,
+    timeout: scaledTimeout(120000),
     env: {
       ...process.env,
       CODEX_CHEF_CODEX_COMMAND: "codex-chef-missing-fixture-command",

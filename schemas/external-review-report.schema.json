@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ucsahinn/codex-chef/schemas/external-review-report.schema.json",
-  "title": "Codex Chef External Review Report",
+  "$id": "https://github.com/ucsahinn/agentchef/schemas/external-review-report.schema.json",
+  "title": "AgentChef External Review Report",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "reviewId", "snapshotCommit", "snapshotContentSha256", "summary", "findings"],

@@ -35,7 +35,7 @@ function fixture() {
   git(repo, ["config", "tag.gpgsign", "false"]);
   fs.writeFileSync(path.join(repo, "app.js"), "export const answer = 42;\n");
   git(repo, ["add", "app.js"]);
-  git(repo, ["-c", "user.name=Codex Chef", "-c", "user.email=chef@example.invalid", "commit", "-qm", "fixture"]);
+  git(repo, ["-c", "user.name=AgentChef", "-c", "user.email=chef@example.invalid", "commit", "-qm", "fixture"]);
   fs.writeFileSync(path.join(repo, ".env"), `${"TO"}${"KEN"}=not-packaged\n`);
   git(repo, ["add", "-f", ".env"]);
   return { root, repo, out: path.join(root, "review") };
@@ -728,7 +728,7 @@ test("tracked sources cannot escape through a replaced ancestor junction", () =>
   git(linkedFixture.repo, ["add", "src/app.js"]);
   git(linkedFixture.repo, [
     "-c",
-    "user.name=Codex Chef",
+    "user.name=AgentChef",
     "-c",
     "user.email=chef@example.invalid",
     "commit",

@@ -52,7 +52,7 @@ codex.cmd --version
 npm.cmd run chef -- --processes --no-log
 ```
 
-Codex Chef's programmatic command resolver selects `npm.cmd`, `npx.cmd`, and
+AgentChef's programmatic command resolver selects `npm.cmd`, `npx.cmd`, and
 `codex.cmd` on Windows and the un-suffixed commands on Unix. This avoids the
 PowerShell script-policy and executable-resolution differences that can make a
 command work interactively but fail in an agent or child process.

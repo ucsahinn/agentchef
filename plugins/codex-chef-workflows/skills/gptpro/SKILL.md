@@ -27,7 +27,7 @@ and hash-bound delivery artifacts. `gptpro-handoff` owns the later prompt/report
 1. Scope the intended GPT Pro decision. For a broad question, use
    `context-budget-planner` to choose the smallest meaningful source surface.
 2. Read [the export contract](references/export-contract.md). Preview, then create
-   the hash-pinned external-review manifest using Codex Chef; run its freshness
+   the hash-pinned external-review manifest using AgentChef; run its freshness
    status successfully.
 3. Preview the semantic Project context. The default split is one text bundle per
    `apps/*`, `packages/*`, `services/*`, and `libs/*`, plus `application`, `db`,

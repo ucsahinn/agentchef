@@ -85,7 +85,7 @@ function pinnedSourceFixture(tempRoot, skill = "example-skill") {
   git(sourceRepo, ["add", "."]);
   git(sourceRepo, [
     "-c",
-    "user.name=Codex Chef",
+    "user.name=AgentChef",
     "-c",
     "user.email=chef@example.invalid",
     "commit",
@@ -213,7 +213,7 @@ function validResearchReport() {
       subQuestions: ["Which claims require live evidence?"],
       scope: "Official documentation and local repository behavior.",
       exclusions: ["Credentialed account data"],
-      audience: "Codex Chef maintainers",
+      audience: "AgentChef maintainers",
       deadline: "2026-07-29"
     },
     methods: {

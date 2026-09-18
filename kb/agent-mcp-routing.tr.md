@@ -1,6 +1,6 @@
 # Ajan Ve MCP Routing
 
-Codex Chef routing rehberi, agent role dosyalari, secilmis skill'ler ve MCP
+AgentChef routing rehberi, agent role dosyalari, secilmis skill'ler ve MCP
 varsayilanlari kurar. Bunlar ayni sey degildir; hepsini tek bir genel
 automation kutusuna koyma.
 
@@ -30,7 +30,7 @@ Delegasyon denetlenebilir olsun diye `Agent plan`, `Agent started` ve
 
 ## Varsayilan MCP Siniri
 
-Codex Chef read-heavy destek yüzeylerini varsayılan olarak kullanışlı tutar:
+AgentChef read-heavy destek yüzeylerini varsayılan olarak kullanışlı tutar:
 resmi docs, Context7, reasoning, browser evidence, semantic code navigation,
 secret icermeyen memory reads ve lokal codebase graph reads. Interaction, symbol
 edit, graph indexing, account access, database access, production telemetry,

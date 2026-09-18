@@ -1,7 +1,7 @@
 # Public Release Hygiene
 
 Use this checklist when preparing a public commit, tag, GitHub Release, or
-repository metadata update. Codex Chef is public-source-first and keeps npm
+repository metadata update. AgentChef is public-source-first and keeps npm
 publishing disabled with `private: true`.
 
 ## Pre-Release Gate

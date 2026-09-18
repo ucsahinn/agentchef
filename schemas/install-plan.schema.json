@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Codex Chef install plan manifest",
+  "title": "AgentChef install plan manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "description", "profiles", "operations"],

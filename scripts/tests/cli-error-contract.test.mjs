@@ -51,7 +51,6 @@ test("public JSON CLIs emit one stable envelope for malformed arguments", () => 
   assertJsonUsageError("scripts/repair-install.mjs", ["--apply", "--agents-home", "--json"], "repair-install");
   assertJsonUsageError("scripts/codex-routing-board.mjs", ["--json", "--profile", "missing-profile"], "codex-routing-board");
   assertJsonUsageError("scripts/plan-install.mjs", ["--json", "--platform", "--summary"], "plan-install");
-  assertJsonUsageError("scripts/brain-cli.mjs", ["status", "--json", "--target"], "brain");
   assertJsonUsageError("scripts/codex-doctor.mjs", ["--json", "--incldue-global"], "codex-doctor");
   assertJsonUsageError("scripts/chef-cli.mjs", ["review", "verify", "--json", "--definitely-invalid"], "external-review");
   assertJsonUsageError("scripts/chef-cli.mjs", ["--json", "--routing", "--profile", "-h"], "chef");
@@ -161,7 +160,7 @@ test("shared error sanitizer redacts paths, secret shapes, and terminal controls
 
 test("shared error sanitizer redacts explicit local roots outside HOME", () => {
   const agentsRoot = path.join(path.parse(root).root, "sentinel-agents-home");
-  const leakedPath = path.join(agentsRoot, "skills", "codex-chef-brain", "linked-child");
+  const leakedPath = path.join(agentsRoot, "skills", "evidence-research", "linked-child");
   const message = sanitizeCliError(
     new Error(`managed direct skill tree must not contain links: ${leakedPath}`),
     {
@@ -173,7 +172,7 @@ test("shared error sanitizer redacts explicit local roots outside HOME", () => {
   assert.equal(message.includes(agentsRoot), false);
   assert.equal(
     message,
-    `managed direct skill tree must not contain links: ${path.join("${AGENTS_HOME}", "skills", "codex-chef-brain", "linked-child")}`
+    `managed direct skill tree must not contain links: ${path.join("${AGENTS_HOME}", "skills", "evidence-research", "linked-child")}`
   );
 });
 
@@ -185,43 +184,6 @@ test("plain errors wrap long unbroken arguments to the terminal width", () => {
   assertNoStack(result);
   const lines = result.stderr.trimEnd().split(/\r?\n/);
   assert.equal(lines.every((line) => line.length <= 40), true, result.stderr);
-});
-
-test("Continuity redacts a mixed-case Windows home from local Brain state", () => {
-  const home = os.homedir();
-  const mixedCaseHome = process.platform === "win32"
-    ? home.replace(/[A-Za-z]/, (letter) => letter === letter.toLowerCase() ? letter.toUpperCase() : letter.toLowerCase())
-    : home;
-  const result = run("scripts/chef-cli.mjs", ["--continuity", "--json", "--no-log"], {
-    env: { CODEX_CHEF_BRAIN_HOME: path.join(mixedCaseHome, "codex-chef-missing-vault") }
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(result.stdout);
-  assert.match(report.brain?.vault?.target || "", /^\$\{HOME\}/);
-  assert.equal(`${result.stdout}${result.stderr}`.toLowerCase().includes(home.toLowerCase()), false);
-});
-
-test("Continuity sanitizes malformed installed Brain skill state", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-continuity-state-"));
-  const agentsHome = path.join(fixtureRoot, ".agents");
-  const target = path.join(agentsHome, "skills", "codex-chef-brain");
-  const outside = path.join(fixtureRoot, "outside");
-  const linkedChild = path.join(target, "linked-child");
-  fs.mkdirSync(target, { recursive: true });
-  fs.mkdirSync(outside, { recursive: true });
-  try {
-    fs.symlinkSync(outside, linkedChild, process.platform === "win32" ? "junction" : "dir");
-    const result = run("scripts/chef-cli.mjs", ["--continuity", "--json", "--no-log"], {
-      env: { AGENTS_HOME: agentsHome }
-    });
-    assert.equal(result.status, 0, result.stderr);
-    const report = JSON.parse(result.stdout);
-    assert.equal(report.brain?.skill?.ready, false);
-    assert.equal(`${result.stdout}${result.stderr}`.includes(fixtureRoot), false);
-    assert.doesNotMatch(report.brain?.skill?.state || "", /\u001b|\u202E/);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
 
 test("plain internal helpers reject malformed arguments without a Node stack", () => {

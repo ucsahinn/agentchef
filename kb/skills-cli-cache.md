@@ -3,7 +3,7 @@
 Use this article when optional skill installation is slow, prompts unexpectedly,
 or fails while resolving public skill sources.
 
-## What Codex Chef Controls
+## What AgentChef Controls
 
 - `catalog/skills.json` lists reviewed installable skills.
 - `catalog/skills-lock.json` records reviewed source metadata.

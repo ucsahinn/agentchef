@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
-  <title id="title">Codex Chef banner</title>
-  <desc id="desc">An animated Codex Chef banner showing a safer and clearer Codex setup with agents, skills, MCP tools, approval boundaries, and verification.</desc>
+  <title id="title">AgentChef banner</title>
+  <desc id="desc">An animated AgentChef banner showing a safer and clearer Codex setup with agents, skills, MCP tools, approval boundaries, and verification.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0f172a"/>
@@ -76,8 +76,8 @@
   </g>
 
   <g font-family="Segoe UI, Arial, sans-serif" fill="#ecfeff">
-    <text x="600" y="104" font-size="46" font-weight="800">Codex Chef</text>
-    <text x="604" y="150" font-size="22" fill="#ccfbf1">A safer, clearer setup for Codex.</text>
+    <text x="600" y="104" font-size="46" font-weight="800">AgentChef</text>
+    <text x="604" y="150" font-size="22" fill="#ccfbf1">A safer, clearer setup for coding agents.</text>
     <text x="604" y="184" font-size="22" fill="#dbeafe">Agents, skills, MCPs, approvals, and verification.</text>
   </g>
 

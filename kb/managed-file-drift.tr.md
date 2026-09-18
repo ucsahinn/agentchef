@@ -1,6 +1,6 @@
 # Managed File Drift
 
-Validator veya runtime check, Codex Chef-managed dosyaların eksik, stale ya da
+Validator veya runtime check, AgentChef-managed dosyaların eksik, stale ya da
 repo template'lerinden farklı olduğunu söylüyorsa bu makaleyi kullan.
 
 ## Managed Yüzeyler

@@ -118,7 +118,7 @@ make it a skill. If it needs tools or distribution, package it as a plugin.
 
 Large agent starter repos can provide useful patterns, but they should not be
 imported wholesale. The current ECC-informed policy is in
-[docs/ecc-compatibility.md](ecc-compatibility.md).
+[docs/harness-compatibility.md](harness-compatibility.md).
 
 Allowed adaptations:
 

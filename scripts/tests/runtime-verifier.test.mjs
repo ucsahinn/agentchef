@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { resolveInstallContract } from "../lib/install-contract.mjs";
 import { writeDirectSkillMarker } from "../manage-direct-skill-target.mjs";
 import { writeMarketplaceEntry } from "../upsert-marketplace-entry.mjs";
+import { scaledTimeout } from "../lib/test-timeouts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 let baselineFixtureRoot = null;
@@ -17,7 +18,7 @@ function run(command, args, options = {}) {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300000,
+    timeout: scaledTimeout(300000),
     windowsHide: true,
     ...options
   });

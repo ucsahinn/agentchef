@@ -25,7 +25,7 @@
       "install": false,
       "directInstall": true,
       "directTarget": "${AGENTS_HOME}/skills/codex-chef-operator",
-      "reason": "Bundled local plugin skill for safe Codex Chef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
+      "reason": "Bundled local plugin skill for safe AgentChef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
     },
     {
       "name": "git-hygiene",
@@ -55,7 +55,7 @@
       "install": false,
       "directInstall": true,
       "directTarget": "${AGENTS_HOME}/skills/gptpro",
-      "reason": "Bundled local plugin skill for preparing secret-safe, architecture-aware GPT Pro Project context from a fresh Codex Chef external-review snapshot without automatic upload."
+      "reason": "Bundled local plugin skill for preparing secret-safe, architecture-aware GPT Pro Project context from a fresh AgentChef external-review snapshot without automatic upload."
     },
     {
       "name": "gptpro-handoff",
@@ -72,14 +72,6 @@
       "directInstall": true,
       "directTarget": "${AGENTS_HOME}/skills/adaptive-agent-routing",
       "reason": "Bundled local plugin skill for conditional delegation, canonical skill ownership, profile-inherited agent model selection, and compact routing visibility, with direct invocation required by the global operating contract."
-    },
-    {
-      "name": "codex-chef-brain",
-      "category": "context-engineering",
-      "install": false,
-      "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/codex-chef-brain",
-      "reason": "Bundled local plugin skill for preview-first capture, project-scoped retrieval, backup, and restore of a user-owned Markdown Brain vault, with direct invocation."
     },
     {
       "name": "investigate",
@@ -513,7 +505,7 @@
       "networkRequired": true,
       "authRequired": false,
       "lastChecked": "2026-06-15",
-      "reason": "First-party Codex Chef ecosystem skill for AI-coding-ready project context, starter docs, agent instruction files, enterprise starter docs, and vibe-coding guardrails. Included in -All because it extends the bundled context_architect and context-budget-planner without requiring credentials."
+      "reason": "First-party AgentChef ecosystem skill for AI-coding-ready project context, starter docs, agent instruction files, enterprise starter docs, and vibe-coding guardrails. Included in -All because it extends the bundled context_architect and context-budget-planner without requiring credentials."
     },
     {
       "name": "what-context-needed",
@@ -528,7 +520,7 @@
       "networkRequired": true,
       "authRequired": false,
       "lastChecked": "2026-06-15",
-      "reason": "Manual context-selection reference; not default because Codex Chef already ships context_architect plus a local context-budget-planner."
+      "reason": "Manual context-selection reference; not default because AgentChef already ships context_architect plus a local context-budget-planner."
     },
     {
       "name": "prompt-architect",
@@ -544,7 +536,7 @@
       "networkRequired": true,
       "authRequired": false,
       "lastChecked": "2026-06-20",
-      "reason": "First-party Codex Chef ecosystem skill for plan-first, approval-gated, security-aware Codex prompt generation, prompt audits, and packaged Prompt Lab KB workflows. Included in -All because it complements the bundled prompt_architect with reusable prompt workflows."
+      "reason": "First-party AgentChef ecosystem skill for plan-first, approval-gated, security-aware Codex prompt generation, prompt audits, and packaged Prompt Lab KB workflows. Included in -All because it complements the bundled prompt_architect with reusable prompt workflows."
     },
     {
       "name": "prompt-engineering-patterns",
@@ -559,7 +551,7 @@
       "networkRequired": true,
       "authRequired": false,
       "lastChecked": "2026-06-15",
-      "reason": "Manual prompt-pattern reference; not default because Codex Chef already includes prompt_architect and avoids duplicate prompt-skill triggers."
+      "reason": "Manual prompt-pattern reference; not default because AgentChef already includes prompt_architect and avoids duplicate prompt-skill triggers."
     },
     {
       "name": "ai-prompt-engineering-safety-review",
@@ -591,7 +583,7 @@
       "authRequired": false,
       "fullDepth": true,
       "lastChecked": "2026-06-15",
-      "reason": "First-party Codex Chef ecosystem skill for creating, improving, validating, forward-testing, and packaging Codex skills and plugins. Included in -All because Codex Chef should ship a complete skill-authoring path while keeping auth and publishing actions approval-gated."
+      "reason": "First-party AgentChef ecosystem skill for creating, improving, validating, forward-testing, and packaging Codex skills and plugins. Included in -All because AgentChef should ship a complete skill-authoring path while keeping auth and publishing actions approval-gated."
     },
     {
       "name": "memory-safety-patterns",

@@ -1,12 +1,12 @@
 # Public Readiness
 
-Public-ready means more than “the files are on GitHub.” A new reader should understand what Codex Chef changes, what it deliberately leaves alone, and how to verify both claims without trusting marketing copy.
+Public-ready means more than “the files are on GitHub.” A new reader should understand what AgentChef changes, what it deliberately leaves alone, and how to verify both claims without trusting marketing copy.
 
 ## The Honest Position
 
-Codex Chef is an unofficial community project, not an OpenAI product. It is a local, cross-platform setup kit for Codex on Windows, macOS, Linux, and WSL. It provides reviewable defaults and tools; it is not a hosted control plane and it does not silently connect private accounts, databases, production systems, or broad filesystem roots.
+AgentChef is an unofficial community project, not an OpenAI product. It is a local, cross-platform setup kit for Codex on Windows, macOS, Linux, and WSL. It provides reviewable defaults and tools; it is not a hosted control plane and it does not silently connect private accounts, databases, production systems, or broad filesystem roots.
 
-The public landing page has six human-written README entry points. Complete operator documentation is maintained in English and Turkish. The shorter German, Spanish, Brazilian Portuguese, and French pages point to those canonical guides instead of presenting generated summaries as full translations.
+The public landing page has two human-written README entry points, English and Turkish. Complete operator documentation is maintained in English and Turkish. The shorter German, Spanish, Brazilian Portuguese, and French pages point to those canonical guides instead of presenting generated summaries as full translations.
 
 ## What A Public User Must Be Able To Prove
 
@@ -16,7 +16,7 @@ The public landing page has six human-written README entry points. Complete oper
 - Authenticated and high-risk connectors remain disabled until a user enables them deliberately.
 - The source tree contains no auth state, sessions, memories, private paths, generated archives, installers, or local caches.
 - The package allowlist contains only tracked, reviewed source files.
-- CI checks Windows installer behavior plus Ubuntu/Node 18 and macOS/Node 24 portability.
+- CI checks Windows installer behavior plus Ubuntu/Node 22 and macOS/Node 24 portability.
 - Release notes describe the current public release; complete historical detail remains in `CHANGELOG.md`.
 
 ## Repository Hygiene

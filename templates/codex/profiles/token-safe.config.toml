@@ -1,6 +1,6 @@
 # Token-safe Codex profile.
 # Copy or merge when a session needs lower context spend without disabling the
-# Codex Chef agent, skill, MCP, memory, hook, or app surfaces.
+# AgentChef agent, skill, MCP, memory, hook, or app surfaces.
 
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"

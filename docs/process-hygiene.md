@@ -10,7 +10,7 @@ windows do not use the tools. Serena is handled differently: each client gets
 a tiny bridge, while one loopback-only manager shares one backend per canonical
 project and starts it only after an allowlisted semantic tool call.
 
-Codex Chef keeps the capabilities and changes when they start:
+AgentChef keeps the capabilities and changes when they start:
 
 - The balanced base enables remote `openaiDeveloperDocs` plus local `context7`
   and `serena`.

@@ -26,7 +26,7 @@ https://developers.openai.com/codex/cli/reference
 | `--dangerously-bypass-approvals-and-sandbox` | Do not use for normal local development. Use only inside a hardened throwaway environment. |
 | `--dangerously-bypass-hook-trust` | Only for automation that already vets hook sources. |
 
-Codex Chef installs three optional MCP-cost profiles. They never change the balanced default unless you explicitly select one:
+AgentChef installs three optional MCP-cost profiles. They never change the balanced default unless you explicitly select one:
 
 ```bash
 codex --profile full
@@ -70,7 +70,7 @@ route you want.
 | `codex debug models` | Inspect the model catalog Codex sees. |
 | `codex execpolicy check` | Test rules against a command. |
 
-Codex Chef's ownership-aware process commands are:
+AgentChef's ownership-aware process commands are:
 
 ```bash
 npm run chef -- --processes --no-log

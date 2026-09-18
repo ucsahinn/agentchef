@@ -15,5 +15,5 @@ test("token audit does not reject its own secret classifier source file", () => 
   );
 
   assert.equal(result.status, 0, result.stdout + "\n" + result.stderr);
-  assert.match(result.stdout, /Codex Chef token surface audit/);
+  assert.match(result.stdout, /AgentChef token surface audit/);
 });

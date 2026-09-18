@@ -1,8 +1,31 @@
 # Upgrade Guide
 
-An upgrade should refresh Codex Chef's managed files without flattening the
+An upgrade should refresh AgentChef's managed files without flattening the
 choices you already made. The flow below previews the incoming change, creates
 a backup, applies only the managed surface, and verifies the installed runtime.
+
+## Upgrading From Codex Chef 0.5.74 To AgentChef 0.6.0
+
+0.6.0 is the first release under the AgentChef name. What changes for an
+existing 0.5.74 installation:
+
+- The repository moved to `https://github.com/ucsahinn/agentchef`; the old
+  URL redirects, but update your remote:
+  `git remote set-url origin https://github.com/ucsahinn/agentchef.git`.
+- Node.js 22.12 or newer is required (Node 18 and 20 are end-of-life).
+- The built-in Brain workflow is gone (see [Brain retirement](brain-retirement.md)).
+  The installer no longer manages `~/.agents/skills/codex-chef-brain`; the old
+  copy is left untouched and you may delete it yourself. `--continuity` and
+  `CODEX_CHEF_BRAIN_HOME` are removed.
+- On-disk identity is unchanged: the plugin id, ownership markers, backup
+  folder names, and schema strings still use the `codex-chef` prefix, so no
+  migration step is needed for 0.6.0. The identity rename is scheduled for
+  1.0.0 with a dedicated, preview-first migration command.
+- The German, Spanish, French, and Brazilian Portuguese README summaries were
+  removed; English and Turkish documentation remain at full parity.
+
+The regular update flow below applies; the preview will show the renamed
+`AGENTS.md` text and the removed Brain skill step.
 
 ## Safe Upgrade Flow
 
@@ -161,5 +184,5 @@ before trusting it. Upgrade and repair do not bypass Codex hook trust.
 5. Re-run `codex doctor --summary`.
 
 The restore apply path creates a rollback backup of current targets first. It
-restores only known Codex Chef-managed files and does not delete old backup
+restores only known AgentChef-managed files and does not delete old backup
 archives automatically.

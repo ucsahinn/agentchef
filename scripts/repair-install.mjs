@@ -30,7 +30,7 @@ installCliErrorBoundary({
   tool: "repair-install",
   argv: args,
   root,
-  prefix: "Codex Chef repair error"
+  prefix: "AgentChef repair error"
 });
 
 const options = {
@@ -109,7 +109,7 @@ if (
 function printHelp() {
   console.log(`Usage: node scripts/repair-install.mjs [options]
 
-Repair or preview repair for an existing Codex Chef global install.
+Repair or preview repair for an existing AgentChef global install.
 
 Options:
   --preview                       Preview repairs without writing (default)
@@ -119,7 +119,7 @@ Options:
   --adopt-seo-skill               Explicitly adopt and replace an existing foreign AGENTS_HOME/skills/seo target
   --adopt-evidence-research-skill Explicitly adopt and replace an existing foreign AGENTS_HOME/skills/evidence-research target
   --adopt-direct-skill <name>     Explicitly adopt another cataloged managed direct-skill target
-  --prune-managed-plugin-extras   Delete extra files only inside the two managed Codex Chef plugin mirrors
+  --prune-managed-plugin-extras   Delete extra files only inside the two managed AgentChef plugin mirrors
   --migrate-legacy-profile-pins   Remove model/review_model pins from known legacy profile files after backup
   --platform <windows|unix>       Select config template; defaults to current OS
   --codex-home <path>             Installed Codex home to inspect
@@ -536,7 +536,7 @@ function repairRulesFile(sourceRel, targetPath, id) {
       action.removedConflictingLocalRules = problemRules.length;
       notes.push(`Removed ${problemRules.length} conflicting local approval rule(s) from ${redact(targetPath)} during repair.`);
     }
-    const next = extra ? `${sourceText.trimEnd()}\n\n# Local approval rules preserved by Codex Chef repair.\n${extra}\n` : sourceText;
+    const next = extra ? `${sourceText.trimEnd()}\n\n# Local approval rules preserved by AgentChef repair.\n${extra}\n` : sourceText;
     prepareTransactionWrite(targetPath);
     fs.writeFileSync(targetPath, next, "utf8");
     trackTransactionWrite(targetPath);
@@ -673,7 +673,7 @@ function repairManagedFiles(contract) {
   for (const extra of extraPluginFiles) {
     const extraPath = extra.path;
     if (!options.pruneManagedPluginExtras) {
-      warnings.push(`Extra file in managed Codex Chef plugin mirror requires explicit prune flag: ${redact(extraPath)}`);
+      warnings.push(`Extra file in managed AgentChef plugin mirror requires explicit prune flag: ${redact(extraPath)}`);
       continue;
     }
     if (!options.apply) {
@@ -903,7 +903,7 @@ function repairMarketplace() {
       target: marketplacePath,
       backup,
       status: "applied",
-      reason: state.existingIndex >= 0 ? "stale Codex Chef plugin entry" : "missing Codex Chef plugin entry"
+      reason: state.existingIndex >= 0 ? "stale AgentChef plugin entry" : "missing AgentChef plugin entry"
     });
   } else {
     recordAction({
@@ -911,7 +911,7 @@ function repairMarketplace() {
       kind: state.existingIndex >= 0 ? "update-marketplace-entry" : "add-marketplace-entry",
       target: marketplacePath,
       status: "planned",
-      reason: state.existingIndex >= 0 ? "stale Codex Chef plugin entry" : "missing Codex Chef plugin entry"
+      reason: state.existingIndex >= 0 ? "stale AgentChef plugin entry" : "missing AgentChef plugin entry"
     });
   }
 
@@ -1119,7 +1119,7 @@ try {
       kind: "refresh-installed-plugin-cache",
       target: PLUGIN_ID,
       status: pluginRefresh.status === "refreshed" ? "applied" : "planned",
-      reason: `installed Codex Chef plugin cache is ${pluginRefresh.currentVersion || pluginRefresh.previousVersion || "unknown"}; expected ${pluginRefresh.expectedVersion}`
+      reason: `installed AgentChef plugin cache is ${pluginRefresh.currentVersion || pluginRefresh.previousVersion || "unknown"}; expected ${pluginRefresh.expectedVersion}`
     });
   } else if (pluginRefresh.warning) {
     notes.push(pluginRefresh.warning);
@@ -1202,7 +1202,7 @@ const report = {
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log("Codex Chef repair");
+  console.log("AgentChef repair");
   console.log(`Mode: ${report.mode}`);
   console.log(`Overall: ${report.status}`);
   console.log(`Codex home: ${report.codexHome}`);

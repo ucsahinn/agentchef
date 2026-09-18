@@ -1,11 +1,15 @@
-# Codex Chef
+# AgentChef
 
-Codex Chef is an unofficial, cross-platform Codex setup kit. It packages
-reviewed global Codex guidance, conservative config templates, specialist
-subagents, curated skills, MCP defaults, a local plugin, dry-run installers, and
-validation gates.
+AgentChef (formerly Codex Chef) is an unofficial, cross-platform setup kit for
+two terminal coding agents: OpenAI Codex CLI and Anthropic Claude Code. It
+packages reviewed global working agreements, conservative config templates,
+specialist subagents, curated skills, MCP defaults, a local plugin, dry-run
+installers, and validation gates. The current release installs the Codex CLI
+surface; the Claude Code install target is the next release line (see
+docs/decisions/006-agentchef-independent-dual-target-product.md and
+docs/release-notes.md for what actually ships).
 
-Canonical repository: https://github.com/ucsahinn/codex-chef
+Canonical repository: https://github.com/ucsahinn/agentchef
 
 Primary human entry points:
 
@@ -19,7 +23,7 @@ Primary human entry points:
 - [MCP catalog](docs/mcp-catalog.md)
 - [Knowledge base](kb/README.md)
 - [Workflow surface map](docs/workflow-surface-map.md)
-- [ECC compatibility](docs/ecc-compatibility.md)
+- [Harness compatibility](docs/harness-compatibility.md)
 - [Public readiness](docs/public-readiness.md)
 - [Release notes](docs/release-notes.md)
 
@@ -50,14 +54,15 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
 ## Core Capabilities
 
 - 21 specialist Codex subagent role definitions.
-- 9 bundled local plugin skills:
+- 10 bundled local plugin skills:
   - `adaptive-agent-routing`
-  - `codex-chef-brain`
   - `codex-chef-operator`
   - `context-budget-planner`
   - `evidence-research`
   - `external-review-workflow`
   - `fetch`
+  - `gptpro`
+  - `gptpro-handoff`
   - `offline-diagram-triplet`
   - `seo`
 - 15 reviewed installable global skills in `catalog/skills.json` and

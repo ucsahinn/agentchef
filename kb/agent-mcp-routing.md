@@ -1,6 +1,6 @@
 # Agent And MCP Routing
 
-Codex Chef installs routing guidance, agent role files, curated skills, and MCP
+AgentChef installs routing guidance, agent role files, curated skills, and MCP
 defaults. They are different surfaces and should not be collapsed into one
 generic automation bucket.
 
@@ -30,7 +30,7 @@ delegation is auditable.
 
 ## Default MCP Boundary
 
-Codex Chef keeps read-heavy support surfaces useful by default: official docs,
+AgentChef keeps read-heavy support surfaces useful by default: official docs,
 Context7, reasoning, browser evidence, semantic code navigation, non-secret
 memory reads, and local codebase graph reads. Interaction, symbol edits, graph
 indexing, account access, database access, production telemetry, deployment

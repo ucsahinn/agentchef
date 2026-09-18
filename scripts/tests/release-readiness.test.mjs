@@ -64,7 +64,7 @@ function createFixture({ initializeGit = true } = {}) {
     fs.mkdirSync(templateDir, { recursive: true });
     fs.mkdirSync(hooksDir, { recursive: true });
     runGit(fixture, ["init", "--quiet", `--template=${templateDir}`]);
-    runGit(fixture, ["config", "user.name", "Codex Chef Fixture"]);
+    runGit(fixture, ["config", "user.name", "AgentChef Fixture"]);
     runGit(fixture, ["config", "user.email", "fixture@example.invalid"]);
     runGit(fixture, ["config", "core.excludesfile", ""]);
     runGit(fixture, ["config", "core.hooksPath", hooksDir]);

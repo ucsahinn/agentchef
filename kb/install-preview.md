@@ -1,6 +1,6 @@
 # Install Preview Safety
 
-Use this article when you want to inspect Codex Chef before it writes to
+Use this article when you want to inspect AgentChef before it writes to
 `~/.codex`, `~/.agents`, or optional Git guard targets.
 
 ## Recommended Flow

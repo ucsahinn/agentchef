@@ -1,7 +1,7 @@
 # Public Release Hijyeni
 
 Public commit, tag, GitHub Release veya repo metadata güncellemesi hazırlarken
-bu kontrol listesini kullan. Codex Chef public-source-first ilerler ve npm
+bu kontrol listesini kullan. AgentChef public-source-first ilerler ve npm
 publish yolunu `private: true` ile kapali tutar.
 
 ## Release Öncesi Gate

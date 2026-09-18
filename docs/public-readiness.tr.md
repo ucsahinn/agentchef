@@ -1,12 +1,12 @@
 # Public Hazırlık
 
-Public-ready olmak yalnızca “dosyalar GitHub’da” demek değildir. Repoyu ilk kez açan biri Codex Chef’in neyi değiştirdiğini, neye bilerek dokunmadığını ve bu iki iddiayı pazarlama cümlelerine güvenmeden nasıl doğrulayacağını anlayabilmeli.
+Public-ready olmak yalnızca “dosyalar GitHub’da” demek değildir. Repoyu ilk kez açan biri AgentChef’in neyi değiştirdiğini, neye bilerek dokunmadığını ve bu iki iddiayı pazarlama cümlelerine güvenmeden nasıl doğrulayacağını anlayabilmeli.
 
 ## Dürüst Konumlandırma
 
-Codex Chef resmi bir OpenAI ürünü değil, topluluk tarafından geliştirilen bir projedir. Windows, macOS, Linux ve WSL üzerinde Codex için çalışan lokal ve platform bağımsız bir kurulum kitidir. İncelenebilir varsayılanlar ve araçlar sunar; hosted bir kontrol paneli değildir, private hesapları, database’leri, production sistemlerini veya geniş filesystem köklerini sessizce bağlamaz.
+AgentChef resmi bir OpenAI ürünü değil, topluluk tarafından geliştirilen bir projedir. Windows, macOS, Linux ve WSL üzerinde Codex için çalışan lokal ve platform bağımsız bir kurulum kitidir. İncelenebilir varsayılanlar ve araçlar sunar; hosted bir kontrol paneli değildir, private hesapları, database’leri, production sistemlerini veya geniş filesystem köklerini sessizce bağlamaz.
 
-Public girişte insan tarafından yazılmış altı README bulunur. Ayrıntılı operatör dokümantasyonu İngilizce ve Türkçe tutulur. Daha kısa Almanca, İspanyolca, Brezilya Portekizcesi ve Fransızca sayfalar otomatik özetleri tam çeviri gibi göstermek yerine okuyucuyu kanonik rehberlere yönlendirir.
+Public girişte insan tarafından yazılmış iki README bulunur: İngilizce ve Türkçe. Ayrıntılı operatör dokümantasyonu İngilizce ve Türkçe tutulur. Daha kısa Almanca, İspanyolca, Brezilya Portekizcesi ve Fransızca sayfalar otomatik özetleri tam çeviri gibi göstermek yerine okuyucuyu kanonik rehberlere yönlendirir.
 
 ## Public Kullanıcının Kanıtlayabilmesi Gerekenler
 
@@ -16,7 +16,7 @@ Public girişte insan tarafından yazılmış altı README bulunur. Ayrıntılı
 - Kimlik doğrulamalı ve yüksek riskli connector’lar kullanıcı bilinçli açana kadar kapalı kalır.
 - Source tree içinde auth state, session, memory, private path, generated archive, installer veya lokal cache bulunmaz.
 - Package allowlist yalnızca tracked ve incelenmiş source dosyalarını içerir.
-- CI; Windows installer davranışını, Ubuntu/Node 18 ve macOS/Node 24 taşınabilirliğini kontrol eder.
+- CI; Windows installer davranışını, Ubuntu/Node 22 ve macOS/Node 24 taşınabilirliğini kontrol eder.
 - Release notes güncel public sürümü anlatır; eski teknik geçmiş `CHANGELOG.md` içinde kalır.
 
 ## Repo Hijyeni

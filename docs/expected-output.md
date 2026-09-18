@@ -9,18 +9,18 @@ ASCII-only terminals.
 Discovery output stays no-write and human-readable:
 
 ```text
-Codex Chef install profiles
-Package: codex-chef@0.5.74
+AgentChef install profiles
+Package: agentchef@0.6.0
 Platform: windows
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 24 | 1 | InstallSkills
-default | 23 | 0 | none
+all | 23 | 1 | InstallSkills
+default | 22 | 0 | none
 ```
 
 ```text
-Codex Chef install plan
+AgentChef install plan
 Platform: windows
 Operations: ...
 
@@ -51,7 +51,7 @@ node scripts/plan-install.mjs --all --json --redact-paths
 ## Routing Board
 
 ```text
-Codex Chef enterprise routing board
+AgentChef enterprise routing board
 Profiles: 18
 Policy: task-shape routing names matching specialists, selects matching skills when applicable, and may spawn bounded local subagents when the current runtime permits delegation; risky actions remain approval-gated.
 
@@ -73,7 +73,7 @@ npm run chef -- --routing --profile starter-health --plain --no-log
 ## PowerShell Non-Interactive Dry Run
 
 ```text
-[*] Codex Chef installer
+[*] AgentChef installer
   - Codex home: ...
   - Agents home: ...
   - Mode: preserve existing files; merge missing config blocks
@@ -99,7 +99,7 @@ What if: Performing the operation ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-brain, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -107,7 +107,7 @@ What if: Performing the operation ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 
 [*] Next steps
-  - completed: Codex Chef dry run
+  - completed: AgentChef dry run
 ```
 
 ## PowerShell Interactive Dry Run
@@ -119,17 +119,17 @@ What if: Performing the operation ...
 Codex home [...]:
 Agents home [...]:
 Install or reconcile the 15 reviewed global Codex skills now? [Y/n]:
-Replace existing managed Codex Chef files after backup instead of preserving/merging? [y/N]:
+Replace existing managed AgentChef files after backup instead of preserving/merging? [y/N]:
 Install optional global Git guards for this Windows user? [y/N]:
 
-[chef] Codex Chef installer
+[chef] AgentChef installer
   - Codex home: ...
   - Agents home: ...
   - Mode: preserve existing files; merge missing config blocks
   - Skills: install reviewed commit-pinned entries by verified native copy
   - Git guards: disabled by default
   - Dry run: no files, Git settings, or skills will be changed
-  - Existing config policy: backup + merge missing Codex Chef blocks unless Force is enabled
+  - Existing config policy: backup + merge missing AgentChef blocks unless Force is enabled
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 Continue with this plan? [Y/n]:
 ```
@@ -137,7 +137,7 @@ Continue with this plan? [Y/n]:
 ## PowerShell Success
 
 ```text
-[chef] Codex Chef installer
+[chef] AgentChef installer
   - Codex home: ...
   - Agents home: ...
   - Mode: preserve existing files; merge missing config blocks
@@ -155,7 +155,7 @@ Continue with this plan? [Y/n]:
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-brain, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -164,7 +164,7 @@ Continue with this plan? [Y/n]:
 
 [chef] Next steps
   - 28 existing managed target(s) were preserved; use -Force only for a deliberate backup-backed replacement
-  [ok] completed: Codex Chef install
+  [ok] completed: AgentChef install
   - Restart Codex, then run:
     codex doctor --summary
     npm run codex:routing
@@ -180,7 +180,7 @@ existing managed files are skipped unless `-Force` is used.
 ## Repair Preview
 
 ```text
-Codex Chef repair
+AgentChef repair
 Mode: plan
 Overall: attention
 Codex home: ...
@@ -203,15 +203,15 @@ current managed-file inventory vary by machine and release.
 ## Status Board
 
 ```text
-Codex Chef status
+AgentChef status
 Overall: attention
 Repo Git: attention - git status --short reports changed lines.
 MCP: 16/16 cataloged configured, 0 missing, <user-added> user-added; 3 catalog defaults enabled/13 disabled; live not probed
 Codex CLI: ok (strict config ok, login ok, MCP ok)
 Installed runtime: attention/current (...)
-Skills: <installed> total across global roots (<managed> Codex Chef managed, <missing> missing, <other> other/user-installed)
+Skills: <installed> total across global roots (<managed> AgentChef managed, <missing> missing, <other> other/user-installed)
 Codex doctor checks: attention (...)
-Next action: Review attention items; they do not necessarily mean Codex Chef install is broken.
+Next action: Review attention items; they do not necessarily mean AgentChef install is broken.
 Details: npm run chef -- --status --details
 ```
 
@@ -225,7 +225,7 @@ them. Tracked or staged edits remain `attention`.
 ## Bash Dry Run
 
 ```text
-[*] Codex Chef installer
+[*] AgentChef installer
   - Codex home: ...
   - Agents home: ...
   - Mode: preserve existing files; merge missing config blocks
@@ -244,7 +244,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-brain, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -252,13 +252,13 @@ Would install file from ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 
 [*] Next steps
-  - completed: Codex Chef dry run
+  - completed: AgentChef dry run
 ```
 
 ## Bash Success
 
 ```text
-[*] Codex Chef installer
+[*] AgentChef installer
   - Codex home: ...
   - Agents home: ...
   - Mode: preserve existing files; merge missing config blocks
@@ -276,7 +276,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-brain, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -285,7 +285,7 @@ Would install file from ...
 
 [*] Next steps
   - 28 existing managed target(s) were preserved; use --force only for a deliberate backup-backed replacement
-  - completed: Codex Chef install
+  - completed: AgentChef install
   - Restart Codex, then run:
     codex doctor --summary
     npm run codex:routing

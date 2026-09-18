@@ -108,7 +108,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 .\scripts\install.ps1 -Repair
 ```
 
-Repair mode backs up and reconciles Codex Chef-managed drift while preserving
+Repair mode backs up and reconciles AgentChef-managed drift while preserving
 unrelated marketplace plugins and user skills. Use force replacement only after
 reviewing the repair plan and deciding that a full managed-target replacement
 is intentional.

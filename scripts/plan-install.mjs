@@ -210,7 +210,7 @@ function createPlan(options) {
 }
 
 function printPlan(plan) {
-  console.log("Codex Chef install plan\n");
+  console.log("AgentChef install plan\n");
   console.log(`Package: ${plan.source.packageName}@${plan.source.packageVersion}`);
   console.log(`Platform: ${plan.target.platform}`);
   console.log(`Codex home: ${plan.target.codexHome}`);
@@ -272,7 +272,7 @@ function countBy(items, key) {
 function printPlanSummary(plan) {
   const highRisk = plan.operations.filter((operation) => operation.risk === "high").length;
   const backupBacked = plan.operations.filter((operation) => operation.backup).length;
-  console.log("Codex Chef install plan summary\n");
+  console.log("AgentChef install plan summary\n");
   console.log(`Package: ${plan.source.packageName}@${plan.source.packageVersion}`);
   console.log(`Platform: ${plan.target.platform}`);
   console.log(`Codex home: ${plan.target.codexHome}`);
@@ -287,7 +287,7 @@ function printPlanSummary(plan) {
 }
 
 function printProfiles(discovery) {
-  console.log("Codex Chef install profiles\n");
+  console.log("AgentChef install profiles\n");
   console.log(`Package: ${discovery.source.packageName}@${discovery.source.packageVersion}`);
   console.log(`Platform: ${discovery.target.platform}`);
   console.log("");
@@ -299,7 +299,7 @@ function printProfiles(discovery) {
 }
 
 function printOperations(discovery) {
-  console.log("Codex Chef install operations\n");
+  console.log("AgentChef install operations\n");
   console.log(`Package: ${discovery.source.packageName}@${discovery.source.packageVersion}`);
   console.log(`Platform: ${discovery.target.platform}`);
   console.log("");

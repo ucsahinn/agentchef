@@ -216,7 +216,7 @@ if (!fs.existsSync(catalogPath)) {
     }
     const roleAssignments = new Map();
     const rolesById = new Map();
-    for (const role of catalog.agentSpaceRoles || []) {
+    for (const role of catalog.coordinatorDomains || []) {
       if (!/^(backend|data|devops|frontend|leadership|product|qa|design|security|marketing|support)$/.test(role.id || "")) {
         fail(`Unsupported AgentSpace role id: ${role.id}`);
       }

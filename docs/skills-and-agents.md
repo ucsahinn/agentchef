@@ -22,7 +22,7 @@ skill is installed automatically.
 
 ## Plugins
 
-The local plugin packages Codex Chef's own workflows so they can be installed
+The local plugin packages AgentChef's own workflows so they can be installed
 and updated together:
 
 - [Plugin manifest](../plugins/codex-chef-workflows/.codex-plugin/plugin.json)

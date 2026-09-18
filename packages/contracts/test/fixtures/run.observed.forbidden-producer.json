@@ -1,9 +1,0 @@
-{
-  "schemaVersion": "1.0",
-  "eventId": "evt_forbidden_producer_01JTEST",
-  "eventType": "run.observed",
-  "occurredAt": "2026-08-14T00:00:00.000Z",
-  "producer": { "product": "chef", "version": "0.5.72" },
-  "correlation": { "suiteId": "suite_01JTEST", "runId": "run_01JTEST" },
-  "payload": { "runState": "running", "mode": "read-only", "worktreeState": "ready" }
-}

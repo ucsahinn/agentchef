@@ -16,14 +16,14 @@ söyleyebilirsin.
 - [Makine tarafından okunan skill kataloğunu aç](../catalog/skills.json)
 - [Resmî Codex skills rehberini oku](https://developers.openai.com/codex/skills)
 
-Codex Chef'e ait hazır akışlar
+AgentChef'e ait hazır akışlar
 [`plugins/codex-chef-workflows/skills`](../plugins/codex-chef-workflows/skills)
 altında durur. Public katalog isteğe bağlı seçenekleri de gösterir; katalogda
 yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
 ## Plugins
 
-Yerel plugin, Codex Chef'e ait akışları birlikte kurup güncelleyebilmek için
+Yerel plugin, AgentChef'e ait akışları birlikte kurup güncelleyebilmek için
 paketler:
 
 - [Plugin manifesti](../plugins/codex-chef-workflows/.codex-plugin/plugin.json)

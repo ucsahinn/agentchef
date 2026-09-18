@@ -15,7 +15,7 @@ test("all 21 specialists expose AgentSpace ownership, knowledge, and safe worker
   assert.equal(corpus.agents.length, 21);
 
   const corpusNames = new Set(corpus.agents.map((agent) => agent.name));
-  const owners = new Map(agents.agentSpaceRoles.flatMap((role) => role.specialists.map((name) => [name, role.id])));
+  const owners = new Map(agents.coordinatorDomains.flatMap((role) => role.specialists.map((name) => [name, role.id])));
   assert.equal(owners.size, 21);
   assert.deepEqual(agents.workerApprovalProfile, {
     approvalPolicy: "on-request",

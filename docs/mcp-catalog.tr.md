@@ -6,7 +6,7 @@ MCP'ler Codex'e ek araç veya canlı bağlam verir: güncel dokümantasyon, brow
 kanıtı, semantic code navigation, özel hesap verileri ya da veritabanı erişimi
 gibi. Bu yüzden çok kullanışlılar ama her birinin sınırı açık olmalı.
 
-Codex Chef toplam 16 MCP tanıyor. Dengeli starter iki sunucuyu açar: uzak
+AgentChef toplam 16 MCP tanıyor. Dengeli starter iki sunucuyu açar: uzak
 `openaiDeveloperDocs` ile lokal lazy `serena` bridge. Context7 dahil altı ek lokal stdio
 yardımcısı tanımlı ama kapalı kalır; yetenek kaybolmaz, her eşzamanlı oturumda
 Node/Python ağaçları gereksiz yere başlamaz. Hesap, veritabanı veya geniş dosya

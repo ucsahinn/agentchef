@@ -11,7 +11,7 @@ credentials, sessions, or protected assets.
 
 ## Invocation
 
-- Use `$fetch <url>` when Codex Chef installed the managed direct skill.
+- Use `$fetch <url>` when AgentChef installed the managed direct skill.
 - Use `$codex-chef-workflows:fetch <url>` when invoking the installed plugin
   package directly.
 - Keep implicit invocation disabled on both surfaces. A normal request that

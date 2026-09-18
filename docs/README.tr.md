@@ -1,10 +1,10 @@
-# Codex Chef Dokümantasyonu
+# AgentChef Dokümantasyonu
 
 [English](README.md) | [Türkçe](README.tr.md)
 
 README hızlıca yönünü bulman için var. Kurulum, onarım, inceleme veya yayın sırasında tam olarak hangi sınırın geçerli olduğunu arıyorsan doğru yer burası.
 
-Codex Chef’in ayrıntılı operatör dokümantasyonu İngilizce ve Türkçe tutulur. Almanca, İspanyolca, Brezilya Portekizcesi ve Fransızca README sayfaları kısa giriş noktaları olarak korunur; otomatik özetleri tam çeviri gibi göstermek yerine okuyucuyu buraya yönlendirir.
+AgentChef’in operatör dokümantasyonu İngilizce ve Türkçe olarak tam paritede tutulur; kısmi çeviri veya yalnızca özet niteliğinde giriş sayfası yoktur.
 
 ## Buradan Başla
 
@@ -12,7 +12,6 @@ Codex Chef’in ayrıntılı operatör dokümantasyonu İngilizce ve Türkçe tu
 | --- | --- |
 | Güvenli ön izleme veya kurulum | [Kurulum rehberi](install.tr.md) |
 | Günlük çalışma akışını anlamak | [Kurulum nasıl kullanılır?](how-to.tr.md) |
-| Proje notlarını lokal yakalamak veya geri çağırmak | [Markdown Brain workflow'u](brain/README.tr.md) |
 | Terminal çıktısını karşılaştırmak | [Beklenen çıktı](expected-output.tr.md) |
 | Hatalı bir komutu teşhis etmek | [Sorun giderme](troubleshooting.tr.md) |
 | Eşzamanlı Codex/MCP süreçlerini sınırlı tutmak | [Çoklu oturum süreç hijyeni](process-hygiene.tr.md) |
@@ -41,7 +40,18 @@ Codex Chef’in ayrıntılı operatör dokümantasyonu İngilizce ve Türkçe tu
 - [GitHub repo ayarları](github-settings.tr.md)
 - [Advisory kaynakları](advisory-sources.tr.md)
 - [Araştırma notları](research-notes.tr.md)
-- [ECC uyumluluğu](ecc-compatibility.tr.md)
+- [Harness uyumluluğu](harness-compatibility.tr.md)
+- [Taşınabilirlik ve runtime sözleşmesi](portability-contract.tr.md)
+- [Brain emekliliği](brain-retirement.tr.md)
 - [Güncel sürüm notları](release-notes.tr.md)
+
+## Karar Kayıtları
+
+- [ADR-001: uyarlanabilir yönlendirme ve kullanıcıya ait config katmanı](decisions/001-adaptive-routing-and-user-owned-config-overlay.md)
+- [ADR-002: Brain içeriği ve Windows ACL durumu (yerini ADR-006 aldı)](decisions/002-brain-content-and-windows-acl-status.md)
+- [ADR-003: yetenek koruyan çoklu oturum süreç hijyeni](decisions/003-capability-preserving-multi-session-process-hygiene.md)
+- [ADR-004: birleşik Workspace OS bootstrap (yerini ADR-006 aldı)](decisions/004-workspace-os-unified-bootstrap.md)
+- [ADR-005: tek dağıtılabilir workspace olarak Kitchen (yerini ADR-006 aldı)](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
+- [ADR-006: bağımsız, çift hedefli ürün olarak devam](decisions/006-agentchef-independent-dual-target-product.md)
 
 Kısa ve belirti odaklı cevaplar için [bilgi bankasına](../kb/README.tr.md) geçebilirsin.

@@ -5,7 +5,7 @@ or the connector stays unavailable.
 
 ## Read The Boundary First
 
-Codex Chef defaults are conservative. Documentation, reasoning, browser
+AgentChef defaults are conservative. Documentation, reasoning, browser
 evidence, semantic code navigation, memory reads, and local graph reads are
 narrowed for routine work. Account, database, production, broad filesystem, and
 mutating connector tools stay disabled or prompt-gated.

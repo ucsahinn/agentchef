@@ -46,7 +46,7 @@ Bu komut şunları çalıştırır:
   stale `dateChecked` kontrolleri ile agent basina expertise signal coverage.
 - `scripts/validate-mcp-config.mjs`: Windows ve Unix Codex template'leri icin
   MCP catalog/config drift kontrolleri.
-- `scripts/validate-chef-cli.mjs`: gruplu Codex Chef komuta merkezi sözleşmesi,
+- `scripts/validate-chef-cli.mjs`: gruplu AgentChef komuta merkezi sözleşmesi,
   doğru yazma/hesap rehberi rozetleri, duruma göre kurulum ön izlemesi, curated
   skill hazır/eksik/geçersiz fixture'ları, kurulu MCP config envanteri, log
   konumu, README kullanım örnekleri ve public-safe GitHub auth sınırı rehberi.
@@ -68,7 +68,7 @@ Bu komut şunları çalıştırır:
 - `scripts/validate-release-readiness.mjs`: release notes, GitHub settings docs,
   workflow hardening, Gitleaks gate dokumantasyonu ve source artifact hygiene.
 - `scripts/verify-install-runtime.mjs`: opsiyonel read-only post-install
-  runtime kontrolü. Kurulu Codex Chef hedeflerini aktif Codex CLI `CODEX_HOME`
+  runtime kontrolü. Kurulu AgentChef hedeflerini aktif Codex CLI `CODEX_HOME`
   ile karşılaştırır.
 
 Ek release kontrolleri:
@@ -170,7 +170,7 @@ Bash dry run:
 ./scripts/install.sh --all --dry-run
 ```
 
-Codex Chef CLI smoke:
+AgentChef CLI smoke:
 
 ```bash
 npm run validate:chef-cli

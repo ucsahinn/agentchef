@@ -13,7 +13,7 @@ installCliErrorBoundary({
   tool: "token-audit",
   argv: rawArgs,
   root,
-  prefix: "Codex Chef token audit error"
+  prefix: "AgentChef token audit error"
 });
 let asJson = false;
 let allowFilesystemFallback = false;
@@ -345,7 +345,7 @@ const report = {
 if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log("Codex Chef token surface audit");
+  console.log("AgentChef token surface audit");
   console.log(report.note);
   console.log("");
   console.log(`Total: ${report.totals.physicalFiles} physical text files, ${report.totals.analysisSurfaces} analysis surfaces, ~${report.totals.estimatedTokens.toLocaleString("en-US")} tokens`);

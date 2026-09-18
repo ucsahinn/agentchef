@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ucsahinn/codex-chef/schemas/external-review-manifest.schema.json",
-  "title": "Codex Chef External Review Manifest",
+  "$id": "https://github.com/ucsahinn/agentchef/schemas/external-review-manifest.schema.json",
+  "title": "AgentChef External Review Manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "reviewId", "generatedAt", "targetName", "snapshot", "policy", "files", "excluded", "parts"],
