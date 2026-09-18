@@ -10,7 +10,7 @@ const root = path.resolve(testDir, "..", "..");
 const hygieneModuleUrl = pathToFileURL(path.join(
   root,
   "plugins",
-  "codex-chef-workflows",
+  "agentchef-workflows",
   "scripts",
   "codex-process-hygiene.mjs"
 )).href;
@@ -77,7 +77,7 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
 });
 
 test("plugin registers only the reviewed SessionEnd process-hygiene hook", () => {
-  const pluginRoot = path.join(root, "plugins", "codex-chef-workflows");
+  const pluginRoot = path.join(root, "plugins", "agentchef-workflows");
   const manifest = JSON.parse(fs.readFileSync(
     path.join(pluginRoot, ".codex-plugin", "plugin.json"),
     "utf8"
@@ -106,7 +106,7 @@ test("SessionEnd hook fails closed without turning unavailable process metadata 
       path.join(
         root,
         "plugins",
-        "codex-chef-workflows",
+        "agentchef-workflows",
         "scripts",
         "codex-process-hygiene.mjs"
       ),
@@ -134,7 +134,7 @@ test("SessionEnd worker rejects forgeable serialized cleanup snapshots", () => {
   const result = spawnSync(
     process.execPath,
     [
-      path.join(root, "plugins", "codex-chef-workflows", "scripts", "codex-process-hygiene.mjs"),
+      path.join(root, "plugins", "agentchef-workflows", "scripts", "codex-process-hygiene.mjs"),
       "--owned-sweep",
       Buffer.from("{}", "utf8").toString("base64url"),
       "--apply",

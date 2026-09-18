@@ -234,6 +234,16 @@ Agents ve opsiyonel Git-guard alanlarinda tutar; `.claude`, `.cursor`,
 `.opencode`, `.zed` ve `.vscode` gibi komsu harness home path'leri install
 yuzeyine sessizce giremez.
 
+Diskteki kimlik 1.0.0'dan itibaren `agentchef` yazımıdır (işaretçiler,
+günlük, kilit, yedek önekleri, şema stringleri, plugin klasörü, marketplace
+adı, plugin id'si, hook banner'ı). Her okuyucu 1.0.0 öncesi `codex-chef`
+yazımını da kabul eder; böylece drift tespiti, onarım, durum ve kaldırma göç
+edilmemiş bir home'u yabancı değil yönetilen sayar. Dönüşüm yalnızca açık
+`--migrate-identity` komutuyla olur; önce ön izler, diğer her yazma gibi
+günlüklenir ve yedeklidir. Göç bir Git hook'unu yalnızca baytları gönderilen
+bir şablonla eşleşiyorsa yeniden yazar; diğer her hook açık sahiplenme
+gerektiren bir çakışma olarak kalır.
+
 Her manifest işlemi hedefini adlandırır (`codex`, `claude` veya `shared`).
 Codex hedefi varsayılandır; Claude hedefi yalnızca açık bir `--target` ya da
 etkileşimli onayla seçilir. Claude tarafındaki işlemler yalnızca `CLAUDE_HOME`
@@ -246,7 +256,7 @@ onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdile
 dokunur. Claude plugin önbelleği `claude plugin` CLI'sına aittir ve asla elle
 yazılmaz. Süreç hijyeni hook'u bu sürümde Claude Code'a yayınlanmaz.
 
-Installer'lar yalniz `codex-chef-workflows` marketplace kaydini upsert eder.
+Installer'lar yalniz `agentchef-workflows` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.
 
@@ -261,7 +271,7 @@ skill dizinleri ve extra dosyalar korunur. Fetch
 açıklamaları açıkça eşleştiğinde implicit seçilebilir.
 
 Marketplace kaydi, current Codex schema'nin istedigi marketplace root'u icinde
-kalan `AGENTS_HOME/plugins/sources/codex-chef-workflows` yonetilen aynasini
+kalan `AGENTS_HOME/plugins/sources/agentchef-workflows` yonetilen aynasini
 kullanir. Bu kayıt plugin'i keşfedilebilir yapar; kurmaz veya etkinleştirmez.
 Namespace'li plugin kullanımı explicit plugin kurulumu ve yeni oturum gerektirir.
 Marketplace JSON, platform launcher'ı, `serena-pool.mjs`, kopyalanan/üretilen
@@ -344,7 +354,7 @@ dosyalarini restore eder. Sonraki bir write fail olursa daha once yazilan
 target'lar fresh rollback backup'tan geri alinir. Commit-pinned skill
 archive'lari catalog'daki tek bir skill ID ile sinirlanir ve handled failure
 sirasinda exact-tree semantigini koruyacak sekilde o skill tree'sini degistirir.
-Valid `codex-chef.backup.v1` manifest archive path, size ve SHA-256 setini
+Valid `agentchef.backup.v1` manifest archive path, size ve SHA-256 setini
 birebir dogrulamalidir; legacy, missing, extra, degistirilmis veya unsupported
 control-plane dosyalari fail-closed olur. Inventory ancak bu kontroller ve
 target allowlist gectikten sonra bir backup'i restorable diye etiketler. Backup
@@ -414,7 +424,7 @@ sahiplenmelidir; Bash installer aynı adların kebab-case biçimini kullanır. B
 sahiplenme diğerini kapsamaz.
 
 Apply, ilk Git-guard değişikliğinden önce iki dosya ile iki anahtarın önceki
-durumunu `codex-chef.global-git-guards-receipt@1` tipli makbuzuna aynen yazar.
+durumunu `agentchef.global-git-guards-receipt@1` tipli makbuzuna aynen yazar.
 Makbuz; bulunmayan dosya ve anahtarları ayırt eder, dosya byte'larını ve modlarını
 korur, birden çok anahtar değerini sırasıyla saklar ve apply sonrası beklenen
 dosya hash'lerini, Unix modlarını ve anahtar değerlerini bağlar. İşlenen bir hata
@@ -423,7 +433,7 @@ boyutu, yolları ve bağlantı güvenliğini doğrular. Mevcut durum apply sonra
 bağla eşleşmiyorsa hiçbir şey yazmaz; yalnızca eşleşiyorsa her yüzeyi aynen
 geri yükler veya kaldırır. Installer makbuz yoluyla tam `manage-global-git-guards.mjs
 restore` komutunu yazdırır. Bu makbuz bilinçli olarak
-`codex-chef.backup.v1` arşivlerinden ayrıdır.
+`agentchef.backup.v1` arşivlerinden ayrıdır.
 
 Kurulursa:
 

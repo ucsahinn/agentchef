@@ -88,17 +88,17 @@ test("approval policy retains narrow read-only Git and npm inspections", async (
 });
 
 test("approval validator executes the full decision matrix", (t) => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-approval-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-approval-"));
   const logPath = path.join(tempDir, "execpolicy.log");
   const fakeCodexPath = path.join(tempDir, process.platform === "win32" ? "codex.cmd" : "codex");
   const fakeCodex = process.platform === "win32"
-    ? '@echo off\r\necho %*\u003e\u003e"%CODEX_CHEF_EXEC_LOG%"\r\necho {"decision":"allow"}\r\n'
-    : '#!/bin/sh\nprintf "%s\\n" "$*" \u003e\u003e "$CODEX_CHEF_EXEC_LOG"\nprintf \'{"decision":"allow"}\\n\'\n';
+    ? '@echo off\r\necho %*\u003e\u003e"%AGENTCHEF_EXEC_LOG%"\r\necho {"decision":"allow"}\r\n'
+    : '#!/bin/sh\nprintf "%s\\n" "$*" \u003e\u003e "$AGENTCHEF_EXEC_LOG"\nprintf \'{"decision":"allow"}\\n\'\n';
   fs.writeFileSync(fakeCodexPath, fakeCodex, "utf8");
   if (process.platform !== "win32") fs.chmodSync(fakeCodexPath, 0o755);
   t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
 
-  const env = { ...process.env, CODEX_CHEF_EXEC_LOG: logPath };
+  const env = { ...process.env, AGENTCHEF_EXEC_LOG: logPath };
   const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") || "PATH";
   env[pathKey] = `${tempDir}${path.delimiter}${env[pathKey] || ""}`;
 

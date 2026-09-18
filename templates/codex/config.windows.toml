@@ -1,4 +1,4 @@
-# Windows-first Codex Chef.
+# Windows-first AgentChef.
 # Copy to ~/.codex/config.toml with scripts/install.ps1.
 
 model = "gpt-5.5"
@@ -355,7 +355,7 @@ approval_mode = "approve"
 [mcp_servers.codebase-memory]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "set npm_config_cache=%LOCALAPPDATA%\\codex-chef\\npm-cache\\codebase-memory && npx.cmd -y codebase-memory-mcp@0.8.1"]
+args = ["/d", "/s", "/c", "set npm_config_cache=%LOCALAPPDATA%\\agentchef\\npm-cache\\codebase-memory && npx.cmd -y codebase-memory-mcp@0.8.1"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
 enabled_tools = ["list_projects", "index_status", "search_graph", "trace_path", "detect_changes", "query_graph", "get_graph_schema", "get_code_snippet", "get_architecture", "search_code"]

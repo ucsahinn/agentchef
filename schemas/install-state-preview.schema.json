@@ -16,7 +16,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "codex-chef.install-state-preview.v1"
+      "const": "agentchef.install-state-preview.v1"
     },
     "generatedAt": {
       "type": "string",
@@ -47,7 +47,7 @@
           "const": "manifests/install-plan.json"
         },
         "manifestVersion": {
-          "const": "codex-chef.install-plan.v2"
+          "const": "agentchef.install-plan.v2"
         }
       }
     },
@@ -249,7 +249,7 @@
             ]
           },
           "stateBackup": {
-            "const": "codex-chef.global-git-guards-receipt@1"
+            "const": "agentchef.global-git-guards-receipt@1"
           },
           "force": {
             "type": "boolean"
@@ -282,7 +282,7 @@
             "minLength": 1
           },
           "pluginId": {
-            "const": "codex-chef-workflows@codex-chef"
+            "const": "agentchef-workflows@agentchef"
           },
           "mode": {
             "const": "+x"

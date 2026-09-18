@@ -230,7 +230,7 @@ function inspectSkills() {
 // files, permission fragment, and rendered working agreement must all be
 // present and current before an install can be trusted.
 function inspectClaudeTemplates(failures) {
-  const pluginRoot = "plugins/codex-chef-workflows";
+  const pluginRoot = "plugins/agentchef-workflows";
   const claudeManifestPath = `${pluginRoot}/.claude-plugin/plugin.json`;
   const codexManifestPath = `${pluginRoot}/.codex-plugin/plugin.json`;
   for (const required of [claudeManifestPath, "templates/claude/settings.fragment.json", "templates/claude/rules/agentchef-working-agreement.md", "templates/shared/working-agreement.md"]) {
@@ -325,7 +325,7 @@ let report;
 try {
   const packageJson = readJson("package.json");
   report = {
-    schemaVersion: "codex-chef.doctor.v1",
+    schemaVersion: "agentchef.doctor.v1",
     generatedAt: new Date().toISOString(),
     repo: {
       root: redact(root),
@@ -353,7 +353,7 @@ try {
 } catch (error) {
   failures.push(error.message);
   report = {
-    schemaVersion: "codex-chef.doctor.v1",
+    schemaVersion: "agentchef.doctor.v1",
     generatedAt: new Date().toISOString(),
     repo: { root: redact(root) },
     warnings,

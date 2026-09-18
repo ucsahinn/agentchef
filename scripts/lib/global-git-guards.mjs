@@ -3,7 +3,15 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const RECEIPT_SCHEMA = "codex-chef.global-git-guards-receipt";
+export const RECEIPT_SCHEMA = "agentchef.global-git-guards-receipt";
+export const LEGACY_RECEIPT_SCHEMA = "codex-chef.global-git-guards-receipt";
+// Managed file bytes shipped by earlier releases (0.5.74 and 0.6.0). A target
+// that still carries one of them is owned by AgentChef and may be replaced
+// without an adoption flag; anything else stays a conflict.
+export const KNOWN_LEGACY_FILE_SHA256 = Object.freeze({
+  "gitignore-global": Object.freeze(["2b2fd5e71c4348956f249a730cf3df6c5f423b15b83d9ff3d5a35138b50d0751", "2b2fd5e71c4348956f249a730cf3df6c5f423b15b83d9ff3d5a35138b50d0751"]),
+  "pre-commit-hook": Object.freeze(["22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b", "22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b"])
+});
 export const RECEIPT_VERSION = 2;
 export const LEGACY_RECEIPT_VERSION = 1;
 export const MAX_GUARD_FILE_BYTES = 1_048_576;
@@ -250,13 +258,15 @@ function buildInspection(options) {
     const desiredMode = managedFileMode(definition);
     const contentExact = current.present && current.bytes.equals(source.bytes);
     const modeExact = desiredMode === null || (current.present && current.mode === desiredMode);
+    const ownedLegacy = current.present && !contentExact
+      && (KNOWN_LEGACY_FILE_SHA256[definition.id] || []).includes(sha256(current.bytes));
     const action = !current.present
       ? "create"
       : contentExact && modeExact
         ? "noop"
         : contentExact
           ? "chmod"
-        : adoptedFiles.has(definition.id)
+        : adoptedFiles.has(definition.id) || ownedLegacy
           ? "replace"
           : "conflict";
     return {
@@ -330,7 +340,7 @@ function buildInspection(options) {
     desiredFiles,
     desiredGitConfig,
     inspection: {
-      schema: "codex-chef.global-git-guards-inspection",
+      schema: "agentchef.global-git-guards-inspection",
       version: 1,
       home,
       files: desiredFiles.map((entry) => entry.public),
@@ -416,7 +426,7 @@ export function validateGlobalGitGuardReceipt(receipt, { home } = {}) {
       : ["schema", "version", "createdAt", "operationId", "state", "home", "files", "gitConfig"],
     "Global Git guard receipt"
   );
-  if (receipt.schema !== RECEIPT_SCHEMA || ![LEGACY_RECEIPT_VERSION, RECEIPT_VERSION].includes(receipt.version)) {
+  if (![RECEIPT_SCHEMA, LEGACY_RECEIPT_SCHEMA].includes(receipt.schema) || ![LEGACY_RECEIPT_VERSION, RECEIPT_VERSION].includes(receipt.version)) {
     throw new Error("Global Git guard receipt schema or version is unsupported.");
   }
   if (typeof receipt.createdAt !== "string" || !Number.isFinite(Date.parse(receipt.createdAt))) {

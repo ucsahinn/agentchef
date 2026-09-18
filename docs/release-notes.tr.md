@@ -2,6 +2,29 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.0.0 - yayınlanmadı
+
+AgentChef 1.0.0 yeniden adlandırmayı tamamlar: installer'ın yazdığı her şey
+artık `agentchef` yazımını taşır ve mevcut bir home tek bir açık komutla göç
+eder. Onu çalıştırana kadar her okuyucu 1.0.0 öncesi `codex-chef` adlarını
+kabul etmeye devam eder; güncelleme günü hiçbir şey bozulmaz.
+
+### Neler Değişti?
+
+- İşaretçiler, günlük, kilit, yedek önekleri, şema stringleri, plugin klasörü,
+  operator skill'i, marketplace adı, plugin id'si, hook banner'ı ve ortam
+  değişkenleri yeniden adlandırıldı; bkz. [güncelleme rehberi](upgrade.tr.md).
+- `npm run chef -- --migrate-identity --target both` dönüşümü ön izler;
+  `--apply` ile `CODEX_HOME/backups/agentchef-migrate-*` altına yedek alarak
+  çalıştırır.
+
+### Ürün Sınırı
+
+Göç yalnızca bilinen bir eski yazım taşıyan dosyalara dokunur. Kullanıcı
+içeriği, yabancı skill'ler, eski yedek klasörleri, `config.toml` blokları ve
+Beyin verisi asla yeniden yazılmaz; eski ortam değişkenleri raporlanır,
+değiştirilmez.
+
 ## v0.9.0 - 2026-09-18
 
 AgentChef 0.9.0, OpenAI Codex CLI'nin yanına ikinci kurulum hedefi olarak

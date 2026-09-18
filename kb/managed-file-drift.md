@@ -13,7 +13,7 @@ targets include:
 - `~/.codex/*.config.toml`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/default.rules`
-- `~/.codex/plugins/codex-chef-workflows`
+- `~/.codex/plugins/agentchef-workflows`
 - `~/.agents/plugins/marketplace.json`
 
 ## Repair Without Guessing
@@ -35,6 +35,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 - User skills are not deleted.
 - Unrelated marketplace plugin entries are preserved.
 - Managed files are backed up before repair.
+- Ownership markers written before 1.0.0 (`.codex-chef-managed.json`,
+  `.codex-chef-source.json`) are still recognized; run
+  `npm run chef -- --migrate-identity` to convert them to the `agentchef`
+  names.
 - Auth files, sessions, memories, logs, and local caches are not imported into
   source control.
 

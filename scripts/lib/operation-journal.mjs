@@ -2,6 +2,16 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { identity, journalFileNames, schemaId } from "./identity.mjs";
+
+// The journal a backup root actually holds (current name first, then legacy).
+function existingJournalPath(backupRoot) {
+  for (const name of journalFileNames) {
+    const candidate = path.join(backupRoot, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(backupRoot, identity.journalFile);
+}
 
 function sha256(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
@@ -74,7 +84,7 @@ function sameFingerprint(left, right) {
 }
 
 function readInProgressJournal(backupRoot) {
-  const journalPath = path.join(backupRoot, ".codex-chef-operation-journal.json");
+  const journalPath = existingJournalPath(backupRoot);
   if (!fs.existsSync(journalPath)) throw new Error(`Operation journal is missing: ${journalPath}`);
   const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
   if (journal.state !== "in-progress") throw new Error(`Operation journal is already ${journal.state}: ${journalPath}`);
@@ -121,12 +131,14 @@ export function createOperationJournal({ backupRoot, operation }) {
   if (!backupRoot || !operation) throw new TypeError("backupRoot and operation are required.");
   const resolvedBackupRoot = path.resolve(backupRoot);
   fs.mkdirSync(resolvedBackupRoot, { recursive: true });
-  const journalPath = path.join(resolvedBackupRoot, ".codex-chef-operation-journal.json");
-  if (fs.existsSync(journalPath)) {
-    throw new Error(`Operation journal already exists: ${journalPath}`);
+  const journalPath = path.join(resolvedBackupRoot, identity.journalFile);
+  for (const name of journalFileNames) {
+    if (fs.existsSync(path.join(resolvedBackupRoot, name))) {
+      throw new Error(`Operation journal already exists: ${path.join(resolvedBackupRoot, name)}`);
+    }
   }
   const journal = {
-    schemaVersion: "codex-chef.operation-journal.v1",
+    schemaVersion: schemaId("operation-journal", 1),
     operation,
     createdAt: new Date().toISOString(),
     state: "in-progress",
@@ -245,9 +257,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
           walk(sourceRoot);
         }
         atomicWrite(journalPath, journal);
-        const failAfter = Number(process.env.CODEX_CHEF_TEST_INSTALL_FAIL_AFTER_MUTATIONS || 0);
+        const failAfter = Number(process.env.AGENTCHEF_TEST_INSTALL_FAIL_AFTER_MUTATIONS || 0);
         if (
-          process.env.CODEX_CHEF_TEST_MODE === "1"
+          process.env.AGENTCHEF_TEST_MODE === "1"
           && Number.isInteger(failAfter)
           && failAfter > 0
           && journal.mutations.length >= failAfter

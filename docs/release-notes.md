@@ -2,6 +2,29 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.0.0 - unreleased
+
+AgentChef 1.0.0 completes the rename: everything the installer writes now
+carries the `agentchef` spelling, and one explicit command migrates an
+existing home. Until you run it, every reader still accepts the pre-1.0.0
+`codex-chef` names, so nothing breaks on upgrade day.
+
+### What Changed
+
+- Markers, journal, lock, backup prefixes, schema strings, plugin folder,
+  operator skill, marketplace name, plugin id, hook banner, and environment
+  variables are renamed; see the [upgrade guide](upgrade.md).
+- `npm run chef -- --migrate-identity --target both` previews the
+  conversion; add `--apply` to run it with backups under
+  `CODEX_HOME/backups/agentchef-migrate-*`.
+
+### Product Boundary
+
+The migration touches only files that carry a known legacy spelling. User
+content, foreign skills, old backup folders, `config.toml` blocks, and Beyin
+data are never rewritten; legacy environment variables are reported, not
+changed.
+
 ## v0.9.0 - 2026-09-18
 
 AgentChef 0.9.0 adds Claude Code as a second install target next to the

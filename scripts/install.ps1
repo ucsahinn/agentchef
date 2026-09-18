@@ -62,10 +62,10 @@ if ($Repair -and $InstallClaude) {
 
 function Get-CuratedSkillsCatalogPath {
   if (
-    $env:CODEX_CHEF_TEST_MODE -eq "1" -and
-    -not [string]::IsNullOrWhiteSpace($env:CODEX_CHEF_TEST_SKILLS_CATALOG)
+    $env:AGENTCHEF_TEST_MODE -eq "1" -and
+    -not [string]::IsNullOrWhiteSpace($env:AGENTCHEF_TEST_SKILLS_CATALOG)
   ) {
-    return (Resolve-Path -LiteralPath $env:CODEX_CHEF_TEST_SKILLS_CATALOG).Path
+    return (Resolve-Path -LiteralPath $env:AGENTCHEF_TEST_SKILLS_CATALOG).Path
   }
   return (Join-Path $RepoRoot "catalog\skills.json")
 }
@@ -170,7 +170,7 @@ function Test-AnyManagedTargetExists {
     (Join-Path $CodexHome "AGENTS.md"),
     (Join-Path $CodexHome "config.toml"),
     (Join-Path $CodexHome "rules\default.rules"),
-    (Join-Path $CodexHome "plugins\codex-chef-workflows"),
+    (Join-Path $CodexHome "plugins\agentchef-workflows"),
     (Join-Path $AgentsHome "plugins\marketplace.json")
   )
   foreach ($target in $managedTargets) {
@@ -213,7 +213,7 @@ function Invoke-InstallTargetPreflight {
     throw "Managed install surface contains an unsafe linked path; refusing all writes."
   }
 
-  $PluginSource = Join-Path $RepoRoot "plugins\codex-chef-workflows"
+  $PluginSource = Join-Path $RepoRoot "plugins\agentchef-workflows"
   $DirectSkillHelper = Join-Path $RepoRoot "scripts\manage-direct-skill-target.mjs"
   $DirectSkills = @(Get-ManagedDirectSkills)
   foreach ($DirectSkill in $DirectSkills) {
@@ -244,7 +244,7 @@ function Invoke-InstallTargetPreflight {
 
   if ($InstallCodex) {
     $MarketplacePath = Join-Path (Join-Path $AgentsHome "plugins") "marketplace.json"
-    $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\codex-chef-workflows"
+    $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\agentchef-workflows"
     $MarketplaceHelper = Join-Path $RepoRoot "scripts\upsert-marketplace-entry.mjs"
     & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --check
     if ($LASTEXITCODE -notin @(0, 2)) {
@@ -428,7 +428,7 @@ if ($Interactive -and -not $InstallGitGuards) {
   }
 }
 
-$BackupRoot = Join-Path $CodexHome ("backups\codex-chef-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + $PID)
+$BackupRoot = Join-Path $CodexHome ("backups\agentchef-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + $PID)
 $OperationJournalScript = Join-Path $RepoRoot "scripts\lib\operation-journal.mjs"
 $OperationJournalActive = $false
 $LastBackupPath = $null
@@ -468,7 +468,7 @@ function Acquire-OperationLock {
   try {
     foreach ($root in Get-CanonicalOperationLockRoots) {
       [System.IO.Directory]::CreateDirectory($root) | Out-Null
-      $lockPath = Join-Path $root ".codex-chef-operation.lock"
+      $lockPath = Join-Path $root ".agentchef-operation.lock"
       New-Item -ItemType Directory -Path $lockPath -ErrorAction Stop | Out-Null
       $acquired += $lockPath
       $ownerPath = Join-Path $lockPath "owner.json"
@@ -919,7 +919,7 @@ Acquire-OperationLock
 Start-OperationJournal
 
 $TemplateRoot = Join-Path $RepoRoot "templates\codex"
-$PluginSource = Join-Path $RepoRoot "plugins\codex-chef-workflows"
+$PluginSource = Join-Path $RepoRoot "plugins\agentchef-workflows"
 
 if ($InstallCodex) {
   Write-Section "Managed Codex files"
@@ -945,13 +945,13 @@ if ($InstallCodex) {
     }
   }
 
-  $PluginTarget = Join-Path $CodexHome "plugins\codex-chef-workflows"
+  $PluginTarget = Join-Path $CodexHome "plugins\agentchef-workflows"
   Install-Directory -Source $PluginSource -Destination $PluginTarget
 }
 
 Write-Section "Shared agent surfaces"
 Ensure-Dir $AgentsHome
-$MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\codex-chef-workflows"
+$MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\agentchef-workflows"
 Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget
 $DirectSkillHelper = Join-Path $RepoRoot "scripts\manage-direct-skill-target.mjs"
 $DirectSkills = @(Get-ManagedDirectSkills)
@@ -960,21 +960,21 @@ foreach ($DirectSkill in $DirectSkills) {
   $DirectTarget = Join-Path $AgentsHome "skills\$($DirectSkill.Name)"
   Install-Directory -Source $DirectSource -Destination $DirectTarget
   if (-not $WhatIfPreference) {
-    Assert-ManagedWriteTarget (Join-Path $DirectTarget ".codex-chef-managed.json")
+    Assert-ManagedWriteTarget (Join-Path $DirectTarget ".agentchef-managed.json")
     $DirectMarkArgs = @($DirectSkillHelper, $DirectSource, $DirectTarget, "--mark")
     if ($DirectSkill.Adopt) {
       $DirectMarkArgs += "--allow-adopt"
     }
     $markerBackup = "-"
-    if ($Script:LastBackupPath -and (Test-Path -LiteralPath (Join-Path $Script:LastBackupPath ".codex-chef-managed.json"))) {
-      $markerBackup = Join-Path $Script:LastBackupPath ".codex-chef-managed.json"
+    if ($Script:LastBackupPath -and (Test-Path -LiteralPath (Join-Path $Script:LastBackupPath ".agentchef-managed.json"))) {
+      $markerBackup = Join-Path $Script:LastBackupPath ".agentchef-managed.json"
     }
-    Prepare-InstallWrite -Path (Join-Path $DirectTarget ".codex-chef-managed.json") -BackupPath $markerBackup
+    Prepare-InstallWrite -Path (Join-Path $DirectTarget ".agentchef-managed.json") -BackupPath $markerBackup
     & node @DirectMarkArgs | Out-Null
     if ($LASTEXITCODE -ne 0) {
       throw "Cannot record AgentChef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
     }
-    Mark-InstallWriteApplied -Path (Join-Path $DirectTarget ".codex-chef-managed.json")
+    Mark-InstallWriteApplied -Path (Join-Path $DirectTarget ".agentchef-managed.json")
   }
 }
 
@@ -1161,7 +1161,7 @@ try {
   $McpCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\mcp-servers.json") -Raw | ConvertFrom-Json
   $SkillCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\skills.json") -Raw | ConvertFrom-Json
   $RoutingCatalog = Get-Content -Path (Join-Path $RepoRoot "catalog\routing-profiles.json") -Raw | ConvertFrom-Json
-  $PluginSkillRoot = Join-Path $RepoRoot "plugins\codex-chef-workflows\skills"
+  $PluginSkillRoot = Join-Path $RepoRoot "plugins\agentchef-workflows\skills"
   $AgentNames = @($AgentCatalog.agents | ForEach-Object { $_.name }) + @($AgentCatalog.coordinators | ForEach-Object { $_.name })
   $McpReady = @($McpCatalog.servers | Where-Object { $_.defaultEnabled -eq $true } | ForEach-Object { $_.name })
   $McpOptIn = @($McpCatalog.servers | Where-Object { $_.defaultEnabled -ne $true } | ForEach-Object { $_.name })

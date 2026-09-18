@@ -74,7 +74,7 @@ test("Claude permissions are derived from the Codex rules without wildcard grant
 test("the Claude plugin manifest mirrors the Codex manifest version and lists every agent file", () => {
   const agents = emitClaudeAgents({ catalog, roleDirectory, pluginName: "agentchef" });
   const manifest = renderClaudePluginManifest(root, [...agents.keys()]);
-  const codexManifest = JSON.parse(fs.readFileSync(path.join(root, "plugins", "codex-chef-workflows", ".codex-plugin", "plugin.json"), "utf8"));
+  const codexManifest = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json"), "utf8"));
   assert.equal(manifest.name, codexManifest.name);
   assert.equal(manifest.version, codexManifest.version);
   assert.equal(manifest.agents.length, agents.size);

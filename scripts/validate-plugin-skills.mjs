@@ -5,11 +5,11 @@ import path from "node:path";
 const root = path.resolve(process.cwd());
 const failures = [];
 
-const pluginManifestRel = "plugins/codex-chef-workflows/.codex-plugin/plugin.json";
+const pluginManifestRel = "plugins/agentchef-workflows/.codex-plugin/plugin.json";
 const pluginManifestPath = path.join(root, pluginManifestRel);
 const expectedBundledSkills = new Set([
   "adaptive-agent-routing",
-  "codex-chef-operator",
+  "agentchef-operator",
   "context-budget-planner",
   "evidence-research",
   "external-review-workflow",
@@ -117,8 +117,8 @@ if (!fs.existsSync(pluginManifestPath)) {
   failures.push(`Missing plugin manifest: ${pluginManifestRel}`);
 } else {
   const plugin = JSON.parse(readText(pluginManifestPath));
-  if (plugin.name !== "codex-chef-workflows") {
-    failures.push(`${pluginManifestRel} must keep name codex-chef-workflows.`);
+  if (plugin.name !== "agentchef-workflows") {
+    failures.push(`${pluginManifestRel} must keep name agentchef-workflows.`);
   }
   if (typeof plugin.skills !== "string") {
     failures.push(`${pluginManifestRel} must declare skills as a string path.`);

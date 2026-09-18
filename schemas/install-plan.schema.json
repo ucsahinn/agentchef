@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "codex-chef.install-plan.v2"
+      "const": "agentchef.install-plan.v2"
     },
     "description": {
       "type": "string",
@@ -144,7 +144,7 @@
             ]
           },
           "stateBackup": {
-            "const": "codex-chef.global-git-guards-receipt@1"
+            "const": "agentchef.global-git-guards-receipt@1"
           },
           "catalog": {
             "type": "string",

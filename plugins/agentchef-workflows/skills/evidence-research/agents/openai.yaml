@@ -1,0 +1,7 @@
+interface:
+  display_name: "Evidence Research"
+  short_description: "Research decisions with traceable sources."
+  default_prompt: "Use $evidence-research, or $agentchef-workflows:evidence-research from the installed plugin, to frame the decision, search and appraise current primary sources, trace every material claim, explain disagreement and uncertainty, and produce the requested evidence package."
+
+policy:
+  allow_implicit_invocation: true

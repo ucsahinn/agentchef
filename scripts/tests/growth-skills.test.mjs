@@ -26,7 +26,7 @@ const pinnedInstaller = path.join(root, "scripts", "install-pinned-skill.mjs");
 const seoValidator = path.join(
   root,
   "plugins",
-  "codex-chef-workflows",
+  "agentchef-workflows",
   "skills",
   "seo",
   "scripts",
@@ -35,7 +35,7 @@ const seoValidator = path.join(
 const researchValidator = path.join(
   root,
   "plugins",
-  "codex-chef-workflows",
+  "agentchef-workflows",
   "skills",
   "evidence-research",
   "scripts",
@@ -145,7 +145,7 @@ function runPinnedInstaller({
 
 function validSeoReport() {
   return {
-    schemaVersion: "codex-chef.seo-audit.v1",
+    schemaVersion: "agentchef.seo-audit.v1",
     generatedAt: "2026-07-29T00:00:00.000Z",
     status: "complete",
     scope: {
@@ -204,7 +204,7 @@ function validSeoReport() {
 
 function validResearchReport() {
   return {
-    schemaVersion: "codex-chef.evidence-research.v1",
+    schemaVersion: "agentchef.evidence-research.v1",
     generatedAt: "2026-07-29T00:00:00.000Z",
     status: "complete",
     charter: {
@@ -256,9 +256,9 @@ function validResearchReport() {
 }
 
 test("managed direct skill marker records the actual skill identity", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-managed-skill-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-skill-"));
   try {
-    const source = path.join(tempRoot, "plugins", "codex-chef-workflows", "skills", "seo");
+    const source = path.join(tempRoot, "plugins", "agentchef-workflows", "skills", "seo");
     const target = path.join(tempRoot, "agents", "skills", "seo");
     fs.mkdirSync(source, { recursive: true });
     fs.writeFileSync(
@@ -272,7 +272,7 @@ test("managed direct skill marker records the actual skill identity", () => {
 
     const marker = JSON.parse(fs.readFileSync(path.join(target, markerFileName), "utf8"));
     assert.equal(marker.name, "seo");
-    assert.equal(marker.source, "plugins/codex-chef-workflows/skills/seo");
+    assert.equal(marker.source, "plugins/agentchef-workflows/skills/seo");
     assert.equal(inspectDirectSkillTarget(source, target).status, "managed");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -280,9 +280,9 @@ test("managed direct skill marker records the actual skill identity", () => {
 });
 
 test("managed direct skill marker does not hide missing or modified source files", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-managed-skill-drift-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-skill-drift-"));
   try {
-    const source = path.join(tempRoot, "plugins", "codex-chef-workflows", "skills", "seo");
+    const source = path.join(tempRoot, "plugins", "agentchef-workflows", "skills", "seo");
     const target = path.join(tempRoot, "agents", "skills", "seo");
     fs.mkdirSync(source, { recursive: true });
     fs.writeFileSync(
@@ -319,7 +319,7 @@ test("managed direct skill marker does not hide missing or modified source files
 });
 
 test("skill provenance rejects empty, unproven, and wrong-source skill directories", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-skill-provenance-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-skill-provenance-"));
   try {
     const target = path.join(tempRoot, "skills", "example-skill");
     fs.mkdirSync(target, { recursive: true });
@@ -364,7 +364,7 @@ test("skill provenance rejects empty, unproven, and wrong-source skill directori
 });
 
 test("pinned skill activation installs an exact native copy with provenance", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-activation-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-activation-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const agentsHome = path.join(tempRoot, "agents");
@@ -400,7 +400,7 @@ test("pinned skill activation installs an exact native copy with provenance", ()
     assert.equal(result.backedUp, false);
     assert.equal(inspectPinnedSkillTarget(target, expected).valid, true);
     assert.deepEqual(
-      fs.readdirSync(path.join(agentsHome, "skills")).filter((entry) => entry.startsWith(".codex-chef-")),
+      fs.readdirSync(path.join(agentsHome, "skills")).filter((entry) => entry.startsWith(".agentchef-")),
       []
     );
   } finally {
@@ -409,7 +409,7 @@ test("pinned skill activation installs an exact native copy with provenance", ()
 });
 
 test("pinned skill activation refuses an unowned target without explicit adoption", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-foreign-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-foreign-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const agentsHome = path.join(tempRoot, "agents");
@@ -459,7 +459,7 @@ test("pinned skill activation refuses an unowned target without explicit adoptio
 });
 
 test("full-depth pinned installation omits the shallow fetch boundary", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-depth-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-depth-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const tracePath = path.join(tempRoot, "git-trace.log");
@@ -479,7 +479,7 @@ test("full-depth pinned installation omits the shallow fetch boundary", () => {
 });
 
 test("pinned installer reuses a verified immutable source checkout across invocations", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-cache-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-cache-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -514,7 +514,7 @@ test("pinned installer reuses a verified immutable source checkout across invoca
 });
 
 test("pinned installer emits a one-time receipt that safely compensates an unchanged install", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-compensation-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -556,7 +556,7 @@ test("pinned installer emits a one-time receipt that safely compensates an uncha
 });
 
 test("pinned skill compensation preserves a target changed after installation", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-guard-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-compensation-guard-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -596,7 +596,7 @@ test("pinned skill compensation preserves a target changed after installation", 
 });
 
 test("pinned skill compensation restores the replaced managed skill from its backup", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-compensation-restore-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-compensation-restore-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -651,7 +651,7 @@ test("pinned skill compensation restores the replaced managed skill from its bac
 });
 
 test("pinned installer preserves and skips an unowned same-name skill", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-skip-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-skip-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -685,7 +685,7 @@ test("pinned installer preserves and skips an unowned same-name skill", () => {
 });
 
 test("pinned installer adopts only the explicitly selected same-name skill", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-adopt-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-adopt-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -740,7 +740,7 @@ test("pinned installer adopts only the explicitly selected same-name skill", () 
 });
 
 test("pinned installer upgrades a valid Chef-owned skill without adoption", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-upgrade-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-upgrade-"));
   try {
     const fixture = pinnedSourceFixture(tempRoot);
     const agentsHome = path.join(tempRoot, "agents");
@@ -783,7 +783,7 @@ test("pinned installer upgrades a valid Chef-owned skill without adoption", () =
 });
 
 test("pinned skill activation restores the previous target when post-activation verification fails", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-rollback-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-rollback-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const agentsHome = path.join(tempRoot, "agents");
@@ -826,7 +826,7 @@ test("pinned skill activation restores the previous target when post-activation 
     assert.equal(fs.readFileSync(path.join(target, "previous.txt"), "utf8"), "preserve me\n");
     assert.equal(fs.existsSync(path.join(target, "SKILL.md")), false);
     assert.deepEqual(
-      fs.readdirSync(path.join(agentsHome, "skills")).filter((entry) => entry.startsWith(".codex-chef-")),
+      fs.readdirSync(path.join(agentsHome, "skills")).filter((entry) => entry.startsWith(".agentchef-")),
       []
     );
   } finally {
@@ -835,13 +835,13 @@ test("pinned skill activation restores the previous target when post-activation 
 });
 
 test("pinned skill replacement creates a manifest-backed namespaced backup", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-backup-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-backup-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const agentsHome = path.join(tempRoot, "agents");
     const codexHome = path.join(tempRoot, "codex");
     const target = path.join(agentsHome, "skills", "example-skill");
-    const backupRoot = path.join(codexHome, "backups", "codex-chef-skill-test-example-skill");
+    const backupRoot = path.join(codexHome, "backups", "agentchef-skill-test-example-skill");
     fs.mkdirSync(source, { recursive: true });
     fs.mkdirSync(target, { recursive: true });
     fs.mkdirSync(codexHome, { recursive: true });
@@ -871,9 +871,9 @@ test("pinned skill replacement creates a manifest-backed namespaced backup", () 
 
     assert.equal(result.backedUp, true);
     const manifest = JSON.parse(
-      fs.readFileSync(path.join(backupRoot, ".codex-chef-backup.json"), "utf8")
+      fs.readFileSync(path.join(backupRoot, ".agentchef-backup.json"), "utf8")
     );
-    assert.equal(manifest.schemaVersion, "codex-chef.backup.v1");
+    assert.equal(manifest.schemaVersion, "agentchef.backup.v1");
     assert.equal(manifest.operation, "pinned-skill-replacement");
     assert.equal(manifest.skill, "example-skill");
     assert.deepEqual(
@@ -896,7 +896,7 @@ test("pinned skill replacement creates a manifest-backed namespaced backup", () 
 });
 
 test("pinned skill activation rejects an overlapping backup root before any write", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-overlap-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-overlap-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const agentsHome = path.join(tempRoot, "agents");
@@ -950,7 +950,7 @@ test("pinned skill activation rejects an overlapping backup root before any writ
 });
 
 test("pinned skill activation rejects linked source content before changing the target", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-link-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-link-"));
   try {
     const source = path.join(tempRoot, "checkout", "example-skill");
     const linkedDirectory = path.join(tempRoot, "linked");
@@ -983,7 +983,7 @@ test("pinned skill activation rejects linked source content before changing the 
 });
 
 test("SEO report validator accepts evidence-backed audit reports", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-report-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-report-"));
   try {
     const reportPath = path.join(tempRoot, "report.json");
     writeJson(reportPath, validSeoReport());
@@ -995,7 +995,7 @@ test("SEO report validator accepts evidence-backed audit reports", () => {
 });
 
 test("SEO report validator rejects ranking guarantees", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-guarantee-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-guarantee-"));
   try {
     const report = validSeoReport();
     report.findings[0].recommendation = "This guarantees first place on Google.";
@@ -1010,7 +1010,7 @@ test("SEO report validator rejects ranking guarantees", () => {
 });
 
 test("SEO report validator rejects unsupported verified indexing claims", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-indexing-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-indexing-"));
   try {
     const report = validSeoReport();
     report.claims.indexingVerified = true;
@@ -1025,7 +1025,7 @@ test("SEO report validator rejects unsupported verified indexing claims", () => 
 });
 
 test("SEO report validator rejects private scope without private authorization", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-private-scope-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-private-scope-"));
   try {
     const report = validSeoReport();
     report.scope.mode = "authorized-private";
@@ -1040,7 +1040,7 @@ test("SEO report validator rejects private scope without private authorization",
 });
 
 test("SEO report validator rejects account claims with non-account evidence", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-account-grade-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-account-grade-"));
   try {
     const report = validSeoReport();
     report.scope.mode = "authorized-private";
@@ -1064,7 +1064,7 @@ test("SEO report validator rejects account claims with non-account evidence", ()
 });
 
 test("SEO report validator enforces field-data grade and metric evidence", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-field-data-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-field-data-"));
   try {
     const report = validSeoReport();
     report.claims.fieldDataVerified = true;
@@ -1099,7 +1099,7 @@ test("SEO report validator enforces field-data grade and metric evidence", () =>
 });
 
 test("SEO report validator rejects evidence grades beyond the declared scope", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-scope-grade-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-scope-grade-"));
   try {
     const report = validSeoReport();
     report.scope.mode = "local-rendered";
@@ -1115,7 +1115,7 @@ test("SEO report validator rejects evidence grades beyond the declared scope", (
 });
 
 test("SEO report validator rejects bearer credentials in free text", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-seo-secret-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-seo-secret-"));
   try {
     const report = validSeoReport();
     report.nextActions = [`Authorization: Bearer ${"abcdefghijklmnopqrstuvwxyz123456"}`];
@@ -1130,7 +1130,7 @@ test("SEO report validator rejects bearer credentials in free text", () => {
 });
 
 test("evidence research validator accepts traceable synthesis", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-report-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-report-"));
   try {
     const reportPath = path.join(tempRoot, "report.json");
     writeJson(reportPath, validResearchReport());
@@ -1142,7 +1142,7 @@ test("evidence research validator accepts traceable synthesis", () => {
 });
 
 test("evidence research validator rejects orphaned claim sources", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-orphan-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-orphan-"));
   try {
     const report = validResearchReport();
     report.claims[0].sourceRefs = ["missing-source"];
@@ -1157,7 +1157,7 @@ test("evidence research validator rejects orphaned claim sources", () => {
 });
 
 test("evidence research validator rejects source links to unknown claims", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-source-link-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-source-link-"));
   try {
     const report = validResearchReport();
     report.sources[0].supports = ["missing-claim"];
@@ -1172,7 +1172,7 @@ test("evidence research validator rejects source links to unknown claims", () =>
 });
 
 test("evidence research validator rejects claim links missing from source supports", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-reverse-link-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-reverse-link-"));
   try {
     const report = validResearchReport();
     report.sources.push({
@@ -1205,7 +1205,7 @@ test("evidence research validator rejects claim links missing from source suppor
 });
 
 test("evidence research validator rejects bearer credentials in free text", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-secret-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-secret-"));
   try {
     const report = validResearchReport();
     report.synthesis.limitations = [`Authorization: Basic ${"dXNlcjpwYXNzd29yZDEyMzQ1Ng=="}`];
@@ -1220,7 +1220,7 @@ test("evidence research validator rejects bearer credentials in free text", () =
 });
 
 test("complete evidence research reports cannot retain unresolved gaps", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-research-gap-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-research-gap-"));
   try {
     const report = validResearchReport();
     report.gaps.push({

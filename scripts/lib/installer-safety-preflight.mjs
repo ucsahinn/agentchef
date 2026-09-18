@@ -139,7 +139,7 @@ export function inspectInstallerSafety({
       path.join(agentsRoot, "plugins", "cache")
     ].filter(pathEntryExists);
     const expectedPluginVersion = JSON.parse(fs.readFileSync(
-      path.join(repoRoot, "plugins", "codex-chef-workflows", ".codex-plugin", "plugin.json"),
+      path.join(repoRoot, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json"),
       "utf8"
     )).version;
     const pluginRefresh = refreshInstalledPlugin({

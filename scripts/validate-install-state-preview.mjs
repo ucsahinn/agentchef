@@ -140,7 +140,7 @@ function validateSchemaDocument() {
   ]) {
     if (!required.has(key)) fail(`Install-state preview schema missing required key: ${key}`);
   }
-  if (schema.properties?.schemaVersion?.const !== "codex-chef.install-state-preview.v1") {
+  if (schema.properties?.schemaVersion?.const !== "agentchef.install-state-preview.v1") {
     fail("Install-state preview schema has unexpected schemaVersion const");
   }
   if (schema.properties?.dryRunOnly?.const !== true) {
@@ -169,7 +169,7 @@ function validateDiscovery(discovery, label) {
     "profiles",
     "operations"
   ], label);
-  if (discovery.schemaVersion !== "codex-chef.install-plan-discovery.v1") {
+  if (discovery.schemaVersion !== "agentchef.install-plan-discovery.v1") {
     fail(`${label} has unexpected schemaVersion`);
   }
   if (discovery.dryRunOnly !== true) fail(`${label} must be dryRunOnly=true`);
@@ -235,7 +235,7 @@ function validatePlan(plan, label, expected = {}) {
     "operations"
   ], label);
 
-  if (plan.schemaVersion !== "codex-chef.install-state-preview.v1") {
+  if (plan.schemaVersion !== "agentchef.install-state-preview.v1") {
     fail(`${label} has unexpected schemaVersion`);
   }
   if (!nonEmptyString(plan.generatedAt) || Number.isNaN(Date.parse(plan.generatedAt))) {
@@ -398,7 +398,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
     fail(`${label} ${operation.id} must include configSource`);
   }
   if (operation.kind === "write-ownership-marker"
-    && !operation.destination.endsWith(".codex-chef-managed.json")) {
+    && !operation.destination.endsWith(".agentchef-managed.json")) {
     fail(`${label} ${operation.id} must target a AgentChef ownership marker`);
   }
   if (operation.kind === "write-marketplace") {
@@ -413,7 +413,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
     if (!nonEmptyString(operation.source) || !nonEmptyString(operation.destination)) {
       fail(`${label} ${operation.id} must include cache source and destination`);
     }
-    if (operation.pluginId !== "codex-chef-workflows@codex-chef") {
+    if (operation.pluginId !== "agentchef-workflows@agentchef") {
       fail(`${label} ${operation.id} must declare the managed plugin id`);
     }
   }
@@ -430,7 +430,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
     if (!nonEmptyString(operation.pluginTarget)) fail(`${label} ${operation.id} must include pluginTarget`);
   }
   if (operation.kind === "claude-plugin-register") {
-    if (operation.pluginId !== "codex-chef-workflows@agentchef") fail(`${label} ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (operation.pluginId !== "agentchef-workflows@agentchef") fail(`${label} ${operation.id} must declare the AgentChef Claude plugin id`);
     if (!nonEmptyString(operation.command)) fail(`${label} ${operation.id} must include command`);
   }
   if (operation.kind === "skill-install") {
@@ -589,7 +589,7 @@ if (semanticPlan) {
     fail("Semantic side-effect plan must include direct-skill ownership marker writes");
   }
   const marketplace = semanticPlan.operations.find((operation) => operation.id === "plugin-marketplace");
-  if (!marketplace?.pluginTarget?.includes("/plugins/sources/codex-chef-workflows")) {
+  if (!marketplace?.pluginTarget?.includes("/plugins/sources/agentchef-workflows")) {
     fail("Semantic side-effect plan marketplace target must use AGENTS_HOME plugin sources");
   }
   if (!semanticPlan.operations.some((operation) => operation.kind === "refresh-plugin-cache")) {
@@ -606,7 +606,7 @@ if (semanticPlan) {
   ]) {
     const operation = semanticPlan.operations.find((entry) => entry.id === id);
     if (operation?.adoptionFlag !== adoptionFlag
-      || operation?.stateBackup !== "codex-chef.global-git-guards-receipt@1"
+      || operation?.stateBackup !== "agentchef.global-git-guards-receipt@1"
       || operation?.backup !== true) {
       fail(`Semantic side-effect plan ${id} must expose narrow adoption and exact prior-state backup`);
     }

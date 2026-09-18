@@ -179,7 +179,7 @@ Chef managed dosyalarini rollback korumali bir transaction olarak geri yazar.
 Commit-pinned skill replacement backup'lari namespaced manifest kullanir ve
 replacement'tan dosya birakmadan onceki skill tree'sini birebir geri yukler.
 Restore,
-valid `codex-chef.backup.v1` manifest tum archive dosyalarini path, size ve
+valid `agentchef.backup.v1` manifest tum archive dosyalarini path, size ve
 SHA-256 ile birebir dogrulamadikca fail-closed kalir; missing, extra, degistirilmis
 ve auth, hook, session, memory veya cache state gibi unsupported control-plane
 dosyalari reddedilir. `--json` ayni davranisi izler; write isteklerinde
@@ -212,6 +212,8 @@ npm run chef -- --install --target both --apply
 npm run chef -- --preview --target claude
 npm run chef -- --remove --target claude
 npm run chef -- --remove --target claude --apply
+npm run chef -- --migrate-identity --target both
+npm run chef -- --migrate-identity --target both --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
@@ -290,15 +292,15 @@ Kullanışlı parametreler:
   Evidence Research yalnız açıkça eşleşen isteklerde implicit seçilebilir.
   Exact direct hedefte kullanıcıya ait farklı bir skill varsa installer hiçbir
   managed dosya yazmadan durur.
-- Kişisel marketplace kaydı `codex-chef-workflows` plugin'ini yalnızca
+- Kişisel marketplace kaydı `agentchef-workflows` plugin'ini yalnızca
   keşfedilebilir yapar; kurmaz veya etkinleştirmez.
-  `$codex-chef-workflows:<skill-adı>` çağrıları için `codex plugin add
-  codex-chef-workflows@codex-chef --json` komutunu (veya `/plugins` yüzeyini)
+  `$agentchef-workflows:<skill-adı>` çağrıları için `codex plugin add
+  agentchef-workflows@agentchef --json` komutunu (veya `/plugins` yüzeyini)
   kullanıp yeni bir Codex oturumu başlat. Bu açık ilk kurulumdan sonra
   installer, update ve repair apply akışları eski versioned plugin cache'ini
   yerinde yeniler ve aktif sürümü doğrular; ilk opt-in öncesinde plugin kurmaz.
 - Kişisel marketplace plugin aynasını
-  `AGENTS_HOME/plugins/sources/codex-chef-workflows` altından marketplace
+  `AGENTS_HOME/plugins/sources/agentchef-workflows` altından marketplace
   root'una göre relative bir path ile okur. Custom `AGENTS_HOME` bir installer
   hedefidir; aktif Codex host'unun bu marketplace'i keşfettiğinin kanıtı
   değildir. Default dışı root'u `codex plugin marketplace add <root>` ile
@@ -434,14 +436,14 @@ donusmez.
 Mevcut dosyalar şu klasöre kopyalanır:
 
 ```text
-~/.codex/backups/codex-chef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS/
 ```
 
-Yeni backup'lar ayrica `.codex-chef-backup.json` manifest'i tasir. Bu kucuk
+Yeni backup'lar ayrica `.agentchef-backup.json` manifest'i tasir. Bu kucuk
 dosya operation, package version, platform, backup-relative path, size, hash ve
 metadata yazilirken gorulen archive issue'larini kaydeder.
 
-Ilk managed write oncesinde atomik `.codex-chef-operation-journal.json`
+Ilk managed write oncesinde atomik `.agentchef-operation-journal.json`
 olusturulur; canonical managed home'lar farkliysa ikisi altinda da ayri sahipli
 islem kilidi alinir. Bir write mutation oncesinde journal'a durably prepare
 edilir, ancak write tamamlandiktan sonra applied olarak isaretlenir. Daha
@@ -478,7 +480,7 @@ reddeder; yönetilen gibi görünen bir yol başka dizine kaçamaz.
 Global Git guard'ları, iki dosya ile iki Git config anahtarı normal yönetilen
 dosya arşivinin dışında kaldığı için ayrı bir tipli kurtarma makbuzu kullanır.
 Apply başlamadan önce önceki byte'lar, dosya modu, varlık/yokluk bilgisi ve
-sıralı anahtar değerleri `codex-chef.global-git-guards-receipt@1` içinde aynen
+sıralı anahtar değerleri `agentchef.global-git-guards-receipt@1` içinde aynen
 kaydedilir. Makbuz ayrıca apply sonrası beklenen yönetilen dosya hash'lerini,
 Unix modlarını ve Git config değerlerini bağlar. Apply başarısız olursa işlem
 bu makbuzdan geri alınır. Makbuzu sakla
@@ -494,7 +496,7 @@ değerleri geri yükler veya daha önce bulunmayan hedefleri kaldırır. Apply'd
 sonra yönetilen dosya, mod ya da anahtar değiştiyse restore hiçbir şey yazmaz;
 böylece sonraki kullanıcı değişiklikleri ezilmez ve ilk repo şablonlarına
 ihtiyaç duyulmaz. Bu akış
-`codex-chef.backup.v1` arşivlerinden bilinçli olarak ayrıdır.
+`agentchef.backup.v1` arşivlerinden bilinçli olarak ayrıdır.
 
 ## Kurulum Sonrası Kontrol
 
@@ -598,7 +600,7 @@ Izole, non-dry-run smoke install icin sahip oldugun bos bir klasor sec; `--apply
 eklemeden once plani incele:
 
 ```powershell
-$portableRoot = Join-Path $PWD ".codex-chef-portable"
+$portableRoot = Join-Path $PWD ".agentchef-portable"
 $env:CODEX_HOME = Join-Path $portableRoot "codex"
 $env:AGENTS_HOME = Join-Path $portableRoot "agents"
 node .\scripts\repair-install.mjs --preview --redact-paths --json

@@ -52,9 +52,9 @@ function operation(id) {
 }
 
 function runMarketplaceHelperSmokes() {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-marketplace-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-marketplace-"));
   const marketplacePath = path.join(fixtureRoot, "agents", "plugins", "marketplace.json");
-  const pluginTarget = path.join(fixtureRoot, "agents", "plugins", "sources", "codex-chef-workflows");
+  const pluginTarget = path.join(fixtureRoot, "agents", "plugins", "sources", "agentchef-workflows");
   const expectedPluginSource = `./${path.relative(fixtureRoot, pluginTarget).replaceAll(path.sep, "/")}`;
   fs.mkdirSync(path.dirname(marketplacePath), { recursive: true });
 
@@ -72,7 +72,7 @@ function runMarketplaceHelperSmokes() {
             interface: { displayName: "Other Plugin", shortDescription: "Must survive." }
           },
           {
-            name: "codex-chef-workflows",
+            name: "agentchef-workflows",
             source: { source: "local", path: "C:/old/plugin" },
             policy: { installation: "AVAILABLE", authentication: "NONE" },
             category: "Productivity",
@@ -92,7 +92,7 @@ function runMarketplaceHelperSmokes() {
   writeMarketplaceEntry(marketplacePath, pluginTarget);
   const written = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
   const other = written.plugins.find((plugin) => plugin.name === "other-plugin");
-  const chef = written.plugins.find((plugin) => plugin.name === "codex-chef-workflows");
+  const chef = written.plugins.find((plugin) => plugin.name === "agentchef-workflows");
   if (!other || other.interface?.displayName !== "Other Plugin") {
     fail("Marketplace helper smoke must preserve unrelated plugin entries and interface metadata.");
   }
@@ -195,7 +195,7 @@ for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall ==
     fail(`Manifest missing managed direct-skill operation: ${id}`);
     continue;
   }
-  if (directOperation.source !== `plugins/codex-chef-workflows/skills/${skill.name}`) {
+  if (directOperation.source !== `plugins/agentchef-workflows/skills/${skill.name}`) {
     fail(`Manifest direct-skill source drifted for ${skill.name}.`);
   }
   if (directOperation.destination !== `\${AGENTS_HOME}/skills/${skill.name}`) {
@@ -242,8 +242,8 @@ requireText(ps, "config.windows.toml", "PowerShell installer");
 requireText(ps, "rules\\default.rules", "PowerShell installer");
 requireText(ps, "agents", "PowerShell installer");
 requireText(ps, "profiles", "PowerShell installer");
-requireText(ps, "plugins\\codex-chef-workflows", "PowerShell installer");
-requireText(ps, "plugins\\sources\\codex-chef-workflows", "PowerShell installer");
+requireText(ps, "plugins\\agentchef-workflows", "PowerShell installer");
+requireText(ps, "plugins\\sources\\agentchef-workflows", "PowerShell installer");
 requireText(ps, "manage-direct-skill-target.mjs", "PowerShell installer");
 requireText(ps, "AdoptFetchSkill", "PowerShell installer");
 requireText(ps, "AdoptSeoSkill", "PowerShell installer");
@@ -328,8 +328,8 @@ requireText(sh, "config.unix.toml", "Bash installer");
 requireText(sh, "rules/default.rules", "Bash installer");
 requireText(sh, "/agents", "Bash installer");
 requireText(sh, "/profiles", "Bash installer");
-requireText(sh, "plugins/codex-chef-workflows", "Bash installer");
-requireText(sh, "plugins/sources/codex-chef-workflows", "Bash installer");
+requireText(sh, "plugins/agentchef-workflows", "Bash installer");
+requireText(sh, "plugins/sources/agentchef-workflows", "Bash installer");
 requireText(sh, "manage-direct-skill-target.mjs", "Bash installer");
 requireText(sh, "adopt-fetch-skill", "Bash installer");
 requireText(sh, "adopt-seo-skill", "Bash installer");
@@ -527,7 +527,7 @@ for (const snippet of [
 requireOrderedText(ps, ["Claude Code target", "refresh-installed-plugin.mjs"], "PowerShell installer (Claude target runs before the Codex plugin cache refresh)");
 requireOrderedText(sh, ["Claude Code target", "PLUGIN_REFRESH_HELPER="], "Bash installer (Claude target runs before the Codex plugin cache refresh)");
 {
-  const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract-targets");
+  const fixtureRoot = path.join(os.tmpdir(), "agentchef-install-contract-targets");
   const bothContract = resolveInstallContract({
     platform: process.platform === "win32" ? "windows" : "unix",
     codexHome: path.join(fixtureRoot, "codex"),
@@ -561,7 +561,7 @@ requireOrderedText(sh, ["Claude Code target", "PLUGIN_REFRESH_HELPER="], "Bash i
 }
 
 function validateResolvedInstallContract() {
-  const fixtureRoot = path.join(os.tmpdir(), "codex-chef-install-contract");
+  const fixtureRoot = path.join(os.tmpdir(), "agentchef-install-contract");
   const codexHome = path.join(fixtureRoot, "codex");
   const agentsHome = path.join(fixtureRoot, "agents");
   const platform = process.platform === "win32" ? "windows" : "unix";

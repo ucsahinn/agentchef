@@ -130,8 +130,8 @@ if [ -z "$CLAUDE_HOME_DIR" ]; then
   CLAUDE_HOME_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 fi
 CURATED_SKILLS_CATALOG="$REPO_ROOT/catalog/skills.json"
-if [ "${CODEX_CHEF_TEST_MODE:-}" = "1" ] && [ "${CODEX_CHEF_TEST_SKILLS_CATALOG:-}" != "" ]; then
-  CURATED_SKILLS_CATALOG="$CODEX_CHEF_TEST_SKILLS_CATALOG"
+if [ "${AGENTCHEF_TEST_MODE:-}" = "1" ] && [ "${AGENTCHEF_TEST_SKILLS_CATALOG:-}" != "" ]; then
+  CURATED_SKILLS_CATALOG="$AGENTCHEF_TEST_SKILLS_CATALOG"
 fi
 
 direct_skill_names() {
@@ -233,7 +233,7 @@ any_managed_target_exists() {
   [ -e "$CODEX_HOME_DIR/AGENTS.md" ] ||
   [ -e "$CODEX_HOME_DIR/config.toml" ] ||
   [ -e "$CODEX_HOME_DIR/rules/default.rules" ] ||
-  [ -e "$CODEX_HOME_DIR/plugins/codex-chef-workflows" ] ||
+  [ -e "$CODEX_HOME_DIR/plugins/agentchef-workflows" ] ||
   [ -e "$AGENTS_HOME_DIR/plugins/marketplace.json" ]
 }
 
@@ -269,7 +269,7 @@ preflight_install_targets() {
     exit 1
   fi
 
-  local plugin_source="$REPO_ROOT/plugins/codex-chef-workflows"
+  local plugin_source="$REPO_ROOT/plugins/agentchef-workflows"
   local direct_helper="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
   local direct_name direct_display direct_adopt direct_flag direct_source direct_target
   while IFS= read -r direct_name; do
@@ -324,7 +324,7 @@ preflight_install_targets() {
 
   if [ "$INSTALL_CODEX" -ne 1 ]; then return; fi
   local marketplace_path="$AGENTS_HOME_DIR/plugins/marketplace.json"
-  local marketplace_plugin_target="$AGENTS_HOME_DIR/plugins/sources/codex-chef-workflows"
+  local marketplace_plugin_target="$AGENTS_HOME_DIR/plugins/sources/agentchef-workflows"
   local marketplace_helper="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
   if node "$marketplace_helper" "$marketplace_path" "$marketplace_plugin_target" --check; then
     :
@@ -441,12 +441,12 @@ if [ "$INTERACTIVE" -eq 1 ] && [ "$INSTALL_GIT_GUARDS" -ne 1 ]; then
   fi
 fi
 
-BACKUP_ROOT="$CODEX_HOME_DIR/backups/codex-chef-$(date +%Y%m%d-%H%M%S)-$$"
+BACKUP_ROOT="$CODEX_HOME_DIR/backups/agentchef-$(date +%Y%m%d-%H%M%S)-$$"
 OPERATION_JOURNAL="$REPO_ROOT/scripts/lib/operation-journal.mjs"
 OPERATION_JOURNAL_ACTIVE=0
 LAST_BACKUP_PATH=""
 GIT_GUARD_RECEIPT=""
-SKILL_COMPENSATION_RECEIPT_LOG="$BACKUP_ROOT/.codex-chef-skill-compensations"
+SKILL_COMPENSATION_RECEIPT_LOG="$BACKUP_ROOT/.agentchef-skill-compensations"
 
 # A global install must not race another install/repair/restore for either
 # managed home. Roots are canonicalized and ordered by the shared lock module's
@@ -535,7 +535,7 @@ acquire_operation_lock() {
       echo "Could not prepare a managed home for the operation lock: $root" >&2
       exit 1
     fi
-    lock_dir="$root/.codex-chef-operation.lock"
+    lock_dir="$root/.agentchef-operation.lock"
     if ! mkdir "$lock_dir" 2>/dev/null; then
       release_operation_locks
       echo "Another AgentChef operation is already in progress for $root; refusing concurrent install." >&2
@@ -826,7 +826,7 @@ install_directory() {
   if run_change "$destination" "sync source-owned files from $source while preserving unrelated extras" true; then
     local managed_root list_file rel
     managed_root="$(managed_root_for "$destination")"
-    list_file="$(mktemp "${TMPDIR:-/tmp}/codex-chef-targets.XXXXXX")"
+    list_file="$(mktemp "${TMPDIR:-/tmp}/agentchef-targets.XXXXXX")"
     (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
       rel="${rel#./}"
       printf '%s\n%s\n' "$(dirname "$destination/$rel")" "$destination/$rel"
@@ -890,7 +890,7 @@ acquire_operation_lock
 start_operation_journal
 
 TEMPLATE_ROOT="$REPO_ROOT/templates/codex"
-PLUGIN_SOURCE="$REPO_ROOT/plugins/codex-chef-workflows"
+PLUGIN_SOURCE="$REPO_ROOT/plugins/agentchef-workflows"
 
 if [ "$INSTALL_CODEX" -eq 1 ]; then
   section "Managed Codex files"
@@ -919,13 +919,13 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
     esac
   done
 
-  PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/codex-chef-workflows"
+  PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/agentchef-workflows"
   install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
 fi
 
 section "Shared agent surfaces"
 ensure_dir "$AGENTS_HOME_DIR"
-MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/codex-chef-workflows"
+MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/agentchef-workflows"
 install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"
 DIRECT_SKILL_HELPER="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
 while IFS= read -r DIRECT_SKILL_NAME; do
@@ -933,7 +933,7 @@ while IFS= read -r DIRECT_SKILL_NAME; do
   DIRECT_SKILL_TARGET="$AGENTS_HOME_DIR/skills/$DIRECT_SKILL_NAME"
   install_directory "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET"
   if [ "$DRY_RUN" -ne 1 ]; then
-    assert_managed_write_target "$DIRECT_SKILL_TARGET/.codex-chef-managed.json"
+    assert_managed_write_target "$DIRECT_SKILL_TARGET/.agentchef-managed.json"
     DIRECT_MARK_ARGS=("$DIRECT_SKILL_HELPER" "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET" "--mark")
     case "$DIRECT_SKILL_NAME" in
       fetch) DIRECT_SKILL_ADOPT="$ADOPT_FETCH_SKILL" ;;
@@ -950,12 +950,12 @@ while IFS= read -r DIRECT_SKILL_NAME; do
       DIRECT_MARK_ARGS+=("--allow-adopt")
     fi
     DIRECT_MARK_BACKUP="-"
-    if [ -n "$LAST_BACKUP_PATH" ] && [ -e "$LAST_BACKUP_PATH/.codex-chef-managed.json" ]; then
-      DIRECT_MARK_BACKUP="$LAST_BACKUP_PATH/.codex-chef-managed.json"
+    if [ -n "$LAST_BACKUP_PATH" ] && [ -e "$LAST_BACKUP_PATH/.agentchef-managed.json" ]; then
+      DIRECT_MARK_BACKUP="$LAST_BACKUP_PATH/.agentchef-managed.json"
     fi
-    prepare_install_write "$DIRECT_SKILL_TARGET/.codex-chef-managed.json" "$DIRECT_MARK_BACKUP"
+    prepare_install_write "$DIRECT_SKILL_TARGET/.agentchef-managed.json" "$DIRECT_MARK_BACKUP"
     node "${DIRECT_MARK_ARGS[@]}" >/dev/null
-    mark_install_write_applied "$DIRECT_SKILL_TARGET/.codex-chef-managed.json"
+    mark_install_write_applied "$DIRECT_SKILL_TARGET/.agentchef-managed.json"
   fi
 done < <(direct_skill_names)
 
@@ -1194,7 +1194,7 @@ const agentCatalog = readJson("catalog/agents.json");
 const mcpCatalog = readJson("catalog/mcp-servers.json");
 const skillCatalog = readJson("catalog/skills.json");
 const routingCatalog = readJson("catalog/routing-profiles.json");
-const pluginSkillRoot = path.join(root, "plugins/codex-chef-workflows/skills");
+const pluginSkillRoot = path.join(root, "plugins/agentchef-workflows/skills");
 
 const agents = [
   ...agentCatalog.agents.map((agent) => agent.name),

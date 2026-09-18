@@ -21,6 +21,7 @@ import {
 } from "./lib/cli-error-contract.mjs";
 import { classifyGitStatus } from "./lib/git-worktree.mjs";
 import { acquireOperationLock } from "./lib/operation-lock.mjs";
+import { acceptsSchema, backupKind, identity, journalFileNames } from "./lib/identity.mjs";
 import {
   buildProcessAudit,
   terminateCleanupPlan
@@ -45,7 +46,7 @@ function normalizeLanguage(value) {
 }
 
 function languageFromEnvironment() {
-  return normalizeLanguage(process.env.CODEX_CHEF_LANG || process.env.CHEF_LANG) || "en";
+  return normalizeLanguage(process.env.AGENTCHEF_LANG || process.env.CODEX_CHEF_LANG || process.env.CHEF_LANG) || "en";
 }
 
 function languageFromArgs(argv, fallback) {
@@ -117,7 +118,7 @@ class UserInterrupt extends Error {
   constructor() {
     super("User interrupted");
     this.name = "UserInterrupt";
-    this.code = "CODEX_CHEF_USER_INTERRUPT";
+    this.code = "AGENTCHEF_USER_INTERRUPT";
   }
 }
 
@@ -126,7 +127,7 @@ function isQuestionAbort(error) {
 }
 
 function isUserInterrupt(error) {
-  return error instanceof UserInterrupt || error?.code === "CODEX_CHEF_USER_INTERRUPT";
+  return error instanceof UserInterrupt || error?.code === "AGENTCHEF_USER_INTERRUPT";
 }
 
 function questionAbortError() {
@@ -169,6 +170,7 @@ const ACTION_FLAGS = new Map([
   ["--backups", "backups"],
   ["--install", "install"],
   ["--remove", "remove"],
+  ["--migrate-identity", "migrate-identity"],
   ["--skills", "skills"],
   ["--mcp", "mcp"],
   ["--routing", "routing"],
@@ -272,10 +274,10 @@ if (options.apply && options.action === "processes" && !options.cleanupStale) {
     "--processes --apply ayrıca --cleanup-stale ister."
   );
 }
-if (options.target && !["install", "preview", "reset", "remove"].includes(options.action || "")) {
+if (options.target && !["install", "preview", "reset", "remove", "migrate-identity"].includes(options.action || "")) {
   cliError(
-    "--target can only be used with --install, --preview, --reset, or --remove.",
-    "--target yalnızca --install, --preview, --reset veya --remove ile kullanılabilir."
+    "--target can only be used with --install, --preview, --reset, --remove, or --migrate-identity.",
+    "--target yalnızca --install, --preview, --reset, --remove veya --migrate-identity ile kullanılabilir."
   );
 }
 if (options.action === "remove" && !options.target) {
@@ -1135,7 +1137,7 @@ Kullanım:
 
 Komut kısayolları:
   Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
-  Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --processes --cleanup-stale --apply
+  Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
   Kurulum hedefi: --install/--preview/--reset/--remove ile --target codex|claude|both (varsayılan codex; etkileşimli kurulum algılayıp onay ister)
   Süreç temizliği: --processes --cleanup-stale [--apply]; --apply olmadan yalnız önizleme
   Yedekler: --backups [--backup ID] [--restore|--delete --apply]
@@ -1158,7 +1160,7 @@ Seçenekler:
   --details      Özet ekranlarda tam tablo ve kanıt ayrıntılarını gösterir
   --cleanup-stale Süresi dolmuş, aktif Codex sahibi olmayan yerel MCP ağaçlarını önizler
   --apply        Update, install, reset, repair, remove, seçili skill install veya açık stale-process temizliği için write action izni verir
-  --target T     --install/--preview/--reset/--remove için kurulum hedefi: codex (varsayılan), claude veya both
+  --target T     --install/--preview/--reset/--remove/--migrate-identity için kurulum hedefi: codex (varsayılan), claude veya both
   --help         Bu yardımı gösterir
 
 Ekranlar:
@@ -1185,7 +1187,7 @@ Usage:
 
 Reference actions:
   Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
-  Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --processes --cleanup-stale --apply
+  Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
   Install target: --target codex|claude|both with --install/--preview/--reset/--remove (default codex; interactive installs detect and confirm)
   Process cleanup: --processes --cleanup-stale [--apply]; preview-only without --apply
   Backups: --backups [--backup ID] [--restore|--delete --apply]
@@ -1214,7 +1216,7 @@ Options:
   --details      Show full tables and evidence on summary screens
   --cleanup-stale Preview expired local MCP trees that have no active Codex owner
   --apply        Allow write actions for update, install, reset, repair, remove, selected skill install, or explicit stale-process cleanup
-  --target T     Install target for --install/--preview/--reset/--remove: codex (default), claude, or both
+  --target T     Install target for --install/--preview/--reset/--remove/--migrate-identity: codex (default), claude, or both
   --help         Show this help
 
 Details:
@@ -1611,7 +1613,7 @@ function runDoctor() {
       || runtimeReport?.status === "attention"
     );
     const report = {
-      schemaVersion: "codex-chef.doctor-bundle.v1",
+      schemaVersion: "agentchef.doctor-bundle.v1",
       generatedAt: new Date().toISOString(),
       status: failed ? "fail" : attention ? "attention" : "ok",
       repoDoctor: {
@@ -1740,7 +1742,7 @@ function atomicWriteUpdateRecoveryReceipt(receipt) {
 
 function prepareUpdateRecoveryReceipt({ beforeHead, candidateHead, expectedPackageVersion, dirty }) {
   const receipt = {
-    schemaVersion: "codex-chef.update-recovery.v1",
+    schemaVersion: "agentchef.update-recovery.v1",
     phase: "prepared",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1769,7 +1771,7 @@ function findRecoverableUpdateReceipt(beforeHead, expectedPackageVersion, dirty)
   if (!fs.existsSync(receiptPath)) return null;
   try {
     const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
-    const resumable = receipt?.schemaVersion === "codex-chef.update-recovery.v1"
+    const resumable = acceptsSchema(receipt?.schemaVersion, "update-recovery", 1)
       && ["source-advanced", "managed-refresh-started"].includes(receipt.phase)
       && receipt.candidateHead === beforeHead
       && receipt.expectedPackageVersion === expectedPackageVersion
@@ -1829,7 +1831,7 @@ function resolveGitRef(ref) {
 }
 
 function runFetchedUpdateValidation(candidateCommit, extra = {}) {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-update-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-update-"));
   const candidatePath = path.join(tempRoot, "candidate");
   let added = false;
   try {
@@ -1865,7 +1867,7 @@ const MANAGED_REFRESH_TARGETS = [
   "CODEX_HOME/rules/default.rules",
   "CODEX_HOME/*.config.toml profiles",
   "CODEX_HOME/agents/*.toml role files",
-  "CODEX_HOME/plugins/codex-chef-workflows",
+  "CODEX_HOME/plugins/agentchef-workflows",
   "AGENTS_HOME/plugins/marketplace.json"
 ];
 
@@ -2488,6 +2490,39 @@ async function runInstall(interaction = {}) {
   });
 }
 
+// 1.0.0 identity migration: converts legacy codex-chef spellings of an
+// installed home to agentchef. Preview-first; --apply is journaled and
+// backup-backed by scripts/migrate-identity.mjs.
+async function runMigrateIdentity(interaction = {}) {
+  const target = options.target || "codex";
+  printSurfaceHeader(
+    localText("Migrate identity", "Kimlik göçü"),
+    localText(
+      `Target: ${target}. Legacy codex-chef markers, folders, marketplace entries, plugin ids, the Git hook banner, and Claude receipts are converted to agentchef; user content and backups stay.`,
+      `Hedef: ${target}. Eski codex-chef işaretçileri, klasörler, marketplace girdileri, plugin id'leri, Git hook banner'ı ve Claude makbuzları agentchef'e çevrilir; kullanıcı içeriği ve yedekler kalır.`
+    ),
+    ICONS.update
+  );
+  const preview = runNode("migrate-identity-preview", "scripts/migrate-identity.mjs", ["--dry-run", "--target", target, "--redact-paths"]);
+  if (!preview.ok) return preview;
+  if (!writeFlowRequested(interaction)) {
+    console.log(styleMuted(localText("No files were changed. Add --apply to run this migration.", "Hiçbir dosya değişmedi. Göçü çalıştırmak için --apply ekleyin.")));
+    return { ok: true, skipped: true };
+  }
+  const allowed = await confirmWriteAction(
+    "Migrate identity",
+    `Migrate identity (target: ${target}) renames AgentChef-owned markers, folders, and entries after backup.`,
+    interaction
+  );
+  if (!allowed) return { ok: false, skipped: true };
+  const applied = runNode("migrate-identity-apply", "scripts/migrate-identity.mjs", ["--apply", "--target", target, "--redact-paths"]);
+  return completeAppliedAction(applied, true, {
+    kind: "migrate-identity",
+    beforeVersion: currentPackageVersion(),
+    afterVersion: currentPackageVersion()
+  });
+}
+
 async function runRemove(interaction = {}) {
   const target = options.target;
   const removeClaude = target !== "codex";
@@ -2597,10 +2632,10 @@ async function runRepair(interaction = {}) {
   );
 }
 
-const BACKUP_MANIFEST_NAME = ".codex-chef-backup.json";
-const OPERATION_JOURNAL_NAME = ".codex-chef-operation-journal.json";
-const PINNED_SKILL_ROLLBACK_RECEIPT_NAME = ".codex-chef-pinned-skill-rollback.json";
-const BACKUP_ID_PATTERN = /^codex-chef-[A-Za-z0-9._-]+$/;
+const BACKUP_MANIFEST_NAME = ".agentchef-backup.json";
+const OPERATION_JOURNAL_NAME = ".agentchef-operation-journal.json";
+const PINNED_SKILL_ROLLBACK_RECEIPT_NAME = ".agentchef-pinned-skill-rollback.json";
+const BACKUP_ID_PATTERN = /^(?:agentchef|codex-chef)-[A-Za-z0-9._-]+$/;
 
 function codexHome() {
   return path.resolve(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
@@ -2673,21 +2708,29 @@ function hashFile(filePath) {
   return hash.digest("hex");
 }
 
+function firstExisting(archivePath, names) {
+  for (const name of names) {
+    const candidate = path.join(archivePath, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(archivePath, names[0]);
+}
+
 function readBackupManifest(archivePath) {
-  const manifestPath = path.join(archivePath, BACKUP_MANIFEST_NAME);
+  const manifestPath = firstExisting(archivePath, [BACKUP_MANIFEST_NAME, identity.legacyBackupManifest]);
   if (!fs.existsSync(manifestPath)) {
-    const journalPath = path.join(archivePath, OPERATION_JOURNAL_NAME);
+    const journalPath = firstExisting(archivePath, journalFileNames);
     if (!fs.existsSync(journalPath)) return null;
     try {
       const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
       if (
-        journal?.schemaVersion !== "codex-chef.operation-journal.v1"
+        !acceptsSchema(journal?.schemaVersion, "operation-journal", 1)
         || !Array.isArray(journal.backups)
       ) {
         return { invalid: true, error: "Operation journal has an unsupported shape." };
       }
       return {
-        schemaVersion: "codex-chef.backup.v1",
+        schemaVersion: "agentchef.backup.v1",
         createdAt: journal.createdAt,
         operation: journal.operation,
         recoveryJournal: true,
@@ -2720,8 +2763,10 @@ function listArchiveFiles(archivePath, includeHashes = false) {
       const relative = toPosix(path.relative(archivePath, fullPath));
       if (
         relative === BACKUP_MANIFEST_NAME
-        || relative === OPERATION_JOURNAL_NAME
+        || relative === identity.legacyBackupManifest
+        || journalFileNames.includes(relative)
         || relative === PINNED_SKILL_ROLLBACK_RECEIPT_NAME
+        || relative === identity.legacyPinnedRollbackReceipt
       ) continue;
       if (!validateArchiveRelativePath(relative)) {
         issues.push(`Rejected unsafe backup path: ${relative}`);
@@ -2791,12 +2836,12 @@ function managedRestoreAllowlist() {
     if (file.endsWith(".config.toml")) addCodex(file);
   }
 
-  const pluginSource = path.join(root, "plugins", "codex-chef-workflows");
+  const pluginSource = path.join(root, "plugins", "agentchef-workflows");
   for (const file of listCanonicalTreeFiles(pluginSource)) {
-    addCodex(`plugins/codex-chef-workflows/${file}`);
+    addCodex(`plugins/agentchef-workflows/${file}`);
     add(
-      `agents/plugins/sources/codex-chef-workflows/${file}`,
-      path.join(agentsHome(), "plugins", "sources", "codex-chef-workflows", ...file.split("/"))
+      `agents/plugins/sources/agentchef-workflows/${file}`,
+      path.join(agentsHome(), "plugins", "sources", "agentchef-workflows", ...file.split("/"))
     );
   }
 
@@ -2840,8 +2885,8 @@ function validateBackupManifest(manifest, files) {
   const issues = [];
   if (!manifest) return ["Backup manifest is required for restore."];
   if (manifest.invalid) return [`Backup manifest is invalid JSON: ${manifest.error}`];
-  if (manifest.schemaVersion !== "codex-chef.backup.v1" || !Array.isArray(manifest.entries)) {
-    return ["Backup manifest must use codex-chef.backup.v1 with an entries array."];
+  if (!acceptsSchema(manifest.schemaVersion, "backup", 1) || !Array.isArray(manifest.entries)) {
+    return ["Backup manifest must use agentchef.backup.v1 (or the legacy codex-chef spelling) with an entries array."];
   }
   if (Array.isArray(manifest.issues) && manifest.issues.length > 0) {
     issues.push("Backup manifest records unresolved archive issues.");
@@ -2972,7 +3017,7 @@ function restoreBackupPlan(archivePath) {
 }
 
 function createRollbackBackup(plan, restoredFrom = "") {
-  const restoreId = `codex-chef-restore-${compactTimestamp()}-${process.pid}`;
+  const restoreId = `agentchef-restore-${compactTimestamp()}-${process.pid}`;
   const rollbackPath = path.join(backupRootPath(), restoreId);
   const entries = [];
   if (plan.replaceRoot && fs.existsSync(plan.replaceRoot.targetRoot)) {
@@ -3037,7 +3082,7 @@ function writeBackupManifest(backupPath, extra = {}) {
   fs.mkdirSync(backupPath, { recursive: true });
   const packageJson = readJson("package.json");
   const manifest = {
-    schemaVersion: "codex-chef.backup.v1",
+    schemaVersion: "agentchef.backup.v1",
     createdAt: new Date().toISOString(),
     packageName: packageJson.name,
     packageVersion: packageJson.version,
@@ -3050,7 +3095,7 @@ function writeBackupManifest(backupPath, extra = {}) {
 function stageRestoreFile(targetPath, data) {
   const stagePath = path.join(
     path.dirname(targetPath),
-    `.codex-chef-restore-stage-${path.basename(targetPath)}-${process.pid}-${crypto.randomUUID()}.tmp`
+    `.agentchef-restore-stage-${path.basename(targetPath)}-${process.pid}-${crypto.randomUUID()}.tmp`
   );
   const descriptor = fs.openSync(stagePath, "wx", 0o600);
   try {
@@ -3072,7 +3117,7 @@ function recoverStaleRestoreStages(items) {
   const scanned = new Set();
   for (const item of items) {
     const directory = path.dirname(item.target);
-    const prefix = `.codex-chef-restore-stage-${path.basename(item.target)}-`;
+    const prefix = `.agentchef-restore-stage-${path.basename(item.target)}-`;
     const key = `${directory}\0${prefix}`;
     if (scanned.has(key) || !fs.existsSync(directory)) continue;
     scanned.add(key);
@@ -3113,7 +3158,7 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
     const targetRoot = plan.replaceRoot.targetRoot;
     const displaced = path.join(
       path.dirname(targetRoot),
-      `.codex-chef-restore-current-${plan.replaceRoot.skill}-${process.pid}-${Date.now()}`
+      `.agentchef-restore-current-${plan.replaceRoot.skill}-${process.pid}-${Date.now()}`
     );
     assertManagedRestoreTarget(targetRoot);
     assertManagedRestoreTarget(displaced);
@@ -3134,8 +3179,8 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
         fs.writeFileSync(item.target, item.data);
         writeCount += 1;
         if (
-          process.env.CODEX_CHEF_TEST_MODE === "1"
-          && Number(process.env.CODEX_CHEF_TEST_PINNED_RESTORE_FAIL_AFTER_WRITES) === writeCount
+          process.env.AGENTCHEF_TEST_MODE === "1"
+          && Number(process.env.AGENTCHEF_TEST_PINNED_RESTORE_FAIL_AFTER_WRITES) === writeCount
         ) {
           throw new Error("Injected pinned restore write failure.");
         }
@@ -3163,14 +3208,14 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
       original.stagePath = stageRestoreFile(original.item.target, original.item.data);
       staged.push(original);
       if (
-        process.env.CODEX_CHEF_TEST_MODE === "1"
-        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_STAGING) === staged.length
+        process.env.AGENTCHEF_TEST_MODE === "1"
+        && Number(process.env.AGENTCHEF_TEST_RESTORE_FAIL_AFTER_STAGING) === staged.length
       ) {
         throw new Error("Injected restore staging failure.");
       }
       if (
-        process.env.CODEX_CHEF_TEST_MODE === "1"
-        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_DURING_WRITE) === staged.length
+        process.env.AGENTCHEF_TEST_MODE === "1"
+        && Number(process.env.AGENTCHEF_TEST_RESTORE_FAIL_DURING_WRITE) === staged.length
       ) {
         throw new Error("Injected restore in-write failure.");
       }
@@ -3186,8 +3231,8 @@ function restoreBackupArchiveUnlocked(archivePath, plan) {
       touched.push(original);
       fs.renameSync(original.stagePath, original.item.target);
       if (
-        process.env.CODEX_CHEF_TEST_MODE === "1"
-        && Number(process.env.CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_WRITES) === touched.length
+        process.env.AGENTCHEF_TEST_MODE === "1"
+        && Number(process.env.AGENTCHEF_TEST_RESTORE_FAIL_AFTER_WRITES) === touched.length
       ) {
         throw new Error("Injected restore write failure.");
       }
@@ -3261,12 +3306,14 @@ function summarizeBackupArchive(id, archivePath) {
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
   return {
     id,
-    kind: id.startsWith("codex-chef-repair-")
+    kind: backupKind(id) === "repair"
       ? "repair"
-      : id.startsWith("codex-chef-restore-")
+      : backupKind(id) === "restore"
         ? "restore-rollback"
-        : id.startsWith("codex-chef-skill-")
+        : backupKind(id) === "skill"
           ? "pinned-skill"
+        : backupKind(id) === "remove"
+          ? "remove"
         : "install",
     path: archivePath,
     fileCount: files.length,
@@ -3838,7 +3885,7 @@ function inspectCuratedSkillStatus(managedSkills, skillsCliVersion = "") {
       try {
         const inspection = skill.directInstall === true
           ? inspectDirectSkillTarget(
-              path.join(root, "plugins", "codex-chef-workflows", "skills", skill.name),
+              path.join(root, "plugins", "agentchef-workflows", "skills", skill.name),
               target
             )
           : inspectPinnedSkillTarget(target, {
@@ -3956,7 +4003,7 @@ async function runSkills(interaction = {}) {
   const installation = inspectCuratedSkillStatus(managedSkills, catalog.skillsCliVersion);
   if (options.json) {
     console.log(JSON.stringify({
-      schemaVersion: "codex-chef.skills.v1",
+      schemaVersion: "agentchef.skills.v1",
       generatedAt: new Date().toISOString(),
       managed: {
         expected: managedSkills.length,
@@ -4952,6 +4999,8 @@ async function runAction(action, interaction = {}) {
       return runInstall(interaction);
     case "remove":
       return runRemove(interaction);
+    case "migrate-identity":
+      return runMigrateIdentity(interaction);
     case "repair":
       return runRepair(interaction);
     case "backups":
@@ -4981,7 +5030,7 @@ async function runAction(action, interaction = {}) {
 
 async function runMenu() {
   printHeader();
-  const scriptedMenu = process.env.CODEX_CHEF_TEST_MENU === "1"
+  const scriptedMenu = process.env.AGENTCHEF_TEST_MENU === "1"
     ? fs.readFileSync(0, "utf8").split(/\r?\n/)
     : null;
   const rl = scriptedMenu ? null : createInterface({ input: process.stdin, output: process.stdout });
@@ -4999,9 +5048,9 @@ async function runMenu() {
   const interaction = { question, fromMenu: true };
   // Existing transcript smokes intentionally retain the historical flat menu.
   // Real interactive sessions use the task-oriented command center below.
-  const legacyTranscriptMode = process.env.CODEX_CHEF_TEST_MENU === "1"
-    && process.env.CODEX_CHEF_TEST_MENU_V2 !== "1";
-  const navigationOnly = process.env.CODEX_CHEF_TEST_MENU_NAV_ONLY === "1";
+  const legacyTranscriptMode = process.env.AGENTCHEF_TEST_MENU === "1"
+    && process.env.AGENTCHEF_TEST_MENU_V2 !== "1";
+  const navigationOnly = process.env.AGENTCHEF_TEST_MENU_NAV_ONLY === "1";
   try {
     let shouldRenderMenu = true;
     let activeGroup = null;
@@ -5085,7 +5134,7 @@ try {
   } else if (options.action) {
     const result = await runAction(options.action);
     if (result?.ok === false && !result.skipped) process.exit(1);
-  } else if (!process.stdin.isTTY && process.env.CODEX_CHEF_TEST_MENU !== "1") {
+  } else if (!process.stdin.isTTY && process.env.AGENTCHEF_TEST_MENU !== "1") {
     printHelp();
   } else {
     await runMenu();

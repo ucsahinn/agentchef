@@ -11,10 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const chef = path.join(root, "scripts", "chef-cli.mjs");
 
 test("restore staging interruption leaves every live target unchanged", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-backup-restore-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-backup-restore-"));
   const codexHome = path.join(fixture, "codex");
   const agentsHome = path.join(fixture, "agents");
-  const archiveId = "codex-chef-test-staging";
+  const archiveId = "agentchef-test-staging";
   const archive = path.join(codexHome, "backups", archiveId);
   const originalAgents = "# current agents\n";
   const originalConfig = "current = true\n";
@@ -34,8 +34,8 @@ test("restore staging interruption leaves every live target unchanged", () => {
         ...process.env,
         CODEX_HOME: codexHome,
         AGENTS_HOME: agentsHome,
-        CODEX_CHEF_TEST_MODE: "1",
-        CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_STAGING: "1"
+        AGENTCHEF_TEST_MODE: "1",
+        AGENTCHEF_TEST_RESTORE_FAIL_AFTER_STAGING: "1"
       }
     });
 
@@ -49,12 +49,12 @@ test("restore staging interruption leaves every live target unchanged", () => {
 });
 
 test("restore removes a stale regular staging file before publishing", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-backup-recovery-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-backup-recovery-"));
   const codexHome = path.join(fixture, "codex");
   const agentsHome = path.join(fixture, "agents");
-  const archiveId = "codex-chef-test-recovery";
+  const archiveId = "agentchef-test-recovery";
   const archive = path.join(codexHome, "backups", archiveId);
-  const staleStage = path.join(codexHome, ".codex-chef-restore-stage-AGENTS.md-interrupted.tmp");
+  const staleStage = path.join(codexHome, ".agentchef-restore-stage-AGENTS.md-interrupted.tmp");
   try {
     write(path.join(codexHome, "AGENTS.md"), "# current agents\n");
     write(staleStage, "incomplete restored content\n");
@@ -92,8 +92,8 @@ function writeManifest(archive, relativePaths) {
       sha256: crypto.createHash("sha256").update(data).digest("hex")
     };
   });
-  write(path.join(archive, ".codex-chef-backup.json"), `${JSON.stringify({
-    schemaVersion: "codex-chef.backup.v1",
+  write(path.join(archive, ".agentchef-backup.json"), `${JSON.stringify({
+    schemaVersion: "agentchef.backup.v1",
     entries
   })}\n`);
 }
@@ -106,7 +106,7 @@ function findRestoreStaging(rootPath) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       if (entry.isDirectory()) pending.push(fullPath);
-      else if (entry.name.startsWith(".codex-chef-restore-stage-")) results.push(fullPath);
+      else if (entry.name.startsWith(".agentchef-restore-stage-")) results.push(fullPath);
     }
   }
   return results;

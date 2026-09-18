@@ -30,7 +30,7 @@ const packages = {
     template: "assets/seo-audit-report.template.json",
     requiredSkillPhrases: [
       "$seo",
-      "$codex-chef-workflows:seo",
+      "$agentchef-workflows:seo",
       "local-source",
       "local-rendered",
       "deployed-public",
@@ -69,7 +69,7 @@ const packages = {
     template: "assets/research-report.template.json",
     requiredSkillPhrases: [
       "$evidence-research",
-      "$codex-chef-workflows:evidence-research",
+      "$agentchef-workflows:evidence-research",
       "fact",
       "inference",
       "recommendation",
@@ -122,7 +122,7 @@ const catalogByName = new Map((catalog.skills || []).map((skill) => [skill.name,
 const operationById = new Map((installPlan.operations || []).map((operation) => [operation.id, operation]));
 
 for (const [skillName, spec] of Object.entries(packages)) {
-  const skillRel = `plugins/codex-chef-workflows/skills/${skillName}`;
+  const skillRel = `plugins/agentchef-workflows/skills/${skillName}`;
   const skillRoot = path.join(root, skillRel);
   for (const relativePath of spec.required) {
     if (!fs.existsSync(path.join(skillRoot, relativePath))) {
@@ -141,7 +141,7 @@ for (const [skillName, spec] of Object.entries(packages)) {
     requireIncludes(sourceText, phrase, `${skillRel}/references/sources.md`);
   }
   requireIncludes(openAiText, `$${skillName}`, `${skillRel}/agents/openai.yaml`);
-  requireIncludes(openAiText, `$codex-chef-workflows:${skillName}`, `${skillRel}/agents/openai.yaml`);
+  requireIncludes(openAiText, `$agentchef-workflows:${skillName}`, `${skillRel}/agents/openai.yaml`);
   requireIncludes(openAiText, "allow_implicit_invocation: true", `${skillRel}/agents/openai.yaml`);
 
   const catalogEntry = catalogByName.get(skillName);
@@ -176,10 +176,10 @@ for (const [skillName, spec] of Object.entries(packages)) {
 }
 
 const seoText = [
-  read("plugins/codex-chef-workflows/skills/seo/SKILL.md"),
-  read("plugins/codex-chef-workflows/skills/seo/references/technical-seo.md"),
-  read("plugins/codex-chef-workflows/skills/seo/references/structured-data.md"),
-  read("plugins/codex-chef-workflows/skills/seo/references/content-and-growth.md")
+  read("plugins/agentchef-workflows/skills/seo/SKILL.md"),
+  read("plugins/agentchef-workflows/skills/seo/references/technical-seo.md"),
+  read("plugins/agentchef-workflows/skills/seo/references/structured-data.md"),
+  read("plugins/agentchef-workflows/skills/seo/references/content-and-growth.md")
 ].join("\n");
 const staleSeoClaims = [
   /E-E-A-T (?:is|as) (?:a )?(?:direct|specific|standalone) ranking factor/i,

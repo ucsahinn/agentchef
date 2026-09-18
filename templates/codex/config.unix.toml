@@ -1,4 +1,4 @@
-# Unix/WSL Codex Chef.
+# Unix/WSL AgentChef.
 # Copy to ~/.codex/config.toml with scripts/install.sh.
 
 model = "gpt-5.5"
@@ -346,7 +346,7 @@ approval_mode = "approve"
 [mcp_servers.codebase-memory]
 enabled = false
 command = "sh"
-args = ["-lc", "npm_config_cache=\"${XDG_CACHE_HOME:-$HOME/.cache}/codex-chef/codebase-memory\" exec npx -y codebase-memory-mcp@0.8.1"]
+args = ["-lc", "npm_config_cache=\"${XDG_CACHE_HOME:-$HOME/.cache}/agentchef/codebase-memory\" exec npx -y codebase-memory-mcp@0.8.1"]
 default_tools_approval_mode = "prompt"
 enabled_tools = ["list_projects", "index_status", "search_graph", "trace_path", "detect_changes", "query_graph", "get_graph_schema", "get_code_snippet", "get_architecture", "search_code"]
 disabled_tools = ["delete_project", "manage_adr", "ingest_traces", "index_repository"]

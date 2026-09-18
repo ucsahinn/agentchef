@@ -35,7 +35,7 @@ function assertJsonUsageError(script, args, expectedTool) {
   assert.equal(result.status, 2, `${script} should return the CLI usage exit code`);
   assert.equal(result.stderr, "", `${script} JSON errors must not mix plain stderr output`);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.schemaVersion, "codex-chef.cli-error.v1");
+  assert.equal(report.schemaVersion, "agentchef.cli-error.v1");
   assert.equal(report.status, "error");
   assert.equal(report.tool, expectedTool);
   assert.equal(report.error?.code, "invalid-argument");
@@ -217,7 +217,7 @@ test("release note extraction consumes options instead of falling back silently"
 });
 
 test("release note output refuses a linked in-repository ancestor", () => {
-  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-release-notes-outside-"));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-release-notes-outside-"));
   const link = path.join(root, "tmp", `cli-error-contract-link-${process.pid}-${Date.now()}`);
   fs.mkdirSync(path.dirname(link), { recursive: true });
   try {

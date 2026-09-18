@@ -144,9 +144,9 @@ export function emitCliError({
   try {
     if (json) {
       fs.writeSync(1, `${JSON.stringify({
-        schemaVersion: "codex-chef.cli-error.v1",
+        schemaVersion: "agentchef.cli-error.v1",
         status: "error",
-        tool: String(tool || "codex-chef").slice(0, 64),
+        tool: String(tool || "agentchef").slice(0, 64),
         error: { code, message }
       }, null, 2)}\n`);
     } else {

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Evidence-Backed SEO"
+  short_description: "Audit, fix, and verify search readiness."
+  default_prompt: "Use $seo, or $agentchef-workflows:seo from the installed plugin, to audit or implement the requested SEO work, distinguish local, rendered, deployed, and account evidence, verify every claim, and leave external writes approval-gated."
+
+policy:
+  allow_implicit_invocation: true

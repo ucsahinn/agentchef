@@ -2,7 +2,11 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 
-const LOCK_DIRECTORY_NAME = ".codex-chef-operation.lock";
+import { identity } from "./identity.mjs";
+
+const LOCK_DIRECTORY_NAME = identity.lockDirectory;
+// A lock left behind by a pre-1.0.0 run still means "in progress".
+const LEGACY_LOCK_DIRECTORY_NAME = identity.legacyLockDirectory;
 const OWNER_FILE_NAME = "owner.json";
 
 function requireText(value, name) {
@@ -56,7 +60,9 @@ function readOwner(lockPath) {
 
 export function inspectOperationLock({ root }) {
   const resolvedRoot = canonicalizeRoot(root, "root");
-  const lockPath = join(resolvedRoot, LOCK_DIRECTORY_NAME);
+  let lockPath = join(resolvedRoot, LOCK_DIRECTORY_NAME);
+  const legacyLockPath = join(resolvedRoot, LEGACY_LOCK_DIRECTORY_NAME);
+  if (!existsSync(lockPath) && existsSync(legacyLockPath)) lockPath = legacyLockPath;
   if (!existsSync(lockPath)) return { status: "absent", lockPath, owner: null };
   const owner = readOwner(lockPath);
   if (!owner || typeof owner.id !== "string" || typeof owner.pid !== "number" || typeof owner.operation !== "string" || typeof owner.startedAt !== "string") {
@@ -95,6 +101,11 @@ export function acquireOperationLock({ root, operation }) {
   const validatedOperation = requireText(operation, "operation");
   mkdirSync(resolvedRoot, { recursive: true });
   const lockPath = join(resolvedRoot, LOCK_DIRECTORY_NAME);
+  if (existsSync(join(resolvedRoot, LEGACY_LOCK_DIRECTORY_NAME))) {
+    const lockError = new Error(`Another operation is already in progress for ${join(resolvedRoot, LEGACY_LOCK_DIRECTORY_NAME)} (legacy lock).`);
+    lockError.code = "OPERATION_LOCKED";
+    throw lockError;
+  }
   const owner = {
     pid: process.pid,
     operation: validatedOperation,

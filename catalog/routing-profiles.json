@@ -386,7 +386,7 @@
       "trigger": "Install health, global setup drift, catalog alignment, skill pressure, MCP status, or AgentChef diagnostics.",
       "match": { "priority": 70, "phrases": [["starter health", 14], ["managed file drift", 14], ["runtime verification", 12], ["process hygiene", 12]], "terms": [["health", 7], ["runtime", 7], ["drift", 8], ["install", 5], ["repair", 7], ["process", 5], ["diagnostic", 7], ["recovery", 7], ["kurulum", 5], ["durum", 4], ["onar", 7], ["surec", 5]], "excludeTerms": [] },
       "agents": ["codex_doctor", "test_verifier"],
-      "skills": ["codex-chef-operator", "context-budget-planner"],
+      "skills": ["agentchef-operator", "context-budget-planner"],
       "mcp": ["openaiDeveloperDocs", "sequential-thinking"],
       "flags": ["codex:status", "verify:install:runtime", "repair:install"],
       "delegationMode": "conditional",

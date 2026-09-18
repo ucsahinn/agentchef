@@ -238,6 +238,16 @@ literal `${HOME}/.claude` destination is still rejected, as are `.cursor`,
 `.opencode`, `.zed`, `.vscode`, `.gemini`, `.qwen`, and `.kiro`, so adjacent
 harness homes cannot drift into the install surface silently.
 
+On-disk identity is the `agentchef` spelling since 1.0.0 (markers, journal,
+lock, backup prefixes, schema strings, plugin folder, marketplace name, plugin
+id, hook banner). Every reader also accepts the pre-1.0.0 `codex-chef`
+spelling, so drift detection, repair, status, and removal treat an un-migrated
+home as managed rather than foreign; the conversion happens only through the
+explicit `--migrate-identity` command, which previews first and is journaled
+and backup-backed like every other write. A Git hook is rewritten by the
+migration only when its bytes match a shipped template; any other hook stays a
+conflict that needs explicit adoption.
+
 Every manifest operation names its target (`codex`, `claude`, or `shared`).
 The Codex target is the default; the Claude target is selected only by an
 explicit `--target` or an interactive confirmation. Claude-side files that
@@ -248,7 +258,7 @@ entries whose current value still matches the receipt. The Claude plugin cache
 is owned by the `claude plugin` CLI and is never written by hand. The
 process-hygiene hook is not published to Claude Code in this release.
 
-Installers upsert only the `codex-chef-workflows` marketplace entry. They do
+Installers upsert only the `agentchef-workflows` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing
 marketplace file is invalid, unreadable, or not a JSON object.
 
@@ -263,7 +273,7 @@ SEO and Evidence Research allow implicit activation only when their
 descriptions unambiguously match.
 
 The marketplace entry points to a managed mirror under
-`AGENTS_HOME/plugins/sources/codex-chef-workflows`, which always stays inside
+`AGENTS_HOME/plugins/sources/agentchef-workflows`, which always stays inside
 the marketplace root required by the current Codex schema. This registration
 makes the plugin discoverable, not installed or enabled; namespaced plugin use
 requires an explicit plugin install and a new session. Marketplace JSON, the
@@ -274,7 +284,7 @@ descendants that escape the configured homes fail closed.
 
 After that explicit first plugin install, installer, repair, and update applies
 inspect the installed plugin version through the targeted `CODEX_HOME`. They
-run `codex plugin add codex-chef-workflows@codex-chef --json` only when the
+run `codex plugin add agentchef-workflows@agentchef --json` only when the
 plugin is already installed and its versioned cache is stale, then read the
 installed version again before reporting success. A missing or uninstalled
 plugin remains uninstalled, and a failed refresh fails closed instead of
@@ -372,7 +382,7 @@ known AgentChef-managed files under the active Codex or Agents homes. If a
 later write fails, already-written targets are restored from the fresh rollback
 backup. Commit-pinned skill archives are limited to a cataloged skill ID and
 replace that skill tree atomically enough to preserve exact-tree semantics
-during handled failures. A valid `codex-chef.backup.v1` manifest must exactly
+during handled failures. A valid `agentchef.backup.v1` manifest must exactly
 match the archive path, size, and SHA-256 set; legacy, missing, extra, altered,
 or unsupported control-plane files fail closed. Inventory calls a backup
 restorable only after those checks and the target allowlist pass. Backup archive
@@ -443,7 +453,7 @@ The operator must review and adopt only the exact conflict with
 flags); one adoption never implies another.
 
 Before the first Git-guard mutation, apply persists the exact prior two-file and
-two-key state in a typed `codex-chef.global-git-guards-receipt@1` receipt. The
+two-key state in a typed `agentchef.global-git-guards-receipt@1` receipt. The
 receipt distinguishes absent files/keys, preserves exact file bytes and modes,
 preserves ordered multi-values, and binds the expected post-apply file hashes,
 Unix modes, and key values. A handled failure rolls the transaction back.
@@ -451,7 +461,7 @@ Restore validates the schema, recorded home, exact allowlist, size, paths, and
 link safety, then refuses to write unless the current state still matches that
 post-apply binding. Only then does it restore or unset each surface exactly. The installer
 prints the receipt path and exact `manage-global-git-guards.mjs restore`
-command; this receipt is deliberately separate from `codex-chef.backup.v1`.
+command; this receipt is deliberately separate from `agentchef.backup.v1`.
 
 When installed, they:
 

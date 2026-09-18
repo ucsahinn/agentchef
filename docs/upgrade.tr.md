@@ -27,6 +27,37 @@ değişenler:
 Aşağıdaki normal güncelleme akışı geçerlidir; ön izleme, yeniden adlandırılmış
 `AGENTS.md` metnini ve kaldırılan Brain skill adımını gösterir.
 
+## 0.9.0'dan 1.0.0'a Geçiş
+
+1.0.0, diskteki kimliği `codex-chef`'ten `agentchef`'e çevirir: sahiplik
+işaretçileri (`.agentchef-managed.json`, `.agentchef-source.json`), işlem
+günlüğü ve kilit adları, yedek klasörü önekleri, makbuz ve rapor şema
+stringleri (`agentchef.<ad>.vN`), plugin klasörü (`plugins/agentchef-workflows`),
+operator skill'i (`agentchef-operator`), kişisel marketplace adı ve plugin
+id'si (`agentchef-workflows@agentchef`), Git hook banner'ı ve `AGENTCHEF_*`
+ortam değişkenleri.
+
+Güncelleme günü hiçbir şey bozulmaz: her okuyucu eski yazımı kabul eder, bu
+yüzden göç edilmemiş bir home yine yönetilen olarak tanınır, onarılır,
+doğrulanır ve doğru kaldırılır. Dönüşümün kendisi tek bir açık, önce-ön-izle
+komuttur:
+
+```powershell
+npm run chef -- --migrate-identity                     # ön izleme, Codex hedefi
+npm run chef -- --migrate-identity --target both       # ön izleme, iki hedef
+npm run chef -- --migrate-identity --target both --apply
+```
+
+Göç; işaretçileri, operator skill klasörünü ve plugin klasörlerini yeniden
+adlandırır; marketplace girdisini, adını ve plugin id'sini yeniden yazar;
+yalnızca baytları gönderilen bir şablonla eşleşen eski banner'lı Git hook'unu
+yeniler; Claude makbuzlarını ve operator skill bağlantısını yeniden yazar;
+CLI'lar mevcutsa plugin'i `codex plugin` ve `claude plugin` üzerinden
+yeniden kaydeder. Yedekler `CODEX_HOME/backups/agentchef-migrate-*` altına
+düşer. Eski yedek klasörleri adlarını korur ve `npm run chef -- --backups`
+ile listelenmeye devam eder. Eski `CODEX_CHEF_*` ortam değişkenleri çalışmaya
+devam eder ve kendin yeniden adlandırabilesin diye raporlanır.
+
 ## 0.6.0'dan 0.9.0'a Geçiş
 
 0.9.0, ikinci kurulum hedefi olarak Claude Code'u ekler. Mevcut bir Codex

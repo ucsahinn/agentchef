@@ -1,11 +1,11 @@
 {
-  "name": "codex-chef",
+  "name": "agentchef",
   "plugins": [
     {
-      "name": "codex-chef-workflows",
+      "name": "agentchef-workflows",
       "source": {
         "source": "local",
-        "path": "./plugins/codex-chef-workflows"
+        "path": "./plugins/agentchef-workflows"
       },
       "policy": {
         "installation": "AVAILABLE",

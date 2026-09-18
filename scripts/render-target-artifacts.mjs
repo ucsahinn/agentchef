@@ -2,7 +2,7 @@
 // Renders every generated, committed target artifact from its single source:
 //   templates/shared/working-agreement.md -> templates/codex/AGENTS.md
 //                                          -> templates/claude/rules/agentchef-working-agreement.md
-//   catalog/agents.json + templates/codex/agents/*.toml -> plugins/codex-chef-workflows/agents/*.md
+//   catalog/agents.json + templates/codex/agents/*.toml -> plugins/agentchef-workflows/agents/*.md
 //   templates/codex/rules/default.rules -> templates/claude/settings.fragment.json
 //   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
 // The Claude manifest declares no hooks: the SessionEnd process-hygiene hook
@@ -17,7 +17,7 @@ import { emitClaudePermissions } from "./lib/emitters/claude-permissions.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
-const pluginDirectory = "plugins/codex-chef-workflows";
+const pluginDirectory = "plugins/agentchef-workflows";
 const agentsOutputDirectory = `${pluginDirectory}/agents`;
 const codexPluginManifestPath = `${pluginDirectory}/.codex-plugin/plugin.json`;
 const claudePluginManifestPath = `${pluginDirectory}/.claude-plugin/plugin.json`;

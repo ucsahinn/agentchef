@@ -81,7 +81,7 @@ Decision rationale: [ADR-001](decisions/001-adaptive-routing-and-user-owned-conf
 | Large skills and agents catalog | Reviewed `catalog/skills.json` and `catalog/agents.json` with validation gates. | Importing broad cross-harness catalogs wholesale. |
 | Manifest-driven install | `manifests/install-plan.json` plus `scripts/plan-install.mjs`. | Hidden global writes or install behavior not shown in the plan preview. |
 | Doctor/status commands | `npm run codex:doctor` and JSON output. | Reading user secrets or mutating global Codex state during diagnostics. |
-| Plugin distribution | Local `codex-chef-workflows` plugin with one exact, trust-gated SessionEnd process hook. | Context-injecting hooks, broad MCP, or external auth. |
+| Plugin distribution | Local `agentchef-workflows` plugin with one exact, trust-gated SessionEnd process hook. | Context-injecting hooks, broad MCP, or external auth. |
 | Legacy command compatibility | Documentation that maps slash-like names to Codex surfaces. | 80+ command shims or deprecated prompt wrappers. |
 | Security/runtime hardening | Gitleaks, workflow hardening, MCP least privilege, install backups, and owner-scoped stale-MCP cleanup after a grace period. | Broad cleanup, auto-publish, token scraping, or broad command allow rules. |
 

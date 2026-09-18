@@ -6,7 +6,7 @@ import test from "node:test";
 import { acquireOperationLock, acquireOperationLockSet, inspectOperationLock, inspectOperationLockSet } from "../lib/operation-lock.mjs";
 
 function withTemporaryRoot(run) {
-  const root = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-"));
+  const root = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-"));
   try {
     run(root);
   } finally {
@@ -28,8 +28,8 @@ test("operation lock rejects a second acquisition for the same root", () => {
 });
 
 test("operation locks for distinct roots do not contend", () => {
-  const firstRoot = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-first-"));
-  const secondRoot = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-second-"));
+  const firstRoot = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-first-"));
+  const secondRoot = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-second-"));
   try {
     const firstLock = acquireOperationLock({ root: firstRoot, operation: "update" });
     const secondLock = acquireOperationLock({ root: secondRoot, operation: "update" });
@@ -45,9 +45,9 @@ test("operation locks for distinct roots do not contend", () => {
 });
 
 test("ordered lock sets contend on a shared root even when their primary roots differ", () => {
-  const firstRoot = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-set-first-"));
-  const secondRoot = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-set-second-"));
-  const sharedRoot = mkdtempSync(join(tmpdir(), "codex-chef-operation-lock-set-shared-"));
+  const firstRoot = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-set-first-"));
+  const secondRoot = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-set-second-"));
+  const sharedRoot = mkdtempSync(join(tmpdir(), "agentchef-operation-lock-set-shared-"));
   try {
     const firstLock = acquireOperationLockSet({ roots: [firstRoot, sharedRoot], operation: "install" });
     assert.throws(
@@ -94,7 +94,7 @@ test("invalid operation is rejected before creating the requested root", () => {
 
 test("operation lock inspection is read-only and fails closed for an unknown owner", () => {
   withTemporaryRoot((root) => {
-    const lockPath = join(root, ".codex-chef-operation.lock");
+    const lockPath = join(root, ".agentchef-operation.lock");
     mkdirSync(lockPath);
     writeFileSync(join(lockPath, "owner.json"), "{not-json}\n", "utf8");
     const inspection = inspectOperationLock({ root });
@@ -106,7 +106,7 @@ test("operation lock inspection is read-only and fails closed for an unknown own
 test("operation lock set inspection canonicalizes duplicate roots and fails closed when any root is unknown", () => {
   withTemporaryRoot((root) => {
     const secondRoot = join(root, "second");
-    const secondLockPath = join(secondRoot, ".codex-chef-operation.lock");
+    const secondLockPath = join(secondRoot, ".agentchef-operation.lock");
     mkdirSync(secondLockPath, { recursive: true });
     writeFileSync(join(secondLockPath, "owner.json"), "{not-json}\\n", "utf8");
 

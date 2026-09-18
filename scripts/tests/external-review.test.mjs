@@ -21,7 +21,7 @@ function git(cwd, args) {
 }
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-review-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-review-"));
   const repo = path.join(root, "repo");
   const templateDir = path.join(root, "git-template-empty");
   const hooksDir = path.join(root, "git-hooks-disabled");

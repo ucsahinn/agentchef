@@ -49,7 +49,7 @@ function configValues(fixture, key) {
 }
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-git-guards-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-git-guards-"));
   const home = path.join(root, "home");
   const source = path.join(root, "source");
   fs.mkdirSync(home, { recursive: true });
@@ -410,7 +410,7 @@ test("JSON CLI previews, applies with a receipt, and restores it", () => {
   assert.equal(applyPayload.applied, true);
   assert.deepEqual(applyPayload.receipt, {
     path: receiptPath,
-    schema: "codex-chef.global-git-guards-receipt",
+    schema: "agentchef.global-git-guards-receipt",
     version: 2
   });
   assert.equal(apply.stdout.includes("bytesBase64"), false);

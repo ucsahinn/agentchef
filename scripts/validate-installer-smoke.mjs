@@ -227,7 +227,7 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
   const agentsPath = path.join(codexHome, "AGENTS.md");
   const rulesPath = path.join(codexHome, "rules", "default.rules");
   const marketplacePath = path.join(agentsHome, "plugins", "marketplace.json");
-  const pluginManifestPath = path.join(codexHome, "plugins", "codex-chef-workflows", ".codex-plugin", "plugin.json");
+  const pluginManifestPath = path.join(codexHome, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json");
   const directSkills = JSON.parse(read(path.join(root, "catalog", "skills.json")))
     .skills
     .filter((skill) => skill.directInstall === true);
@@ -253,12 +253,12 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
   assertFileExists(marketplacePath, `${label} explicit AGENTS_HOME`);
   for (const skill of directSkills) {
     const directSkillPath = path.join(agentsHome, "skills", skill.name, "SKILL.md");
-    const directMarkerPath = path.join(agentsHome, "skills", skill.name, ".codex-chef-managed.json");
+    const directMarkerPath = path.join(agentsHome, "skills", skill.name, ".agentchef-managed.json");
     assertFileExists(directSkillPath, `${label} direct $${skill.name} skill`);
     assertFileExists(directMarkerPath, `${label} direct $${skill.name} ownership marker`);
     if (
       fs.existsSync(directSkillPath)
-      && read(directSkillPath) !== read(path.join(root, "plugins", "codex-chef-workflows", "skills", skill.name, "SKILL.md"))
+      && read(directSkillPath) !== read(path.join(root, "plugins", "agentchef-workflows", "skills", skill.name, "SKILL.md"))
     ) {
       fail(`${label} direct $${skill.name} skill must match its canonical plugin source.`);
     }
@@ -301,13 +301,13 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
   if (fs.existsSync(marketplacePath)) {
     try {
       const marketplace = JSON.parse(read(marketplacePath));
-      const chefEntries = (marketplace.plugins || []).filter((plugin) => plugin?.name === "codex-chef-workflows");
+      const chefEntries = (marketplace.plugins || []).filter((plugin) => plugin?.name === "agentchef-workflows");
       if (chefEntries.length !== 1) fail(`${label} marketplace must contain exactly one AgentChef plugin entry.`);
       const chef = chefEntries[0];
       const marketplaceRoot = path.resolve(agentsHome, "..");
       const expectedPluginSource = `./${path.relative(
         marketplaceRoot,
-        path.join(agentsHome, "plugins", "sources", "codex-chef-workflows")
+        path.join(agentsHome, "plugins", "sources", "agentchef-workflows")
       ).replaceAll(path.sep, "/")}`;
       if (chef && chef.source?.path !== expectedPluginSource) {
         fail(`${label} marketplace AgentChef plugin path must be portable and marketplace-root-relative.`);
@@ -432,7 +432,7 @@ function assertNoBackupInventoryGate() {
   const scenarios = [
     {
       name: "existing managed directory under force/update semantics",
-      prepare: ({ codexHome }) => ensureDir(path.join(codexHome, "plugins", "codex-chef-workflows")),
+      prepare: ({ codexHome }) => ensureDir(path.join(codexHome, "plugins", "agentchef-workflows")),
       args: []
     },
     {
@@ -645,8 +645,8 @@ function runInstallerSafetyScenarios() {
   }
 
   progress("force and update preserve unrelated directory files");
-  const extraPlugin = path.join(creationCodexHome, "plugins", "codex-chef-workflows", "user-extra.txt");
-  const extraMarketplacePlugin = path.join(creationAgentsHome, "plugins", "sources", "codex-chef-workflows", "user-extra.txt");
+  const extraPlugin = path.join(creationCodexHome, "plugins", "agentchef-workflows", "user-extra.txt");
+  const extraMarketplacePlugin = path.join(creationAgentsHome, "plugins", "sources", "agentchef-workflows", "user-extra.txt");
   const extraDirectSkill = path.join(creationAgentsHome, "skills", "fetch", "user-extra.txt");
   for (const target of [extraPlugin, extraMarketplacePlugin, extraDirectSkill]) {
     fs.writeFileSync(target, "must survive force and update\n", "utf8");
@@ -831,7 +831,7 @@ function initializeCuratedSkillInstallerFixture() {
   fs.writeFileSync(
     catalogPath,
     `${JSON.stringify({
-      schemaVersion: "codex-chef.skills.v1",
+      schemaVersion: "agentchef.skills.v1",
       skillsCliVersion: "1.5.20",
       skills: [{
         name: "example-skill",
@@ -884,8 +884,8 @@ const curatedStatusOutput = assertRunOk(
     [process.platform === "win32" ? "-InstallSkills" : "--install-skills"],
     {
       extraEnv: {
-        CODEX_CHEF_TEST_MODE: "1",
-        CODEX_CHEF_TEST_SKILLS_CATALOG: curatedStatusFixture.catalogPath,
+        AGENTCHEF_TEST_MODE: "1",
+        AGENTCHEF_TEST_SKILLS_CATALOG: curatedStatusFixture.catalogPath,
         GIT_ALLOW_PROTOCOL: "file",
         GIT_CONFIG_COUNT: "2",
         GIT_CONFIG_KEY_0: "http.sslBackend",
@@ -936,8 +936,8 @@ fs.writeFileSync(rollbackAgentsPath, "# user-owned pre-install AGENTS\n", "utf8"
 progress("post-mutation rollback");
 const rollbackResult = runInstaller(rollbackCodexHome, rollbackAgentsHome, [], {
   extraEnv: {
-    CODEX_CHEF_TEST_MODE: "1",
-    CODEX_CHEF_TEST_INSTALL_FAIL_AFTER_MUTATIONS: "1"
+    AGENTCHEF_TEST_MODE: "1",
+    AGENTCHEF_TEST_INSTALL_FAIL_AFTER_MUTATIONS: "1"
   }
 });
 if (rollbackResult.status === 0) {
@@ -987,8 +987,8 @@ assertInstalledBaseline(codexHome, agentsHome, "Installer existing-config smoke"
 assertDefaultBoundaries(firstExistingOutput, "Installer existing-config smoke");
 
 const configPath = path.join(codexHome, "config.toml");
-const pluginManifestPath = path.join(codexHome, "plugins", "codex-chef-workflows", ".codex-plugin", "plugin.json");
-const pluginExtraPath = path.join(codexHome, "plugins", "codex-chef-workflows", "user-extra.txt");
+const pluginManifestPath = path.join(codexHome, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json");
+const pluginExtraPath = path.join(codexHome, "plugins", "agentchef-workflows", "user-extra.txt");
 if (fs.existsSync(configPath)) {
   const config = read(configPath);
   assertIncludes(config, 'model = "local-custom-model"', "Installer smoke config");
@@ -1009,7 +1009,7 @@ const secondExistingOutput = assertRunOk(runInstaller(codexHome, agentsHome), "I
 assertInstalledBaseline(codexHome, agentsHome, "Installer idempotent smoke");
 assertDefaultBoundaries(secondExistingOutput, "Installer idempotent smoke");
 if (fs.existsSync(pluginManifestPath)) {
-  const sourcePluginManifest = read(path.join(root, "plugins", "codex-chef-workflows", ".codex-plugin", "plugin.json"));
+  const sourcePluginManifest = read(path.join(root, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json"));
   if (read(pluginManifestPath) !== sourcePluginManifest) {
     fail("Installer idempotent smoke must refresh stale managed plugin files on reinstall.");
   }
@@ -1112,7 +1112,7 @@ for (const { scenario, foreignSentinel } of foreignSkillFixtures) {
   const foreignSkillRoot = path.join(adoptionAgentsHome, "skills", scenario.name);
   if (
     read(path.join(foreignSkillRoot, "SKILL.md"))
-    !== read(path.join(root, "plugins", "codex-chef-workflows", "skills", scenario.name, "SKILL.md"))
+    !== read(path.join(root, "plugins", "agentchef-workflows", "skills", scenario.name, "SKILL.md"))
   ) {
     fail(`Installer explicit ${scenario.display} adoption must replace the selected skill with the canonical managed source.`);
   }
@@ -1151,7 +1151,7 @@ for (const variant of ["root-link", "nested-link"]) {
     // that install.ps1/install.sh invoke before acquiring a write lock.
     ? runInstaller(linkCodexHome, linkAgentsHome, [adoptFlag])
     : runDirectSkillTargetPreflight(
-      path.join(root, "plugins", "codex-chef-workflows", "skills", "fetch"),
+      path.join(root, "plugins", "agentchef-workflows", "skills", "fetch"),
       linkFetchRoot,
       true
     );
@@ -1183,7 +1183,7 @@ ensureDir(path.dirname(danglingFetchRoot));
 fs.symlinkSync(missingExternalRoot, danglingFetchRoot, process.platform === "win32" ? "junction" : "dir");
 for (const args of [[], [adoptFlag]]) {
   const danglingResult = runDirectSkillTargetPreflight(
-    path.join(root, "plugins", "codex-chef-workflows", "skills", "fetch"),
+    path.join(root, "plugins", "agentchef-workflows", "skills", "fetch"),
     danglingFetchRoot,
     args.length > 0
   );

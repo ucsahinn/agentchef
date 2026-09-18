@@ -20,10 +20,10 @@ test("PowerShell installer refuses an existing AGENTS_HOME operation lock before
     return;
   }
 
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-powershell-lock-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-powershell-lock-"));
   const codexHome = path.join(fixtureRoot, "codex");
   const agentsHome = path.join(fixtureRoot, "agents");
-  const agentsLock = path.join(agentsHome, ".codex-chef-operation.lock");
+  const agentsLock = path.join(agentsHome, ".agentchef-operation.lock");
   fs.mkdirSync(agentsLock, { recursive: true });
   fs.writeFileSync(path.join(agentsLock, "owner.json"), `${JSON.stringify({
     pid: 12345,
@@ -40,8 +40,8 @@ test("PowerShell installer refuses an existing AGENTS_HOME operation lock before
         CODEX_HOME: codexHome,
         AGENTS_HOME: agentsHome,
         HOME: path.join(fixtureRoot, "home"),
-        CODEX_CHEF_CODEX_COMMAND: "codex-chef-test-missing-command",
-        CODEX_CHEF_TEST_MODE: "1",
+        AGENTCHEF_CODEX_COMMAND: "agentchef-test-missing-command",
+        AGENTCHEF_TEST_MODE: "1",
         FORCE_COLOR: "0",
         NO_COLOR: "1"
       },
@@ -52,7 +52,7 @@ test("PowerShell installer refuses an existing AGENTS_HOME operation lock before
     });
     assert.notEqual(result.status, 0, `installer unexpectedly ignored AGENTS_HOME lock:\n${output(result)}`);
     assert.match(output(result), /Another AgentChef operation is already in progress/i);
-    assert.equal(fs.existsSync(path.join(codexHome, ".codex-chef-operation.lock")), false, "failed acquisition must release any earlier CODEX_HOME lock");
+    assert.equal(fs.existsSync(path.join(codexHome, ".agentchef-operation.lock")), false, "failed acquisition must release any earlier CODEX_HOME lock");
     assert.equal(fs.existsSync(path.join(codexHome, "AGENTS.md")), false, "lock rejection must occur before managed writes");
   } finally {
     fs.rmSync(fixtureRoot, { force: true, recursive: true });
@@ -65,7 +65,7 @@ test("PowerShell installer completes its journal with applied mutations and rele
     return;
   }
 
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-powershell-journal-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-powershell-journal-"));
   const codexHome = path.join(fixtureRoot, "codex");
   const agentsHome = path.join(fixtureRoot, "agents");
   try {
@@ -76,8 +76,8 @@ test("PowerShell installer completes its journal with applied mutations and rele
         CODEX_HOME: codexHome,
         AGENTS_HOME: agentsHome,
         HOME: path.join(fixtureRoot, "home"),
-        CODEX_CHEF_CODEX_COMMAND: "codex-chef-test-missing-command",
-        CODEX_CHEF_TEST_MODE: "1",
+        AGENTCHEF_CODEX_COMMAND: "agentchef-test-missing-command",
+        AGENTCHEF_TEST_MODE: "1",
         FORCE_COLOR: "0",
         NO_COLOR: "1"
       },
@@ -88,14 +88,14 @@ test("PowerShell installer completes its journal with applied mutations and rele
     });
     assert.equal(result.status, 0, `installer failed:\n${output(result)}`);
     const backupRoot = fs.readdirSync(path.join(codexHome, "backups"), { withFileTypes: true })
-      .find((entry) => entry.isDirectory() && entry.name.startsWith("codex-chef-"));
+      .find((entry) => entry.isDirectory() && entry.name.startsWith("agentchef-"));
     assert.ok(backupRoot, "installer did not create a transaction backup root");
-    const journal = JSON.parse(fs.readFileSync(path.join(codexHome, "backups", backupRoot.name, ".codex-chef-operation-journal.json"), "utf8"));
+    const journal = JSON.parse(fs.readFileSync(path.join(codexHome, "backups", backupRoot.name, ".agentchef-operation-journal.json"), "utf8"));
     assert.equal(journal.state, "complete");
     assert.ok(journal.mutations.length > 0, "installer did not journal managed mutations");
     assert.ok(journal.mutations.every((mutation) => mutation.phase === "applied"), "every completed mutation must be marked applied after its write");
-    assert.equal(fs.existsSync(path.join(codexHome, ".codex-chef-operation.lock")), false);
-    assert.equal(fs.existsSync(path.join(agentsHome, ".codex-chef-operation.lock")), false);
+    assert.equal(fs.existsSync(path.join(codexHome, ".agentchef-operation.lock")), false);
+    assert.equal(fs.existsSync(path.join(agentsHome, ".agentchef-operation.lock")), false);
   } finally {
     fs.rmSync(fixtureRoot, { force: true, recursive: true });
   }

@@ -62,12 +62,12 @@ const mcp = readJson("catalog/mcp-servers.json");
 const skills = readJson("catalog/skills.json");
 const agentsTemplate = fs.readFileSync(path.join(root, "templates/codex/AGENTS.md"), "utf8");
 const routingBoardScript = fs.readFileSync(path.join(root, "scripts/codex-routing-board.mjs"), "utf8");
-const routingReference = fs.readFileSync(path.join(root, "plugins/codex-chef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"), "utf8");
+const routingReference = fs.readFileSync(path.join(root, "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"), "utf8");
 
 const agentNames = validateNamedCatalog(agents.agents, "agent");
 const mcpNames = new Set((mcp.servers || []).map((server) => server.name));
 const catalogSkillNames = validateNamedCatalog(skills.skills, "skill");
-const localSkillRoot = path.join(root, "plugins", "codex-chef-workflows", "skills");
+const localSkillRoot = path.join(root, "plugins", "agentchef-workflows", "skills");
 const localSkillNames = fs.existsSync(localSkillRoot)
   ? new Set(fs.readdirSync(localSkillRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())

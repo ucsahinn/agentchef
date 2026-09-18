@@ -8,7 +8,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const receiptSchemaVersion = "codex-chef.json-merge-receipt.v1";
+export const receiptSchemaVersion = "agentchef.json-merge-receipt.v1";
+export const legacyReceiptSchemaVersion = "codex-chef.json-merge-receipt.v1";
 
 export function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
@@ -86,7 +87,7 @@ export function writeReceipt(receiptPath, receipt) {
 export function readReceipt(receiptPath) {
   if (!fs.existsSync(receiptPath)) return null;
   const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8").replace(/^\uFEFF/, ""));
-  if (receipt?.schemaVersion !== receiptSchemaVersion || !Array.isArray(receipt.entries)) {
+  if (![receiptSchemaVersion, legacyReceiptSchemaVersion].includes(receipt?.schemaVersion) || !Array.isArray(receipt.entries)) {
     throw new Error(`Unsupported merge receipt: ${receiptPath}`);
   }
   return receipt;

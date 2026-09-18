@@ -55,7 +55,7 @@ function runGit(fixture, args) {
 }
 
 function createFixture({ initializeGit = true } = {}) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-release-readiness-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-release-readiness-"));
   copyFixtureFiles(fixtureRoot);
   const fixture = { root: fixtureRoot };
   if (initializeGit) {

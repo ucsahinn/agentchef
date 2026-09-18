@@ -25,24 +25,24 @@ function fixture() {
   copyTemplate("templates/codex/rules/default.rules", path.join(codexHome, "rules", "default.rules"));
   fs.appendFileSync(path.join(codexHome, "rules", "default.rules"), "\n# user addition\n");
   fs.writeFileSync(path.join(codexHome, "config.toml"), "# user config\nmodel = \"x\"\n");
-  const pluginTarget = path.join(codexHome, "plugins", "codex-chef-workflows");
-  copyTemplate("plugins/codex-chef-workflows/.codex-plugin/plugin.json", path.join(pluginTarget, ".codex-plugin", "plugin.json"));
+  const pluginTarget = path.join(codexHome, "plugins", "agentchef-workflows");
+  copyTemplate("plugins/agentchef-workflows/.codex-plugin/plugin.json", path.join(pluginTarget, ".codex-plugin", "plugin.json"));
   fs.writeFileSync(path.join(pluginTarget, "extra.txt"), "user extra\n");
   const directSkill = path.join(agentsHome, "skills", "context-budget-planner");
-  copyTemplate("plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md", path.join(directSkill, "SKILL.md"));
-  fs.writeFileSync(path.join(directSkill, ".codex-chef-managed.json"), "{}\n");
+  copyTemplate("plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md", path.join(directSkill, "SKILL.md"));
+  fs.writeFileSync(path.join(directSkill, ".agentchef-managed.json"), "{}\n");
   const foreignDirect = path.join(agentsHome, "skills", "fetch");
   fs.mkdirSync(foreignDirect, { recursive: true });
   fs.writeFileSync(path.join(foreignDirect, "SKILL.md"), "hand-written fetch skill\n");
   const curated = path.join(agentsHome, "skills", "systematic-debugging");
   fs.mkdirSync(curated, { recursive: true });
   fs.writeFileSync(path.join(curated, "SKILL.md"), "pinned\n");
-  fs.writeFileSync(path.join(curated, ".codex-chef-source.json"), `${JSON.stringify({ schemaVersion: "codex-chef.pinned-skill.v1" })}\n`);
+  fs.writeFileSync(path.join(curated, ".agentchef-source.json"), `${JSON.stringify({ schemaVersion: "agentchef.pinned-skill.v1" })}\n`);
   const userSkill = path.join(agentsHome, "skills", "webapp-testing");
   fs.mkdirSync(userSkill, { recursive: true });
   fs.writeFileSync(path.join(userSkill, "SKILL.md"), "mine\n");
   fs.mkdirSync(path.join(agentsHome, "plugins"), { recursive: true });
-  fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({ name: "codex-chef", plugins: [{ name: "other-plugin" }, { name: "codex-chef-workflows" }] }, null, 2)}\n`);
+  fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({ name: "agentchef", plugins: [{ name: "other-plugin" }, { name: "agentchef-workflows" }] }, null, 2)}\n`);
   return { home, codexHome, agentsHome, pluginTarget, directSkill, foreignDirect, curated, userSkill };
 }
 
@@ -96,9 +96,9 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.deepEqual(marketplace.plugins.map((plugin) => plugin.name), ["other-plugin"]);
   const backups = fs.readdirSync(path.join(state.codexHome, "backups"));
   assert.equal(backups.length, 1);
-  assert.match(backups[0], /^codex-chef-remove-/);
+  assert.match(backups[0], /^agentchef-remove-/);
   assert.ok(fs.existsSync(path.join(state.codexHome, "backups", backups[0], ".codex", "AGENTS.md")), "removed files are backed up first");
-  assert.ok(!fs.existsSync(path.join(state.codexHome, ".codex-chef-operation.lock")));
+  assert.ok(!fs.existsSync(path.join(state.codexHome, ".agentchef-operation.lock")));
 
   const again = run(state, ["--apply"]);
   assert.ok(again.outcome.results.every((result) => !["removed", "removed-owned-files", "entry-removed"].includes(result.status)), JSON.stringify(again.outcome.results));

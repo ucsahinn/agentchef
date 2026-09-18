@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(process.cwd());
 const failures = [];
-const skillDir = path.join(root, "plugins", "codex-chef-workflows", "skills", "fetch");
+const skillDir = path.join(root, "plugins", "agentchef-workflows", "skills", "fetch");
 const validator = path.join(skillDir, "scripts", "validate-fetch-report.mjs");
 let tempRoot = null;
 
@@ -56,7 +56,7 @@ function evidence(role, viewport, state, relativePath) {
 
 function validReport() {
   return {
-    schemaVersion: "codex-chef.fetch-report.v1",
+    schemaVersion: "agentchef.fetch-report.v1",
     source: {
       url: "https://example.com/",
       capturedAt: "2026-07-28T00:00:00.000Z"
@@ -288,7 +288,7 @@ try {
     if (!/allow_implicit_invocation:\s*false/.test(yaml)) {
       fail("Fetch must remain explicit-only to avoid JavaScript fetch and scraping trigger collisions.");
     }
-    if (!yaml.includes("$fetch") || !yaml.includes("$codex-chef-workflows:fetch")) {
+    if (!yaml.includes("$fetch") || !yaml.includes("$agentchef-workflows:fetch")) {
       fail("Fetch default prompt must document both direct and plugin-namespaced invocation identities.");
     }
   }
@@ -310,7 +310,7 @@ try {
   );
   if (
     directOperation?.kind !== "copy-directory"
-    || directOperation?.source !== "plugins/codex-chef-workflows/skills/fetch"
+    || directOperation?.source !== "plugins/agentchef-workflows/skills/fetch"
     || directOperation?.destination !== "${AGENTS_HOME}/skills/fetch"
     || !installPlan.profiles?.default?.includes("fetch-direct-skill")
     || !installPlan.profiles?.all?.includes("fetch-direct-skill")
@@ -319,8 +319,8 @@ try {
   }
   if (
     marketplaceSourceOperation?.kind !== "copy-directory"
-    || marketplaceSourceOperation?.source !== "plugins/codex-chef-workflows"
-    || marketplaceSourceOperation?.destination !== "${AGENTS_HOME}/plugins/sources/codex-chef-workflows"
+    || marketplaceSourceOperation?.source !== "plugins/agentchef-workflows"
+    || marketplaceSourceOperation?.destination !== "${AGENTS_HOME}/plugins/sources/agentchef-workflows"
     || !installPlan.profiles?.default?.includes("codex-plugin-marketplace-source")
     || !installPlan.profiles?.all?.includes("codex-plugin-marketplace-source")
   ) {

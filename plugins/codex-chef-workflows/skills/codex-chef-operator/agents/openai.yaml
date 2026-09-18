@@ -1,7 +1,0 @@
-interface:
-  display_name: "Chef Operator"
-  short_description: "Maintain AgentChef safely."
-  default_prompt: "Use $codex-chef-operator to audit and improve this AgentChef setup without weakening safety gates."
-
-policy:
-  allow_implicit_invocation: true

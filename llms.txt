@@ -42,7 +42,7 @@ The default managed Codex targets are:
 - `~/.codex/config.toml`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/default.rules`
-- `~/.codex/plugins/codex-chef-workflows`
+- `~/.codex/plugins/agentchef-workflows`
 - `~/.agents/plugins/marketplace.json`
 - `~/.agents/skills/fetch`
 - `~/.agents/skills/seo`
@@ -56,7 +56,7 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
 - 21 specialist Codex subagent role definitions.
 - 10 bundled local plugin skills:
   - `adaptive-agent-routing`
-  - `codex-chef-operator`
+  - `agentchef-operator`
   - `context-budget-planner`
   - `evidence-research`
   - `external-review-workflow`

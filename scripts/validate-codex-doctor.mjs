@@ -30,7 +30,7 @@ if (failures.length === 0) {
 }
 
 if (report) {
-  if (report.schemaVersion !== "codex-chef.doctor.v1") {
+  if (report.schemaVersion !== "agentchef.doctor.v1") {
     fail("codex doctor schemaVersion drifted.");
   }
   if (report.status !== "ok") {

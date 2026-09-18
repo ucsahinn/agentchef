@@ -122,8 +122,8 @@ function stateDirectory() {
 }
 
 function poolPort() {
-  const parsed = Number.parseInt(process.env.CODEX_CHEF_SERENA_POOL_PORT || "44787", 10);
-  if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 65535) throw new Error("CODEX_CHEF_SERENA_POOL_PORT must be an integer from 1024 to 65535.");
+  const parsed = Number.parseInt(process.env.AGENTCHEF_SERENA_POOL_PORT || process.env.CODEX_CHEF_SERENA_POOL_PORT || "44787", 10);
+  if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 65535) throw new Error("AGENTCHEF_SERENA_POOL_PORT must be an integer from 1024 to 65535.");
   return parsed;
 }
 

@@ -154,7 +154,7 @@ if (options.profile && profiles.length === 0) {
 }
 
 const report = {
-  schemaVersion: "codex-chef.routing.v2",
+  schemaVersion: "agentchef.routing.v2",
   generatedAt: new Date().toISOString(),
   sourcePolicy: routing.sourcePolicy,
   delegationPolicy: routing.delegationPolicy,

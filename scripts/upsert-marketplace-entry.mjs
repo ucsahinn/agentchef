@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
 const sourceMarketplacePath = path.join(repoRoot, ".agents", "plugins", "marketplace.json");
-const pluginName = "codex-chef-workflows";
+const pluginName = "agentchef-workflows";
 const allowedInstallPolicies = new Set(["NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"]);
 const allowedAuthenticationPolicies = new Set(["ON_INSTALL", "ON_USE"]);
 
@@ -62,7 +62,7 @@ export function writeMarketplaceEntry(marketplacePath, pluginTarget) {
   const state = inspectMarketplaceEntry(marketplacePath, pluginTarget);
   if (!state.changed) return { ...state, status: "current" };
 
-  if (!state.marketplace.name) state.marketplace.name = "codex-chef";
+  if (!state.marketplace.name) state.marketplace.name = "agentchef";
   if (state.existingIndex >= 0) state.marketplace.plugins[state.existingIndex] = state.desired;
   else state.marketplace.plugins.push(state.desired);
 
@@ -76,7 +76,7 @@ export function stableJson(value) {
 }
 
 function readMarketplaceOrDefault(marketplacePath) {
-  if (!fs.existsSync(marketplacePath)) return { name: "codex-chef", plugins: [] };
+  if (!fs.existsSync(marketplacePath)) return { name: "agentchef", plugins: [] };
 
   const marketplace = readJsonFile(marketplacePath);
   if (!marketplace || typeof marketplace !== "object" || Array.isArray(marketplace)) {

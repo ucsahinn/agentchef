@@ -296,7 +296,7 @@ const budgetFindings = categoryRows.map((category) => {
 });
 
 const report = {
-  schemaVersion: "codex-chef.token-surfaces.v2",
+  schemaVersion: "agentchef.token-surfaces.v2",
   note: "Token estimates use a coarse chars/4 heuristic for repository surfaces. They are not provider billing or measured session usage.",
   telemetry: {
     layer: "real_session_telemetry",

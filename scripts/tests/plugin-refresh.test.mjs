@@ -19,7 +19,7 @@ function listResult(installed = []) {
 function installedPlugin(version) {
   return {
     pluginId: PLUGIN_ID,
-    name: "codex-chef-workflows",
+    name: "agentchef-workflows",
     version,
     installed: true,
     enabled: true
