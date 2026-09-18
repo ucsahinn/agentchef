@@ -11,7 +11,7 @@ Discovery ciktisi no-write ve okunabilir kalir:
 
 ```text
 AgentChef install profiles
-Package: agentchef@0.5.74
+Package: agentchef@0.6.0
 Platform: windows
 
 Profile | Operations | High risk | Optional flags

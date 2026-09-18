@@ -499,7 +499,7 @@
       "appliesToAgents": ["devex_auditor", "release_verifier", "codex_doctor", "context_architect"]
     },
     "codex_chef_local_synthesis": {
-      "url": "https://github.com/ucsahinn/codex-chef",
+      "url": "https://github.com/ucsahinn/agentchef",
       "sourceLocation": "docs/research-notes.md:143",
       "sourceType": "local repo evidence",
       "confidence": "high",

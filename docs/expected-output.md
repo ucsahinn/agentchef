@@ -10,7 +10,7 @@ Discovery output stays no-write and human-readable:
 
 ```text
 AgentChef install profiles
-Package: agentchef@0.5.74
+Package: agentchef@0.6.0
 Platform: windows
 
 Profile | Operations | High risk | Optional flags

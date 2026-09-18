@@ -2,7 +2,7 @@
 
 Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrulandıktan ve account-level değişiklik açıkça onaylandıktan sonra manuel uygula.
 
-Yayın adayı temel sürümü: **v0.5.74**.
+Yayın adayı temel sürümü: **v0.6.0**.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

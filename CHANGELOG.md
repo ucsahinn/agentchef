@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.0 - 2026-09-18
+
 - Continue the project as an independent product named AgentChef
   ([ADR-006](docs/decisions/006-agentchef-independent-dual-target-product.md));
   Kitchen is neither modified nor depended on. Visible identity (repository,
