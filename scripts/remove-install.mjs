@@ -17,7 +17,7 @@ import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
 import { createOperationJournal } from "./lib/operation-journal.mjs";
-import { markerFileName } from "./manage-direct-skill-target.mjs";
+import { managedMarkerNames } from "./lib/identity.mjs";
 import { pinnedSkillProvenanceFileName, pinnedSkillSchemaVersion } from "./lib/skill-provenance.mjs";
 import { PLUGIN_ID } from "./refresh-installed-plugin.mjs";
 import { platformCommand } from "./lib/platform-command.mjs";
@@ -64,13 +64,15 @@ function directoryPlan(sourceRoot, destination, { requireMarker }) {
   const stat = lstatOrNull(destination);
   if (!stat) return { decision: "absent", files: [] };
   if (stat.isSymbolicLink() || !stat.isDirectory()) return { decision: "foreign", files: [] };
-  if (requireMarker && !fs.existsSync(path.join(destination, requireMarker))) return { decision: "foreign", files: [] };
+  // requireMarker lists the accepted ownership marker spellings; the one present wins.
+  const presentMarker = requireMarker ? requireMarker.find((name) => fs.existsSync(path.join(destination, name))) : null;
+  if (requireMarker && !presentMarker) return { decision: "foreign", files: [] };
   const files = listRegularFiles(sourceRoot).map((relative) => {
     const target = path.join(destination, relative);
     const decision = fileDecision(target, fs.readFileSync(path.join(sourceRoot, relative)));
     return { relative, target, decision };
   });
-  if (requireMarker) files.push({ relative: requireMarker, target: path.join(destination, requireMarker), decision: "remove" });
+  if (presentMarker) files.push({ relative: presentMarker, target: path.join(destination, presentMarker), decision: "remove" });
   const extras = listRegularFiles(destination).filter((relative) => !files.some((file) => file.relative === relative));
   return { decision: files.some((file) => file.decision === "remove") ? "remove-owned" : "nothing-owned", files, extras };
 }
@@ -100,7 +102,7 @@ export function planCodexRemoval(options) {
     }
     if (action.kind === "copy-directory") {
       const sourceRoot = path.join(repoRoot, action.source);
-      const requireMarker = action.componentId.endsWith("-direct-skill") ? markerFileName : null;
+      const requireMarker = action.componentId.endsWith("-direct-skill") ? [...managedMarkerNames] : null;
       const plan = directoryPlan(sourceRoot, action.destination, { requireMarker });
       items.push({ id: action.id, kind: "directory", target: action.destination, decision: plan.decision, files: plan.files, extras: plan.extras || [] });
       continue;

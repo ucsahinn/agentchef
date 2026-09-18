@@ -104,3 +104,16 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.ok(again.outcome.results.every((result) => !["removed", "removed-owned-files", "entry-removed"].includes(result.status)), JSON.stringify(again.outcome.results));
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("Codex removal recognizes a direct skill that still carries the legacy ownership marker", () => {
+  const state = fixture();
+  const legacyDirect = path.join(state.agentsHome, "skills", "adaptive-agent-routing");
+  copyTemplate("plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md", path.join(legacyDirect, "SKILL.md"));
+  fs.writeFileSync(path.join(legacyDirect, ".codex-chef-managed.json"), "{}\n");
+  const plan = run(state, ["--dry-run"]);
+  assert.equal(plan.items.find((item) => item.id === "adaptive-agent-routing-direct-skill")?.decision, "remove-owned");
+  const applied = run(state, ["--apply"]);
+  assert.equal(Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]))["adaptive-agent-routing-direct-skill"], "removed-owned-files");
+  assert.ok(!fs.existsSync(path.join(legacyDirect, ".codex-chef-managed.json")), "the legacy marker is removed with the owned files");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

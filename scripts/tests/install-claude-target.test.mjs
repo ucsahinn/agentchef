@@ -157,3 +157,26 @@ test("an AgentChef-marked copy is adopted into a link only with --adopt-skill-li
   assert.ok(fs.existsSync(path.join(backupRoot, "claude", "skills", "demo-skill", "SKILL.md")), "the replaced copy was backed up first");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("an un-migrated home with legacy marker spellings is still linked and adopted", () => {
+  const state = fixture();
+  // Managed tree written before 1.0.0: legacy marker on the AGENTS_HOME skill...
+  const legacySkill = path.join(state.agentsHome, "skills", "legacy-skill");
+  fs.mkdirSync(legacySkill, { recursive: true });
+  fs.writeFileSync(path.join(legacySkill, "SKILL.md"), "---\nname: legacy-skill\ndescription: legacy\n---\n# legacy\n");
+  fs.writeFileSync(path.join(legacySkill, ".codex-chef-source.json"), `${JSON.stringify({ schemaVersion: "codex-chef.pinned-skill.v1" })}\n`);
+  // ...and a hand-mirrored copy under the Claude home that carries the legacy marker too.
+  const copy = path.join(state.claudeHome, "skills", "legacy-skill");
+  fs.mkdirSync(copy, { recursive: true });
+  fs.writeFileSync(path.join(copy, "SKILL.md"), "older mirrored copy\n");
+  fs.writeFileSync(path.join(copy, ".codex-chef-source.json"), "{}\n");
+  const plan = run(state, ["--dry-run"]);
+  const links = Object.fromEntries(plan.plan.actions.find((action) => action.kind === "link-directory").links.map((link) => [link.name, link.decision]));
+  assert.equal(links["demo-skill"], "create");
+  assert.equal(links["legacy-skill"], "adoptable-copy", "a legacy-marked copy is adoptable, not foreign");
+  const applied = run(state, ["--apply", "--adopt-skill-links"]);
+  assert.equal(applied.outcome.results.find((result) => result.id === "claude-skill-links").status, "linked");
+  assert.ok(fs.lstatSync(copy).isSymbolicLink());
+  assert.ok(fs.existsSync(path.join(applied.outcome.backupRoot, "claude", "skills", "legacy-skill", "SKILL.md")));
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
