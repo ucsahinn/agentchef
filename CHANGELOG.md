@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.0 - 2026-09-18
+
 - Add Claude Code as a second install target. Every `manifests/install-plan.json`
   operation now names its target (`codex`, `claude`, or `shared`; schema
   `codex-chef.install-plan.v2`), `plan-install`, the safety preflight, the

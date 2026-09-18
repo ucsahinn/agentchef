@@ -2,6 +2,45 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v0.9.0 - 2026-09-18
+
+AgentChef 0.9.0, OpenAI Codex CLI'nin yanına ikinci kurulum hedefi olarak
+Claude Code'u ekler. Mevcut Codex kurulumları varsayılan olarak etkilenmez:
+Codex hedefi varsayılan kalır; Claude Code hedefi yalnızca açık bir
+`--target claude` ya da `--target both` veya etkileşimli onayın ardından
+yönetilir.
+
+### Neler Değişti?
+
+- Tek katalog, iki hedef. Her kurulum işlemi hedefini adlandırır (`codex`,
+  `claude` veya `shared`); yönetilen skill ağacı, plugin kaynak ağacı, Git
+  guard'ları ve curated skill'ler gibi paylaşılan işlemler bir kez koşar.
+- Claude Code yüzeyi tek bir transaction yardımcısıyla kurulur: `AGENTS.md`
+  ile aynı çalışma sözleşmesinden üretilen kullanıcı seviyesi kural dosyası,
+  yan makbuzlarla kaydedilen eklemeli `settings.json` izin kuralları ve
+  `.claude.json` MCP girdileri, yönetilen `~/.agents/skills` ağacına skill
+  bağlantıları, Claude plugin marketplace'i, ad-alanlı 32 `agentchef:<rol>`
+  subagent'ı ve `claude plugin` CLI üzerinden plugin kaydı. Bkz.
+  [Claude Code yüzeyleri](claude-surfaces.tr.md) ve
+  [hedef yetenek haritası](target-capability-map.tr.md).
+- `npm run chef -- --remove --target <t>`, iki hedefte de yalnızca AgentChef'e
+  ait dosyaları, bağlantıları, marketplace girdilerini ve makbuza kayıtlı
+  ayarları kaldırır.
+- `verify-install-runtime`, `codex:status` ve `codex:doctor` Claude hedefini
+  doğrular (`--target claude|both`); durum ekranı, ayrı hafıza motoru
+  kuruluysa salt-okunur Beyin özet satırını da aktarır.
+- Oturum sonu süreç hijyeni hook'u bu sürümde yalnızca Codex'te kalır.
+
+### Ürün Sınırı
+
+Diskteki kimlik hâlâ `codex-chef` önekidir (plugin id'si, sahiplik
+işaretçileri, marketplace kökü, yedek klasörleri, şema stringleri, ortam
+değişkenleri); önce-ön-izle kimlik göçü 1.0.0 ile gelir. AgentChef
+`~/.claude/CLAUDE.md`, `~/.claude/agents/`, OAuth durumu veya `.claude.json`
+içinde `mcpServers` dışındaki hiçbir anahtarı düzenlemez ve Claude'un plugin
+önbelleğini asla elle yazmaz. 0.6.0'dan 0.9.0'a notlar için
+[güncelleme rehberine](upgrade.tr.md) bakın.
+
 ## v0.6.0 - 2026-09-18
 
 AgentChef 0.6.0, yeni adla çıkan ilk sürümdür. Yerleşik Brain workflow'unu

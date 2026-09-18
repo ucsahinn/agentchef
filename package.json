@@ -1,6 +1,6 @@
 {
   "name": "agentchef",
-  "version": "0.6.0",
+  "version": "0.9.0",
   "private": true,
   "description": "AgentChef: cross-platform setup kit for OpenAI Codex CLI and Anthropic Claude Code with agents, skills, MCPs, safe installers, and validation gates.",
   "files": [
