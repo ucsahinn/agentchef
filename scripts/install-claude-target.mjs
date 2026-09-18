@@ -33,13 +33,15 @@ import { planMcpMerge } from "./lib/claude-mcp-merge.mjs";
 import { createSkillLink, inspectSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
 import { platformCommand } from "./lib/platform-command.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
+import { managedMarkerNames, sourceMarkerNames } from "./lib/identity.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
 export const claudeInstallSchemaVersion = "agentchef.claude-install.v1";
 export const legacyClaudeInstallSchemaVersion = "codex-chef.claude-install.v1";
 export const claudeInstallReceiptName = "install-receipt.json";
-const managedSkillMarkers = [".agentchef-managed.json", ".agentchef-source.json"];
+// Both marker spellings: an un-migrated home still carries the codex-chef names.
+const managedSkillMarkers = [...managedMarkerNames, ...sourceMarkerNames];
 const pluginName = "agentchef-workflows";
 const claudeMarketplaceName = "agentchef";
 

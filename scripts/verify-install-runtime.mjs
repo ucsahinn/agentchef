@@ -11,6 +11,7 @@ import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { claudeInstallReceiptName, claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion } from "./install-claude-target.mjs";
 import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receipt.mjs";
 import { inspectSkillLink } from "./lib/skill-links.mjs";
+import { managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { platformCommand } from "./lib/platform-command.mjs";
 import {
@@ -328,7 +329,19 @@ function inspectInstalledFiles(failures) {
       failures.push(error.message);
     }
   }
+  // Ownership markers may still carry the pre-1.0.0 spelling on an
+  // un-migrated home; either spelling satisfies presence.
+  const markerDestinations = new Set(contract.operations
+    .filter((action) => action.kind === "write-ownership-marker")
+    .map((action) => action.destination));
   for (const file of requiredFiles) {
+    if (markerDestinations.has(file)) {
+      const directory = path.dirname(file);
+      if (!managedMarkerNames.some((name) => fs.existsSync(path.join(directory, name)))) {
+        failures.push(`Required installed file is missing: ${redact(file)}`);
+      }
+      continue;
+    }
     if (!fs.existsSync(file)) failures.push(`Required installed file is missing: ${redact(file)}`);
   }
   if (!fs.existsSync(pluginPath)) failures.push(`Installed plugin directory is missing: ${redact(pluginPath)}`);
