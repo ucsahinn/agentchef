@@ -2,7 +2,7 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
-## v1.0.0 - unreleased
+## v1.0.0 - 2026-09-18
 
 AgentChef 1.0.0 completes the rename: everything the installer writes now
 carries the `agentchef` spelling, and one explicit command migrates an
@@ -24,6 +24,11 @@ existing home. Until you run it, every reader still accepts the pre-1.0.0
 - Skill links cover only skills that are still in the catalog; a managed
   directory that left it (the retired `codex-chef-brain`, for example) is
   reported as `retired` and left alone.
+- Review follow-ups: removal deletes both marker spellings from a partially
+  migrated skill folder, redacted plans keep the real shape of the
+  `.claude.json` path, and the install contract honours `CLAUDE_CONFIG_DIR`.
+- The global Git ignore template is retitled for AgentChef; an installed copy
+  from an earlier release is still recognized as AgentChef-owned.
 
 ### Product Boundary
 

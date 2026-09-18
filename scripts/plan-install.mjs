@@ -190,12 +190,20 @@ function createDiscovery(options) {
   };
 }
 
-// Redacted plans keep the shape Claude Code uses: ~/.claude.json by default,
-// inside the config directory only when it was relocated.
-function claudeJsonRelocated(options) {
+// Redacted plans keep the real shape of the .claude.json path: relative to the
+// Claude home or the home directory when it lives under one of them, and the
+// ${CLAUDE_JSON} token for an explicit override somewhere else.
+function redactedClaudeJson(options) {
   const actual = path.resolve(options.claudeJson);
-  const standard = path.resolve(options.home, ".claude.json");
-  return process.platform === "win32" ? actual.toLowerCase() !== standard.toLowerCase() : actual !== standard;
+  const relativeTo = (base) => {
+    const relative = path.relative(path.resolve(base), actual);
+    return relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative.split(path.sep).join("/") : null;
+  };
+  const underClaudeHome = relativeTo(options.claudeHome);
+  if (underClaudeHome) return "${HOME}/.claude/" + underClaudeHome;
+  const underHome = relativeTo(options.home);
+  if (underHome) return "${HOME}/" + underHome;
+  return "${CLAUDE_JSON}";
 }
 
 function createPlan(options) {
@@ -207,7 +215,7 @@ function createPlan(options) {
         codexHome: "${HOME}/.codex",
         agentsHome: "${HOME}/.agents",
         claudeHome: "${HOME}/.claude",
-        claudeJson: claudeJsonRelocated(options) ? "${HOME}/.claude/.claude.json" : "${HOME}/.claude.json",
+        claudeJson: redactedClaudeJson(options),
         home: "${HOME}"
       }
     : options;

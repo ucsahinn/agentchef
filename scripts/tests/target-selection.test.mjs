@@ -8,6 +8,7 @@ import { readInstallManifest, resolveInstallContract, selectInstallComponents } 
 const manifest = readInstallManifest();
 const baseOptions = {
   manifest,
+  env: {},
   platform: "windows",
   codexHome: "C:\\Codex",
   agentsHome: "C:\\Agents",
@@ -79,6 +80,7 @@ test("both-target contract is the union of both selections in manifest order", (
 test("unix contract keeps the Claude JSON in the home directory unless the Claude home is relocated", () => {
   const base = {
     manifest,
+    env: {},
     platform: "unix",
     codexHome: "/opt/agentchef-home/.codex",
     agentsHome: "/opt/agentchef-home/.agents",
@@ -94,6 +96,9 @@ test("unix contract keeps the Claude JSON in the home directory unless the Claud
   assert.equal(relocated.operations.find((action) => action.id === "claude-mcp-merge").destination, "/opt/claude-config/.claude.json", "a relocated config directory holds .claude.json itself");
   const explicit = resolveInstallContract({ ...base, claudeHome: "/opt/claude-config", claudeJson: "/elsewhere/.claude.json" });
   assert.equal(explicit.operations.find((action) => action.id === "claude-mcp-merge").destination, "/elsewhere/.claude.json");
+  const fromEnv = resolveInstallContract({ ...base, env: { CLAUDE_CONFIG_DIR: "/opt/claude-config" } });
+  assert.equal(fromEnv.operations.find((action) => action.id === "claude-working-agreement").destination, "/opt/claude-config/rules/agentchef-working-agreement.md", "CLAUDE_CONFIG_DIR sets the Claude home when no --claude-home is given");
+  assert.equal(fromEnv.operations.find((action) => action.id === "claude-mcp-merge").destination, "/opt/claude-config/.claude.json", "and relocates .claude.json with it");
 });
 
 test("resolveClaudeHomes follows CLAUDE_CONFIG_DIR and explicit overrides", () => {

@@ -117,3 +117,19 @@ test("Codex removal recognizes a direct skill that still carries the legacy owne
   assert.ok(!fs.existsSync(path.join(legacyDirect, ".codex-chef-managed.json")), "the legacy marker is removed with the owned files");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("Codex removal removes both marker spellings from a partially migrated direct skill", () => {
+  const state = fixture();
+  const direct = path.join(state.agentsHome, "skills", "adaptive-agent-routing");
+  copyTemplate("plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md", path.join(direct, "SKILL.md"));
+  fs.writeFileSync(path.join(direct, ".agentchef-managed.json"), "{}\n");
+  fs.writeFileSync(path.join(direct, ".codex-chef-managed.json"), "{}\n");
+  const plan = run(state, ["--dry-run"]);
+  const item = plan.items.find((entry) => entry.id === "adaptive-agent-routing-direct-skill");
+  assert.equal(item?.decision, "remove-owned");
+  assert.deepEqual(item.files.filter((file) => file.relative.endsWith("-managed.json")).map((file) => file.relative).sort(), [".agentchef-managed.json", ".codex-chef-managed.json"], "both markers are planned for removal");
+  run(state, ["--apply"]);
+  assert.ok(!fs.existsSync(path.join(direct, ".agentchef-managed.json")));
+  assert.ok(!fs.existsSync(path.join(direct, ".codex-chef-managed.json")), "no stale marker is left behind");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

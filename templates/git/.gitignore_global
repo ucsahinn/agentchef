@@ -1,4 +1,4 @@
-# Codex Enterprise Starter global Git ignore.
+# AgentChef global Git ignore.
 
 # Local env and secrets
 .env

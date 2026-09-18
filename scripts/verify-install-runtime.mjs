@@ -234,6 +234,8 @@ function run(command, commandArgs, extra = {}) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: extra.timeout || options.probeTimeoutMs,
+    // codex plugin list --available --json can exceed the 1 MiB default.
+    maxBuffer: 64 * 1024 * 1024,
     windowsHide: true,
     env: extra.env || process.env
   });

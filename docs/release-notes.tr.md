@@ -2,7 +2,7 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
-## v1.0.0 - yayınlanmadı
+## v1.0.0 - 2026-09-18
 
 AgentChef 1.0.0 yeniden adlandırmayı tamamlar: installer'ın yazdığı her şey
 artık `agentchef` yazımını taşır ve mevcut bir home tek bir açık komutla göç
@@ -25,6 +25,12 @@ kabul etmeye devam eder; güncelleme günü hiçbir şey bozulmaz.
 - Skill bağlantıları yalnızca hâlâ katalogda olan skill'leri kapsar;
   katalogdan çıkmış yönetilen bir dizin (örneğin emekli `codex-chef-brain`)
   `retired` olarak raporlanır ve dokunulmaz.
+- İnceleme takipleri: kaldırma, kısmen göç etmiş bir skill klasöründeki her iki
+  işaretçi yazımını da siler; redakte edilmiş planlar `.claude.json` yolunun
+  gerçek biçimini korur; kurulum sözleşmesi `CLAUDE_CONFIG_DIR` değişkenini
+  kendisi dikkate alır.
+- Global Git ignore şablonunun başlığı AgentChef için yenilendi; önceki bir
+  sürümden kurulmuş kopya hâlâ AgentChef'e ait olarak tanınır.
 
 ### Ürün Sınırı
 

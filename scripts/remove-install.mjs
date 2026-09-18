@@ -64,15 +64,17 @@ function directoryPlan(sourceRoot, destination, { requireMarker }) {
   const stat = lstatOrNull(destination);
   if (!stat) return { decision: "absent", files: [] };
   if (stat.isSymbolicLink() || !stat.isDirectory()) return { decision: "foreign", files: [] };
-  // requireMarker lists the accepted ownership marker spellings; the one present wins.
-  const presentMarker = requireMarker ? requireMarker.find((name) => fs.existsSync(path.join(destination, name))) : null;
-  if (requireMarker && !presentMarker) return { decision: "foreign", files: [] };
+  // requireMarker lists the accepted ownership marker spellings; every marker that
+  // is present is AgentChef-owned and leaves with the files (a partially migrated
+  // home can carry both spellings).
+  const presentMarkers = requireMarker ? requireMarker.filter((name) => fs.existsSync(path.join(destination, name))) : [];
+  if (requireMarker && presentMarkers.length === 0) return { decision: "foreign", files: [] };
   const files = listRegularFiles(sourceRoot).map((relative) => {
     const target = path.join(destination, relative);
     const decision = fileDecision(target, fs.readFileSync(path.join(sourceRoot, relative)));
     return { relative, target, decision };
   });
-  if (presentMarker) files.push({ relative: presentMarker, target: path.join(destination, presentMarker), decision: "remove" });
+  for (const marker of presentMarkers) files.push({ relative: marker, target: path.join(destination, marker), decision: "remove" });
   const extras = listRegularFiles(destination).filter((relative) => !files.some((file) => file.relative === relative));
   return { decision: files.some((file) => file.decision === "remove") ? "remove-owned" : "nothing-owned", files, extras };
 }
