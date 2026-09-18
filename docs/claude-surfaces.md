@@ -14,7 +14,7 @@ Date checked: 2026-09-18 (Claude Code 2.1.276).
 | Root | Default | Override | Notes |
 | --- | --- | --- | --- |
 | Claude config directory | `~/.claude` | `CLAUDE_CONFIG_DIR` | Also relocates `.claude.json`, so a scratch directory isolates everything. |
-| User-scope MCP and account state | `~/.claude/.claude.json` (inside the config directory) | follows `CLAUDE_CONFIG_DIR` | AgentChef reads and writes only the `mcpServers` key. |
+| User-scope MCP and account state | `~/.claude.json` (in the home directory, next to `~/.claude`) | `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set, or `--claude-json` | AgentChef reads and writes only the `mcpServers` key. |
 | Shared skills and plugin marketplace | `~/.agents` | `AGENTS_HOME` | Shared with the Codex target; one managed tree. |
 
 Development and tests must point all three at a scratch root;
@@ -28,8 +28,8 @@ Development and tests must point all three at a scratch root;
 | Serena bridge | `~/.claude/agentchef/serena-pool.mjs` | AgentChef file | backup, then refresh; state lives in `CODEX_HOME/serena-pool` so both agents share one lazy backend |
 | Permissions | `~/.claude/settings.json` → `permissions.allow`, `permissions.ask` | sidecar receipt `~/.claude/agentchef/receipts/claude-settings-merge-receipt.json` | additive only; existing rules, `deny` lists, `env`, and hooks are never removed or reordered |
 | Process-hygiene hook | not published in this release | Codex plugin only | Claude Code stops its own MCP children at session end; the Claude branch is planned for a later release |
-| MCP servers | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | a server with the same name is left untouched |
-| Skill links | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | directory link (junction on Windows) | foreign real directories are skipped; AgentChef-marked copies are adopted only with `--adopt-skill-links` |
+| MCP servers | `~/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | a server with the same name is left untouched |
+| Skill links | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | directory link (junction on Windows) | foreign real directories are skipped; AgentChef-marked copies are adopted only with `--adopt-skill-links`; managed directories that left the catalog are reported as `retired` and left alone |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef file | backup, then refresh |
 | Plugin installation | Claude's plugin cache | Claude Code (`claude plugin`) | AgentChef runs `claude plugin marketplace add` and `claude plugin install agentchef-workflows@agentchef`; it never writes the cache directly |
 | Install receipt | `~/.claude/agentchef/install-receipt.json` | AgentChef file | lists installed files, links, receipts, and commands for status, repair, and removal |

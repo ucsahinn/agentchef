@@ -69,7 +69,8 @@ is unavailable it fails closed and produces no cleanup candidates. Use
 Claude Code skill links are directory junctions (`~/.claude/skills/<name>`
 into `~/.agents/skills/<name>`). Junctions need no administrator rights or
 Developer Mode. `CLAUDE_CONFIG_DIR` relocates the whole Claude home,
-including `.claude.json`, which is how the scratch-home tests stay isolated.
+including `.claude.json` (which otherwise lives at `~/.claude.json`, not inside
+`~/.claude`); that is how the scratch-home tests stay isolated.
 
 For additional temporary read access inside a session:
 

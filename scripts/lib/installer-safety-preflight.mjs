@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { inspectGlobalGitGuards } from "./global-git-guards.mjs";
 import { normalizeTargets, resolveInstallContract } from "./install-contract.mjs";
 import { assertManagedTargetPath, isPathInside } from "./managed-path-safety.mjs";
+import { resolveClaudeHomes } from "./targets/claude.mjs";
 import { refreshInstalledPlugin } from "../refresh-installed-plugin.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
@@ -40,8 +41,9 @@ export function inspectInstallerSafety({
   const agentsRoot = path.resolve(agentsHome);
   const homeRoot = home ? path.resolve(home) : path.dirname(codexRoot);
   const selectedTargets = normalizeTargets(targets);
-  const claudeRoot = path.resolve(claudeHome || path.join(homeRoot, ".claude"));
-  const claudeJsonPath = path.resolve(claudeJson || path.join(claudeRoot, ".claude.json"));
+  const claudeHomes = resolveClaudeHomes({ env: process.env, home: homeRoot, claudeHome, claudeJson });
+  const claudeRoot = claudeHomes.claudeHome;
+  const claudeJsonPath = claudeHomes.claudeJson;
   const claudeSelected = selectedTargets.has("claude");
   const contract = resolveInstallContract({
     root: repoRoot,
@@ -68,7 +70,7 @@ export function inspectInstallerSafety({
       assertManagedTargetPath(target, [agentsRoot]);
       agentsTargets.push(target);
     } else if (claudeSelected && (isPathInside(target, claudeRoot) || target === claudeJsonPath)) {
-      assertManagedTargetPath(target, [claudeRoot, path.dirname(claudeJsonPath)]);
+      assertManagedTargetPath(target, target === claudeJsonPath ? [path.dirname(claudeJsonPath)] : [claudeRoot]);
       claudeTargets.push(target);
     } else if (installGitGuards && isPathInside(target, homeRoot)) {
       assertManagedTargetPath(target, [homeRoot]);

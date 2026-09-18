@@ -58,6 +58,17 @@ düşer. Eski yedek klasörleri adlarını korur ve `npm run chef -- --backups`
 ile listelenmeye devam eder. Eski `CODEX_CHEF_*` ortam değişkenleri çalışmaya
 devam eder ve kendin yeniden adlandırabilesin diye raporlanır.
 
+1.0.0 ayrıca Claude hedefinin user-scope `.claude.json` dosyasını nerede
+bulduğunu düzeltir: home dizinindeki `~/.claude.json`, ya da yalnızca değişken
+ayarlıysa `$CLAUDE_CONFIG_DIR/.claude.json`. 0.9.0 MCP girdilerini Claude
+Code'un değişken olmadan hiç okumadığı `~/.claude/.claude.json` dosyasına
+birleştiriyordu. Bir 0.9.0 Claude kurulumu bu dosyayı bıraktıysa installer'ı
+yeniden çalıştır (doğru dosyaya birleştirir ve makbuzu yeniden yazar), sonra
+başka bir şey içermediğini doğrulayıp artık `~/.claude/.claude.json` dosyasını
+kendin sil. Skill bağlantı adımı artık yalnızca hâlâ `catalog/skills.json`
+içinde olan skill'leri bağlar; katalogdan çıkmış yönetilen bir dizin `retired`
+olarak raporlanır ve dokunulmaz.
+
 ## 0.6.0'dan 0.9.0'a Geçiş
 
 0.9.0, ikinci kurulum hedefi olarak Claude Code'u ekler. Mevcut bir Codex

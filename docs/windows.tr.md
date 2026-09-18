@@ -68,7 +68,8 @@ bilgisini okur; bu bilgi yoksa fail-closed kalır ve temizlik adayı üretmez.
 
 Claude Code skill bağlantıları dizin junction'larıdır (`~/.claude/skills/<ad>`
 → `~/.agents/skills/<ad>`). Junction için yönetici hakkı veya Developer Mode
-gerekmez. `CLAUDE_CONFIG_DIR`, `.claude.json` dahil tüm Claude home'unu taşır;
+gerekmez. `CLAUDE_CONFIG_DIR`, `.claude.json` dahil tüm Claude home'unu taşır (değişken
+yokken bu dosya `~/.claude` içinde değil, `~/.claude.json` konumundadır);
 scratch-home testleri bu sayede izole kalır.
 
 Bir oturum içinde geçici ek okuma izni gerekiyorsa:

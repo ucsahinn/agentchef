@@ -11,7 +11,7 @@ bilmen gerekiyorsa bu makaleyi kullan.
 - Başka hiçbir şey: `hooks`, `env`, `deny` listeleri ve diğer tüm anahtarlar
   senin yazdığın gibi kalır. Bu sürümde Claude Code için hook kurulmaz.
 - `.claude.json` içindeki `mcpServers.context7` ve `mcpServers.serena`
-  girdileri.
+  girdileri (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun içinde).
 
 Bu iki dosyadaki diğer her şey sana veya Claude Code'a aittir. AgentChef
 eklediği her girdiyi `~/.claude/agentchef/receipts/` altındaki yan bir makbuza

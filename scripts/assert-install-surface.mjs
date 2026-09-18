@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { normalizeTargets, resolveInstallContract } from "./lib/install-contract.mjs";
+import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 
 function insideRoot(target, root) {
   return path.relative(root, path.resolve(target)).split(path.sep)[0] !== "..";
@@ -14,8 +15,9 @@ export function assertInstallSurface(codexHome, agentsHome, { claudeHome = null,
   const agentsRoot = path.resolve(agentsHome);
   const selectedTargets = normalizeTargets(targets);
   const home = os.homedir();
-  const claudeRoot = path.resolve(claudeHome || process.env.CLAUDE_CONFIG_DIR || path.join(home, ".claude"));
-  const claudeJsonPath = path.resolve(claudeJson || path.join(claudeRoot, ".claude.json"));
+  const claudeHomes = resolveClaudeHomes({ env: process.env, home, claudeHome, claudeJson });
+  const claudeRoot = claudeHomes.claudeHome;
+  const claudeJsonPath = claudeHomes.claudeJson;
   const claudeSelected = selectedTargets.has("claude");
   const contract = resolveInstallContract({
     platform: process.platform === "win32" ? "windows" : "unix",
@@ -26,9 +28,10 @@ export function assertInstallSurface(codexHome, agentsHome, { claudeHome = null,
     targets: selectedTargets,
     home
   });
-  const roots = [codexRoot, agentsRoot, ...(claudeSelected ? [claudeRoot, path.dirname(claudeJsonPath)] : [])];
+  const roots = [codexRoot, agentsRoot, ...(claudeSelected ? [claudeRoot] : [])];
   for (const target of contract.preflightTargets) {
-    assertManagedTargetPath(target, roots);
+    const isClaudeJson = claudeSelected && path.resolve(target) === claudeJsonPath;
+    assertManagedTargetPath(target, isClaudeJson ? [path.dirname(claudeJsonPath)] : roots);
   }
   return {
     targets: contract.targets,

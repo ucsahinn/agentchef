@@ -10,7 +10,9 @@ Claude Code reads `~/.claude/skills/`, not `~/.agents/skills/`. AgentChef keeps
 one managed copy of every bundled and curated skill under
 `~/.agents/skills/<name>` and exposes it to Claude through a directory link
 (`~/.claude/skills/<name>`, a junction on Windows and a symlink elsewhere).
-Claude Code supports linked skill folders and deduplicates them.
+Claude Code supports linked skill folders and deduplicates them. Only skills
+that are still in `catalog/skills.json` are linked; a managed directory that
+left the catalog is reported as `retired` and stays as it is.
 
 ## Recommended Checks
 
@@ -26,6 +28,7 @@ Each link reports one decision:
 | `current` | the link already points at the managed tree |
 | `adoptable-copy` | a real directory carrying an AgentChef marker; rerun with `--adopt-skill-links` to back it up and replace it with a link |
 | `foreign` | a real directory without an AgentChef marker, or a link elsewhere; left untouched |
+| `retired` | a managed directory under `~/.agents/skills` whose name is no longer in `catalog/skills.json` (for example `codex-chef-brain`, retired in 0.6.0); reported, never linked, adopted, or removed |
 
 ## Clean Decision Flow
 

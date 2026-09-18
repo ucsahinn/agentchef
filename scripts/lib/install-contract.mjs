@@ -358,6 +358,17 @@ function sourcePreflightArtifacts(operations, options) {
   return [...new Set(artifacts)];
 }
 
+// Mirrors resolveClaudeHomes without the environment: callers that honour
+// CLAUDE_CONFIG_DIR pass claudeJson explicitly. A Claude home other than the
+// default ${HOME}/.claude counts as relocated and holds .claude.json itself;
+// otherwise Claude Code keeps the file at ${HOME}/.claude.json.
+function defaultClaudeJsonPath({ platform, home, claudeHome }) {
+  const defaultHome = joinTargetPath(platform, home, ".claude");
+  const resolvedHome = claudeHome ? normalizeTargetPath(claudeHome, platform) : defaultHome;
+  const same = platform === "windows" ? resolvedHome.toLowerCase() === defaultHome.toLowerCase() : resolvedHome === defaultHome;
+  return same ? joinTargetPath(platform, home, ".claude.json") : joinTargetPath(platform, resolvedHome, ".claude.json");
+}
+
 export function resolveInstallContract(rawOptions) {
   const options = {
     root: repositoryRoot,
@@ -369,7 +380,7 @@ export function resolveInstallContract(rawOptions) {
     noBackup: false,
     targets: defaultTargets,
     claudeHome: rawOptions.claudeHome || joinTargetPath(rawOptions.platform, rawOptions.home, ".claude"),
-    claudeJson: rawOptions.claudeJson || joinTargetPath(rawOptions.platform, rawOptions.claudeHome || joinTargetPath(rawOptions.platform, rawOptions.home, ".claude"), ".claude.json"),
+    claudeJson: rawOptions.claudeJson || defaultClaudeJsonPath(rawOptions),
     ...rawOptions
   };
   options.targets = normalizeTargets(options.targets);

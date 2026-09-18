@@ -232,7 +232,8 @@ targets.
 `scripts/validate-install-plan.mjs` keeps every destination inside the roots
 its target owns: Codex operations stay under `CODEX_HOME` and `AGENTS_HOME`,
 Claude operations under `CLAUDE_HOME` (`CLAUDE_CONFIG_DIR` or `~/.claude`),
-the user-scope `.claude.json`, and the shared `AGENTS_HOME/plugins` tree, and
+the user-scope `.claude.json` (`~/.claude.json`, or inside `CLAUDE_CONFIG_DIR`
+when that variable is set), and the shared `AGENTS_HOME/plugins` tree, and
 shared operations under `AGENTS_HOME` or the reviewed Git-guard targets. A
 literal `${HOME}/.claude` destination is still rejected, as are `.cursor`,
 `.opencode`, `.zed`, `.vscode`, `.gemini`, `.qwen`, and `.kiro`, so adjacent

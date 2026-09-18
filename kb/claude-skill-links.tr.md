@@ -12,7 +12,9 @@ okur. AgentChef her bundled ve küratörlü skill'in tek yönetilen kopyasını
 `~/.agents/skills/<name>` altında tutar ve onu bir dizin bağlantısıyla
 (`~/.claude/skills/<name>`; Windows'ta junction, diğer platformlarda symlink)
 Claude'a açar. Claude Code bağlantılı skill klasörlerini destekler ve
-tekilleştirir.
+tekilleştirir. Yalnızca hâlâ `catalog/skills.json` içinde olan skill'ler
+bağlanır; katalogdan çıkmış yönetilen bir dizin `retired` olarak raporlanır
+ve olduğu gibi kalır.
 
 ## Önerilen Kontroller
 
@@ -28,6 +30,7 @@ Her bağlantı tek bir karar raporlar:
 | `current` | bağlantı zaten yönetilen ağaca işaret ediyor |
 | `adoptable-copy` | AgentChef marker'ı taşıyan gerçek bir dizin; yedekleyip bağlantıyla değiştirmek için `--adopt-skill-links` ile yeniden çalıştır |
 | `foreign` | AgentChef marker'ı olmayan gerçek bir dizin ya da başka yere giden bir bağlantı; dokunulmaz |
+| `retired` | `~/.agents/skills` altında adı artık `catalog/skills.json` içinde olmayan yönetilen bir dizin (örneğin 0.6.0'da emekli edilen `codex-chef-brain`); raporlanır, asla bağlanmaz, benimsenmez ya da kaldırılmaz |
 
 ## Temiz Karar Akışı
 

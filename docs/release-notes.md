@@ -17,6 +17,13 @@ existing home. Until you run it, every reader still accepts the pre-1.0.0
 - `npm run chef -- --migrate-identity --target both` previews the
   conversion; add `--apply` to run it with backups under
   `CODEX_HOME/backups/agentchef-migrate-*`.
+- The Claude target now merges MCP entries into the file Claude Code reads:
+  `~/.claude.json`, or `$CLAUDE_CONFIG_DIR/.claude.json` only when that
+  variable is set. 0.9.0 wrote `~/.claude/.claude.json` instead; see the
+  [upgrade guide](upgrade.md) if that file exists on your machine.
+- Skill links cover only skills that are still in the catalog; a managed
+  directory that left it (the retired `codex-chef-brain`, for example) is
+  reported as `retired` and left alone.
 
 ### Product Boundary
 

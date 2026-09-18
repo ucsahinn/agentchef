@@ -10,7 +10,9 @@ entries AgentChef added.
   `templates/codex/rules/default.rules`.
 - Nothing else: `hooks`, `env`, `deny` lists, and every other key stay as
   you wrote them. No hook is installed for Claude Code in this release.
-- The `mcpServers.context7` and `mcpServers.serena` entries in `.claude.json`.
+- The `mcpServers.context7` and `mcpServers.serena` entries in `.claude.json`
+  (`~/.claude.json`, or `$CLAUDE_CONFIG_DIR/.claude.json` when that variable
+  is set).
 
 Everything else in those two files belongs to you or to Claude Code. AgentChef
 records each added entry in a sidecar receipt under
