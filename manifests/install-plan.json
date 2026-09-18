@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "codex-chef.install-plan.v1",
-  "description": "Codex-only install surface used for dry-run planning, validation, and collision review. Profiles select the base operation set; every resolved plan uses the canonical operations-array order, with optional Git guards and curated skills completed before the terminal plugin-cache refresh.",
+  "schemaVersion": "codex-chef.install-plan.v2",
+  "description": "Codex-only install surface used for dry-run planning, validation, and collision review. Profiles select the base operation set; every resolved plan uses the canonical operations-array order, with optional Git guards and curated skills completed before the terminal plugin-cache refresh. Every operation names its target: codex, claude, or shared (runs once for any selected target).",
   "profiles": {
     "default": [
       "codex-agents-md",
@@ -24,6 +24,13 @@
       "evidence-research-direct-skill",
       "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
+      "claude-working-agreement",
+      "claude-serena-pool",
+      "claude-settings-merge",
+      "claude-mcp-merge",
+      "claude-skill-links",
+      "claude-plugin-marketplace",
+      "claude-plugin-register",
       "installed-plugin-cache-refresh"
     ],
     "all": [
@@ -49,6 +56,13 @@
       "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
       "curated-skills",
+      "claude-working-agreement",
+      "claude-serena-pool",
+      "claude-settings-merge",
+      "claude-mcp-merge",
+      "claude-skill-links",
+      "claude-plugin-marketplace",
+      "claude-plugin-register",
       "installed-plugin-cache-refresh"
     ]
   },
@@ -56,10 +70,14 @@
     {
       "id": "codex-agents-md",
       "kind": "copy-file",
+      "target": "codex",
       "summary": "Install durable global Codex guidance.",
       "source": "templates/codex/AGENTS.md",
       "destination": "${CODEX_HOME}/AGENTS.md",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -68,13 +86,17 @@
     {
       "id": "codex-config",
       "kind": "copy-file",
+      "target": "codex",
       "summary": "Install Codex config template for the current platform.",
       "sourceByPlatform": {
         "windows": "templates/codex/config.windows.toml",
         "unix": "templates/codex/config.unix.toml"
       },
       "destination": "${CODEX_HOME}/config.toml",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "merge-missing-blocks-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -83,10 +105,14 @@
     {
       "id": "codex-profile-launcher",
       "kind": "copy-file",
+      "target": "codex",
       "summary": "Install the profile launcher used to compose managed MCP profiles.",
       "source": "templates/codex/codex-profile.mjs",
       "destination": "${CODEX_HOME}/codex-profile.mjs",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -95,10 +121,14 @@
     {
       "id": "codex-serena-pool",
       "kind": "copy-file",
+      "target": "codex",
       "summary": "Install the lazy project-keyed Serena pool bridge.",
       "source": "templates/codex/serena-pool.mjs",
       "destination": "${CODEX_HOME}/serena-pool.mjs",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -107,10 +137,14 @@
     {
       "id": "codex-rules",
       "kind": "copy-file",
+      "target": "codex",
       "summary": "Install conservative default command-approval rules.",
       "source": "templates/codex/rules/default.rules",
       "destination": "${CODEX_HOME}/rules/default.rules",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -119,10 +153,14 @@
     {
       "id": "codex-agents",
       "kind": "copy-glob",
+      "target": "codex",
       "summary": "Install specialist subagent definitions.",
       "sourceGlob": "templates/codex/agents/*.toml",
       "destinationDir": "${CODEX_HOME}/agents",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -131,11 +169,19 @@
     {
       "id": "codex-profiles",
       "kind": "copy-glob",
+      "target": "codex",
       "summary": "Install named Codex profile files.",
       "sourceGlob": "templates/codex/profiles/*.toml",
-      "excludeBasenames": ["full.config.toml", "multi-session.config.toml", "offline.config.toml"],
+      "excludeBasenames": [
+        "full.config.toml",
+        "multi-session.config.toml",
+        "offline.config.toml"
+      ],
       "destinationDir": "${CODEX_HOME}",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "skip-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -144,6 +190,7 @@
     {
       "id": "codex-mcp-profiles",
       "kind": "generate-mcp-profile",
+      "target": "codex",
       "summary": "Generate full, multi-session, and offline profiles from the installed config while preserving user overrides.",
       "sources": [
         "templates/codex/profiles/full.config.toml",
@@ -152,7 +199,10 @@
       ],
       "destinationDir": "${CODEX_HOME}",
       "configSource": "${CODEX_HOME}/config.toml",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "generate-merged-profile-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -161,10 +211,14 @@
     {
       "id": "codex-plugin",
       "kind": "copy-directory",
+      "target": "codex",
       "summary": "Install the local workflow plugin bundle and its reviewed SessionEnd process-hygiene hook.",
       "source": "plugins/codex-chef-workflows",
       "destination": "${CODEX_HOME}/plugins/codex-chef-workflows",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-managed-files-preserve-extras-backup-before-sync",
       "backup": true,
       "risk": "medium",
@@ -173,11 +227,15 @@
     {
       "id": "codex-chef-operator-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the AgentChef operator workflow for direct routing-profile invocation.",
       "source": "plugins/codex-chef-workflows/skills/codex-chef-operator",
       "destination": "${AGENTS_HOME}/skills/codex-chef-operator",
       "ownershipMarker": "${AGENTS_HOME}/skills/codex-chef-operator/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -186,11 +244,15 @@
     {
       "id": "context-budget-planner-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the context budget planner required by the global operating contract.",
       "source": "plugins/codex-chef-workflows/skills/context-budget-planner",
       "destination": "${AGENTS_HOME}/skills/context-budget-planner",
       "ownershipMarker": "${AGENTS_HOME}/skills/context-budget-planner/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -199,11 +261,15 @@
     {
       "id": "adaptive-agent-routing-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the adaptive routing workflow required by the global operating contract.",
       "source": "plugins/codex-chef-workflows/skills/adaptive-agent-routing",
       "destination": "${AGENTS_HOME}/skills/adaptive-agent-routing",
       "ownershipMarker": "${AGENTS_HOME}/skills/adaptive-agent-routing/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -212,11 +278,15 @@
     {
       "id": "external-review-workflow-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the secret-safe external review workflow for direct invocation.",
       "source": "plugins/codex-chef-workflows/skills/external-review-workflow",
       "destination": "${AGENTS_HOME}/skills/external-review-workflow",
       "ownershipMarker": "${AGENTS_HOME}/skills/external-review-workflow/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -225,11 +295,15 @@
     {
       "id": "gptpro-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the GPT Pro Project context workflow for direct invocation.",
       "source": "plugins/codex-chef-workflows/skills/gptpro",
       "destination": "${AGENTS_HOME}/skills/gptpro",
       "ownershipMarker": "${AGENTS_HOME}/skills/gptpro/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -238,11 +312,15 @@
     {
       "id": "gptpro-handoff-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the manifest-bound GPT Pro handoff workflow for direct invocation.",
       "source": "plugins/codex-chef-workflows/skills/gptpro-handoff",
       "destination": "${AGENTS_HOME}/skills/gptpro-handoff",
       "ownershipMarker": "${AGENTS_HOME}/skills/gptpro-handoff/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -251,11 +329,15 @@
     {
       "id": "fetch-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the explicit-only Fetch workflow for direct $fetch invocation.",
       "source": "plugins/codex-chef-workflows/skills/fetch",
       "destination": "${AGENTS_HOME}/skills/fetch",
       "ownershipMarker": "${AGENTS_HOME}/skills/fetch/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -264,11 +346,15 @@
     {
       "id": "seo-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the evidence-backed SEO workflow for direct $seo invocation.",
       "source": "plugins/codex-chef-workflows/skills/seo",
       "destination": "${AGENTS_HOME}/skills/seo",
       "ownershipMarker": "${AGENTS_HOME}/skills/seo/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -277,11 +363,15 @@
     {
       "id": "evidence-research-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the source-traceable research workflow for direct $evidence-research invocation.",
       "source": "plugins/codex-chef-workflows/skills/evidence-research",
       "destination": "${AGENTS_HOME}/skills/evidence-research",
       "ownershipMarker": "${AGENTS_HOME}/skills/evidence-research/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -290,11 +380,15 @@
     {
       "id": "offline-diagram-triplet-direct-skill",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Install the offline diagram workflow for direct invocation.",
       "source": "plugins/codex-chef-workflows/skills/offline-diagram-triplet",
       "destination": "${AGENTS_HOME}/skills/offline-diagram-triplet",
       "ownershipMarker": "${AGENTS_HOME}/skills/offline-diagram-triplet/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
@@ -303,10 +397,14 @@
     {
       "id": "codex-plugin-marketplace-source",
       "kind": "copy-directory",
+      "target": "shared",
       "summary": "Mirror the local workflow plugin inside the personal marketplace root.",
       "source": "plugins/codex-chef-workflows",
       "destination": "${AGENTS_HOME}/plugins/sources/codex-chef-workflows",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "sync-managed-files-preserve-extras-backup-before-sync",
       "backup": true,
       "risk": "medium",
@@ -315,10 +413,14 @@
     {
       "id": "plugin-marketplace",
       "kind": "write-marketplace",
+      "target": "codex",
       "summary": "Register the local workflow plugin in the personal marketplace file.",
       "destination": "${AGENTS_HOME}/plugins/marketplace.json",
       "pluginTarget": "${AGENTS_HOME}/plugins/sources/codex-chef-workflows",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "upsert-entry-with-backup",
       "backup": true,
       "risk": "medium",
@@ -327,13 +429,17 @@
     {
       "id": "git-ignore-global",
       "kind": "copy-file",
+      "target": "shared",
       "summary": "Optionally install global Git ignore rules.",
       "source": "templates/git/.gitignore_global",
       "destination": "${HOME}/.gitignore_global",
       "adoptionFlag": "AdoptGitIgnore",
       "stateBackup": "codex-chef.global-git-guards-receipt@1",
       "requiresFlag": "InstallGitGuards",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "fail-on-foreign-existing-unless-explicit-adoption-backup-before-replace",
       "backup": true,
       "risk": "medium",
@@ -342,13 +448,17 @@
     {
       "id": "git-pre-commit-hook",
       "kind": "copy-file",
+      "target": "shared",
       "summary": "Optionally install a global pre-commit hook.",
       "source": "templates/git/pre-commit",
       "destination": "${HOME}/.githooks/pre-commit",
       "adoptionFlag": "AdoptGitHook",
       "stateBackup": "codex-chef.global-git-guards-receipt@1",
       "requiresFlag": "InstallGitGuards",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "fail-on-foreign-existing-unless-explicit-adoption-backup-before-replace",
       "backup": true,
       "risk": "high",
@@ -357,11 +467,14 @@
     {
       "id": "git-pre-commit-hook-executable",
       "kind": "chmod",
+      "target": "shared",
       "summary": "Mark the optional global pre-commit hook executable on Unix.",
       "destination": "${HOME}/.githooks/pre-commit",
       "mode": "+x",
       "requiresFlag": "InstallGitGuards",
-      "platforms": ["unix"],
+      "platforms": [
+        "unix"
+      ],
       "collision": "set-executable-bit-after-hook-install",
       "backup": false,
       "risk": "high",
@@ -370,13 +483,17 @@
     {
       "id": "git-config-excludesfile",
       "kind": "git-config",
+      "target": "shared",
       "summary": "Optionally set global Git core.excludesfile.",
       "key": "core.excludesfile",
       "value": "${HOME}/.gitignore_global",
       "adoptionFlag": "AdoptGitExcludesFile",
       "stateBackup": "codex-chef.global-git-guards-receipt@1",
       "requiresFlag": "InstallGitGuards",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "fail-on-conflicting-global-setting-unless-explicit-adoption",
       "backup": true,
       "risk": "high",
@@ -385,13 +502,17 @@
     {
       "id": "git-config-hooks-path",
       "kind": "git-config",
+      "target": "shared",
       "summary": "Optionally set global Git core.hooksPath.",
       "key": "core.hooksPath",
       "value": "${HOME}/.githooks",
       "adoptionFlag": "AdoptGitHooksPath",
       "stateBackup": "codex-chef.global-git-guards-receipt@1",
       "requiresFlag": "InstallGitGuards",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "fail-on-conflicting-global-setting-unless-explicit-adoption",
       "backup": true,
       "risk": "high",
@@ -400,24 +521,143 @@
     {
       "id": "curated-skills",
       "kind": "skill-install",
+      "target": "shared",
       "summary": "Optionally install curated global Codex skills from the locked catalog.",
       "catalog": "catalog/skills.json",
       "lock": "catalog/skills-lock.json",
       "requiresFlag": "InstallSkills",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "preserve-foreign-update-owned-mandatory-backup-explicit-adoption-required",
       "backup": true,
       "risk": "high",
       "conflictPolicy": "Only locked package/skill pairs are allowed. Unmarked, foreign, or locally drifted same-name targets are preserved and skipped by default. A valid AgentChef provenance marker permits a mandatory-backup managed upgrade; replacing any other exact target requires a separately reviewed per-skill --adopt-existing invocation."
     },
     {
+      "id": "claude-working-agreement",
+      "kind": "copy-file",
+      "target": "claude",
+      "summary": "Install the AgentChef working agreement as a Claude Code user-level rule.",
+      "source": "templates/claude/rules/agentchef-working-agreement.md",
+      "destination": "${CLAUDE_HOME}/rules/agentchef-working-agreement.md",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "backup-before-replace",
+      "backup": true,
+      "risk": "medium",
+      "conflictPolicy": "User-level rules load in every Claude Code session before project rules. The user's own CLAUDE.md is never edited; removing this one file removes the agreement."
+    },
+    {
+      "id": "claude-serena-pool",
+      "kind": "copy-file",
+      "target": "claude",
+      "summary": "Install the shared Serena bridge launcher for the Claude Code MCP entry.",
+      "source": "templates/codex/serena-pool.mjs",
+      "destination": "${CLAUDE_HOME}/agentchef/serena-pool.mjs",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "backup-before-replace",
+      "backup": true,
+      "risk": "low",
+      "conflictPolicy": "The bridge keeps its state under CODEX_HOME/serena-pool so Codex and Claude Code share one lazy Serena backend."
+    },
+    {
+      "id": "claude-settings-merge",
+      "kind": "json-merge",
+      "target": "claude",
+      "summary": "Append reviewed permission rules to Claude Code settings.json and record them in a receipt.",
+      "source": "templates/claude/settings.fragment.json",
+      "destination": "${CLAUDE_HOME}/settings.json",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "additive-merge-with-receipt",
+      "backup": true,
+      "risk": "high",
+      "conflictPolicy": "Existing keys, rules, hooks, and ordering are preserved. A rule already present in a stricter list is never re-added below it. Only entries listed in the receipt are removed on --remove."
+    },
+    {
+      "id": "claude-mcp-merge",
+      "kind": "json-merge",
+      "target": "claude",
+      "summary": "Add the context7 and serena MCP servers to the user-scope .claude.json when they are absent.",
+      "source": "catalog/mcp-servers.json",
+      "destination": "${CLAUDE_JSON}",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "additive-merge-with-receipt",
+      "backup": true,
+      "risk": "high",
+      "conflictPolicy": "A server that already exists under the same name is left exactly as the user has it. No other .claude.json key is read or written; only the entries listed in the receipt are removed on --remove."
+    },
+    {
+      "id": "claude-skill-links",
+      "kind": "link-directory",
+      "target": "claude",
+      "summary": "Expose every AgentChef-managed skill to Claude Code through a directory link.",
+      "source": "${AGENTS_HOME}/skills",
+      "destination": "${CLAUDE_HOME}/skills",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "create-link-or-adopt-marked-copy",
+      "backup": true,
+      "risk": "medium",
+      "conflictPolicy": "A real directory carrying an AgentChef marker is replaced by a link only with --adopt-skill-links after a backup. Foreign directories and links elsewhere are never touched."
+    },
+    {
+      "id": "claude-plugin-marketplace",
+      "kind": "write-claude-marketplace",
+      "target": "claude",
+      "summary": "Write the Claude Code marketplace manifest next to the shared plugin source tree.",
+      "destination": "${AGENTS_HOME}/plugins/.claude-plugin/marketplace.json",
+      "pluginTarget": "${AGENTS_HOME}/plugins/sources/codex-chef-workflows",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "backup-before-replace",
+      "backup": true,
+      "risk": "low",
+      "conflictPolicy": "The manifest is generated in full from the repository; it lists only the AgentChef plugin and reuses the Codex marketplace source tree."
+    },
+    {
+      "id": "claude-plugin-register",
+      "kind": "claude-plugin-register",
+      "target": "claude",
+      "summary": "Register the marketplace and install the plugin through the claude plugin CLI.",
+      "pluginId": "codex-chef-workflows@agentchef",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "cli-owned-state",
+      "backup": false,
+      "risk": "medium",
+      "conflictPolicy": "Claude Code's plugin cache is owned by the claude CLI; AgentChef never writes ~/.claude/plugins/*.json by hand. Without the CLI the commands are printed for later."
+    },
+    {
       "id": "installed-plugin-cache-refresh",
       "kind": "refresh-plugin-cache",
+      "target": "codex",
       "summary": "Refresh an already-installed AgentChef plugin cache when its version is stale.",
       "source": "${CODEX_HOME}/plugins/codex-chef-workflows",
       "destination": "${CODEX_HOME}/plugins/cache",
       "pluginId": "codex-chef-workflows@codex-chef",
-      "platforms": ["windows", "unix"],
+      "platforms": [
+        "windows",
+        "unix"
+      ],
       "collision": "inspect-installed-plugin-refresh-only-when-stale",
       "backup": false,
       "risk": "medium",

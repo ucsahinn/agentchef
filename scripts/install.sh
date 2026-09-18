@@ -19,6 +19,10 @@ NO_BACKUP=0
 DRY_RUN=0
 PLAIN_OUTPUT=0
 INTERACTIVE=0
+TARGET="codex"
+CLAUDE_HOME_DIR=""
+ADOPT_SKILL_LINKS=0
+SKIP_CLAUDE_PLUGIN_REGISTER=0
 SKIPPED_EXISTING_COUNT=0
 
 for arg in "$@"; do
@@ -48,6 +52,19 @@ for arg in "$@"; do
     --dry-run) DRY_RUN=1 ;;
     --plain-output) PLAIN_OUTPUT=1 ;;
     --interactive) INTERACTIVE=1 ;;
+    --target=*)
+      TARGET="${arg#*=}"
+      case "$TARGET" in
+        codex|claude|both) ;;
+        *)
+          echo "--target must be codex, claude, or both." >&2
+          exit 2
+          ;;
+      esac
+      ;;
+    --claude-home=*) CLAUDE_HOME_DIR="${arg#*=}" ;;
+    --adopt-skill-links) ADOPT_SKILL_LINKS=1 ;;
+    --skip-claude-plugin-register) SKIP_CLAUDE_PLUGIN_REGISTER=1 ;;
     *)
       echo "Unknown argument: $arg" >&2
       exit 2
@@ -57,6 +74,26 @@ done
 
 if [ "$ALL" -eq 1 ]; then
   INSTALL_SKILLS=1
+fi
+
+# Install targets: codex (default) keeps the 0.5.x behavior; claude adds the
+# Claude Code surface through scripts/install-claude-target.mjs; both runs the
+# shared operations once. Transaction state (lock, journal, backups) stays
+# under CODEX_HOME for every target.
+INSTALL_CODEX=0
+INSTALL_CLAUDE=0
+case "$TARGET" in
+  codex) INSTALL_CODEX=1 ;;
+  claude) INSTALL_CLAUDE=1 ;;
+  both) INSTALL_CODEX=1; INSTALL_CLAUDE=1 ;;
+esac
+if { [ "$ADOPT_SKILL_LINKS" -eq 1 ] || [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; } && [ "$INSTALL_CLAUDE" -ne 1 ]; then
+  echo "--adopt-skill-links and --skip-claude-plugin-register require --target=claude or --target=both." >&2
+  exit 2
+fi
+if [ "$REPAIR" -eq 1 ] && [ "$INSTALL_CLAUDE" -eq 1 ]; then
+  echo "--repair reconciles the Codex surface only; rerun the installer with --target=claude to repair Claude Code files (the Claude target is idempotent)." >&2
+  exit 2
 fi
 
 if [ "$INSTALL_GIT_GUARDS" -ne 1 ] && {
@@ -89,6 +126,9 @@ done
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
 AGENTS_HOME_DIR="${AGENTS_HOME:-$HOME/.agents}"
+if [ -z "$CLAUDE_HOME_DIR" ]; then
+  CLAUDE_HOME_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+fi
 CURATED_SKILLS_CATALOG="$REPO_ROOT/catalog/skills.json"
 if [ "${CODEX_CHEF_TEST_MODE:-}" = "1" ] && [ "${CODEX_CHEF_TEST_SKILLS_CATALOG:-}" != "" ]; then
   CURATED_SKILLS_CATALOG="$CODEX_CHEF_TEST_SKILLS_CATALOG"
@@ -217,9 +257,14 @@ run_preflight_validators() {
 }
 
 preflight_install_targets() {
-  if ! node "$REPO_ROOT/scripts/assert-install-surface.mjs" \
-    --codex-home "$CODEX_HOME_DIR" \
-    --agents-home "$AGENTS_HOME_DIR" >/dev/null; then
+  local surface_args=(
+    "$REPO_ROOT/scripts/assert-install-surface.mjs"
+    "--codex-home" "$CODEX_HOME_DIR"
+    "--agents-home" "$AGENTS_HOME_DIR"
+    "--target" "$TARGET"
+  )
+  if [ "$INSTALL_CLAUDE" -eq 1 ]; then surface_args+=("--claude-home" "$CLAUDE_HOME_DIR"); fi
+  if ! node "${surface_args[@]}" >/dev/null; then
     echo "Managed install surface contains an unsafe linked path; refusing all writes." >&2
     exit 1
   fi
@@ -277,6 +322,7 @@ preflight_install_targets() {
     fi
   done < <(direct_skill_names)
 
+  if [ "$INSTALL_CODEX" -ne 1 ]; then return; fi
   local marketplace_path="$AGENTS_HOME_DIR/plugins/marketplace.json"
   local marketplace_plugin_target="$AGENTS_HOME_DIR/plugins/sources/codex-chef-workflows"
   local marketplace_helper="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
@@ -297,6 +343,8 @@ installer_safety_preflight() {
     "--codex-home" "$CODEX_HOME_DIR"
     "--agents-home" "$AGENTS_HOME_DIR"
   )
+  safety_args+=("--target" "$TARGET")
+  if [ "$INSTALL_CLAUDE" -eq 1 ]; then safety_args+=("--claude-home" "$CLAUDE_HOME_DIR"); fi
   if [ "$NO_BACKUP" -eq 1 ]; then safety_args+=("--no-backup"); fi
   if [ "$DRY_RUN" -eq 1 ]; then safety_args+=("--dry-run"); fi
   if [ "$INSTALL_SKILLS" -eq 1 ]; then safety_args+=("--install-skills"); fi
@@ -329,6 +377,10 @@ CODEX_HOME_DIR="$(optional_path "Codex home" "$CODEX_HOME_DIR")"
 AGENTS_HOME_DIR="$(optional_path "Agents home" "$AGENTS_HOME_DIR")"
 CODEX_HOME_DIR="$(normalize_install_path "$CODEX_HOME_DIR")"
 AGENTS_HOME_DIR="$(normalize_install_path "$AGENTS_HOME_DIR")"
+if [ "$INSTALL_CLAUDE" -eq 1 ]; then
+  CLAUDE_HOME_DIR="$(optional_path "Claude home" "$CLAUDE_HOME_DIR")"
+  CLAUDE_HOME_DIR="$(normalize_install_path "$CLAUDE_HOME_DIR")"
+fi
 
 if [ "$REPAIR" -eq 1 ]; then
   section "AgentChef repair"
@@ -792,8 +844,12 @@ install_directory() {
 }
 
 section "AgentChef installer"
+note "Targets: $TARGET"
 note "Codex home: $CODEX_HOME_DIR"
 note "Agents home: $AGENTS_HOME_DIR"
+if [ "$INSTALL_CLAUDE" -eq 1 ]; then
+  note "Claude home: $CLAUDE_HOME_DIR"
+fi
 if [ "$UPDATE" -eq 1 ]; then
   note "Mode: update managed targets after backup; preserve user config and synchronize AgentChef tables"
 elif [ "$FORCE" -eq 1 ]; then
@@ -833,38 +889,42 @@ preflight_install_targets
 acquire_operation_lock
 start_operation_journal
 
-section "Managed Codex files"
-ensure_dir "$CODEX_HOME_DIR"
-ensure_dir "$CODEX_HOME_DIR/agents"
-ensure_dir "$CODEX_HOME_DIR/rules"
-ensure_dir "$AGENTS_HOME_DIR"
-
 TEMPLATE_ROOT="$REPO_ROOT/templates/codex"
-
-install_file "$TEMPLATE_ROOT/AGENTS.md" "$CODEX_HOME_DIR/AGENTS.md"
-install_codex_config "$TEMPLATE_ROOT/config.unix.toml" "$CODEX_HOME_DIR/config.toml"
-install_file "$TEMPLATE_ROOT/codex-profile.mjs" "$CODEX_HOME_DIR/codex-profile.mjs"
-install_file "$TEMPLATE_ROOT/serena-pool.mjs" "$CODEX_HOME_DIR/serena-pool.mjs"
-install_file "$TEMPLATE_ROOT/rules/default.rules" "$CODEX_HOME_DIR/rules/default.rules"
-
-for file in "$TEMPLATE_ROOT"/agents/*.toml; do
-  install_file "$file" "$CODEX_HOME_DIR/agents/$(basename "$file")"
-done
-
-for file in "$TEMPLATE_ROOT"/profiles/*.toml; do
-  case "$(basename "$file")" in
-    full.config.toml|multi-session.config.toml|offline.config.toml)
-      install_mcp_profile "$file" "$CODEX_HOME_DIR/$(basename "$file")" "$CODEX_HOME_DIR/config.toml"
-      ;;
-    *)
-      install_file "$file" "$CODEX_HOME_DIR/$(basename "$file")"
-      ;;
-  esac
-done
-
 PLUGIN_SOURCE="$REPO_ROOT/plugins/codex-chef-workflows"
-PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/codex-chef-workflows"
-install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
+
+if [ "$INSTALL_CODEX" -eq 1 ]; then
+  section "Managed Codex files"
+  ensure_dir "$CODEX_HOME_DIR"
+  ensure_dir "$CODEX_HOME_DIR/agents"
+  ensure_dir "$CODEX_HOME_DIR/rules"
+
+  install_file "$TEMPLATE_ROOT/AGENTS.md" "$CODEX_HOME_DIR/AGENTS.md"
+  install_codex_config "$TEMPLATE_ROOT/config.unix.toml" "$CODEX_HOME_DIR/config.toml"
+  install_file "$TEMPLATE_ROOT/codex-profile.mjs" "$CODEX_HOME_DIR/codex-profile.mjs"
+  install_file "$TEMPLATE_ROOT/serena-pool.mjs" "$CODEX_HOME_DIR/serena-pool.mjs"
+  install_file "$TEMPLATE_ROOT/rules/default.rules" "$CODEX_HOME_DIR/rules/default.rules"
+
+  for file in "$TEMPLATE_ROOT"/agents/*.toml; do
+    install_file "$file" "$CODEX_HOME_DIR/agents/$(basename "$file")"
+  done
+
+  for file in "$TEMPLATE_ROOT"/profiles/*.toml; do
+    case "$(basename "$file")" in
+      full.config.toml|multi-session.config.toml|offline.config.toml)
+        install_mcp_profile "$file" "$CODEX_HOME_DIR/$(basename "$file")" "$CODEX_HOME_DIR/config.toml"
+        ;;
+      *)
+        install_file "$file" "$CODEX_HOME_DIR/$(basename "$file")"
+        ;;
+    esac
+  done
+
+  PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/codex-chef-workflows"
+  install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
+fi
+
+section "Shared agent surfaces"
+ensure_dir "$AGENTS_HOME_DIR"
 MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/codex-chef-workflows"
 install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"
 DIRECT_SKILL_HELPER="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
@@ -899,32 +959,34 @@ while IFS= read -r DIRECT_SKILL_NAME; do
   fi
 done < <(direct_skill_names)
 
-MARKETPLACE_DIR="$AGENTS_HOME_DIR/plugins"
-MARKETPLACE_PATH="$MARKETPLACE_DIR/marketplace.json"
-ensure_dir "$MARKETPLACE_DIR"
-assert_managed_write_target "$MARKETPLACE_PATH"
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "Would upsert AgentChef plugin marketplace entry: $MARKETPLACE_PATH"
-else
-  MARKETPLACE_HELPER="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
-  if node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --check
-  then
-    marketplace_status=0
+if [ "$INSTALL_CODEX" -eq 1 ]; then
+  MARKETPLACE_DIR="$AGENTS_HOME_DIR/plugins"
+  MARKETPLACE_PATH="$MARKETPLACE_DIR/marketplace.json"
+  ensure_dir "$MARKETPLACE_DIR"
+  assert_managed_write_target "$MARKETPLACE_PATH"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "Would upsert AgentChef plugin marketplace entry: $MARKETPLACE_PATH"
   else
-    marketplace_status=$?
-  fi
-  if [ "$marketplace_status" -eq 2 ]; then
-    backup_target "$MARKETPLACE_PATH"
-    assert_managed_write_target "$MARKETPLACE_PATH"
-    prepare_install_write "$MARKETPLACE_PATH" "$LAST_BACKUP_PATH"
-    node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --write
-    mark_install_write_applied "$MARKETPLACE_PATH"
-    action "updated marketplace" "$MARKETPLACE_PATH"
-  elif [ "$marketplace_status" -eq 0 ]; then
-    SKIPPED_EXISTING_COUNT=$((SKIPPED_EXISTING_COUNT + 1))
-  else
-    echo "Cannot update plugin marketplace because it is invalid or unreadable: $MARKETPLACE_PATH" >&2
-    exit 1
+    MARKETPLACE_HELPER="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
+    if node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --check
+    then
+      marketplace_status=0
+    else
+      marketplace_status=$?
+    fi
+    if [ "$marketplace_status" -eq 2 ]; then
+      backup_target "$MARKETPLACE_PATH"
+      assert_managed_write_target "$MARKETPLACE_PATH"
+      prepare_install_write "$MARKETPLACE_PATH" "$LAST_BACKUP_PATH"
+      node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --write
+      mark_install_write_applied "$MARKETPLACE_PATH"
+      action "updated marketplace" "$MARKETPLACE_PATH"
+    elif [ "$marketplace_status" -eq 0 ]; then
+      SKIPPED_EXISTING_COUNT=$((SKIPPED_EXISTING_COUNT + 1))
+    else
+      echo "Cannot update plugin marketplace because it is invalid or unreadable: $MARKETPLACE_PATH" >&2
+      exit 1
+    fi
   fi
 fi
 
@@ -1083,15 +1145,41 @@ NODE
   fi
 fi
 
-# The plugin cache is the final external mutation: later output/manifest work is non-mutating.
-PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
-PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
-if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
-  PLUGIN_REFRESH_ARGS+=("--apply")
+if [ "$INSTALL_CLAUDE" -eq 1 ]; then
+  # One Node transaction owns every Claude-side mutation (files, additive JSON
+  # merges with receipts, skill links, marketplace manifest, plugin CLI). It
+  # rolls its own journal back on failure; the exit below then rolls back the
+  # Codex-side journal so --target=both stays all-or-nothing.
+  section "Claude Code target"
+  CLAUDE_TARGET_ARGS=(
+    "$REPO_ROOT/scripts/install-claude-target.mjs"
+    "--claude-home" "$CLAUDE_HOME_DIR"
+    "--agents-home" "$AGENTS_HOME_DIR"
+    "--home" "$HOME"
+    "--platform" "unix"
+    "--agents-lock-held"
+  )
+  if [ "$DRY_RUN" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--dry-run"); else CLAUDE_TARGET_ARGS+=("--apply"); fi
+  if [ "$NO_BACKUP" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--no-backup"); fi
+  if [ "$ADOPT_SKILL_LINKS" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--adopt-skill-links"); fi
+  if [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--skip-plugin-register"); fi
+  if ! node "${CLAUDE_TARGET_ARGS[@]}"; then
+    echo "Claude Code target install failed; the helper rolled back its own changes." >&2
+    exit 1
+  fi
 fi
-if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
-  echo "Refresh installed AgentChef plugin cache failed." >&2
-  exit 1
+
+if [ "$INSTALL_CODEX" -eq 1 ]; then
+  # The plugin cache is the final external mutation: later output/manifest work is non-mutating.
+  PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
+  PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
+  if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
+    PLUGIN_REFRESH_ARGS+=("--apply")
+  fi
+  if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
+    echo "Refresh installed AgentChef plugin cache failed." >&2
+    exit 1
+  fi
 fi
 
 section "Capability board"
@@ -1153,12 +1241,20 @@ if [ "$DRY_RUN" -eq 1 ]; then
   action "completed" "AgentChef dry run"
 else
   action "completed" "AgentChef install"
-  note "Restart Codex, then run:"
-  echo "    codex doctor --summary"
-  echo "    npm run codex:routing"
-  echo "    npm run codex:status"
-  echo "    npm run verify:install:runtime"
-  echo '    codex exec --strict-config "Summarize the active Codex setup."'
+  if [ "$INSTALL_CODEX" -eq 1 ]; then
+    note "Restart Codex, then run:"
+    echo "    codex doctor --summary"
+    echo "    npm run codex:routing"
+    echo "    npm run codex:status"
+    echo "    npm run verify:install:runtime"
+    echo '    codex exec --strict-config "Summarize the active Codex setup."'
+  fi
+  if [ "$INSTALL_CLAUDE" -eq 1 ]; then
+    note "Start a new Claude Code session, then run:"
+    echo "    claude plugin list"
+    echo "    claude mcp list"
+    echo "    npm run verify:install:runtime -- --target claude"
+  fi
 fi
 if [ "$NO_BACKUP" -ne 1 ] && [ -d "$BACKUP_ROOT" ]; then
   if ! node "$REPO_ROOT/scripts/write-backup-manifest.mjs" --backup-root "$BACKUP_ROOT" --operation install --platform unix; then

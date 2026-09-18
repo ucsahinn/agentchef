@@ -100,3 +100,7 @@ Official references:
   multi-window capacity.
 - If the audit finds no old unowned candidates, do not stop anything merely
   because the raw Node/Python count is high.
+- Claude Code sessions are not covered in this release: the session-end hook
+  ships only in the Codex plugin manifest, and the audit recognizes Codex
+  session owners only. Claude Code stops its own MCP children when a session
+  ends; the Claude branch of this hook is planned for a later release.

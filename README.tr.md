@@ -115,9 +115,9 @@ onay için durur. Doğrulama, gerçekte ne olduğunu kontrol eder.
 
 ## 🚀 Önce Gör, Sonra Kur
 
-Git, Node.js 22.12 veya üzeri, npm/npx ve Codex CLI gerekir. Bunlardan biri
-eksikse tahmin yürütmek yerine [kurulum rehberine](docs/install.tr.md)
-bakabilirsin.
+Git, Node.js 22.12 veya üzeri, npm/npx ve Codex CLI ve/veya Claude Code
+gerekir. Bunlardan biri eksikse tahmin yürütmek yerine
+[kurulum rehberine](docs/install.tr.md) bakabilirsin.
 
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
@@ -137,6 +137,12 @@ npm run chef -- --install --apply
 Aynı komutlar macOS, Linux ve WSL üzerinde de çalışır. Installer, yönettiği
 hedefleri değiştirmeden önce yedek alır; sana ait skill, MCP, profil veya ilgisiz
 plugin dosyalarını temizlemez.
+
+Etkileşimli kurulum hangi CLI'ların kurulu olduğunu algılar ve Codex CLI
+hedefini mi, Claude Code hedefini mi, yoksa ikisini birden mi yöneteceğini
+sorar. Doğrudan çağrılarda `--target codex|claude|both` ile seçersin; Claude
+Code hedefi asla örtük seçilmez. Hangi hedefin ne aldığı için
+[hedef yetenek haritasına](docs/target-capability-map.tr.md) bak.
 
 ### Hatırlaman gereken dört komut
 

@@ -234,6 +234,18 @@ Agents ve opsiyonel Git-guard alanlarinda tutar; `.claude`, `.cursor`,
 `.opencode`, `.zed` ve `.vscode` gibi komsu harness home path'leri install
 yuzeyine sessizce giremez.
 
+Her manifest işlemi hedefini adlandırır (`codex`, `claude` veya `shared`).
+Codex hedefi varsayılandır; Claude hedefi yalnızca açık bir `--target` ya da
+etkileşimli onayla seçilir. Claude tarafındaki işlemler yalnızca `CLAUDE_HOME`
+(`CLAUDE_CONFIG_DIR` veya `~/.claude`), kullanıcı kapsamlı `.claude.json` ve
+paylaşılan `AGENTS_HOME/plugins` ağacına yazabilir; `${HOME}/.claude` gibi
+sabit bir hedef reddedilmeye devam eder. AgentChef'in sahibi olmadığı Claude
+dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen
+her girdi `~/.claude/agentchef/receipts/` altındaki yan makbuza yazılır;
+onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdilere
+dokunur. Claude plugin önbelleği `claude plugin` CLI'sına aittir ve asla elle
+yazılmaz. Süreç hijyeni hook'u bu sürümde Claude Code'a yayınlanmaz.
+
 Installer'lar yalniz `codex-chef-workflows` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.

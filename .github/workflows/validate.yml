@@ -28,6 +28,9 @@ jobs:
       - run: node --check scripts/validate-workflow-security.mjs
       - run: node --check scripts/validate-content-safety.mjs
       - run: node --check scripts/validate-install-plan.mjs
+      - run: node --check scripts/install-claude-target.mjs
+      - run: node --check scripts/remove-install.mjs
+      - run: node --check scripts/render-target-artifacts.mjs
       - run: node --check scripts/validate-install-state-preview.mjs
       - run: node --check scripts/validate-installer-alignment.mjs
       - run: node --check scripts/validate-installer-smoke.mjs
@@ -100,6 +103,35 @@ jobs:
           $env:AGENTS_HOME = Join-Path $env:TEMP "codex-chef-ci-agents-home"
           powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf -PlainOutput
       - run: npm.cmd run validate:installer-smoke
+
+  claude-target:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - run: npm run render:targets:check
+      - run: npm run check:claude
+      - run: |
+          CODEX_HOME="$PWD/tmp/ci-codex-home" \
+          AGENTS_HOME="$PWD/tmp/ci-agents-home" \
+          CLAUDE_CONFIG_DIR="$PWD/tmp/ci-claude-home" \
+          HOME="$PWD/tmp/ci-home" \
+          bash scripts/install.sh --all --target=both --dry-run
+      - run: |
+          mkdir -p tmp/ci-agents-home/plugins/sources/codex-chef-workflows tmp/ci-claude-home tmp/ci-home
+          node scripts/install-claude-target.mjs --apply --skip-plugin-register \
+            --claude-home "$PWD/tmp/ci-claude-home" --agents-home "$PWD/tmp/ci-agents-home" \
+            --home "$PWD/tmp/ci-home" --platform unix --redact-paths
+          node scripts/verify-install-runtime.mjs --target claude --skip-codex-cli --redact-paths \
+            --claude-home "$PWD/tmp/ci-claude-home" --agents-home "$PWD/tmp/ci-agents-home" \
+            --codex-home "$PWD/tmp/ci-codex-home"
+          node scripts/install-claude-target.mjs --remove --apply --skip-plugin-register \
+            --claude-home "$PWD/tmp/ci-claude-home" --agents-home "$PWD/tmp/ci-agents-home" \
+            --home "$PWD/tmp/ci-home" --platform unix --redact-paths
 
   portability:
     name: portability (${{ matrix.os }}, Node ${{ matrix.node }})

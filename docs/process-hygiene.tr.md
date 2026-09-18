@@ -93,3 +93,7 @@ Resmî kaynaklar:
   fan-out'u sınırlar.
 - Denetim eski ve sahipsiz aday bulmazsa ham Node/Python sayısı yüksek diye
   hiçbir şeyi durdurma.
+- Claude Code oturumları bu sürümde kapsam dışıdır: oturum sonu hook'u yalnızca
+  Codex plugin manifestinde yayınlanır ve denetim yalnızca Codex oturum
+  sahiplerini tanır. Claude Code oturum bitince kendi MCP alt süreçlerini
+  kendisi durdurur; bu hook'un Claude dalı sonraki bir sürüm için planlıdır.

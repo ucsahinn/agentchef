@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inspectGlobalGitGuards } from "./global-git-guards.mjs";
-import { resolveInstallContract } from "./install-contract.mjs";
+import { normalizeTargets, resolveInstallContract } from "./install-contract.mjs";
 import { assertManagedTargetPath, isPathInside } from "./managed-path-safety.mjs";
 import { refreshInstalledPlugin } from "../refresh-installed-plugin.mjs";
 
@@ -23,6 +23,9 @@ export function inspectInstallerSafety({
   codexHome,
   agentsHome,
   home,
+  claudeHome = null,
+  claudeJson = null,
+  targets = "codex",
   noBackup = false,
   dryRun = false,
   installSkills = false,
@@ -36,11 +39,18 @@ export function inspectInstallerSafety({
   const codexRoot = path.resolve(codexHome);
   const agentsRoot = path.resolve(agentsHome);
   const homeRoot = home ? path.resolve(home) : path.dirname(codexRoot);
+  const selectedTargets = normalizeTargets(targets);
+  const claudeRoot = path.resolve(claudeHome || path.join(homeRoot, ".claude"));
+  const claudeJsonPath = path.resolve(claudeJson || path.join(claudeRoot, ".claude.json"));
+  const claudeSelected = selectedTargets.has("claude");
   const contract = resolveInstallContract({
     root: repoRoot,
     platform: process.platform === "win32" ? "windows" : "unix",
     codexHome: codexRoot,
     agentsHome: agentsRoot,
+    claudeHome: claudeRoot,
+    claudeJson: claudeJsonPath,
+    targets: selectedTargets,
     home: homeRoot,
     installSkills,
     installGitGuards,
@@ -48,6 +58,7 @@ export function inspectInstallerSafety({
   });
   const codexTargets = [];
   const agentsTargets = [];
+  const claudeTargets = [];
   const homeTargets = [];
   for (const target of contract.preflightTargets.map((entry) => path.resolve(entry))) {
     if (isPathInside(target, codexRoot)) {
@@ -56,6 +67,9 @@ export function inspectInstallerSafety({
     } else if (isPathInside(target, agentsRoot)) {
       assertManagedTargetPath(target, [agentsRoot]);
       agentsTargets.push(target);
+    } else if (claudeSelected && (isPathInside(target, claudeRoot) || target === claudeJsonPath)) {
+      assertManagedTargetPath(target, [claudeRoot, path.dirname(claudeJsonPath)]);
+      claudeTargets.push(target);
     } else if (installGitGuards && isPathInside(target, homeRoot)) {
       assertManagedTargetPath(target, [homeRoot]);
       homeTargets.push(target);
@@ -68,10 +82,12 @@ export function inspectInstallerSafety({
     targetCounts: {
       codex: codexTargets.length,
       agents: agentsTargets.length,
+      claude: claudeTargets.length,
       home: homeTargets.length
     },
     contract: {
       profile: contract.profileName,
+      targets: contract.targets,
       components: contract.selectedComponents.map((operation) => operation.id),
       actions: contract.operations.map((operation) => ({
         id: operation.id,
@@ -117,6 +133,7 @@ export function inspectInstallerSafety({
     const existingTargets = [
       ...codexTargets,
       ...agentsTargets,
+      ...claudeTargets,
       ...homeTargets,
       path.join(codexRoot, "plugins", "cache"),
       path.join(agentsRoot, "plugins", "cache")
@@ -160,6 +177,9 @@ function parseArgs(argv) {
     codexHome: null,
     agentsHome: null,
     home: null,
+    claudeHome: null,
+    claudeJson: null,
+    targets: "codex",
     noBackup: false,
     dryRun: false,
     installSkills: false,
@@ -173,11 +193,14 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (["--codex-home", "--agents-home", "--home"].includes(arg)) {
+    if (["--codex-home", "--agents-home", "--home", "--claude-home", "--claude-json", "--target"].includes(arg)) {
       const value = argv[index + 1];
       if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value.`);
       if (arg === "--codex-home") options.codexHome = value;
       else if (arg === "--agents-home") options.agentsHome = value;
+      else if (arg === "--claude-home") options.claudeHome = value;
+      else if (arg === "--claude-json") options.claudeJson = value;
+      else if (arg === "--target") options.targets = value;
       else options.home = value;
       index += 1;
     } else if (arg === "--no-backup") options.noBackup = true;

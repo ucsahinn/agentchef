@@ -135,6 +135,25 @@ windows with `codex --profile multi-session`. Only old unowned candidates can
 appear in the explicit cleanup preview. See
 [multi-session process hygiene](process-hygiene.md).
 
+## Claude Code Target
+
+If Claude Code does not show the AgentChef rule, plugin, MCP servers, or
+skills after an install:
+
+```bash
+npm run verify:install:runtime -- --target claude
+claude plugin list
+claude mcp list
+```
+
+Start a new session; Claude Code reads rules, plugins, and skills at startup.
+A `foreign` skill link decision means a real directory of your own sits at
+`~/.claude/skills/<name>`; AgentChef never replaces it. A `user-changed`
+receipt entry means you edited something AgentChef added; it is kept as your
+content. See [Claude skill links](../kb/claude-skill-links.md),
+[Claude settings merge](../kb/claude-settings-merge.md), and
+[Claude plugin cache](../kb/claude-plugin-cache.md).
+
 ## Windows Sandbox
 
 Current Codex Windows modes include native elevated sandbox, native unelevated

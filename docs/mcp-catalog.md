@@ -16,6 +16,13 @@ no Serena/LSP tree until a semantic tool is actually called. Eight
 account, database, or broad-filesystem connectors stay off until you
 deliberately need them.
 
+On the Claude Code target, AgentChef adds only `context7` and the lazy
+`serena` bridge to the user-scope `mcpServers` of `.claude.json`, records both
+in a receipt, and leaves any server you already defined untouched. The
+Codex-specific `openaiDeveloperDocs` entry is not added there; every other
+catalog server stays documented with its `claude mcp add` form in the
+[target capability map](target-capability-map.md).
+
 > **Configured is not the same as live.** A server can exist in the template
 > and still need a launcher, first-run package download, browser, authorization,
 > or Codex restart. `codex mcp list --json` confirms configuration discovery;

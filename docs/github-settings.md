@@ -2,7 +2,7 @@
 
 These settings shape the project’s public first impression. Apply them manually only after the source tree is verified and the account-level change is explicitly approved.
 
-Release candidate baseline: **v0.6.0**.
+Release candidate baseline: **v0.9.0**.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private
@@ -75,7 +75,7 @@ validated locally but is not yet uploaded to the account-level setting.
 
 - Default branch: `main`.
 - `main` protection requires `validate`, `windows-installer`,
-  `portability (ubuntu-latest, Node 22)`, and
+  `portability (ubuntu-latest, Node 22)`, `claude-target`, and
   `portability (macos-latest, Node 24)` with strict branch freshness.
 - Force-pushes and branch deletion are disabled; repository administrators are
   not enforced so an explicitly approved maintainer push remains possible.

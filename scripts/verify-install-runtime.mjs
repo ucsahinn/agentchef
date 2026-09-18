@@ -6,6 +6,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findProblemRules } from "./lib/approval-rules.mjs";
 import { resolveInstallContract } from "./lib/install-contract.mjs";
+import { parseTargetSelection } from "./lib/targets/index.mjs";
+import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
+import { claudeInstallReceiptName, claudeInstallSchemaVersion } from "./install-claude-target.mjs";
+import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receipt.mjs";
+import { inspectSkillLink } from "./lib/skill-links.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { platformCommand } from "./lib/platform-command.mjs";
 import {
@@ -43,7 +48,9 @@ const options = {
   doctorTimeoutMs: 12000,
   mcpTimeoutMs: 15000,
   codexHome: process.env.CODEX_HOME || path.join(os.homedir(), ".codex"),
-  agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents")
+  agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"),
+  claudeHome: null,
+  targets: "codex"
 };
 
 for (let index = 0; index < args.length; index += 1) {
@@ -70,6 +77,12 @@ for (let index = 0; index < args.length; index += 1) {
   } else if (arg === "--agents-home") {
     options.agentsHome = path.resolve(requireCliValue(args, index, "--agents-home"));
     index += 1;
+  } else if (arg === "--claude-home") {
+    options.claudeHome = path.resolve(requireCliValue(args, index, "--claude-home"));
+    index += 1;
+  } else if (arg === "--target") {
+    options.targets = requireCliValue(args, index, "--target");
+    index += 1;
   } else if (arg === "--help" || arg === "-h") {
     printHelp();
     process.exit(0);
@@ -77,6 +90,17 @@ for (let index = 0; index < args.length; index += 1) {
     throw new CliUsageError(`Unknown argument: ${arg}`);
   }
 }
+let selectedTargets;
+try {
+  selectedTargets = parseTargetSelection(options.targets);
+} catch (error) {
+  throw new CliUsageError(error.message);
+}
+const claudeHomes = resolveClaudeHomes({ env: process.env, home: os.homedir(), claudeHome: options.claudeHome });
+options.claudeHome = claudeHomes.claudeHome;
+options.claudeJson = claudeHomes.claudeJson;
+options.verifyCodex = selectedTargets.has("codex");
+options.verifyClaude = selectedTargets.has("claude");
 
 function printHelp() {
   console.log(`Usage: node scripts/verify-install-runtime.mjs [options]
@@ -84,8 +108,10 @@ function printHelp() {
 Read-only runtime verification for an installed AgentChef setup.
 
 Options:
+  --target <selection>    codex (default), claude, or both: which installed target to verify
   --codex-home <path>     Installed Codex home to inspect
   --agents-home <path>    Installed Agents home to inspect
+  --claude-home <path>    Installed Claude Code home to inspect (default CLAUDE_CONFIG_DIR or ~/.claude)
   --expect-skills         Fail if installable curated skills are missing
   --expect-git-guards     Fail if optional global Git guard files/settings are missing
   --skip-codex-cli        Do not call codex doctor or codex mcp list
@@ -888,6 +914,80 @@ function inspectGitGuards(failures) {
   };
 }
 
+// Claude Code target: the install receipt, merge receipts, skill links, and
+// the claude CLI are the evidence. Missing CLI is a warning unless
+// --require-live-runtime is set; a broken managed file or a receipt entry that
+// disappeared is a failure.
+function inspectClaudeRuntime(failures, warnings) {
+  const claudeHome = options.claudeHome;
+  const receiptPath = path.join(claudeHome, "agentchef", claudeInstallReceiptName);
+  if (!fs.existsSync(receiptPath)) {
+    failures.push(`Claude Code target is not installed: missing ${redact(receiptPath)}. Run the installer with --target claude.`);
+    return { inspected: true, installed: false, claudeHome: redact(claudeHome) };
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(readText(receiptPath));
+  } catch (error) {
+    failures.push(`Claude install receipt is unreadable: ${error.message}`);
+    return { inspected: true, installed: false, claudeHome: redact(claudeHome) };
+  }
+  if (receipt.schemaVersion !== claudeInstallSchemaVersion) failures.push(`Claude install receipt has unexpected schemaVersion ${receipt.schemaVersion}.`);
+  const files = (receipt.files || []).map((file) => {
+    const stat = fs.existsSync(file.path) ? fs.lstatSync(file.path) : null;
+    let status = "missing";
+    if (stat?.isFile() && !stat.isSymbolicLink()) status = fileSha256(file.path) === file.sha256 ? "current" : "drift";
+    else if (stat) status = "foreign";
+    if (status !== "current") failures.push(`Claude managed file ${status}: ${redact(file.path)}`);
+    return { path: redact(file.path), status };
+  });
+  const links = (receipt.links || []).map((link) => {
+    const inspection = inspectSkillLink(link.link, link.target);
+    if (inspection.status !== "link-current") failures.push(`Claude skill link ${inspection.status}: ${redact(link.link)}`);
+    return { link: redact(link.link), status: inspection.status };
+  });
+  const receipts = (receipt.receipts || []).map((mergeReceiptPath) => {
+    const mergeReceipt = readReceipt(mergeReceiptPath);
+    if (!mergeReceipt) {
+      failures.push(`Claude merge receipt missing: ${redact(mergeReceiptPath)}`);
+      return { receipt: redact(mergeReceiptPath), status: "missing" };
+    }
+    let document = {};
+    try {
+      document = JSON.parse(readText(mergeReceipt.target).replace(/^\uFEFF/, ""));
+    } catch (error) {
+      failures.push(`Claude merge target unreadable: ${redact(mergeReceipt.target)} (${error.message})`);
+      return { receipt: redact(mergeReceiptPath), status: "target-unreadable" };
+    }
+    const entries = inspectReceipt(mergeReceipt, document);
+    const missing = entries.filter((entry) => entry.status === "missing" && entry.kind !== "container");
+    const changed = entries.filter((entry) => entry.status === "changed");
+    if (missing.length > 0) failures.push(`${missing.length} recorded entr${missing.length === 1 ? "y is" : "ies are"} missing from ${redact(mergeReceipt.target)}; rerun the installer with --target claude.`);
+    if (changed.length > 0) warnings.push(`${changed.length} AgentChef entr${changed.length === 1 ? "y was" : "ies were"} changed by the user in ${redact(mergeReceipt.target)}; they are kept as user content.`);
+    return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
+  });
+  const claude = platformCommand("claude", process.platform === "win32" ? "windows" : "unix");
+  const version = options.skipCodexCli ? null : runProbe("claude --version", claude, ["--version"], { timeout: options.probeTimeoutMs });
+  let cli = { inspected: false };
+  if (version && !version.error && version.status === 0) {
+    cli = { inspected: true, version: String(version.stdout || "").trim().split(/\r?\n/)[0] || null };
+    const pluginSource = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
+    const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
+    cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
+    if (cli.pluginValidate !== "ok") (options.requireLiveRuntime ? failures : warnings).push(`claude plugin validate --strict reported problems for ${redact(pluginSource)}.`);
+    if (!options.noMcpProbe) {
+      const mcp = runProbe("claude mcp list", claude, ["mcp", "list"], { timeout: options.mcpTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
+      cli.mcpList = mcp.error ? "error" : mcp.status === 0 ? "ok" : "fail";
+      const listed = String(mcp.stdout || "");
+      cli.mcpServers = ["context7", "serena"].filter((name) => new RegExp(`^\\s*${name}\\b`, "m").test(listed));
+      if (cli.mcpList !== "ok") (options.requireLiveRuntime ? failures : warnings).push("claude mcp list did not succeed with the installed Claude home.");
+    }
+  } else if (!options.skipCodexCli) {
+    (options.requireLiveRuntime ? failures : warnings).push("claude CLI is not available on PATH; Claude Code runtime evidence is file-based only.");
+  }
+  return { inspected: true, installed: true, claudeHome: redact(claudeHome), files, links, receipts, cli };
+}
+
 const failures = [];
 const warnings = [];
 
@@ -895,13 +995,15 @@ const report = {
   probes,
   schemaVersion: "codex-chef.install-runtime.v1",
   generatedAt: new Date().toISOString(),
-  installed: inspectInstalledFiles(failures),
-  managedFiles: inspectManagedFileDrift(failures, warnings),
-  configDrift: inspectConfigDrift(failures),
-  runtime: inspectCodexRuntime(failures, warnings),
-  plugin: inspectPluginRuntime(failures, warnings),
-  skills: inspectSkills(failures, warnings),
-  gitGuards: inspectGitGuards(failures),
+  targets: [...selectedTargets],
+  installed: options.verifyCodex ? inspectInstalledFiles(failures) : { inspected: false, codexHome: redact(options.codexHome), agentsHome: redact(options.agentsHome), agents: { installed: 0, expected: 0 }, mcp: { installed: 0, expected: 0 } },
+  managedFiles: options.verifyCodex ? inspectManagedFileDrift(failures, warnings) : { inspected: false, matched: 0, expected: 0 },
+  configDrift: options.verifyCodex ? inspectConfigDrift(failures) : { inspected: false },
+  runtime: options.verifyCodex ? inspectCodexRuntime(failures, warnings) : { inspected: false },
+  plugin: options.verifyCodex ? inspectPluginRuntime(failures, warnings) : { inspected: false },
+  skills: options.verifyCodex ? inspectSkills(failures, warnings) : { inspected: false, installed: 0, missing: [] },
+  gitGuards: options.verifyCodex ? inspectGitGuards(failures) : { inspected: false },
+  claude: options.verifyClaude ? inspectClaudeRuntime(failures, warnings) : { inspected: false },
   warnings,
   failures
 };
@@ -913,11 +1015,21 @@ if (options.json) {
 } else {
   if (!progressEnabled) console.log("AgentChef install runtime verification");
   console.log(`Status: ${report.status}`);
+  console.log(`Targets: ${report.targets.join(", ")}`);
   console.log(`Codex home: ${report.installed.codexHome}`);
   console.log(`Agents home: ${report.installed.agentsHome}`);
-  console.log(`Agents: ${report.installed.agents.installed}/${report.installed.agents.expected}`);
-  console.log(`MCP config: ${report.installed.mcp.installed}/${report.installed.mcp.expected}`);
-  console.log(`Managed files: ${report.managedFiles.matched}/${report.managedFiles.expected} current`);
+  if (options.verifyCodex) {
+    console.log(`Agents: ${report.installed.agents.installed}/${report.installed.agents.expected}`);
+    console.log(`MCP config: ${report.installed.mcp.installed}/${report.installed.mcp.expected}`);
+    console.log(`Managed files: ${report.managedFiles.matched}/${report.managedFiles.expected} current`);
+  }
+  if (report.claude.inspected) {
+    console.log(`Claude home: ${report.claude.claudeHome}`);
+    if (report.claude.installed) {
+      console.log(`Claude managed files: ${report.claude.files.filter((file) => file.status === "current").length}/${report.claude.files.length} current; skill links: ${report.claude.links.filter((link) => link.status === "link-current").length}/${report.claude.links.length}; merge receipts: ${report.claude.receipts.map((entry) => entry.status).join(", ") || "none"}`);
+      if (report.claude.cli.inspected) console.log(`Claude CLI: ${report.claude.cli.version || "unknown"}; plugin validate: ${report.claude.cli.pluginValidate}; mcp list: ${report.claude.cli.mcpList || "skipped"}`);
+    }
+  }
   if (report.runtime.inspected) {
     console.log(`Codex doctor home under test: ${report.runtime.activeCodexHome || "unknown"}`);
     console.log(`Installed CODEX_HOME matches target: ${report.runtime.activeHomeMatchesInstall}`);

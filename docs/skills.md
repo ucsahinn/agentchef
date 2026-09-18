@@ -113,6 +113,10 @@ upstream options intentionally kept out of the default skill list.
   vendor setup, or a more specialized task.
 - Skills do not execute by themselves. Codex selects one when the task matches
   or when you explicitly invoke it.
+- Claude Code sees the same managed tree through directory links
+  (`~/.claude/skills/<name>` into `~/.agents/skills/<name>`) and through the
+  plugin, so there is still one canonical copy per skill. Invoke a skill there
+  with `/<name>`. See [Claude skill links](../kb/claude-skill-links.md).
 
 The machine-readable source is
 [`catalog/skills.json`](../catalog/skills.json). Reviewed install targets are

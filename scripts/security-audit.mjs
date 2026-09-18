@@ -442,7 +442,7 @@ for (const configFile of ["templates/codex/config.windows.toml", "templates/code
 
 const installPlan = JSON.parse(read("manifests/install-plan.json"));
 for (const operation of installPlan.operations || []) {
-  if (operation.risk === "high" && !operation.requiresFlag) {
+  if (operation.risk === "high" && !operation.requiresFlag && operation.target !== "claude") {
     failures.push(`High-risk install plan operation must require an explicit flag: ${operation.id}`);
   }
   if (

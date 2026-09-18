@@ -11,6 +11,8 @@ import {
   repositoryRoot,
   resolveInstallContract
 } from "./lib/install-contract.mjs";
+import { parseTargetSelection, operationAppliesToTargets } from "./lib/targets/index.mjs";
+import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 
 const root = repositoryRoot;
 const manifestPath = path.join(root, "manifests", "install-plan.json");
@@ -30,6 +32,9 @@ function parseArgs(argv) {
     platform: process.platform === "win32" ? "windows" : "unix",
     codexHome: process.env.CODEX_HOME || path.join(os.homedir(), ".codex"),
     agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"),
+    claudeHome: null,
+    claudeJson: null,
+    targets: null,
     home: os.homedir()
   };
 
@@ -57,6 +62,15 @@ function parseArgs(argv) {
     } else if (arg === "--home") {
       parsed.home = requireCliValue(argv, index, "--home");
       index += 1;
+    } else if (arg === "--claude-home") {
+      parsed.claudeHome = requireCliValue(argv, index, "--claude-home");
+      index += 1;
+    } else if (arg === "--claude-json") {
+      parsed.claudeJson = requireCliValue(argv, index, "--claude-json");
+      index += 1;
+    } else if (arg === "--target") {
+      parsed.targets = requireCliValue(argv, index, "--target");
+      index += 1;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
@@ -72,6 +86,15 @@ function parseArgs(argv) {
   if (parsed.all) {
     parsed.installSkills = true;
   }
+
+  try {
+    parsed.targets = [...parseTargetSelection(parsed.targets)];
+  } catch (error) {
+    throw new CliUsageError(error.message);
+  }
+  const claudeHomes = resolveClaudeHomes({ env: process.env, home: parsed.home, claudeHome: parsed.claudeHome, claudeJson: parsed.claudeJson });
+  parsed.claudeHome = claudeHomes.claudeHome;
+  parsed.claudeJson = claudeHomes.claudeJson;
 
   return parsed;
 }
@@ -91,8 +114,11 @@ Options:
   --no-backup            Reflect no-backup behavior in the plan metadata
   --redact-paths         Replace local home paths with placeholders in output
   --platform <name>      windows or unix (defaults to current platform)
+  --target <selection>   codex (default), claude, or both; shared operations run once
   --codex-home <path>    Override CODEX_HOME for planning only
   --agents-home <path>   Override AGENTS_HOME for planning only
+  --claude-home <path>   Override CLAUDE_CONFIG_DIR for planning only
+  --claude-json <path>   Override the user-scope .claude.json location for planning only
   --home <path>          Override HOME for planning only
   --json                 Emit machine-readable JSON
 `);
@@ -107,8 +133,10 @@ function sortedUnique(values) {
 }
 
 function manifestOperations(manifest, options) {
+  const targets = new Set(options.targets);
   return manifest.operations
     .filter((operation) => operation.platforms.includes(options.platform))
+    .filter((operation) => operationAppliesToTargets(operation, targets))
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -119,6 +147,7 @@ function createDiscovery(options) {
   const operations = manifestOperations(manifest, options).map((operation) => ({
     id: operation.id,
     kind: operation.kind,
+    target: operation.target,
     summary: operation.summary,
     platforms: operation.platforms,
     requiresFlag: operation.requiresFlag || null,
@@ -127,10 +156,12 @@ function createDiscovery(options) {
     collision: operation.collision
   }));
   const profiles = Object.entries(manifest.profiles || {}).map(([id, operationIds]) => {
+    const targets = new Set(options.targets);
     const knownOperations = operationIds
       .map((operationId) => operationsById.get(operationId))
       .filter(Boolean)
-      .filter((operation) => operation.platforms.includes(options.platform));
+      .filter((operation) => operation.platforms.includes(options.platform))
+      .filter((operation) => operationAppliesToTargets(operation, targets));
     return {
       id,
       operationIds: knownOperations.map((operation) => operation.id),
@@ -151,7 +182,8 @@ function createDiscovery(options) {
       manifestVersion: manifest.schemaVersion
     },
     target: {
-      platform: options.platform
+      platform: options.platform,
+      targets: options.targets
     },
     profiles,
     operations
@@ -166,6 +198,8 @@ function createPlan(options) {
         ...options,
         codexHome: "${HOME}/.codex",
         agentsHome: "${HOME}/.agents",
+        claudeHome: "${HOME}/.claude",
+        claudeJson: "${HOME}/.claude/.claude.json",
         home: "${HOME}"
       }
     : options;
@@ -191,8 +225,11 @@ function createPlan(options) {
     },
     target: {
       platform: options.platform,
+      targets: options.targets,
       codexHome: outputOptions.codexHome,
       agentsHome: outputOptions.agentsHome,
+      claudeHome: outputOptions.claudeHome,
+      claudeJson: outputOptions.claudeJson,
       home: outputOptions.home
     },
     options: {
@@ -201,7 +238,8 @@ function createPlan(options) {
       installGitGuards: options.installGitGuards,
       force: options.force,
       noBackup: options.noBackup,
-      redactPaths: options.redactPaths
+      redactPaths: options.redactPaths,
+      targets: options.targets
     },
     selectedComponentIds: selected.map((operation) => operation.id),
     skippedComponentIds: skipped.map((operation) => operation.id),
@@ -213,8 +251,13 @@ function printPlan(plan) {
   console.log("AgentChef install plan\n");
   console.log(`Package: ${plan.source.packageName}@${plan.source.packageVersion}`);
   console.log(`Platform: ${plan.target.platform}`);
+  console.log(`Targets: ${plan.target.targets.join(", ")}`);
   console.log(`Codex home: ${plan.target.codexHome}`);
   console.log(`Agents home: ${plan.target.agentsHome}`);
+  if (plan.target.targets.includes("claude")) {
+    console.log(`Claude home: ${plan.target.claudeHome}`);
+    console.log(`Claude JSON: ${plan.target.claudeJson}`);
+  }
   console.log(`Selected components: ${plan.selectedComponentIds.join(", ")}`);
   console.log(`Skipped components: ${plan.skippedComponentIds.join(", ") || "(none)"}`);
   console.log(`Operations: ${plan.operations.length}`);
@@ -243,6 +286,18 @@ function printPlan(plan) {
     } else if (operation.kind === "write-ownership-marker") {
       console.log(`  source skill: ${operation.source}`);
       console.log(`  marker: ${operation.destination}`);
+    } else if (operation.kind === "json-merge") {
+      console.log(`  fragment: ${operation.source}`);
+      console.log(`  target: ${operation.destination}`);
+    } else if (operation.kind === "link-directory") {
+      console.log(`  link root: ${operation.destination}`);
+      console.log(`  points into: ${operation.source}`);
+    } else if (operation.kind === "write-claude-marketplace") {
+      console.log(`  target: ${operation.destination}`);
+      console.log(`  plugin target: ${operation.pluginTarget}`);
+    } else if (operation.kind === "claude-plugin-register") {
+      console.log(`  plugin: ${operation.pluginId}`);
+      console.log(`  command: ${operation.command}`);
     } else {
       console.log(`  source: ${operation.source}`);
       console.log(`  target: ${operation.destination}`);
@@ -275,8 +330,10 @@ function printPlanSummary(plan) {
   console.log("AgentChef install plan summary\n");
   console.log(`Package: ${plan.source.packageName}@${plan.source.packageVersion}`);
   console.log(`Platform: ${plan.target.platform}`);
+  console.log(`Targets: ${plan.target.targets.join(", ")}`);
   console.log(`Codex home: ${plan.target.codexHome}`);
   console.log(`Agents home: ${plan.target.agentsHome}`);
+  if (plan.target.targets.includes("claude")) console.log(`Claude home: ${plan.target.claudeHome}`);
   console.log(`Selected components (${plan.selectedComponentIds.length}): ${plan.selectedComponentIds.join(", ")}`);
   console.log(`Skipped components (${plan.skippedComponentIds.length}): ${plan.skippedComponentIds.join(", ") || "(none)"}`);
   console.log(`Operations: ${plan.operations.length}; high risk: ${highRisk}; backup-backed: ${backupBacked}; force: ${plan.options.force ? "yes" : "no"}`);
@@ -290,6 +347,7 @@ function printProfiles(discovery) {
   console.log("AgentChef install profiles\n");
   console.log(`Package: ${discovery.source.packageName}@${discovery.source.packageVersion}`);
   console.log(`Platform: ${discovery.target.platform}`);
+  console.log(`Targets: ${discovery.target.targets.join(", ")}`);
   console.log("");
   console.log("Profile | Operations | High risk | Optional flags");
   console.log("--- | ---: | ---: | ---");
@@ -303,10 +361,10 @@ function printOperations(discovery) {
   console.log(`Package: ${discovery.source.packageName}@${discovery.source.packageVersion}`);
   console.log(`Platform: ${discovery.target.platform}`);
   console.log("");
-  console.log("Operation | Kind | Risk | Requires | Backup | Collision");
-  console.log("--- | --- | --- | --- | --- | ---");
+  console.log("Operation | Kind | Target | Risk | Requires | Backup | Collision");
+  console.log("--- | --- | --- | --- | --- | --- | ---");
   for (const operation of discovery.operations) {
-    console.log(`${operation.id} | ${operation.kind} | ${operation.risk} | ${operation.requiresFlag || "default"} | ${operation.backup ? "yes" : "no"} | ${operation.collision}`);
+    console.log(`${operation.id} | ${operation.kind} | ${operation.target} | ${operation.risk} | ${operation.requiresFlag || "default"} | ${operation.backup ? "yes" : "no"} | ${operation.collision}`);
   }
 }
 

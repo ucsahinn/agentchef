@@ -113,6 +113,10 @@ listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçenekle
   kurulumu ya da daha özel bir görev gerektirebilir.
 - Skill'ler kendi kendine çalışmaz. Codex, görev eşleştiğinde veya sen açıkça
   çağırdığında skill'i seçer.
+- Claude Code aynı yönetilen ağacı dizin bağlantıları (`~/.claude/skills/<ad>`
+  → `~/.agents/skills/<ad>`) ve plugin üzerinden görür; skill başına yine tek
+  kanonik kopya vardır. Orada bir skill'i `/<ad>` ile çağırırsın. Bkz.
+  [Claude skill bağlantıları](../kb/claude-skill-links.tr.md).
 
 Makine tarafından okunan kaynak
 [`catalog/skills.json`](../catalog/skills.json) dosyasıdır. İncelenmiş kurulum

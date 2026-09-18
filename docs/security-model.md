@@ -229,10 +229,24 @@ a clean first install; current setups become a no-op, while drift is directed to
 the explicit backup-backed repair boundary. The same status inspection treats
 user-added skills and MCP connectors as preserved inventory, not deletion
 targets.
-`scripts/validate-install-plan.mjs` also keeps destinations inside reviewed
-Codex, Agents, and optional Git-guard targets so adjacent harness homes such as
-`.claude`, `.cursor`, `.opencode`, `.zed`, and `.vscode` cannot drift into the
-install surface silently.
+`scripts/validate-install-plan.mjs` keeps every destination inside the roots
+its target owns: Codex operations stay under `CODEX_HOME` and `AGENTS_HOME`,
+Claude operations under `CLAUDE_HOME` (`CLAUDE_CONFIG_DIR` or `~/.claude`),
+the user-scope `.claude.json`, and the shared `AGENTS_HOME/plugins` tree, and
+shared operations under `AGENTS_HOME` or the reviewed Git-guard targets. A
+literal `${HOME}/.claude` destination is still rejected, as are `.cursor`,
+`.opencode`, `.zed`, `.vscode`, `.gemini`, `.qwen`, and `.kiro`, so adjacent
+harness homes cannot drift into the install surface silently.
+
+Every manifest operation names its target (`codex`, `claude`, or `shared`).
+The Codex target is the default; the Claude target is selected only by an
+explicit `--target` or an interactive confirmation. Claude-side files that
+AgentChef does not own (`settings.json`, `.claude.json`) are merged
+additively and every added entry is recorded in a sidecar receipt under
+`~/.claude/agentchef/receipts/`; repair, status, and removal act only on
+entries whose current value still matches the receipt. The Claude plugin cache
+is owned by the `claude plugin` CLI and is never written by hand. The
+process-hygiene hook is not published to Claude Code in this release.
 
 Installers upsert only the `codex-chef-workflows` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing

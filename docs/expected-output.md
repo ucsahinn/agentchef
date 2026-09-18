@@ -10,13 +10,30 @@ Discovery output stays no-write and human-readable:
 
 ```text
 AgentChef install profiles
-Package: agentchef@0.6.0
+Package: agentchef@0.9.0
 Platform: windows
+Targets: codex
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
 all | 23 | 1 | InstallSkills
 default | 22 | 0 | none
+```
+
+The default target is `codex`. Add `--target claude` or `--target both` to
+include the Claude Code operations; shared operations (direct skills, the
+plugin source tree, Git guards, curated skills) are counted once:
+
+```text
+AgentChef install profiles
+Package: agentchef@0.9.0
+Platform: windows
+Targets: codex, claude
+
+Profile | Operations | High risk | Optional flags
+--- | ---: | ---: | ---
+all | 30 | 3 | InstallSkills
+default | 29 | 2 | none
 ```
 
 ```text

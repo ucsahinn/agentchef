@@ -2,6 +2,42 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v0.9.0 - 2026-09-18
+
+AgentChef 0.9.0 adds Claude Code as a second install target next to the
+OpenAI Codex CLI. Existing Codex installs are unaffected by default: the Codex
+target stays the default, and the Claude Code target is managed only after an
+explicit `--target claude` or `--target both`, or an interactive confirmation.
+
+### What Changed
+
+- One catalog, two targets. Every install operation names its target
+  (`codex`, `claude`, or `shared`); shared operations such as the managed
+  skill tree, the plugin source tree, Git guards, and curated skills run once.
+- The Claude Code surface is installed by one transaction helper: a user-level
+  rule file rendered from the same working agreement as `AGENTS.md`, additive
+  `settings.json` permission rules and `.claude.json` MCP entries recorded in
+  sidecar receipts, skill links into the managed `~/.agents/skills` tree, a
+  Claude plugin marketplace, 32 namespaced `agentchef:<role>` subagents, and
+  plugin registration through the `claude plugin` CLI. See
+  [Claude Code surfaces](claude-surfaces.md) and the
+  [target capability map](target-capability-map.md).
+- `npm run chef -- --remove --target <t>` removes only AgentChef-owned files,
+  links, marketplace entries, and receipt-recorded settings on either target.
+- `verify-install-runtime`, `codex:status`, and `codex:doctor` verify the
+  Claude target (`--target claude|both`); status also relays the read-only
+  Beyin summary line when the separate memory engine is installed.
+- The session-end process-hygiene hook stays Codex-only in this release.
+
+### Product Boundary
+
+On-disk identity is still the `codex-chef` prefix (plugin id, ownership
+markers, marketplace root, backup folders, schema strings, environment
+variables); 1.0.0 ships the preview-first identity migration. AgentChef never
+edits your `~/.claude/CLAUDE.md`, `~/.claude/agents/`, OAuth state, or any
+`.claude.json` key other than `mcpServers`, and never writes Claude's plugin
+cache by hand. See the [upgrade guide](upgrade.md) for the 0.6.0 to 0.9.0 notes.
+
 ## v0.6.0 - 2026-09-18
 
 AgentChef 0.6.0 is the first release under the new name. It retires the

@@ -2,7 +2,7 @@
 
 Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrulandıktan ve account-level değişiklik açıkça onaylandıktan sonra manuel uygula.
 
-Yayın adayı temel sürümü: **v0.6.0**.
+Yayın adayı temel sürümü: **v0.9.0**.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
@@ -74,7 +74,7 @@ doğrulandı fakat account-level ayara henüz yüklenmedi.
 
 - Default branch: `main`.
 - `main` protection; `validate`, `windows-installer`,
-  `portability (ubuntu-latest, Node 22)` ve
+  `portability (ubuntu-latest, Node 22)`, `claude-target` ve
   `portability (macos-latest, Node 24)` check'lerini strict branch freshness ile
   zorunlu tutuyor.
 - Force-push ve branch silme kapalı; açıkça onaylanmış maintainer push'ı mümkün

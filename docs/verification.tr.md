@@ -312,6 +312,17 @@ Gerçek kurulum veya upgrade sonrası read-only runtime verifier çalıştır:
 npm run verify:install:runtime -- --expect-skills
 ```
 
+Claude Code hedefi için `--target claude` (veya `both`) ekle. Doğrulayıcı bu
+durumda `~/.claude/agentchef/` altındaki kurulum makbuzunu okur, her yönetilen
+dosyanın hash'ini, her skill bağlantısını ve her birleştirme makbuzu girdisini
+kontrol eder; CLI varsa `claude --version`, `claude plugin validate --strict`
+ve `claude mcp list` problarını çalıştırır:
+
+```bash
+npm run verify:install:runtime -- --target claude
+npm run codex:status -- --target both
+```
+
 `--expect-skills` flag'ini sadece gerçek kurulumda `-All` veya `-InstallSkills`
 kullandıysan ver. Verifier managed dosyalarda source drift olup olmadığını
 kontrol eder, Codex CLI kontrollerini `CODEX_HOME` açıkça kurulu hedefe

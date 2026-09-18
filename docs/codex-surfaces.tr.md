@@ -20,6 +20,9 @@ Routing kaniti ayrica `catalog/routing-profiles.json` ve
 `npm run chef -- --routing` ile gorulur. Bu permission vermez; sadece beklenen
 ajan, skill, MCP, validation gate ve final raporlama sozlesmesini gosterir.
 
+Bu yüzeylerin Claude Code karşılıkları [Claude Code yüzeyleri](claude-surfaces.tr.md)
+sayfasında; iki hedef arasındaki eşleme [hedef yetenek haritasında](target-capability-map.tr.md).
+
 Resmi kaynaklar:
 
 - AGENTS.md: https://developers.openai.com/codex/guides/agents-md

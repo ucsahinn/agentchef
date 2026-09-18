@@ -17,11 +17,14 @@ AgentChef’in operatör dokümantasyonu İngilizce ve Türkçe olarak tam parit
 | Eşzamanlı Codex/MCP süreçlerini sınırlı tutmak | [Çoklu oturum süreç hijyeni](process-hygiene.tr.md) |
 | Lokal tercihleri kaybetmeden güncellemek | [Güncelleme rehberi](upgrade.tr.md) |
 | Repoyu veya kurulu runtime’ı kanıtlamak | [Doğrulama](verification.tr.md) |
+| Codex CLI ve Claude Code hedeflerini seçmek veya karşılaştırmak | [Hedef yetenek haritası](target-capability-map.tr.md) |
 
 ## Kurulumu Tanı
 
+- [Hedef yetenek haritası (Codex CLI ve Claude Code)](target-capability-map.tr.md)
 - [Codex kapasite haritası](codex-capability-map.tr.md)
 - [Codex yüzeyleri](codex-surfaces.tr.md)
+- [Claude Code yüzeyleri](claude-surfaces.tr.md)
 - [CLI flag ve komutları](codex-flags.tr.md)
 - [Uzman agent'lar](agents.tr.md)
 - [Skill kataloğu](skills.tr.md)

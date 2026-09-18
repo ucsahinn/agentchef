@@ -120,6 +120,16 @@ veritabanı erişimi ve veritabanı performansı ihtiyaçları soru, incelenen k
 handoff ile `backend_coordinator` için ana oturuma döner. Customer support/onboarding rotası da
 advisory'dir. Bu rotalar veritabanı, customer-account veya production erişimi vermez.
 
+### Aynı roller Claude Code'da
+
+Claude Code hedefi aynı 32 rolü `agentchef:<rol>` adlı plugin subagent'ları
+olarak taşır (örneğin `agentchef:code-mapper`). `npm run render:targets`
+katalogdan üretir: salt-okunur Codex rolleri `Read`, `Grep`, `Glob` araçlı
+ve `Write`, `Edit`, `Bash` yasaklı subagent'lara dönüşür; workspace-write
+roller düzenleme araçlarını korur; koordinatörler yalnızca kataloğa bağlı
+worker'larını `Agent(agentchef:<worker>)` ile başlatabilir. AgentChef
+`~/.claude/agents/` dizinine asla yazmaz ve asla `bypassPermissions` üretmez.
+
 ## AgentSpace Sahipliği, Knowledge ve Worker Güvenliği
 
 | Koordinatör | Sınırlı uzman worker'lar |

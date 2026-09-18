@@ -19,8 +19,13 @@ const allowedKinds = new Set([
   "refresh-plugin-cache",
   "git-config",
   "chmod",
-  "skill-install"
+  "skill-install",
+  "json-merge",
+  "link-directory",
+  "write-claude-marketplace",
+  "claude-plugin-register"
 ]);
+const allowedTargets = new Set(["codex", "claude", "shared"]);
 const allowedFlags = new Set(["InstallSkills", "InstallGitGuards"]);
 const allowedPlatforms = new Set(["windows", "unix"]);
 const allowedRisks = new Set(["low", "medium", "high"]);
@@ -69,6 +74,16 @@ function validateGlob(operation) {
   }
 }
 
+// Every target owns a fixed set of home tokens. Literal adjacent-harness
+// homes stay denied for every target: the Claude surface is reachable only
+// through the ${CLAUDE_HOME}/${CLAUDE_JSON} tokens, which the installer
+// resolves from CLAUDE_CONFIG_DIR at run time.
+const targetRoots = {
+  codex: ["${CODEX_HOME}", "${AGENTS_HOME}"],
+  claude: ["${CLAUDE_HOME}", "${CLAUDE_JSON}", "${AGENTS_HOME}/plugins"],
+  shared: ["${AGENTS_HOME}"]
+};
+
 function validateDestinationPath(operation, key, value) {
   if (!value || typeof value !== "string") {
     fail(`Operation ${operation.id} must declare ${key}`);
@@ -77,6 +92,7 @@ function validateDestinationPath(operation, key, value) {
   const normalized = value.replace(/\\/g, "/");
   const deniedHomes = [
     "${HOME}/.claude",
+    "${HOME}/.claude.json",
     "${HOME}/.cursor",
     "${HOME}/.opencode",
     "${HOME}/.kiro",
@@ -105,10 +121,56 @@ function validateDestinationPath(operation, key, value) {
     return;
   }
 
-  if (!["${CODEX_HOME}", "${AGENTS_HOME}"].includes(normalized)
-    && !normalized.startsWith("${CODEX_HOME}/")
-    && !normalized.startsWith("${AGENTS_HOME}/")) {
-    fail(`Operation ${operation.id} default destination must stay within CODEX_HOME or AGENTS_HOME: ${value}`);
+  const roots = targetRoots[operation.target] || targetRoots.codex;
+  if (!roots.some((root) => normalized === root || normalized.startsWith(`${root}/`))) {
+    fail(`Operation ${operation.id} (${operation.target}) destination must stay within ${roots.join(" or ")}: ${value}`);
+  }
+}
+
+// Target combinations: every shared operation appears exactly once for any
+// selection, no two operations write the same destination, and claude-only
+// operations never leak into the default codex selection.
+function validateTargetCombinations() {
+  const planFor = (targetArgs, label) => {
+    const output = runPlan(["--all", "--install-git-guards", "--platform", "unix", ...targetArgs, "--json"], label);
+    return output ? parsePlan(output, label) : null;
+  };
+  const codexOnly = planFor([], "Target codex plan");
+  const claudeOnly = planFor(["--target", "claude"], "Target claude plan");
+  const both = planFor(["--target", "both"], "Target both plan");
+  if (!codexOnly || !claudeOnly || !both) return;
+  const byId = new Map(manifest.operations.map((operation) => [operation.id, operation]));
+  const sharedIds = manifest.operations.filter((operation) => operation.target === "shared").map((operation) => operation.id);
+  for (const [label, plan] of [["codex", codexOnly], ["claude", claudeOnly], ["both", both]]) {
+    const selected = plan.selectedComponentIds;
+    for (const id of sharedIds) {
+      if (selected.filter((entry) => entry === id).length !== 1) {
+        fail(`Target ${label} plan must include shared operation ${id} exactly once`);
+      }
+    }
+    const destinations = new Map();
+    for (const action of plan.operations) {
+      if (!action.destination || action.kind === "chmod") continue;
+      const previous = destinations.get(action.destination);
+      if (previous && previous !== action.componentId) {
+        fail(`Target ${label} plan writes ${action.destination} from both ${previous} and ${action.componentId}`);
+      }
+      destinations.set(action.destination, action.componentId);
+    }
+    for (const id of selected) {
+      const target = byId.get(id)?.target;
+      if (label === "codex" && target === "claude") fail(`Default codex plan must not select claude operation ${id}`);
+      if (label === "claude" && target === "codex") fail(`Claude-only plan must not select codex operation ${id}`);
+    }
+  }
+  if (both.selectedComponentIds.length !== new Set([...codexOnly.selectedComponentIds, ...claudeOnly.selectedComponentIds]).size) {
+    fail("Target both plan must equal the union of the codex and claude selections");
+  }
+  const claudeActions = claudeOnly.operations.filter((action) => byId.get(action.componentId)?.target === "claude");
+  for (const action of claudeActions) {
+    if (action.destination && !/(\/|\\)\.claude(\/|\\|$)|\.claude\.json$|(\/|\\)plugins(\/|\\)\.claude-plugin(\/|\\)marketplace\.json$/.test(action.destination)) {
+      fail(`Claude operation ${action.id} resolved outside the Claude surface: ${action.destination}`);
+    }
   }
 }
 
@@ -192,6 +254,8 @@ function validatePlanOutputSmoke() {
     }
   }
 
+  validateTargetCombinations();
+
   const extendedOutput = runPlan([
     "--platform",
     "windows",
@@ -224,7 +288,7 @@ if (!schema) {
   fail("Missing or invalid schemas/install-plan.schema.json");
 }
 
-if (manifest.schemaVersion !== "codex-chef.install-plan.v1") {
+if (manifest.schemaVersion !== "codex-chef.install-plan.v2") {
   fail("Install plan manifest has unexpected schemaVersion");
 }
 
@@ -253,6 +317,10 @@ for (const operation of manifest.operations || []) {
   operationIds.add(operation.id);
 
   if (!allowedKinds.has(operation.kind)) fail(`Operation ${operation.id} has invalid kind: ${operation.kind}`);
+  if (!allowedTargets.has(operation.target)) fail(`Operation ${operation.id} has invalid target: ${operation.target}`);
+  if (["json-merge", "link-directory", "write-claude-marketplace", "claude-plugin-register"].includes(operation.kind) && operation.target !== "claude") {
+    fail(`Operation ${operation.id} kind ${operation.kind} is Claude-only and must declare target claude`);
+  }
   if (!operation.summary) fail(`Operation ${operation.id} must declare summary`);
   if (!operation.collision) fail(`Operation ${operation.id} must declare collision`);
   if (typeof operation.backup !== "boolean") fail(`Operation ${operation.id} must declare boolean backup`);
@@ -299,6 +367,35 @@ for (const operation of manifest.operations || []) {
   if (operation.kind === "skill-install") {
     validateSourcePath(operation, "catalog", operation.catalog);
     validateSourcePath(operation, "lock", operation.lock);
+  }
+
+  if (operation.kind === "json-merge") {
+    validateSourcePath(operation, "source", operation.source);
+    validateDestinationPath(operation, "destination", operation.destination);
+    if (!/receipt/i.test(operation.collision || "")) fail(`Operation ${operation.id} json-merge collision must be receipt-backed`);
+    if (!/receipt/i.test(operation.conflictPolicy || "")) fail(`Operation ${operation.id} json-merge conflictPolicy must explain receipt-scoped removal`);
+  }
+
+  if (operation.kind === "link-directory") {
+    // Links live under the Claude home and point into the shared skill tree.
+    if (String(operation.source || "").replace(/\\/g, "/") !== "${AGENTS_HOME}/skills") {
+      fail(`Operation ${operation.id} link-directory source must be the shared ${"$"}{AGENTS_HOME}/skills tree`);
+    }
+    validateDestinationPath(operation, "destination", operation.destination);
+    if (!/foreign/i.test(operation.conflictPolicy || "")) fail(`Operation ${operation.id} link-directory conflictPolicy must say foreign directories are never touched`);
+  }
+
+  if (operation.kind === "write-claude-marketplace") {
+    validateDestinationPath(operation, "destination", operation.destination);
+    validateDestinationPath(operation, "pluginTarget", operation.pluginTarget);
+    if (!operation.destination.endsWith("/.claude-plugin/marketplace.json")) {
+      fail(`Operation ${operation.id} must write the .claude-plugin/marketplace.json manifest`);
+    }
+  }
+
+  if (operation.kind === "claude-plugin-register") {
+    if (operation.pluginId !== "codex-chef-workflows@agentchef") fail(`Operation ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (operation.backup !== false) fail(`Operation ${operation.id} is CLI-owned and must not claim a file backup`);
   }
 
   if (operation.kind === "write-marketplace") {

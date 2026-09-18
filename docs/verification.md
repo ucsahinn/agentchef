@@ -320,6 +320,17 @@ managed files and the Codex CLI should still be checked without starting the
 MCP probe. These modes skip only the named probe surface; they do not weaken
 source-drift validation.
 
+For the Claude Code target, add `--target claude` (or `both`). The verifier
+then reads the install receipt under `~/.claude/agentchef/`, checks every
+managed file hash, every skill link, and every merge receipt entry, and probes
+`claude --version`, `claude plugin validate --strict`, and `claude mcp list`
+when the CLI is available:
+
+```bash
+npm run verify:install:runtime -- --target claude
+npm run codex:status -- --target both
+```
+
 ## Remote Verification
 
 After an approved push:

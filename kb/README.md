@@ -23,6 +23,10 @@ Language entry points:
 | An MCP connector is listed but shows no tools. | [MCP connector shows no tools](mcp-no-tools.md) |
 | Managed files are missing or stale. | [Managed file drift](managed-file-drift.md) |
 | Should screenshots or visuals be committed? | [Public visual assets](public-visual-assets.md) |
+| What did AgentChef add to my Claude Code settings.json or .claude.json? | [Claude settings merge](claude-settings-merge.md) |
+| Claude Code does not see the AgentChef plugin or shows an old version. | [Claude plugin cache](claude-plugin-cache.md) |
+| `CLAUDE_CONFIG_DIR` or a moved Claude home makes results inconsistent. | [Custom Claude home and ambient drift](claude-home-drift.md) |
+| A skill is missing from Claude Code or `~/.claude/skills` holds a real copy. | [Claude skill links](claude-skill-links.md) |
 
 ## Operating Rules
 

@@ -13,6 +13,13 @@ Node/Python ağaçları gereksiz yere başlamaz. Hesap, veritabanı veya geniş 
 sistemi erişimi isteyen diğer sekiz connector ise gerçekten ihtiyacın olana
 kadar kapalı kalır.
 
+Claude Code hedefinde AgentChef, `.claude.json` içindeki kullanıcı kapsamlı
+`mcpServers` alanına yalnızca `context7` ve lazy `serena` bridge'ini ekler,
+ikisini de makbuza yazar ve zaten tanımladığın sunuculara dokunmaz. Codex'e
+özgü `openaiDeveloperDocs` girdisi oraya eklenmez; kataloğun diğer sunucuları
+`claude mcp add` biçimleriyle [hedef yetenek haritasında](target-capability-map.tr.md)
+belgelidir.
+
 > **Config'de görünmesi çalıştığı anlamına gelmez.** Bir MCP template'te yer
 > aldığı hâlde launcher, ilk açılışta paket indirme, browser, hesap onayı veya
 > Codex restart'ı bekliyor olabilir. `codex mcp list --json` yalnız config

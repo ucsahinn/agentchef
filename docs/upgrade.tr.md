@@ -27,6 +27,27 @@ değişenler:
 Aşağıdaki normal güncelleme akışı geçerlidir; ön izleme, yeniden adlandırılmış
 `AGENTS.md` metnini ve kaldırılan Brain skill adımını gösterir.
 
+## 0.6.0'dan 0.9.0'a Geçiş
+
+0.9.0, ikinci kurulum hedefi olarak Claude Code'u ekler. Mevcut bir Codex
+kurulumu için varsayılan olarak hiçbir şey değişmez: aşağıdaki güncelleme
+akışı `~/.codex` ve `~/.agents` dizinlerini eskisi gibi yönetmeye devam eder
+ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler:
+
+- Installer'larda, `npm run chef -- --install`, `--preview`, `--reset` ve
+  yeni `--remove` komutunda `--target codex|claude|both`. Etkileşimli
+  kurulum `codex` ve `claude` CLI'larını algılar ve hangi hedeflerin
+  yönetileceğini sorar.
+- Claude Code yüzeyi tek bir transaction yardımcısıyla kurulur
+  (`scripts/install-claude-target.mjs`); bkz.
+  [Claude Code yüzeyleri](claude-surfaces.tr.md).
+- `npm run chef -- --remove --target <t>`, yalnızca AgentChef'e ait dosyaları,
+  bağlantıları, marketplace girdilerini ve makbuza kayıtlı ayarları silen
+  önce-ön-izle bir kaldırmadır; kullanıcı içeriği, Git guard'ları ve yedekler
+  kalır.
+- `npm run verify:install:runtime -- --target claude` ve
+  `npm run codex:status -- --target both` Claude tarafını doğrular.
+
 ## Güvenli Upgrade Akışı
 
 1. Repo güncellemesini çek.

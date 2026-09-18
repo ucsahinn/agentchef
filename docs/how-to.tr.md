@@ -61,6 +61,11 @@ Codex içinde şunları kontrol et:
 /hooks
 ```
 
+Claude Code hedefini de kurduysan yeni bir Claude Code oturumu açıp
+`npm run verify:install:runtime -- --target claude` çalıştır; oturum içinde
+`/context`, `/plugin` ve `/skills` kural dosyasını, plugin'i ve bağlantılı
+skill'leri gösterir.
+
 ## Çalışma Modeli
 
 Bu kurulumu uzman bir yazılım ekibi gibi kullan:

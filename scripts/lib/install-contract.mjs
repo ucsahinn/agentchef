@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+import { defaultTargets, operationAppliesToTargets, parseTargetSelection } from "./targets/index.mjs";
+
 export const repositoryRoot = path.resolve(moduleDirectory, "..", "..");
 export const installManifestPath = path.join(repositoryRoot, "manifests", "install-plan.json");
 
@@ -34,6 +36,8 @@ export function resolveInstallValue(value, options) {
   return normalizeTargetPath(String(value)
     .replaceAll("${CODEX_HOME}", options.codexHome)
     .replaceAll("${AGENTS_HOME}", options.agentsHome)
+    .replaceAll("${CLAUDE_HOME}", options.claudeHome)
+    .replaceAll("${CLAUDE_JSON}", options.claudeJson)
     .replaceAll("${HOME}", options.home)
     .replaceAll("${REPO_ROOT}", options.root || repositoryRoot), options.platform);
 }
@@ -89,7 +93,20 @@ function flagEnabled(operation, options) {
   return true;
 }
 
+// Target selection. "codex" stays the compatible default; "shared" operations
+// run once for any selection; "claude" operations need an explicit target.
+export function normalizeTargets(value) {
+  if (value instanceof Set) return new Set([...value].map(String));
+  if (Array.isArray(value)) return new Set(value.map(String));
+  return parseTargetSelection(value);
+}
+
+function targetEnabled(operation, targets) {
+  return operationAppliesToTargets(operation, targets);
+}
+
 export function selectInstallComponents(manifest, options) {
+  const targets = normalizeTargets(options.targets);
   const profileName = options.profile || (options.all ? "all" : "default");
   const profileIds = manifest.profiles?.[profileName];
   if (!Array.isArray(profileIds)) throw new Error(`Unknown install profile: ${profileName}`);
@@ -114,15 +131,17 @@ export function selectInstallComponents(manifest, options) {
 
   const selected = manifest.operations
     .filter((operation) => selectedSet.has(operation.id))
-    .filter((operation) => operation.platforms.includes(options.platform));
+    .filter((operation) => operation.platforms.includes(options.platform))
+    .filter((operation) => targetEnabled(operation, targets));
   const selectedPlatformIds = new Set(selected.map((operation) => operation.id));
   const skipped = manifest.operations.filter((operation) => !selectedPlatformIds.has(operation.id));
-  return { profileName, selected, skipped };
+  return { profileName, targets: [...targets], selected, skipped };
 }
 
 function selectedBy(operation, options, profileName) {
   if (operation.requiresFlag === "InstallGitGuards") return "InstallGitGuards";
   if (operation.requiresFlag === "InstallSkills") return options.all ? "--all" : "--install-skills";
+  if ((operation.target || "codex") === "claude") return "--target claude";
   return profileName;
 }
 
@@ -130,6 +149,7 @@ function commonAction(operation, options, profileName) {
   const noBackupIncompatible = ["git-config", "refresh-plugin-cache", "chmod"].includes(operation.kind);
   return {
     componentId: operation.id,
+    target: operation.target || "codex",
     summary: operation.summary,
     risk: operation.risk,
     collision: operation.collision,
@@ -242,6 +262,40 @@ export function expandInstallComponent(operation, options, profileName) {
     }];
   }
 
+  // Claude Code operations are executed by scripts/install-claude-target.mjs;
+  // the plan only resolves their destinations so preflight and previews can
+  // reason about every touched path.
+  if (operation.kind === "json-merge" || operation.kind === "write-claude-marketplace") {
+    return [{
+      ...common,
+      id: operation.id,
+      kind: operation.kind,
+      source: operation.source,
+      destination: resolveInstallValue(operation.destination, options),
+      ...(operation.pluginTarget ? { pluginTarget: resolveInstallValue(operation.pluginTarget, options) } : {})
+    }];
+  }
+
+  if (operation.kind === "link-directory") {
+    return [{
+      ...common,
+      id: operation.id,
+      kind: operation.kind,
+      source: resolveInstallValue(operation.source, options),
+      destination: resolveInstallValue(operation.destination, options)
+    }];
+  }
+
+  if (operation.kind === "claude-plugin-register") {
+    return [{
+      ...common,
+      id: operation.id,
+      kind: operation.kind,
+      pluginId: operation.pluginId,
+      command: `${options.platform === "windows" ? "claude.cmd" : "claude"} plugin marketplace add ${joinTargetPath(options.platform, options.agentsHome, "plugins")} && ${options.platform === "windows" ? "claude.cmd" : "claude"} plugin install ${operation.pluginId} --scope user`
+    }];
+  }
+
   const source = operation.sourceByPlatform
     ? operation.sourceByPlatform[options.platform]
     : operation.source;
@@ -265,7 +319,7 @@ export function expandInstallComponent(operation, options, profileName) {
 }
 
 function actionPreflightTargets(action, options) {
-  if (action.kind === "refresh-plugin-cache") return [];
+  if (["refresh-plugin-cache", "claude-plugin-register", "link-directory"].includes(action.kind)) return [];
   if (!action.destination) return [];
   if (action.kind !== "copy-directory") return [action.destination];
   const sourceRoot = path.join(options.root, action.source);
@@ -313,8 +367,12 @@ export function resolveInstallContract(rawOptions) {
     installGitGuards: false,
     force: false,
     noBackup: false,
+    targets: defaultTargets,
+    claudeHome: rawOptions.claudeHome || joinTargetPath(rawOptions.platform, rawOptions.home, ".claude"),
+    claudeJson: rawOptions.claudeJson || joinTargetPath(rawOptions.platform, rawOptions.claudeHome || joinTargetPath(rawOptions.platform, rawOptions.home, ".claude"), ".claude.json"),
     ...rawOptions
   };
+  options.targets = normalizeTargets(options.targets);
   const manifest = rawOptions.manifest || readInstallManifest(options.root);
   const selection = selectInstallComponents(manifest, options);
   const operations = selection.selected.flatMap((operation) =>
@@ -327,6 +385,7 @@ export function resolveInstallContract(rawOptions) {
   return {
     manifest,
     profileName: selection.profileName,
+    targets: selection.targets,
     selectedComponents: selection.selected,
     skippedComponents: selection.skipped,
     operations,
