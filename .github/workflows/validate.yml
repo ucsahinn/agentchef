@@ -58,6 +58,9 @@ jobs:
       - run: node --check scripts/lib/approval-rules.mjs
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
+          # Required by gitleaks-action to read pull-request commits; the job
+          # token keeps the workflow's read-only contents permission.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
       - run: bash -n scripts/install.sh
       - run: |
