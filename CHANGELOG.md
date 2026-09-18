@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- Add Claude Code as a second install target. Every `manifests/install-plan.json`
+  operation now names its target (`codex`, `claude`, or `shared`; schema
+  `codex-chef.install-plan.v2`), `plan-install`, the safety preflight, the
+  install-surface assertion, and both shell installers take
+  `--target codex|claude|both` (`-Target` in PowerShell), and
+  `npm run chef -- --install` detects the installed CLIs and confirms the
+  target. Non-interactive runs keep the Codex default; the Claude target is
+  never selected implicitly.
+- Install the Claude surface through one transaction helper,
+  `scripts/install-claude-target.mjs`: a user-level rule file rendered from
+  the shared working agreement, the Serena bridge, additive `settings.json`
+  permission rules and `.claude.json` MCP entries recorded in sidecar receipts,
+  junction/symlink skill links into the managed `~/.agents/skills` tree, the
+  Claude plugin marketplace manifest, and plugin registration through the
+  `claude plugin` CLI. Foreign directories and user content are never
+  replaced; AgentChef-marked copies are adopted only with `--adopt-skill-links`.
+- Generate the Claude artifacts from the Codex catalog with
+  `npm run render:targets` (checked by `npm run check`): 32 namespaced plugin
+  subagents (`agentchef:<role>`), the `.claude-plugin/plugin.json` manifest,
+  `templates/claude/settings.fragment.json` from `default.rules`, and both
+  working-agreement renders from `templates/shared/working-agreement.md`.
+- Add `npm run chef -- --remove --target <t>` (preview-first): Claude removal
+  reverts only receipt-recorded entries, AgentChef-created links, and
+  hash-matching files; Codex removal (`scripts/remove-install.mjs`) deletes
+  only byte-identical managed files, marker-carrying skills, source-owned
+  plugin files, the marketplace entry, and the plugin cache entry.
+- Teach `verify-install-runtime`, `codex-status`, and `codex-doctor` the
+  Claude target (`--target claude|both`, `--claude-home`): receipt, link, and
+  file verification plus `claude --version`, `claude plugin validate --strict`,
+  and `claude mcp list` probes; status also relays the read-only Beyin summary
+  line when the launcher exists.
+- Let the operation journal record link mutations explicitly
+  (`prepareMutation({ link: true })`) and prune merge-created containers on
+  removal; add a `claude-target` CI job and `npm run check:claude`.
+- The session-end process-hygiene hook stays Codex-only; the Claude plugin
+  manifest publishes no hook in this release.
+
 ## 0.6.0 - 2026-09-18
 
 - Continue the project as an independent product named AgentChef

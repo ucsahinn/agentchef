@@ -110,7 +110,7 @@ export function planCodexRemoval(options) {
       let decision = "absent";
       if (fs.existsSync(action.destination)) {
         try {
-          const document = JSON.parse(fs.readFileSync(action.destination, "utf8").replace(/^FEFF/, ""));
+          const document = JSON.parse(fs.readFileSync(action.destination, "utf8").replace(/^\uFEFF/, ""));
           decision = (document.plugins || []).some((plugin) => plugin?.name === "codex-chef-workflows") ? "remove-entry" : "no-entry";
         } catch {
           decision = "foreign";
@@ -233,7 +233,7 @@ export function applyCodexRemoval(options, plan) {
           results.push({ id: item.id, status: item.decision });
           continue;
         }
-        const document = JSON.parse(fs.readFileSync(item.target, "utf8").replace(/^FEFF/, ""));
+        const document = JSON.parse(fs.readFileSync(item.target, "utf8").replace(/^\uFEFF/, ""));
         document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== "codex-chef-workflows");
         const backup = backupInto(backupRoot, roots, item.target);
         journal.recordBackup(backup);

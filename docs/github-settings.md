@@ -75,7 +75,7 @@ validated locally but is not yet uploaded to the account-level setting.
 
 - Default branch: `main`.
 - `main` protection requires `validate`, `windows-installer`,
-  `portability (ubuntu-latest, Node 22)`, and
+  `portability (ubuntu-latest, Node 22)`, `claude-target`, and
   `portability (macos-latest, Node 24)` with strict branch freshness.
 - Force-pushes and branch deletion are disabled; repository administrators are
   not enforced so an explicitly approved maintainer push remains possible.
