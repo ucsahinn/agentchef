@@ -181,7 +181,7 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
   }
   const directRoot = path.join(rootPath, ".agents", "skills");
   for (const skill of bundled) {
-    const source = path.join(root, "plugins", "codex-chef-workflows", "skills", skill.name);
+    const source = path.join(root, "plugins", "agentchef-workflows", "skills", skill.name);
     const target = path.join(directRoot, skill.name);
     if (invalid.includes(skill.name)) {
       fs.mkdirSync(target, { recursive: true });
@@ -198,7 +198,7 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
 
 function runMenuTranscriptSmoke() {
   const baseEnv = {
-    CODEX_CHEF_TEST_MENU: "1",
+    AGENTCHEF_TEST_MENU: "1",
     FORCE_COLOR: "0",
     NO_COLOR: "1",
     COLUMNS: "72"
@@ -255,7 +255,7 @@ function runMenuTranscriptSmoke() {
     }
   }
 
-  const interactiveWriteRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-menu-write-"));
+  const interactiveWriteRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-menu-write-"));
   const interactiveRepair = runCliSmokeRaw("menu-repair-typed-apply-transcript", ["--plain", "--no-log"], {
     env: {
       ...baseEnv,
@@ -305,7 +305,7 @@ function runMenuTranscriptSmoke() {
     }
   }
 
-  const installedSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-menu-skills-ready-"));
+  const installedSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-menu-skills-ready-"));
   const installedSkillsEnv = createCuratedSkillFixture(installedSkillsRoot);
   const skillSelection = runCliSmokeRaw("menu-skills-selection-transcript", ["--plain", "--no-log"], {
     env: {
@@ -334,7 +334,7 @@ function runMenuTranscriptSmoke() {
     }
   }
 
-  const missingSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-menu-skills-missing-"));
+  const missingSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-menu-skills-missing-"));
   const skillInstallCancel = runCliSmokeRaw("menu-skills-typed-apply-transcript", ["--plain", "--no-log"], {
     env: {
       ...baseEnv,
@@ -353,9 +353,9 @@ function runMenuTranscriptSmoke() {
     }
   }
 
-  const backupMenuRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-menu-backup-"));
+  const backupMenuRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-menu-backup-"));
   const backupMenuCodexHome = path.join(backupMenuRoot, ".codex");
-  const backupMenuArchive = path.join(backupMenuCodexHome, "backups", "codex-chef-menu-test", "codex");
+  const backupMenuArchive = path.join(backupMenuCodexHome, "backups", "agentchef-menu-test", "codex");
   fs.mkdirSync(backupMenuArchive, { recursive: true });
   fs.writeFileSync(path.join(backupMenuArchive, "AGENTS.md"), "menu backup fixture\n", "utf8");
   spawnSync(process.execPath, [
@@ -375,7 +375,7 @@ function runMenuTranscriptSmoke() {
     timeout: scaledTimeout(30000)
   });
   if (backupInspect.ok) {
-    for (const snippet of ["Choose a backup number", "Backup action", "Backup details", "codex-chef-menu-test"]) {
+    for (const snippet of ["Choose a backup number", "Backup action", "Backup details", "agentchef-menu-test"]) {
       if (!backupInspect.output.includes(snippet)) {
         fail(`chef-cli backup menu must support same-session selection and inspection: ${snippet}`);
       }
@@ -408,7 +408,7 @@ function runMenuTranscriptSmoke() {
     timeout: scaledTimeout(30000)
   });
   if (backupDeleteWrong.ok) {
-    if (!backupDeleteWrong.output.includes("Type DELETE codex-chef-menu-test")) {
+    if (!backupDeleteWrong.output.includes("Type DELETE agentchef-menu-test")) {
       fail("chef-cli backup delete menu must bind confirmation to the selected archive id.");
     }
     if (!fs.existsSync(path.dirname(backupMenuArchive))) {
@@ -422,11 +422,11 @@ function runMenuTranscriptSmoke() {
       CODEX_HOME: backupMenuCodexHome,
       AGENTS_HOME: path.join(backupMenuRoot, ".agents")
     },
-    input: "9\n1\n3\nDELETE codex-chef-menu-test\n\nq\n",
+    input: "9\n1\n3\nDELETE agentchef-menu-test\n\nq\n",
     timeout: scaledTimeout(30000)
   });
   if (backupDeleteExact.ok) {
-    if (!backupDeleteExact.output.includes("Backup archive deleted: codex-chef-menu-test")) {
+    if (!backupDeleteExact.output.includes("Backup archive deleted: agentchef-menu-test")) {
       fail("chef-cli backup delete menu must report the exact archive deleted after scoped confirmation.");
     }
     if (fs.existsSync(path.dirname(backupMenuArchive))) {
@@ -451,7 +451,7 @@ function runMenuTranscriptSmoke() {
 
   const rich = runCliSmokeRaw("menu-rich-transcript", ["--no-log"], {
     env: {
-      CODEX_CHEF_TEST_MENU: "1",
+      AGENTCHEF_TEST_MENU: "1",
       FORCE_COLOR: "1"
     },
     input: "q\n",
@@ -471,9 +471,9 @@ function runCommandCenterSmoke() {
   const result = runCliSmokeRaw("command-center-v2", ["--plain", "--no-log"], {
     input: "1\n1\nb\n2\n1\n2\n3\n4\n5\nb\n3\n1\n2\n3\n4\nb\n4\n1\n2\n3\n4\nb\n5\n1\n2\nb\n6\n1\n2\nb\nq\n",
     env: {
-      CODEX_CHEF_TEST_MENU: "1",
-      CODEX_CHEF_TEST_MENU_V2: "1",
-      CODEX_CHEF_TEST_MENU_NAV_ONLY: "1",
+      AGENTCHEF_TEST_MENU: "1",
+      AGENTCHEF_TEST_MENU_V2: "1",
+      AGENTCHEF_TEST_MENU_NAV_ONLY: "1",
       FORCE_COLOR: "0",
       NO_COLOR: "1"
     }
@@ -532,13 +532,13 @@ function runCommandCenterSmoke() {
     }
   }
 
-  const commandCenterRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-command-center-actions-"));
+  const commandCenterRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-command-center-actions-"));
   const readySkillsEnv = createCuratedSkillFixture(commandCenterRoot);
   const readySkills = runCliSmokeRaw("command-center-v2-ready-skills", ["--plain", "--no-log"], {
     input: "3\n1\n\nb\nq\n",
     env: {
-      CODEX_CHEF_TEST_MENU: "1",
-      CODEX_CHEF_TEST_MENU_V2: "1",
+      AGENTCHEF_TEST_MENU: "1",
+      AGENTCHEF_TEST_MENU_V2: "1",
       FORCE_COLOR: "0",
       NO_COLOR: "1",
       ...readySkillsEnv
@@ -554,12 +554,12 @@ function runCommandCenterSmoke() {
     }
   }
 
-  const freshInstallRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-command-center-install-"));
+  const freshInstallRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-command-center-install-"));
   const installPreview = runCliSmokeRaw("command-center-v2-install-preview", ["--plain", "--no-log"], {
     input: "2\n3\n\n\nb\nq\n",
     env: {
-      CODEX_CHEF_TEST_MENU: "1",
-      CODEX_CHEF_TEST_MENU_V2: "1",
+      AGENTCHEF_TEST_MENU: "1",
+      AGENTCHEF_TEST_MENU_V2: "1",
       FORCE_COLOR: "0",
       NO_COLOR: "1",
       CODEX_HOME: path.join(freshInstallRoot, ".codex"),
@@ -714,8 +714,8 @@ function runBackupsFixtureSmokes() {
   const journalFile = path.join(journalBackupRoot, "codex", "AGENTS.md");
   fs.mkdirSync(path.dirname(journalFile), { recursive: true });
   fs.writeFileSync(journalFile, "# recovered from interrupted operation\n", "utf8");
-  fs.writeFileSync(path.join(journalBackupRoot, ".codex-chef-operation-journal.json"), `${JSON.stringify({
-    schemaVersion: "codex-chef.operation-journal.v1",
+  fs.writeFileSync(path.join(journalBackupRoot, ".agentchef-operation-journal.json"), `${JSON.stringify({
+    schemaVersion: "agentchef.operation-journal.v1",
     operation: "install",
     createdAt: new Date().toISOString(),
     state: "failed",
@@ -790,11 +790,12 @@ function runBackupsFixtureSmokes() {
   if (!restoredProfile.includes("restored profile launcher")) {
     fail("chef-cli backup restore apply did not restore CODEX_HOME/codex-profile.mjs from the canonical archive path");
   }
-  if (!restoredMarketplace.includes("codex-chef")) {
+  // The fixture is a pre-1.0.0 archive: restore must return its bytes unchanged.
+  if (!restoredMarketplace.includes("\"name\":\"codex-chef\"")) {
     fail("chef-cli backup restore apply did not restore AGENTS_HOME/plugins/marketplace.json from legacy marketplace backup");
   }
   const rollbackArchives = fs.readdirSync(path.join(codexHome, "backups"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("codex-chef-restore-"));
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("agentchef-restore-"));
   if (rollbackArchives.length === 0) {
     fail("chef-cli backup restore apply must create a rollback backup before overwriting current targets");
   }
@@ -827,8 +828,8 @@ function runBackupsFixtureSmokes() {
     {
       env: {
         ...env,
-        CODEX_CHEF_TEST_MODE: "1",
-        CODEX_CHEF_TEST_RESTORE_FAIL_AFTER_WRITES: "1"
+        AGENTCHEF_TEST_MODE: "1",
+        AGENTCHEF_TEST_RESTORE_FAIL_AFTER_WRITES: "1"
       },
       expectedStatus: 1
     }
@@ -849,8 +850,8 @@ function runBackupsFixtureSmokes() {
     {
       env: {
         ...env,
-        CODEX_CHEF_TEST_MODE: "1",
-        CODEX_CHEF_TEST_RESTORE_FAIL_DURING_WRITE: "1"
+        AGENTCHEF_TEST_MODE: "1",
+        AGENTCHEF_TEST_RESTORE_FAIL_DURING_WRITE: "1"
       },
       expectedStatus: 1
     }
@@ -874,7 +875,7 @@ function runBackupsFixtureSmokes() {
     fail("chef-cli backup restore must roll back a target truncated during the write call.");
   }
 
-  const pinnedSkillId = "codex-chef-skill-20990101-accessibility";
+  const pinnedSkillId = "agentchef-skill-20990101-accessibility";
   const pinnedSkillBackup = path.join(codexHome, "backups", pinnedSkillId);
   const pinnedSkillSource = path.join(fixtureRoot, "source", "accessibility");
   const pinnedSkillTarget = path.join(agentsHome, "skills", "accessibility");
@@ -926,8 +927,8 @@ function runBackupsFixtureSmokes() {
     {
       env: {
         ...env,
-        CODEX_CHEF_TEST_MODE: "1",
-        CODEX_CHEF_TEST_PINNED_RESTORE_FAIL_AFTER_WRITES: "1"
+        AGENTCHEF_TEST_MODE: "1",
+        AGENTCHEF_TEST_PINNED_RESTORE_FAIL_AFTER_WRITES: "1"
       },
       expectedStatus: 1
     }
@@ -1190,7 +1191,7 @@ if (!exists(cliPath)) {
     "--logs",
     "--apply",
     "tmp/chef-cli/logs",
-    "CODEX_HOME/plugins/codex-chef-workflows",
+    "CODEX_HOME/plugins/agentchef-workflows",
     "codex-status.mjs",
     "codex-doctor.mjs",
     "plan-install.mjs",
@@ -1208,7 +1209,7 @@ if (!exists(cliPath)) {
     "install.sh",
     "Authentication notes",
     "Kimlik doğrulama notları",
-    "CODEX_CHEF_LANG",
+    "AGENTCHEF_LANG",
     "languageFromEnvironment",
     "localText",
     "printManagedRefreshSummary",
@@ -1272,7 +1273,7 @@ if (!exists(cliPath)) {
     "Operatör paneline dönmek için Enter'a basın",
     "Shortcuts: l = language, q = quit",
     "Kısayollar: l = dil, q = çıkış",
-    "CODEX_CHEF_TEST_MENU",
+    "AGENTCHEF_TEST_MENU",
     "Language switched to English",
     "Dil Türkçe olarak ayarlandı"
   ]) {
@@ -1309,7 +1310,7 @@ if (!exists(cliPath)) {
   if (cli.includes('runBash("update-install", "scripts/install.sh", ["--force"')) {
     fail(`${cliPath} Bash update-install must not use broad --force config replacement`);
   }
-  if (cli.includes("AGENTS_HOME/plugins/codex-chef-workflows")) {
+  if (cli.includes("AGENTS_HOME/plugins/agentchef-workflows")) {
     fail(`${cliPath} must describe the AgentChef plugin target under CODEX_HOME, not AGENTS_HOME`);
   }
 
@@ -1419,7 +1420,7 @@ runCliSmoke("help-tr-env", ["--help", "--plain", "--no-log"], [
   "Seçenekler:"
 ], {
   env: {
-    CODEX_CHEF_LANG: "tr"
+    AGENTCHEF_LANG: "tr"
   },
   forbidAnsi: true
 });
@@ -1458,7 +1459,7 @@ runCliErrorSmoke("repo-only-doctor", ["--doctor", "--repo-only", "--plain", "--n
 runCliJsonEnvelopeSmoke(
   "doctor",
   ["--doctor", "--json", "--no-log"],
-  "codex-chef.doctor-bundle.v1"
+  "agentchef.doctor-bundle.v1"
 );
 runCliSmoke("forced-color", ["--help", "--no-log"], [
   "AgentChef CLI"
@@ -1500,7 +1501,7 @@ runCliSmoke("mcp-forced-color", ["--mcp", "--details", "--no-log"], [
   },
   expectAnsi: true
 });
-const skillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-skills-status-"));
+const skillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-skills-status-"));
 try {
   runCliSmoke("skills-status-empty", ["--skills", "--details", "--plain", "--no-log"], [
     "Installation status",
@@ -1518,7 +1519,7 @@ try {
   fs.rmSync(skillStatusRoot, { recursive: true, force: true });
 }
 
-const invalidSkillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-skills-invalid-"));
+const invalidSkillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-skills-invalid-"));
 try {
   const invalidEnv = createCuratedSkillFixture(invalidSkillStatusRoot, {
     invalid: ["dependency-upgrade"]
@@ -1537,7 +1538,7 @@ try {
   fs.rmSync(invalidSkillStatusRoot, { recursive: true, force: true });
 }
 
-const mcpStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-mcp-status-"));
+const mcpStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-mcp-status-"));
 try {
   const mcpCodexHome = path.join(mcpStatusRoot, ".codex");
   fs.mkdirSync(mcpCodexHome, { recursive: true });
@@ -1572,8 +1573,8 @@ try {
 
 const skillsWorkspaceMenu = runCliSmokeRaw("menu-skills-workspace", ["--plain", "--no-log"], {
   env: {
-    CODEX_CHEF_TEST_MENU: "1",
-    CODEX_CHEF_TEST_MENU_V2: "1",
+    AGENTCHEF_TEST_MENU: "1",
+    AGENTCHEF_TEST_MENU_V2: "1",
     FORCE_COLOR: "0",
     NO_COLOR: "1"
   },
@@ -1584,7 +1585,7 @@ if (skillsWorkspaceMenu.ok && !skillsWorkspaceMenu.output.includes("Skill status
   fail("chef-cli skills workspace must advertise installed/missing status alongside the catalog.");
 }
 
-const readySkillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-skills-ready-"));
+const readySkillStatusRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-skills-ready-"));
 try {
   const readySkillStatusEnv = createCuratedSkillFixture(readySkillStatusRoot);
   runCliSmoke("skills", ["--skills", "--details", "--plain", "--no-log"], [
@@ -1694,7 +1695,7 @@ runCliSmoke("routing-profile-wrong-cwd", ["--routing", "--profile", "starter-hea
   "Owner:",
   "Validation:"
 ], { cwd: path.dirname(root) });
-const managedPreviewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-managed-preview-"));
+const managedPreviewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-preview-"));
 const managedPreviewEnv = {
   CODEX_HOME: path.join(managedPreviewRoot, ".codex"),
   AGENTS_HOME: path.join(managedPreviewRoot, ".agents")

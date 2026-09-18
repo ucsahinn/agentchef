@@ -52,16 +52,16 @@ const requiredPublicFiles = [
   "catalog/agents.json",
   "catalog/skills.json",
   "catalog/skills-lock.json",
-  "plugins/codex-chef-workflows/.codex-plugin/plugin.json",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/SKILL.md",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/references/repo-maintenance.md",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/references/context-strategy.md",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/SKILL.md",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/references/diagram-contract.md",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/agents/openai.yaml",
+  "plugins/agentchef-workflows/.codex-plugin/plugin.json",
+  "plugins/agentchef-workflows/skills/agentchef-operator/SKILL.md",
+  "plugins/agentchef-workflows/skills/agentchef-operator/references/repo-maintenance.md",
+  "plugins/agentchef-workflows/skills/agentchef-operator/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md",
+  "plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md",
+  "plugins/agentchef-workflows/skills/context-budget-planner/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/SKILL.md",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/references/diagram-contract.md",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/agents/openai.yaml",
   "manifests/install-plan.json",
   "schemas/install-plan.schema.json",
   "schemas/install-state-preview.schema.json",
@@ -117,7 +117,7 @@ function isPinnedPackageSpec(spec) {
 
 function isHookSurfacePath(rel) {
   if (rel === "templates/git/pre-commit") return false;
-  if (rel === "plugins/codex-chef-workflows/hooks/process-hygiene.json") return false;
+  if (rel === "plugins/agentchef-workflows/hooks/process-hygiene.json") return false;
   return /(?:^|\/)hooks(?:\/|$)/i.test(rel)
     || /(?:^|\/)hooks\.json$/i.test(rel)
     || /^scripts\/hooks\//i.test(rel)
@@ -203,8 +203,8 @@ for (const file of files) {
   const rel = posix(path.relative(root, file));
   const text = fs.readFileSync(file, "utf8");
   const reviewedProcessHygieneSurface = [
-    "plugins/codex-chef-workflows/hooks/process-hygiene.json",
-    "plugins/codex-chef-workflows/scripts/codex-process-hygiene.mjs"
+    "plugins/agentchef-workflows/hooks/process-hygiene.json",
+    "plugins/agentchef-workflows/scripts/codex-process-hygiene.mjs"
   ].includes(rel);
 
   if (isHookSurfacePath(rel)) {
@@ -217,7 +217,7 @@ for (const file of files) {
       for (const forbiddenKey of ["hooks", "mcpServers", "apps"]) {
         if (Object.prototype.hasOwnProperty.call(plugin, forbiddenKey)) {
           if (
-            rel === "plugins/codex-chef-workflows/.codex-plugin/plugin.json"
+            rel === "plugins/agentchef-workflows/.codex-plugin/plugin.json"
             && forbiddenKey === "hooks"
             && JSON.stringify(plugin.hooks) === JSON.stringify(["./hooks/process-hygiene.json"])
           ) {
@@ -252,7 +252,7 @@ for (const file of files) {
     }
   }
 
-  if (rel === "plugins/codex-chef-workflows/hooks/process-hygiene.json") {
+  if (rel === "plugins/agentchef-workflows/hooks/process-hygiene.json") {
     try {
       const hookConfig = JSON.parse(text);
       const events = Object.keys(hookConfig.hooks || {});

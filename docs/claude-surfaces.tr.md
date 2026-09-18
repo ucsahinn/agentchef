@@ -31,9 +31,9 @@ Geliştirme ve testler üçünü de bir scratch köküne yönlendirmelidir;
 | MCP sunucuları | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | aynı ada sahip bir sunucuya dokunulmaz |
 | Skill bağlantıları | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | dizin bağlantısı (Windows'ta junction) | yabancı gerçek dizinler atlanır; AgentChef marker'lı kopyalar yalnız `--adopt-skill-links` ile benimsenir |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef dosyası | yedekle, sonra yenile |
-| Plugin kurulumu | Claude'un plugin cache'i | Claude Code (`claude plugin`) | AgentChef `claude plugin marketplace add` ve `claude plugin install codex-chef-workflows@agentchef` çalıştırır; cache'i asla doğrudan yazmaz |
+| Plugin kurulumu | Claude'un plugin cache'i | Claude Code (`claude plugin`) | AgentChef `claude plugin marketplace add` ve `claude plugin install agentchef-workflows@agentchef` çalıştırır; cache'i asla doğrudan yazmaz |
 | Kurulum receipt'i | `~/.claude/agentchef/install-receipt.json` | AgentChef dosyası | status, repair ve kaldırma için kurulan dosyaları, bağlantıları, receipt'leri ve komutları listeler |
-| Yedekler, journal, kilit | `~/.claude/agentchef/backups/agentchef-*`, `.codex-chef-operation-journal.json`, `.codex-chef-operation.lock` | AgentChef | Codex hedefiyle aynı transaction makinesi |
+| Yedekler, journal, kilit | `~/.claude/agentchef/backups/agentchef-*`, `.agentchef-operation-journal.json`, `.agentchef-operation.lock` | AgentChef | Codex hedefiyle aynı transaction makinesi |
 
 ## Komutlar
 
@@ -55,7 +55,7 @@ Claude hedefi asla örtük olarak seçilmez.
 ```powershell
 npm run verify:install:runtime -- --target claude
 claude --version
-claude plugin validate "$env:AGENTS_HOME\plugins\sources\codex-chef-workflows"
+claude plugin validate "$env:AGENTS_HOME\plugins\sources\agentchef-workflows"
 claude mcp list
 ```
 

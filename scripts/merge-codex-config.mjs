@@ -360,7 +360,7 @@ for (const [key, line] of templateRootAssignments.entries()) {
 const sanitizedDestination = syncManagedTables(normalizeManagedFields(destination));
 
 const report = {
-  schemaVersion: "codex-chef.config-merge.v1",
+  schemaVersion: "agentchef.config-merge.v1",
   template: path.resolve(templatePath),
   destination: path.resolve(destinationPath),
   destinationExists,
@@ -387,11 +387,11 @@ if (fullTemplateInstall && !options.dryRun) {
   const withRootDefaults = rootAddition
     ? insertBeforeFirstTable(
         base,
-        `# Codex Chef merged root defaults. Existing user-defined root settings were preserved.\n${rootAddition}`
+        `# AgentChef merged root defaults. Existing user-defined root settings were preserved.\n${rootAddition}`
       )
     : base;
   const next = addition
-    ? `${withRootDefaults}${withRootDefaults ? "\n\n" : ""}# Codex Chef merged config blocks. Existing user-defined tables were preserved.\n${addition}\n`
+    ? `${withRootDefaults}${withRootDefaults ? "\n\n" : ""}# AgentChef merged config blocks. Existing user-defined tables were preserved.\n${addition}\n`
     : `${withRootDefaults}\n`;
   fs.writeFileSync(destinationPath, next, "utf8");
 }

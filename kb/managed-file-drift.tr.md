@@ -13,7 +13,7 @@ hedefler şunlardır:
 - `~/.codex/*.config.toml`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/default.rules`
-- `~/.codex/plugins/codex-chef-workflows`
+- `~/.codex/plugins/agentchef-workflows`
 - `~/.agents/plugins/marketplace.json`
 
 ## Tahmin Etmeden Repair
@@ -35,6 +35,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 - User skill'leri silinmez.
 - İlgisiz marketplace plugin kayıtları korunur.
 - Managed dosyalar repair öncesi yedeklenir.
+- 1.0.0 öncesi yazılan sahiplik işaretçileri (`.codex-chef-managed.json`,
+  `.codex-chef-source.json`) hâlâ tanınır; `agentchef` adlarına çevirmek için
+  `npm run chef -- --migrate-identity` çalıştır.
 - Auth dosyaları, session'lar, memory, log ve local cache source control içine
   alınmaz.
 

@@ -9,7 +9,7 @@ marketplace or plugin, or when the plugin is listed but stale.
   marketplace manifest that points at the shared plugin source tree.
 - The two CLI calls that register it: `claude plugin marketplace add
   <AGENTS_HOME>/plugins` and `claude plugin install
-  codex-chef-workflows@agentchef --scope user`.
+  agentchef-workflows@agentchef --scope user`.
 
 AgentChef never writes Claude Code's own plugin cache
 (`~/.claude/plugins/known_marketplaces.json`, `installed_plugins.json`,
@@ -20,7 +20,7 @@ AgentChef never writes Claude Code's own plugin cache
 ```bash
 claude --version
 claude plugin list
-claude plugin validate "$AGENTS_HOME/plugins/sources/codex-chef-workflows"
+claude plugin validate "$AGENTS_HOME/plugins/sources/agentchef-workflows"
 node scripts/install-claude-target.mjs --json --redact-paths
 ```
 
@@ -29,7 +29,7 @@ node scripts/install-claude-target.mjs --json --redact-paths
 1. If `claude` is not on `PATH`, the installer skips registration and prints
    the exact commands; run them after installing Claude Code.
 2. If the marketplace is registered but the plugin is stale, run
-   `claude plugin update codex-chef-workflows@agentchef`.
+   `claude plugin update agentchef-workflows@agentchef`.
 3. If `/plugin` shows a second copy of a skill (for example both `/seo` and
    `/agentchef:seo`), that is expected: the direct skill link wins for the
    unqualified name and the plugin keeps the namespaced one.

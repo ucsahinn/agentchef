@@ -4,9 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   runProcessHygieneCli
-} from "../plugins/codex-chef-workflows/scripts/codex-process-hygiene.mjs";
+} from "../plugins/agentchef-workflows/scripts/codex-process-hygiene.mjs";
 
-export * from "../plugins/codex-chef-workflows/scripts/codex-process-hygiene.mjs";
+export * from "../plugins/agentchef-workflows/scripts/codex-process-hygiene.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(scriptPath);

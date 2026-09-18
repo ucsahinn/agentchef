@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "agentchef.seo-audit.v1",
+  "generatedAt": "2026-07-29T00:00:00Z",
+  "status": "partial",
+  "scope": {
+    "mode": "local-rendered",
+    "authorization": "local-only",
+    "targetUrl": "",
+    "locales": ["en"]
+  },
+  "claims": {
+    "rankingsVerified": false,
+    "indexingVerified": false,
+    "searchConsoleVerified": false,
+    "fieldDataVerified": false
+  },
+  "evidence": [
+    {
+      "id": "evidence-1",
+      "kind": "local-browser",
+      "location": "artifacts/seo/home-mobile.png",
+      "checkedAt": "2026-07-29T00:00:00Z",
+      "grade": "local-rendered"
+    }
+  ],
+  "findings": [
+    {
+      "id": "finding-1",
+      "bucket": "content-intent",
+      "severity": "info",
+      "classification": "proven",
+      "summary": "Example finding supported by rendered local evidence.",
+      "impact": "The affected page meaning can be evaluated from the rendered output.",
+      "recommendation": "Replace this example with the smallest evidence-backed action.",
+      "validation": "Repeat the rendered browser check after implementation.",
+      "evidenceRefs": ["evidence-1"],
+      "approvalRequired": false
+    }
+  ],
+  "metrics": {
+    "lab": [],
+    "field": []
+  },
+  "gaps": [
+    "No deployed or property-specific evidence was authorized for this example."
+  ],
+  "approvalGates": [],
+  "nextActions": [
+    "Replace example values with the audited target and rerun the validator."
+  ]
+}

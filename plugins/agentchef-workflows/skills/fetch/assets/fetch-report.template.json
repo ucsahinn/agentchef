@@ -1,0 +1,169 @@
+{
+  "schemaVersion": "agentchef.fetch-report.v1",
+  "source": {
+    "url": "https://example.com/",
+    "capturedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "scope": {
+    "authorizationMode": "public-only",
+    "explicitPrivateAuthorization": false,
+    "explicitInsecureHttpAuthorization": false,
+    "explicitNonPublicAuthorization": false,
+    "allowedOrigins": [
+      "https://example.com"
+    ]
+  },
+  "safety": {
+    "credentialsCaptured": false,
+    "authStatePersisted": false,
+    "unsanitizedHarPersisted": false,
+    "productionWrites": false,
+    "protectedAssetsCopied": false
+  },
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "routes": [
+    {
+      "sourcePath": "/",
+      "localPath": "/",
+      "states": [
+        "default"
+      ],
+      "controls": [
+        {
+          "id": "route-baseline",
+          "states": [
+            "default"
+          ]
+        }
+      ],
+      "evidence": [
+        {
+          "role": "source",
+          "type": "viewport-screenshot",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/source/home--desktop--default.png"
+        },
+        {
+          "role": "source",
+          "type": "viewport-screenshot",
+          "viewport": "mobile",
+          "state": "default",
+          "path": "evidence/source/home--mobile--default.png"
+        },
+        {
+          "role": "local",
+          "type": "viewport-screenshot",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/local/home--desktop--default.png"
+        },
+        {
+          "role": "local",
+          "type": "viewport-screenshot",
+          "viewport": "mobile",
+          "state": "default",
+          "path": "evidence/local/home--mobile--default.png"
+        },
+        {
+          "role": "source",
+          "type": "full-page-screenshot",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/source/home--desktop--default--full.png"
+        },
+        {
+          "role": "source",
+          "type": "full-page-screenshot",
+          "viewport": "mobile",
+          "state": "default",
+          "path": "evidence/source/home--mobile--default--full.png"
+        },
+        {
+          "role": "local",
+          "type": "full-page-screenshot",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/local/home--desktop--default--full.png"
+        },
+        {
+          "role": "local",
+          "type": "full-page-screenshot",
+          "viewport": "mobile",
+          "state": "default",
+          "path": "evidence/local/home--mobile--default--full.png"
+        },
+        {
+          "role": "source",
+          "type": "interaction",
+          "viewport": "desktop",
+          "state": "default",
+          "control": "route-baseline",
+          "path": "evidence/source/home--default--interaction.json"
+        },
+        {
+          "role": "local",
+          "type": "interaction",
+          "viewport": "desktop",
+          "state": "default",
+          "control": "route-baseline",
+          "path": "evidence/local/home--default--interaction.json"
+        },
+        {
+          "role": "local",
+          "type": "console",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/local/home--default--console.json"
+        },
+        {
+          "role": "local",
+          "type": "network",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/local/home--default--network.json"
+        },
+        {
+          "role": "local",
+          "type": "accessibility",
+          "viewport": "desktop",
+          "state": "default",
+          "path": "evidence/local/home--default--accessibility.json"
+        }
+      ],
+      "checks": {
+        "visual": "pass",
+        "responsive": "pass",
+        "interaction": "pass",
+        "content": "pass",
+        "assets": "pass",
+        "console": "pass",
+        "network": "pass",
+        "accessibility": "pass"
+      },
+      "gaps": []
+    }
+  ],
+  "commands": [
+    {
+      "command": "npm run test",
+      "status": "pass"
+    }
+  ],
+  "summary": {
+    "status": "complete",
+    "knownGaps": [],
+    "nextAction": ""
+  }
+}

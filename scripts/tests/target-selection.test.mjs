@@ -60,7 +60,7 @@ test("claude-only contract keeps shared operations once and resolves the Claude 
   assert.equal(links.source, path.win32.join("C:\\Agents", "skills"));
   assert.equal(links.destination, path.win32.join("C:\\Claude", "skills"));
   const register = contract.operations.find((action) => action.id === "claude-plugin-register");
-  assert.match(register.command, /^claude\.cmd plugin marketplace add .*\\plugins && claude\.cmd plugin install codex-chef-workflows@agentchef --scope user$/);
+  assert.match(register.command, /^claude\.cmd plugin marketplace add .*\\plugins && claude\.cmd plugin install agentchef-workflows@agentchef --scope user$/);
   assert.ok(!contract.preflightTargets.includes(links.destination), "link roots are not preflight write targets");
 });
 

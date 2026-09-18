@@ -61,7 +61,7 @@ function buildRuntimeFixture(codexHome, agentsHome) {
 function installFixture(codexHome, agentsHome) {
   if (!baselineFixtureRoot) {
     process.stderr.write("[runtime-verifier] building reusable installed fixture baseline\n");
-    baselineFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-baseline-"));
+    baselineFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-baseline-"));
     const baselineCodexHome = path.join(baselineFixtureRoot, ".codex");
     const baselineAgentsHome = path.join(baselineFixtureRoot, ".agents");
     buildRuntimeFixture(baselineCodexHome, baselineAgentsHome);
@@ -94,7 +94,7 @@ test("runtime verifier help documents its effective timeout defaults", () => {
 });
 
 test("runtime fixture builder produces a self-contained installed baseline", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-fixture-builder-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-fixture-builder-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -134,7 +134,7 @@ function writeEmptyMcpCodex(binDir, codexHome) {
 }
 
 test("runtime verifier treats an empty live MCP list as ambiguous when managed config is present", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-verifier-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-verifier-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -171,7 +171,7 @@ test("runtime verifier treats an empty live MCP list as ambiguous when managed c
 });
 
 test("strict live runtime fails when the installed-home doctor times out", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-slow-doctor-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-slow-doctor-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -220,7 +220,7 @@ test("strict live runtime fails when the installed-home doctor times out", () =>
 });
 
 test("installed profile launcher applies MCP enablement through Codex config overrides", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-profile-launcher-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-profile-launcher-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -266,7 +266,7 @@ test("installed profile launcher applies MCP enablement through Codex config ove
 });
 
 test("runtime verifier fails when the installed Serena pool launcher is missing", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-missing-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-serena-missing-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -283,7 +283,7 @@ test("runtime verifier fails when the installed Serena pool launcher is missing"
 });
 
 test("runtime verifier fails when the installed Serena pool launcher drifts", () => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-drift-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-serena-drift-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
@@ -301,7 +301,7 @@ test("runtime verifier fails when the installed Serena pool launcher drifts", ()
 });
 
 test("runtime verifier rejects a linked Serena pool launcher", (context) => {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-runtime-serena-link-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-serena-link-"));
   try {
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");

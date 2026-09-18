@@ -27,6 +27,37 @@ existing 0.5.74 installation:
 The regular update flow below applies; the preview will show the renamed
 `AGENTS.md` text and the removed Brain skill step.
 
+## Upgrading From 0.9.0 To 1.0.0
+
+1.0.0 renames the on-disk identity from `codex-chef` to `agentchef`: the
+ownership markers (`.agentchef-managed.json`, `.agentchef-source.json`), the
+operation journal and lock names, backup-folder prefixes, receipt and report
+schema strings (`agentchef.<name>.vN`), the plugin folder
+(`plugins/agentchef-workflows`), the operator skill (`agentchef-operator`),
+the personal marketplace name and plugin id (`agentchef-workflows@agentchef`),
+the Git hook banner, and the `AGENTCHEF_*` environment variables.
+
+Nothing breaks on upgrade day: every reader accepts the legacy spelling, so an
+un-migrated home is still recognized as managed, repaired, verified, and
+removed correctly. The conversion itself is one explicit, preview-first
+command:
+
+```powershell
+npm run chef -- --migrate-identity                     # preview, Codex target
+npm run chef -- --migrate-identity --target both       # preview, both targets
+npm run chef -- --migrate-identity --target both --apply
+```
+
+The migration renames markers, the operator skill folder, and the plugin
+folders; rewrites the marketplace entry, name, and plugin id; refreshes a Git
+hook that still carries the legacy banner (only when its bytes match a shipped
+template); rewrites Claude receipts and the operator skill link; and
+re-registers the plugin through the `codex plugin` and `claude plugin` CLIs
+when they are available. Backups land under `CODEX_HOME/backups/agentchef-migrate-*`.
+Old backup folders keep their names and stay listed by `npm run chef -- --backups`.
+Legacy `CODEX_CHEF_*` environment variables keep working and are reported so
+you can rename them yourself.
+
 ## Upgrading From 0.6.0 To 0.9.0
 
 0.9.0 adds Claude Code as a second install target. For an existing Codex

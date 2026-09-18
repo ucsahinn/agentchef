@@ -24,7 +24,7 @@ import { platformCommand } from "./lib/platform-command.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
-export const removePlanSchemaVersion = "codex-chef.remove-plan.v1";
+export const removePlanSchemaVersion = "agentchef.remove-plan.v1";
 
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
@@ -111,7 +111,7 @@ export function planCodexRemoval(options) {
       if (fs.existsSync(action.destination)) {
         try {
           const document = JSON.parse(fs.readFileSync(action.destination, "utf8").replace(/^\uFEFF/, ""));
-          decision = (document.plugins || []).some((plugin) => plugin?.name === "codex-chef-workflows") ? "remove-entry" : "no-entry";
+          decision = (document.plugins || []).some((plugin) => plugin?.name === "agentchef-workflows") ? "remove-entry" : "no-entry";
         } catch {
           decision = "foreign";
         }
@@ -180,7 +180,7 @@ export function applyCodexRemoval(options, plan) {
     if (["file", "directory", "marketplace", "curated-skill"].includes(item.kind)) assertManagedTargetPath(item.target, roots);
   }
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;
-  const backupRoot = path.join(codexHome, "backups", `codex-chef-remove-${stamp}`);
+  const backupRoot = path.join(codexHome, "backups", `agentchef-remove-${stamp}`);
   fs.mkdirSync(backupRoot, { recursive: true });
   const lockSet = acquireOperationLockSet({ roots, operation: "remove" });
   const journal = createOperationJournal({ backupRoot, operation: "remove" });
@@ -234,7 +234,7 @@ export function applyCodexRemoval(options, plan) {
           continue;
         }
         const document = JSON.parse(fs.readFileSync(item.target, "utf8").replace(/^\uFEFF/, ""));
-        document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== "codex-chef-workflows");
+        document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== "agentchef-workflows");
         const backup = backupInto(backupRoot, roots, item.target);
         journal.recordBackup(backup);
         journal.prepareMutation({ target: item.target, backup });

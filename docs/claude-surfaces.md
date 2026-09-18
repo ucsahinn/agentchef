@@ -31,9 +31,9 @@ Development and tests must point all three at a scratch root;
 | MCP servers | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | a server with the same name is left untouched |
 | Skill links | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | directory link (junction on Windows) | foreign real directories are skipped; AgentChef-marked copies are adopted only with `--adopt-skill-links` |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef file | backup, then refresh |
-| Plugin installation | Claude's plugin cache | Claude Code (`claude plugin`) | AgentChef runs `claude plugin marketplace add` and `claude plugin install codex-chef-workflows@agentchef`; it never writes the cache directly |
+| Plugin installation | Claude's plugin cache | Claude Code (`claude plugin`) | AgentChef runs `claude plugin marketplace add` and `claude plugin install agentchef-workflows@agentchef`; it never writes the cache directly |
 | Install receipt | `~/.claude/agentchef/install-receipt.json` | AgentChef file | lists installed files, links, receipts, and commands for status, repair, and removal |
-| Backups, journal, lock | `~/.claude/agentchef/backups/agentchef-*`, `.codex-chef-operation-journal.json`, `.codex-chef-operation.lock` | AgentChef | same transaction machinery as the Codex target |
+| Backups, journal, lock | `~/.claude/agentchef/backups/agentchef-*`, `.agentchef-operation-journal.json`, `.agentchef-operation.lock` | AgentChef | same transaction machinery as the Codex target |
 
 ## Commands
 
@@ -55,7 +55,7 @@ selected implicitly.
 ```powershell
 npm run verify:install:runtime -- --target claude
 claude --version
-claude plugin validate "$env:AGENTS_HOME\plugins\sources\codex-chef-workflows"
+claude plugin validate "$env:AGENTS_HOME\plugins\sources\agentchef-workflows"
 claude mcp list
 ```
 

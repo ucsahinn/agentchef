@@ -18,9 +18,9 @@ function fail(message) {
 }
 
 const agentsRel = "templates/codex/AGENTS.md";
-const routingSkillRel = "plugins/codex-chef-workflows/skills/adaptive-agent-routing/SKILL.md";
-const routingReferenceRel = "plugins/codex-chef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md";
-const routingOpenAiRel = "plugins/codex-chef-workflows/skills/adaptive-agent-routing/agents/openai.yaml";
+const routingSkillRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md";
+const routingReferenceRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md";
+const routingOpenAiRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/agents/openai.yaml";
 
 for (const rel of [agentsRel, routingSkillRel, routingReferenceRel, routingOpenAiRel]) {
   if (!exists(rel)) fail(`Missing adaptive routing surface: ${rel}`);
@@ -115,7 +115,7 @@ if (exists("catalog/mcp-servers.json")) {
 if (exists("scripts/analyze-token-surfaces.mjs")) {
   const analyzer = read("scripts/analyze-token-surfaces.mjs");
   for (const required of [
-    "codex-chef.token-surfaces.v2",
+    "agentchef.token-surfaces.v2",
     "always_loaded_instruction_estimate",
     "registered_conditional_surface",
     "invoked_or_deferred_surface",

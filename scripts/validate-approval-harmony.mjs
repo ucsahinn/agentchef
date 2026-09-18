@@ -210,8 +210,8 @@ if (!commandExistsOnPath(codexCommand())) {
   }
 }
 
-if (!matrixRan && process.env.CODEX_CHEF_REQUIRE_CODEX === "1") {
-  fail("Codex CLI is required by CODEX_CHEF_REQUIRE_CODEX=1 but execpolicy matrix could not run.");
+if (!matrixRan && (process.env.AGENTCHEF_REQUIRE_CODEX === "1" || process.env.CODEX_CHEF_REQUIRE_CODEX === "1")) {
+  fail("Codex CLI is required by AGENTCHEF_REQUIRE_CODEX=1 but execpolicy matrix could not run.");
 }
 
 if (failures.length > 0) {

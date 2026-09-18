@@ -8,6 +8,7 @@
   "lockSemantics": "commit-pinned",
   "immutability": "Every installable upstream is pinned to a full Git commit SHA. The recorded Skills CLI version and integrity remain compatibility and discovery metadata; installation uses the repository native-copy helper and does not execute that registry package.",
   "compatibilityAliases": {
+    "codex-chef-operator": "agentchef-operator",
     "context-engineering-project-starter": "ai-project-starter",
     "codex-skill-forge": "ai-skill-create",
     "codex-enterprise-prompt-architect": "prompt-architect"
@@ -20,11 +21,11 @@
       "reason": "Configure and troubleshoot Codex MCP connectors."
     },
     {
-      "name": "codex-chef-operator",
+      "name": "agentchef-operator",
       "category": "codex-setup",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/codex-chef-operator",
+      "directTarget": "${AGENTS_HOME}/skills/agentchef-operator",
       "reason": "Bundled local plugin skill for safe AgentChef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
     },
     {

@@ -189,8 +189,8 @@ const codebaseMemoryDisabledTools = ["delete_project", "manage_adr", "ingest_tra
 const codebaseMemory = (catalog.servers || []).find((server) => server.name === "codebase-memory");
 const supabase = (catalog.servers || []).find((server) => server.name === "supabase");
 const codebaseMemoryCacheLaunchers = {
-  "templates/codex/config.windows.toml": "set npm_config_cache=%LOCALAPPDATA%\\\\codex-chef\\\\npm-cache\\\\codebase-memory && npx.cmd -y codebase-memory-mcp@0.8.1",
-  "templates/codex/config.unix.toml": 'npm_config_cache=\\"${XDG_CACHE_HOME:-$HOME/.cache}/codex-chef/codebase-memory\\" exec npx -y codebase-memory-mcp@0.8.1'
+  "templates/codex/config.windows.toml": "set npm_config_cache=%LOCALAPPDATA%\\\\agentchef\\\\npm-cache\\\\codebase-memory && npx.cmd -y codebase-memory-mcp@0.8.1",
+  "templates/codex/config.unix.toml": 'npm_config_cache=\\"${XDG_CACHE_HOME:-$HOME/.cache}/agentchef/codebase-memory\\" exec npx -y codebase-memory-mcp@0.8.1'
 };
 const serenaPoolScript = "templates/codex/serena-pool.mjs";
 

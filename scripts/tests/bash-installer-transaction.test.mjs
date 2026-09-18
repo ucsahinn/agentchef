@@ -21,7 +21,7 @@ function fixture(context) {
     context.skip("Git Bash is not installed");
     return null;
   }
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-bash-transaction-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-bash-transaction-"));
   const relative = path.relative(root, fixtureRoot).replaceAll(path.sep, "/");
   const codexHome = path.join(fixtureRoot, "codex");
   const agentsHome = path.join(fixtureRoot, "agents");
@@ -35,7 +35,7 @@ function fixture(context) {
       HOME: process.platform === "win32" ? path.join(fixtureRoot, "home") : `${relative}/home`,
       CODEX_HOME: process.platform === "win32" ? codexHome : `${relative}/codex`,
       AGENTS_HOME: process.platform === "win32" ? agentsHome : `${relative}/agents`,
-      CODEX_CHEF_CODEX_COMMAND: "codex-chef-test-missing-command",
+      AGENTCHEF_CODEX_COMMAND: "agentchef-test-missing-command",
       PATH: process.platform === "win32" ? `${path.dirname(process.execPath)};${process.env.PATH || process.env.Path || ""}` : process.env.PATH,
       FORCE_COLOR: "0", NO_COLOR: "1"
     }
@@ -45,7 +45,7 @@ function fixture(context) {
 test("Unix installer refuses a live operation lock in AGENTS_HOME before managed writes", (context) => {
   const state = fixture(context);
   if (!state) return;
-  const lockPath = path.join(state.agentsHome, ".codex-chef-operation.lock");
+  const lockPath = path.join(state.agentsHome, ".agentchef-operation.lock");
   fs.mkdirSync(lockPath, { recursive: true });
   fs.writeFileSync(path.join(lockPath, "owner.json"), `${JSON.stringify({ pid: 7, operation: "repair", startedAt: "2026-01-01T00:00:00.000Z", id: "held-by-test" })}\n`);
   try {
@@ -65,7 +65,7 @@ test("Unix installer journals applied file and tree mutations across both manage
     const result = runInstaller(state.env);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const backups = fs.readdirSync(path.join(state.codexHome, "backups"));
-    const journalPath = path.join(state.codexHome, "backups", backups[0], ".codex-chef-operation-journal.json");
+    const journalPath = path.join(state.codexHome, "backups", backups[0], ".agentchef-operation-journal.json");
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
     assert.equal(journal.state, "complete");
     assert.ok(journal.mutations.length > 0, "install must journal managed mutations");

@@ -36,10 +36,11 @@ import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
-export const claudeInstallSchemaVersion = "codex-chef.claude-install.v1";
+export const claudeInstallSchemaVersion = "agentchef.claude-install.v1";
+export const legacyClaudeInstallSchemaVersion = "codex-chef.claude-install.v1";
 export const claudeInstallReceiptName = "install-receipt.json";
-const managedSkillMarkers = [".codex-chef-managed.json", ".codex-chef-source.json"];
-const pluginName = "codex-chef-workflows";
+const managedSkillMarkers = [".agentchef-managed.json", ".agentchef-source.json"];
+const pluginName = "agentchef-workflows";
 const claudeMarketplaceName = "agentchef";
 
 function readJson(relativePath) {
@@ -460,7 +461,7 @@ export function planClaudeRemoval(options) {
     return { receiptPath, present: false, files: [], links: [], receipts: [], commands: [] };
   }
   const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
-  if (receipt.schemaVersion !== claudeInstallSchemaVersion) throw new Error(`Unsupported install receipt: ${receiptPath}`);
+  if (![claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion].includes(receipt.schemaVersion)) throw new Error(`Unsupported install receipt: ${receiptPath}`);
   const files = (receipt.files || []).map((file) => {
     const stat = lstatOrNull(file.path);
     let decision = "absent";

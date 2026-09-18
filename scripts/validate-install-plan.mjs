@@ -200,7 +200,7 @@ function validatePlanOutputSmoke() {
   if (jsonOutput) {
     const plan = parsePlan(jsonOutput, "Install plan JSON smoke");
     if (plan) {
-      if (plan.schemaVersion !== "codex-chef.install-state-preview.v1") {
+      if (plan.schemaVersion !== "agentchef.install-state-preview.v1") {
         fail("Install plan JSON smoke returned unexpected schemaVersion");
       }
       if (!Array.isArray(plan.operations) || plan.operations.length === 0) {
@@ -288,7 +288,7 @@ if (!schema) {
   fail("Missing or invalid schemas/install-plan.schema.json");
 }
 
-if (manifest.schemaVersion !== "codex-chef.install-plan.v2") {
+if (manifest.schemaVersion !== "agentchef.install-plan.v2") {
   fail("Install plan manifest has unexpected schemaVersion");
 }
 
@@ -394,7 +394,7 @@ for (const operation of manifest.operations || []) {
   }
 
   if (operation.kind === "claude-plugin-register") {
-    if (operation.pluginId !== "codex-chef-workflows@agentchef") fail(`Operation ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (operation.pluginId !== "agentchef-workflows@agentchef") fail(`Operation ${operation.id} must declare the AgentChef Claude plugin id`);
     if (operation.backup !== false) fail(`Operation ${operation.id} is CLI-owned and must not claim a file backup`);
   }
 
@@ -422,7 +422,7 @@ for (const operation of manifest.operations || []) {
   if (operation.kind === "refresh-plugin-cache") {
     validateDestinationPath(operation, "source", operation.source);
     validateDestinationPath(operation, "destination", operation.destination);
-    if (operation.pluginId !== "codex-chef-workflows@codex-chef") {
+    if (operation.pluginId !== "agentchef-workflows@agentchef") {
       fail(`Operation ${operation.id} must declare the managed AgentChef plugin id`);
     }
   }
@@ -494,12 +494,12 @@ if (generatedProfiles?.kind !== "generate-mcp-profile"
 }
 
 const marketplaceOperation = manifest.operations?.find((operation) => operation.id === "plugin-marketplace");
-if (marketplaceOperation?.pluginTarget !== "${AGENTS_HOME}/plugins/sources/codex-chef-workflows") {
+if (marketplaceOperation?.pluginTarget !== "${AGENTS_HOME}/plugins/sources/agentchef-workflows") {
   fail("plugin-marketplace pluginTarget must stay under AGENTS_HOME marketplace sources");
 }
 
 for (const operation of manifest.operations?.filter((entry) => entry.id.endsWith("-direct-skill")) || []) {
-  if (operation.ownershipMarker !== `${operation.destination}/.codex-chef-managed.json`) {
+  if (operation.ownershipMarker !== `${operation.destination}/.agentchef-managed.json`) {
     fail(`Direct skill ${operation.id} must declare its explicit ownership marker action`);
   }
 }
@@ -519,7 +519,7 @@ for (const [operationId, adoptionFlag] of gitGuardAdoptionFlags) {
   if (operation?.adoptionFlag !== adoptionFlag) {
     fail(`Git guard ${operationId} must require its narrow adoption flag ${adoptionFlag}`);
   }
-  if (operation?.stateBackup !== "codex-chef.global-git-guards-receipt@1" || operation?.backup !== true) {
+  if (operation?.stateBackup !== "agentchef.global-git-guards-receipt@1" || operation?.backup !== true) {
     fail(`Git guard ${operationId} must require an exact prior-state receipt before mutation`);
   }
 }

@@ -95,8 +95,8 @@ if (exists("templates/codex/AGENTS.md")) {
   }
 }
 
-if (exists("plugins/codex-chef-workflows/skills/context-budget-planner/references/context-strategy.md")) {
-  const strategy = read("plugins/codex-chef-workflows/skills/context-budget-planner/references/context-strategy.md");
+if (exists("plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md")) {
+  const strategy = read("plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md");
   for (const required of ["npm run token:audit", "token-safe.config.toml", "model/reasoning pin"]) {
     if (!strategy.includes(required)) fail(`context-budget strategy missing: ${required}`);
   }
@@ -163,7 +163,7 @@ if (exists("catalog/agents.json")) {
 
 if (exists("scripts/analyze-token-surfaces.mjs")) {
   const analyzer = read("scripts/analyze-token-surfaces.mjs");
-  for (const required of ["codex-chef.token-surfaces.v2", "always_loaded_instruction_estimate", "registered_conditional_surface", "invoked_or_deferred_surface", "repository_maintenance_size", "real_session_telemetry", "tool_schema_context", "per_agent_runtime_cost", "runtime-startup", "agent-role", "skill-discovery-metadata", "skill-instructions", "skill-references", "skill-agent-metadata", "skill-executable-source", "docs-release", "catalog-corpus", "script-large", "scripts-tests", "chars/4", "categoryBudgets", "budgetFindings", "git-source-set", "allow-filesystem-fallback"]) {
+  for (const required of ["agentchef.token-surfaces.v2", "always_loaded_instruction_estimate", "registered_conditional_surface", "invoked_or_deferred_surface", "repository_maintenance_size", "real_session_telemetry", "tool_schema_context", "per_agent_runtime_cost", "runtime-startup", "agent-role", "skill-discovery-metadata", "skill-instructions", "skill-references", "skill-agent-metadata", "skill-executable-source", "docs-release", "catalog-corpus", "script-large", "scripts-tests", "chars/4", "categoryBudgets", "budgetFindings", "git-source-set", "allow-filesystem-fallback"]) {
     if (!analyzer.includes(required)) fail(`Token analyzer missing expected category or note: ${required}`);
   }
   if (!analyzer.includes('if (/^scripts\\/(?:chef-cli|codex-status)\\.mjs$/.test(rel)) return "script-large";')) {
@@ -195,7 +195,7 @@ function runAnalyzer(cwd) {
   }
 }
 
-const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-token-audit-"));
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-token-audit-"));
 try {
   fs.mkdirSync(path.join(fixtureRoot, "plugins", "demo", "skills", "sample", "scripts"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "plugins", "demo", "skills", "sample", "references"), { recursive: true });
@@ -294,7 +294,7 @@ try {
       } else {
         try {
           const report = JSON.parse(missingResult.stdout);
-          if (report.schemaVersion !== "codex-chef.cli-error.v1" || !report.error?.message?.includes("tracked-missing.md")) {
+          if (report.schemaVersion !== "agentchef.cli-error.v1" || !report.error?.message?.includes("tracked-missing.md")) {
             fail("Token analyzer missing-source failure must identify the redacted Git-enumerated path.");
           }
           if (String(missingResult.stdout).includes(fixtureRoot)) {
@@ -310,7 +310,7 @@ try {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
 }
 
-const noGitRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-token-no-git-"));
+const noGitRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-token-no-git-"));
 try {
   fs.writeFileSync(path.join(noGitRoot, "README.md"), "# Fixture\n", "utf8");
   const failClosed = spawnSync(
@@ -323,7 +323,7 @@ try {
   } else {
     try {
       const report = JSON.parse(failClosed.stdout);
-      if (report.schemaVersion !== "codex-chef.cli-error.v1" || report.tool !== "token-audit") {
+      if (report.schemaVersion !== "agentchef.cli-error.v1" || report.tool !== "token-audit") {
         fail("Token analyzer Git failure must use the shared JSON error contract.");
       }
     } catch (error) {

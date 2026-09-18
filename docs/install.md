@@ -190,7 +190,7 @@ copies known AgentChef-managed files back as a rollback-protected transaction.
 Commit-pinned skill replacement backups use a namespaced manifest and restore
 the previous skill tree exactly, rather than leaving files from the replacement.
 Restore fails
-closed unless a valid `codex-chef.backup.v1` manifest exactly matches every
+closed unless a valid `agentchef.backup.v1` manifest exactly matches every
 archive file by path, size, and SHA-256; missing, extra, altered, or unsupported
 control-plane files such as auth, hook, session, memory, and cache state are
 rejected. `--json` follows the same behavior: write requests report explicit
@@ -223,6 +223,8 @@ npm run chef -- --install --target both --apply
 npm run chef -- --preview --target claude
 npm run chef -- --remove --target claude
 npm run chef -- --remove --target claude --apply
+npm run chef -- --migrate-identity --target both
+npm run chef -- --migrate-identity --target both --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
@@ -299,15 +301,15 @@ Useful switches:
   the plugin. Fetch disables implicit invocation; SEO and Evidence Research
   allow it only for unambiguous matching requests. If an exact direct target
   contains a foreign skill, installation fails before any managed write.
-- The personal marketplace entry makes `codex-chef-workflows` discoverable; it
+- The personal marketplace entry makes `agentchef-workflows` discoverable; it
   does not install or enable the plugin. To use
-  `$codex-chef-workflows:<skill-name>`, run `codex plugin add
-  codex-chef-workflows@codex-chef --json` (or use `/plugins`) and start a new
+  `$agentchef-workflows:<skill-name>`, run `codex plugin add
+  agentchef-workflows@agentchef --json` (or use `/plugins`) and start a new
   Codex session. After that explicit first install, later installer, update,
   and repair applies refresh a stale versioned plugin cache in place and verify
   the active version. They do not install the plugin before that opt-in.
 - The personal marketplace reads its plugin mirror from
-  `AGENTS_HOME/plugins/sources/codex-chef-workflows` through a path relative to
+  `AGENTS_HOME/plugins/sources/agentchef-workflows` through a path relative to
   the marketplace root. A custom `AGENTS_HOME` is an installer destination,
   not proof that the active Codex host discovers that marketplace. For a
   non-default root, register it with `codex plugin marketplace add <root>` and
@@ -445,15 +447,15 @@ state into a distributable default.
 Existing files are copied into:
 
 ```text
-~/.codex/backups/codex-chef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS/
 ```
 
-New backups also include `.codex-chef-backup.json`, a small manifest with the
+New backups also include `.agentchef-backup.json`, a small manifest with the
 operation, package version, platform, backup-relative paths, sizes, hashes, and
 any archive issues detected while writing metadata.
 
 Before the first managed write, the installer creates an atomic
-`.codex-chef-operation-journal.json` and takes separately owned operation locks
+`.agentchef-operation-journal.json` and takes separately owned operation locks
 under both canonical managed homes when they are distinct. A write is durably
 prepared in the journal before mutation, then marked applied only after the
 write completes. If a later installer step fails, only targets that still match
@@ -489,7 +491,7 @@ cannot escape to another directory.
 Global Git guards use a separate typed recovery receipt because their two files
 and two Git config keys are outside the ordinary managed-file archive. Before
 mutation, apply records the exact prior bytes, file mode, presence/absence, and
-ordered key values in `codex-chef.global-git-guards-receipt@1`. It also binds
+ordered key values in `agentchef.global-git-guards-receipt@1`. It also binds
 the expected managed file hashes, Unix modes, and Git config values produced by
 apply. If apply fails, the transaction rolls back from that receipt. Keep the receipt and use the
 exact restore command printed by the installer; the underlying form is:
@@ -503,7 +505,7 @@ allowlist, size, paths, and link safety before restoring prior values or
 removing targets that were previously absent. Restore refuses to write if a
 managed file, mode, or key changed after apply, so later user edits are not
 clobbered and the original repository templates are not needed. It is intentionally separate
-from the `codex-chef.backup.v1` archive flow.
+from the `agentchef.backup.v1` archive flow.
 
 ## Post-Install Checks
 
@@ -603,7 +605,7 @@ For an isolated, non-dry-run smoke install, choose a fresh folder you own and
 review the plan before adding `--apply`:
 
 ```powershell
-$portableRoot = Join-Path $PWD ".codex-chef-portable"
+$portableRoot = Join-Path $PWD ".agentchef-portable"
 $env:CODEX_HOME = Join-Path $portableRoot "codex"
 $env:AGENTS_HOME = Join-Path $portableRoot "agents"
 node .\scripts\repair-install.mjs --preview --redact-paths --json

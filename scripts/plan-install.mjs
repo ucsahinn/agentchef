@@ -172,7 +172,7 @@ function createDiscovery(options) {
   }).sort((left, right) => left.id.localeCompare(right.id));
 
   return {
-    schemaVersion: "codex-chef.install-plan-discovery.v1",
+    schemaVersion: "agentchef.install-plan-discovery.v1",
     generatedAt: new Date().toISOString(),
     dryRunOnly: true,
     source: {
@@ -214,7 +214,7 @@ function createPlan(options) {
   const operations = contract.operations;
 
   return {
-    schemaVersion: "codex-chef.install-state-preview.v1",
+    schemaVersion: "agentchef.install-state-preview.v1",
     generatedAt: new Date().toISOString(),
     dryRunOnly: true,
     source: {

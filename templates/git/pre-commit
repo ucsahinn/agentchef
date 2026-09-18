@@ -13,7 +13,7 @@ function exitCode(result) {
   return Number.isInteger(result.status) ? result.status : 1;
 }
 
-console.log("[codex-chef] pre-commit guard");
+console.log("[agentchef] pre-commit guard");
 
 const staged = run("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"]);
 if (staged.status !== 0) {

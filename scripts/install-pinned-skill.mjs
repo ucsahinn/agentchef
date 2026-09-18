@@ -41,8 +41,8 @@ const options = {
   rollbackReceipt: ""
 };
 
-const PINNED_SOURCE_RECEIPT = ".codex-chef-pinned-source.json";
-const PINNED_SOURCE_RECEIPT_SCHEMA = "codex-chef.pinned-skill-source.v1";
+const PINNED_SOURCE_RECEIPT = ".agentchef-pinned-source.json";
+const PINNED_SOURCE_RECEIPT_SCHEMA = "agentchef.pinned-skill-source.v1";
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
@@ -90,7 +90,7 @@ if (options.rollbackReceipt) {
   });
   if (options.json) {
     console.log(JSON.stringify({
-      schemaVersion: "codex-chef.pinned-skill-install-compensation.v1",
+      schemaVersion: "agentchef.pinned-skill-install-compensation.v1",
       status: "ok",
       outcome: "compensated",
       ...result
@@ -199,7 +199,7 @@ function removeCheckout() {
   const resolved = path.resolve(checkout);
   const relative = path.relative(tempRoot, resolved);
   if (
-    !path.basename(resolved).startsWith("codex-chef-pinned-skill-")
+    !path.basename(resolved).startsWith("agentchef-pinned-skill-")
     || relative.startsWith("..")
     || path.isAbsolute(relative)
   ) {
@@ -216,7 +216,7 @@ function checkoutPinnedSource() {
     return { cacheHit: true };
   }
 
-  checkout = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-pinned-skill-"));
+  checkout = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-skill-"));
   temporaryCheckout = true;
   run("git", ["init", "--quiet"], "Git initialization");
   run("git", ["remote", "add", "origin", githubUrl], "Git remote configuration");
@@ -258,7 +258,7 @@ function publishPinnedSourceCache() {
 function emitResult(outcome, message, compensation = null) {
   if (options.json) {
     console.log(JSON.stringify({
-      schemaVersion: "codex-chef.pinned-skill-install-result.v1",
+      schemaVersion: "agentchef.pinned-skill-install-result.v1",
       status: "ok",
       outcome,
       skill: options.skill,
@@ -297,7 +297,7 @@ try {
     const backupRoot = path.join(
       codexHome,
       "backups",
-      `codex-chef-skill-${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${options.skill}`
+      `agentchef-skill-${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${options.skill}`
     );
     assertManagedTargetPath(target, [agentsHome]);
     assertManagedTargetPath(backupRoot, [codexHome]);

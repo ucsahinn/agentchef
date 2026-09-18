@@ -51,7 +51,7 @@ Operations: ...
 ```
 
 JSON output uses `schemaVersion:
-codex-chef.install-state-preview.v1` and does not write to global
+agentchef.install-state-preview.v1` and does not write to global
 Codex, Agents, or Git locations.
 
 The JSON contract is documented in
@@ -116,7 +116,7 @@ What if: Performing the operation ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -172,7 +172,7 @@ Continue with this plan? [Y/n]:
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -211,7 +211,7 @@ Action: planned update-marketplace-entry .../.agents/plugins/marketplace.json
 Warning: <other> non-curated global skill(s) are installed; repair reports them but does not delete user skills.
 ```
 
-JSON output uses `schemaVersion: codex-chef.repair.v1`. `-Repair -WhatIf` and
+JSON output uses `schemaVersion: agentchef.repair.v1`. `-Repair -WhatIf` and
 `npm run repair:install -- --json` stay no-write. `-Repair` and
 `npm run repair:install -- --apply` create backups before fixing managed drift.
 Counts in this example are placeholders because installed user skills and the
@@ -261,7 +261,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -293,7 +293,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):

@@ -9,6 +9,7 @@ import {
   installCliErrorBoundary,
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
+import { identity, journalFileNames, schemaId } from "./lib/identity.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -46,8 +47,8 @@ for (let index = 0; index < args.length; index += 1) {
 
 if (!options.backupRoot) throw new CliUsageError("--backup-root is required");
 
-const manifestName = ".codex-chef-backup.json";
-const journalName = ".codex-chef-operation-journal.json";
+const manifestName = identity.backupManifest;
+const journalNames = [...journalFileNames, identity.legacyBackupManifest];
 const backupRoot = path.resolve(options.backupRoot);
 if (!fs.existsSync(backupRoot) || !fs.statSync(backupRoot).isDirectory()) {
   throw new Error(`Backup root does not exist: ${backupRoot}`);
@@ -84,7 +85,7 @@ function listEntries() {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       const relative = toPosix(path.relative(backupRoot, fullPath));
-      if (relative === manifestName || relative === journalName) continue;
+      if (relative === manifestName || journalNames.includes(relative)) continue;
       if (!validateRelativePath(relative)) {
         issues.push(`unsafe-relative-path:${relative}`);
         continue;
@@ -114,7 +115,7 @@ function listEntries() {
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const { entries, issues } = listEntries();
 const manifest = {
-  schemaVersion: "codex-chef.backup.v1",
+  schemaVersion: schemaId("backup", 1),
   createdAt: new Date().toISOString(),
   packageName: packageJson.name,
   packageVersion: packageJson.version,

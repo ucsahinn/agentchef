@@ -13,9 +13,11 @@ import {
   writePinnedSkillProvenance
 } from "./skill-provenance.mjs";
 
-const BACKUP_MANIFEST_NAME = ".codex-chef-backup.json";
-const ROLLBACK_RECEIPT_NAME = ".codex-chef-pinned-skill-rollback.json";
-const ROLLBACK_RECEIPT_SCHEMA = "codex-chef.pinned-skill-rollback.v1";
+import { acceptsSchema, identity, schemaId } from "./identity.mjs";
+
+const BACKUP_MANIFEST_NAME = identity.backupManifest;
+const ROLLBACK_RECEIPT_NAME = identity.pinnedRollbackReceipt;
+const ROLLBACK_RECEIPT_SCHEMA = schemaId("pinned-skill-rollback", 1);
 
 function removeRealDirectory(target, managedRoots) {
   if (!fs.existsSync(target)) return;
@@ -70,7 +72,7 @@ function createPinnedSkillBackup(target, backupRoot, skill, expected, managedRoo
   fs.writeFileSync(
     path.join(backupRoot, BACKUP_MANIFEST_NAME),
     `${JSON.stringify({
-      schemaVersion: "codex-chef.backup.v1",
+      schemaVersion: schemaId("backup", 1),
       createdAt: new Date().toISOString(),
       operation: "pinned-skill-replacement",
       skill,
@@ -110,7 +112,7 @@ function readRollbackReceipt(receiptPath, managedRoots) {
   }
   const receipt = JSON.parse(fs.readFileSync(receiptState.canonicalTarget, "utf8"));
   if (
-    receipt?.schemaVersion !== ROLLBACK_RECEIPT_SCHEMA
+    !acceptsSchema(receipt?.schemaVersion, "pinned-skill-rollback", 1)
     || receipt?.kind !== "pinned-skill-rollback"
     || typeof receipt.target !== "string"
     || typeof receipt.backupRoot !== "string"
@@ -202,7 +204,7 @@ export function activatePinnedSkill({
   fs.mkdirSync(targetParent, { recursive: true });
   assertManagedTargetPath(targetParent, managedRoots);
 
-  const staging = fs.mkdtempSync(path.join(targetParent, `.codex-chef-${expected.skill}-`));
+  const staging = fs.mkdtempSync(path.join(targetParent, `.agentchef-${expected.skill}-`));
   let backedUp = false;
   let activated = false;
   let backupTarget = null;

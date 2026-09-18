@@ -8,7 +8,7 @@ import { findProblemRules } from "./lib/approval-rules.mjs";
 import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
-import { claudeInstallReceiptName, claudeInstallSchemaVersion } from "./install-claude-target.mjs";
+import { claudeInstallReceiptName, claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion } from "./install-claude-target.mjs";
 import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receipt.mjs";
 import { inspectSkillLink } from "./lib/skill-links.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
@@ -336,7 +336,7 @@ function inspectInstalledFiles(failures) {
     failures.push(`Installed marketplace plugin source is missing: ${redact(marketplacePluginPath)}`);
   }
   for (const skill of directSkills) {
-    const source = path.join(root, "plugins", "codex-chef-workflows", "skills", skill.name);
+    const source = path.join(root, "plugins", "agentchef-workflows", "skills", skill.name);
     const target = path.join(options.agentsHome, "skills", skill.name);
     try {
       const state = inspectDirectSkillTarget(source, target);
@@ -769,14 +769,14 @@ function inspectPluginRuntime(failures, warnings) {
       ...(Array.isArray(parsed.installed) ? parsed.installed : []),
       ...(Array.isArray(parsed.available) ? parsed.available : [])
     ];
-    const entry = entries.find((plugin) => plugin?.name === "codex-chef-workflows");
+    const entry = entries.find((plugin) => plugin?.name === "agentchef-workflows");
     if (!entry) {
       warnings.push(
         "AgentChef plugin is neither installed nor discoverable in the active marketplace set; managed direct skills remain the guaranteed invocation path."
       );
       return { inspected: true, found: false, installed: false, enabled: false };
     }
-    const expectedVersion = readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version;
+    const expectedVersion = readJson("plugins/agentchef-workflows/.codex-plugin/plugin.json").version;
     if (entry.installed !== true) {
       warnings.push(
         "AgentChef plugin is discoverable but not installed; namespaced plugin calls require explicit installation and a new session."
@@ -932,7 +932,7 @@ function inspectClaudeRuntime(failures, warnings) {
     failures.push(`Claude install receipt is unreadable: ${error.message}`);
     return { inspected: true, installed: false, claudeHome: redact(claudeHome) };
   }
-  if (receipt.schemaVersion !== claudeInstallSchemaVersion) failures.push(`Claude install receipt has unexpected schemaVersion ${receipt.schemaVersion}.`);
+  if (![claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion].includes(receipt.schemaVersion)) failures.push(`Claude install receipt has unexpected schemaVersion ${receipt.schemaVersion}.`);
   const files = (receipt.files || []).map((file) => {
     const stat = fs.existsSync(file.path) ? fs.lstatSync(file.path) : null;
     let status = "missing";
@@ -971,7 +971,7 @@ function inspectClaudeRuntime(failures, warnings) {
   let cli = { inspected: false };
   if (version && !version.error && version.status === 0) {
     cli = { inspected: true, version: String(version.stdout || "").trim().split(/\r?\n/)[0] || null };
-    const pluginSource = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
+    const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
     const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
     cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
     if (cli.pluginValidate !== "ok") (options.requireLiveRuntime ? failures : warnings).push(`claude plugin validate --strict reported problems for ${redact(pluginSource)}.`);
@@ -993,7 +993,7 @@ const warnings = [];
 
 const report = {
   probes,
-  schemaVersion: "codex-chef.install-runtime.v1",
+  schemaVersion: "agentchef.install-runtime.v1",
   generatedAt: new Date().toISOString(),
   targets: [...selectedTargets],
   installed: options.verifyCodex ? inspectInstalledFiles(failures) : { inspected: false, codexHome: redact(options.codexHome), agentsHome: redact(options.agentsHome), agents: { installed: 0, expected: 0 }, mcp: { installed: 0, expected: 0 } },

@@ -160,7 +160,7 @@ function shouldAdoptDirectSkill(skill) {
 const backupRoot = path.join(
   options.codexHome,
   "backups",
-  `codex-chef-repair-${timestamp()}-${crypto.randomUUID()}`
+  `agentchef-repair-${timestamp()}-${crypto.randomUUID()}`
 );
 const actions = [];
 const warnings = [];
@@ -286,8 +286,8 @@ function trackTransactionWrite(targetPath) {
     output: fingerprintTarget(key),
     backup: transactionOriginals.get(key) || null
   });
-  const failAfter = Number(process.env.CODEX_CHEF_TEST_REPAIR_FAIL_AFTER_WRITES || 0);
-  if (process.env.CODEX_CHEF_TEST_MODE === "1" && Number.isInteger(failAfter) && failAfter > 0 && transactionWrites.size >= failAfter) {
+  const failAfter = Number(process.env.AGENTCHEF_TEST_REPAIR_FAIL_AFTER_WRITES || 0);
+  if (process.env.AGENTCHEF_TEST_MODE === "1" && Number.isInteger(failAfter) && failAfter > 0 && transactionWrites.size >= failAfter) {
     throw new Error("Injected repair post-write failure");
   }
 }
@@ -648,7 +648,7 @@ function repairManagedFiles(contract) {
   // Keep this invariant explicit so a platform-specific contract expansion can
   // never leave a managed support file behind while still writing the marker.
   for (const directSkill of directSkills) {
-    const sourceRoot = path.join(root, "plugins", "codex-chef-workflows", "skills", directSkill.name);
+    const sourceRoot = path.join(root, "plugins", "agentchef-workflows", "skills", directSkill.name);
     const targetRoot = path.join(options.agentsHome, "skills", directSkill.name);
     for (const relativePath of listFilesRecursive(sourceRoot, { rejectLinks: true })) {
       const sourcePath = path.join(sourceRoot, relativePath);
@@ -656,7 +656,7 @@ function repairManagedFiles(contract) {
       if (!fileEquals(sourcePath, targetPath)) {
         expected += 1;
         account(repairFile(
-          toPosix(path.join("plugins/codex-chef-workflows/skills", directSkill.name, relativePath)),
+          toPosix(path.join("plugins/agentchef-workflows/skills", directSkill.name, relativePath)),
           targetPath,
           `direct-skill-reconcile:${directSkill.name}:${relativePath}`
         ));
@@ -872,7 +872,7 @@ function runConfigMerge() {
 
 function repairMarketplace() {
   const marketplacePath = path.join(options.agentsHome, "plugins", "marketplace.json");
-  const pluginTarget = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
+  const pluginTarget = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
   let state;
 
   try {
@@ -1064,13 +1064,13 @@ try {
     ? refreshInstalledPlugin({
         apply: false,
         codexHome: options.codexHome,
-        expectedVersion: readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version,
+        expectedVersion: readJson("plugins/agentchef-workflows/.codex-plugin/plugin.json").version,
         platform: options.platform
       })
     : null;
   assertNoBackupCreationOnly(repairContract.preflightTargets, noBackupPluginRefresh);
   for (const directSkill of directSkills) {
-    const source = path.join(root, "plugins", "codex-chef-workflows", "skills", directSkill.name);
+    const source = path.join(root, "plugins", "agentchef-workflows", "skills", directSkill.name);
     const target = path.join(options.agentsHome, "skills", directSkill.name);
     const alternateTarget = path.join(options.codexHome, "skills", directSkill.name);
     if (
@@ -1092,7 +1092,7 @@ try {
     }
   }
   const marketplacePath = path.join(options.agentsHome, "plugins", "marketplace.json");
-  const marketplacePluginTarget = path.join(options.agentsHome, "plugins", "sources", "codex-chef-workflows");
+  const marketplacePluginTarget = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
   inspectMarketplaceEntry(marketplacePath, marketplacePluginTarget);
   preflight = runPreflightValidators();
   if (preflight.status !== "ok") {
@@ -1110,7 +1110,7 @@ try {
   pluginRefresh = noBackupPluginRefresh || refreshInstalledPlugin({
     apply: options.apply,
     codexHome: options.codexHome,
-    expectedVersion: readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version,
+    expectedVersion: readJson("plugins/agentchef-workflows/.codex-plugin/plugin.json").version,
     platform: options.platform
   });
   if (pluginRefresh.status === "planned" || pluginRefresh.status === "refreshed") {
@@ -1169,7 +1169,7 @@ const status = failures.length > 0
       : "ok";
 
 const report = {
-  schemaVersion: "codex-chef.repair.v1",
+  schemaVersion: "agentchef.repair.v1",
   generatedAt: new Date().toISOString(),
   mode: options.apply ? "apply" : "plan",
   status,

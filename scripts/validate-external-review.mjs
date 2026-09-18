@@ -9,9 +9,9 @@ const required = [
   "scripts/tests/external-review.test.mjs",
   "schemas/external-review-manifest.schema.json",
   "schemas/external-review-report.schema.json",
-  "plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md",
-  "plugins/codex-chef-workflows/skills/external-review-workflow/references/review-protocol.md",
-  "plugins/codex-chef-workflows/skills/external-review-workflow/agents/openai.yaml"
+  "plugins/agentchef-workflows/skills/external-review-workflow/SKILL.md",
+  "plugins/agentchef-workflows/skills/external-review-workflow/references/review-protocol.md",
+  "plugins/agentchef-workflows/skills/external-review-workflow/agents/openai.yaml"
 ];
 
 for (const file of required) {
@@ -20,7 +20,7 @@ for (const file of required) {
 
 const cli = fs.readFileSync(path.join(root, "scripts/external-review-cli.mjs"), "utf8");
 const chef = fs.readFileSync(path.join(root, "scripts/chef-cli.mjs"), "utf8");
-const skill = fs.readFileSync(path.join(root, "plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md"), "utf8");
+const skill = fs.readFileSync(path.join(root, "plugins/agentchef-workflows/skills/external-review-workflow/SKILL.md"), "utf8");
 const routing = JSON.parse(fs.readFileSync(path.join(root, "catalog/routing-profiles.json"), "utf8"));
 const manifestSchema = JSON.parse(fs.readFileSync(path.join(root, "schemas/external-review-manifest.schema.json"), "utf8"));
 const reportSchema = JSON.parse(fs.readFileSync(path.join(root, "schemas/external-review-report.schema.json"), "utf8"));

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const command = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "codex";
 const configSource = path.join(root, "templates", "codex", process.platform === "win32" ? "config.windows.toml" : "config.unix.toml");
-const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-config-compat-"));
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-config-compat-"));
 const codexHome = path.join(fixtureRoot, ".codex");
 fs.mkdirSync(codexHome);
 fs.copyFileSync(configSource, path.join(codexHome, "config.toml"));

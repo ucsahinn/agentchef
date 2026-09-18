@@ -2,8 +2,20 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const pinnedSkillProvenanceFileName = ".codex-chef-source.json";
-export const pinnedSkillSchemaVersion = "codex-chef.pinned-skill.v1";
+import { acceptsSchema, identity, schemaId, sourceMarkerNames } from "./identity.mjs";
+
+// Current marker name; a legacy marker is found through provenanceMarkerPath().
+export const pinnedSkillProvenanceFileName = identity.sourceMarker;
+export const legacyPinnedSkillProvenanceFileName = identity.legacySourceMarker;
+export const pinnedSkillSchemaVersion = schemaId("pinned-skill", 1);
+
+export function provenanceMarkerPath(target) {
+  for (const name of sourceMarkerNames) {
+    const candidate = path.join(target, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(target, pinnedSkillProvenanceFileName);
+}
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -32,7 +44,7 @@ export function hashSkillTree(directory) {
   while (pending.length > 0) {
     const current = pending.pop();
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      if (entry.name === pinnedSkillProvenanceFileName) continue;
+      if (sourceMarkerNames.includes(entry.name)) continue;
       const absolute = path.join(current, entry.name);
       const stat = fs.lstatSync(absolute);
       if (stat.isSymbolicLink()) {
@@ -87,7 +99,7 @@ export function inspectPinnedSkillOwnership(target, expected) {
   const tree = inspectSkillTree(target, expected.skill);
   if (!tree.valid) return tree;
 
-  const markerPath = path.join(target, pinnedSkillProvenanceFileName);
+  const markerPath = provenanceMarkerPath(target);
   const markerStat = lstatOrNull(markerPath);
   if (!markerStat || markerStat.isSymbolicLink() || !markerStat.isFile() || markerStat.size === 0) {
     return { valid: false, reason: "missing-provenance", actualHash: tree.actualHash };
@@ -100,8 +112,10 @@ export function inspectPinnedSkillOwnership(target, expected) {
     return { valid: false, reason: "invalid-provenance-json", actualHash: tree.actualHash };
   }
 
+  if (!acceptsSchema(marker?.schemaVersion, "pinned-skill", 1)) {
+    return { valid: false, reason: "provenance-schemaVersion-mismatch", actualHash: tree.actualHash };
+  }
   const expectedFields = {
-    schemaVersion: pinnedSkillSchemaVersion,
     package: expected.package,
     skill: expected.skill
   };
@@ -167,6 +181,9 @@ export function inspectPinnedSkillTarget(target, expected) {
 
 export function writePinnedSkillProvenance(target, expected) {
   const markerPath = path.join(target, pinnedSkillProvenanceFileName);
+  // A rewrite always produces the current marker; a legacy marker is retired.
+  const legacyPath = path.join(target, legacyPinnedSkillProvenanceFileName);
+  if (fs.existsSync(legacyPath)) fs.rmSync(legacyPath, { force: true });
   fs.writeFileSync(markerPath, `${JSON.stringify({
     schemaVersion: pinnedSkillSchemaVersion,
     package: expected.package,

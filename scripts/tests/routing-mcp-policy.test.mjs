@@ -15,7 +15,7 @@ function copyFile(relativePath, targetRoot) {
 }
 
 function tempSurface(t, files) {
-  const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-chef-policy-"));
+  const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-policy-"));
   t.after(() => fs.rmSync(targetRoot, { recursive: true, force: true }));
   for (const file of files) copyFile(file, targetRoot);
   return targetRoot;
@@ -41,7 +41,7 @@ const routingFiles = [
   "templates/codex/AGENTS.md",
   "scripts/codex-routing-board.mjs",
   "scripts/validate-routing-profiles.mjs",
-  "plugins/codex-chef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"
+  "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"
 ];
 
 function routingFixture(t, mutate) {

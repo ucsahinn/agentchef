@@ -3,7 +3,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const markerFileName = ".codex-chef-managed.json";
+import { acceptsSchema, identity, managedMarkerNames, schemaId } from "./lib/identity.mjs";
+
+export const markerFileName = identity.managedMarker;
+export const legacyMarkerFileName = identity.legacyManagedMarker;
+
+// The ownership marker a target actually carries (current first, then legacy).
+export function markerPathFor(targetRoot) {
+  for (const name of managedMarkerNames) {
+    const candidate = path.join(path.resolve(targetRoot), name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(path.resolve(targetRoot), markerFileName);
+}
 
 function readSkillName(sourceRoot) {
   const skillPath = path.join(path.resolve(sourceRoot), "SKILL.md");
@@ -25,12 +37,25 @@ function markerContractFor(sourceRoot, targetRoot) {
     throw new Error(`managed direct skill target folder must match skill name ${name}: ${targetRoot}`);
   }
   return Object.freeze({
-    schemaVersion: "codex-chef.managed-direct-skill.v1",
-    manager: "codex-chef",
+    schemaVersion: schemaId("managed-direct-skill", 1),
+    manager: "agentchef",
     component: "direct-skill",
     name,
-    source: `plugins/codex-chef-workflows/skills/${name}`
+    source: `plugins/agentchef-workflows/skills/${name}`
   });
+}
+
+// A marker written before 1.0.0 is accepted when every field other than the
+// identity spelling matches the current contract.
+function markerMatchesContract(marker, contract) {
+  if (!marker || typeof marker !== "object") return false;
+  if (!acceptsSchema(marker.schemaVersion, "managed-direct-skill", 1)) return false;
+  if (!["agentchef", "codex-chef"].includes(marker.manager)) return false;
+  const legacyName = contract.name === identity.operatorSkill ? identity.legacyOperatorSkill : contract.name;
+  if (marker.component !== contract.component || ![contract.name, legacyName].includes(marker.name)) return false;
+  const legacySkill = contract.name === identity.operatorSkill ? identity.legacyOperatorSkill : contract.name;
+  const legacySource = `plugins/${identity.legacyPluginName}/skills/${legacySkill}`;
+  return marker.source === contract.source || marker.source === legacySource;
 }
 
 function stableJson(value) {
@@ -115,18 +140,18 @@ export function inspectDirectSkillTarget(sourceRoot, targetRoot) {
 
   let targetFiles;
   try {
-    targetFiles = listRegularFiles(target).filter((file) => file !== markerFileName);
+    targetFiles = listRegularFiles(target).filter((file) => !managedMarkerNames.includes(file));
   } catch (error) {
     return { status: "foreign", safeToSync: false, reason: error.message, sourceFiles };
   }
 
-  const markerPath = path.join(target, markerFileName);
+  const markerPath = markerPathFor(target);
   if (fs.existsSync(markerPath)) {
     const markerStat = fs.lstatSync(markerPath);
     const marker = markerStat.isFile() && !markerStat.isSymbolicLink()
       ? readMarker(markerPath)
       : null;
-    if (marker && stableJson(marker) === stableJson(markerContract)) {
+    if (markerMatchesContract(marker, markerContract)) {
       const managedFilesMatch = filesMatch(source, target, sourceFiles);
       if (managedFilesMatch && stableJson(targetFiles) === stableJson(sourceFiles)) {
         return { status: "managed", safeToSync: true, sourceFiles };
@@ -174,6 +199,15 @@ export function writeDirectSkillMarker(sourceRoot, targetRoot, { allowAdopt = fa
     throw new Error(`direct ${skillName} target does not match the canonical source: ${targetRoot}`);
   }
   const markerPath = path.join(path.resolve(targetRoot), markerFileName);
+  const legacyMarkerPath = path.join(path.resolve(targetRoot), legacyMarkerFileName);
+  if (fs.existsSync(legacyMarkerPath)) {
+    const legacyStat = fs.lstatSync(legacyMarkerPath);
+    if (!legacyStat.isFile() || legacyStat.isSymbolicLink()) {
+      throw new Error(`direct ${skillName} legacy ownership marker must be a regular file: ${legacyMarkerPath}`);
+    }
+    // Writing the current marker retires the legacy one.
+    fs.rmSync(legacyMarkerPath, { force: true });
+  }
   if (fs.existsSync(markerPath)) {
     const markerStat = fs.lstatSync(markerPath);
     if (!markerStat.isFile() || markerStat.isSymbolicLink()) {

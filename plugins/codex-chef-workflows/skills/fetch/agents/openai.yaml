@@ -1,7 +1,0 @@
-interface:
-  display_name: "Fetch Website"
-  short_description: "Rebuild authorized sites from browser evidence."
-  default_prompt: "Use $fetch, or $codex-chef-workflows:fetch from the installed plugin, with the supplied URL to reconstruct the authorized website in the current workspace, verify it in a real browser, and report every fidelity gap."
-
-policy:
-  allow_implicit_invocation: false

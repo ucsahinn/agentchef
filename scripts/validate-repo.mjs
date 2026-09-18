@@ -148,37 +148,37 @@ const requiredFiles = [
   "scripts/scan-supply-chain-iocs.mjs",
   "scripts/security-audit.mjs",
   "scripts/lib/approval-rules.mjs",
-  "plugins/codex-chef-workflows/.codex-plugin/plugin.json",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/SKILL.md",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/references/repo-maintenance.md",
-  "plugins/codex-chef-workflows/skills/codex-chef-operator/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/SKILL.md",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/references/diagram-contract.md",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/offline-diagram-triplet/scripts/render-diagram-triplet.mjs",
-  "plugins/codex-chef-workflows/skills/fetch/SKILL.md",
-  "plugins/codex-chef-workflows/skills/fetch/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/fetch/assets/fetch-report.template.json",
-  "plugins/codex-chef-workflows/skills/fetch/references/capture-protocol.md",
-  "plugins/codex-chef-workflows/skills/fetch/references/forward-tests.md",
-  "plugins/codex-chef-workflows/skills/fetch/references/implementation-protocol.md",
-  "plugins/codex-chef-workflows/skills/fetch/references/safety-boundaries.md",
-  "plugins/codex-chef-workflows/skills/fetch/references/sources.md",
-  "plugins/codex-chef-workflows/skills/fetch/references/verification-rubric.md",
-  "plugins/codex-chef-workflows/skills/fetch/scripts/validate-fetch-report.mjs",
-  "plugins/codex-chef-workflows/skills/seo/SKILL.md",
-  "plugins/codex-chef-workflows/skills/seo/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/seo/assets/seo-audit-report.template.json",
-  "plugins/codex-chef-workflows/skills/seo/references/sources.md",
-  "plugins/codex-chef-workflows/skills/seo/scripts/validate-seo-report.mjs",
-  "plugins/codex-chef-workflows/skills/evidence-research/SKILL.md",
-  "plugins/codex-chef-workflows/skills/evidence-research/agents/openai.yaml",
-  "plugins/codex-chef-workflows/skills/evidence-research/assets/research-report.template.json",
-  "plugins/codex-chef-workflows/skills/evidence-research/references/sources.md",
-  "plugins/codex-chef-workflows/skills/evidence-research/scripts/validate-research-report.mjs",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/references/context-strategy.md",
-  "plugins/codex-chef-workflows/skills/context-budget-planner/agents/openai.yaml",
+  "plugins/agentchef-workflows/.codex-plugin/plugin.json",
+  "plugins/agentchef-workflows/skills/agentchef-operator/SKILL.md",
+  "plugins/agentchef-workflows/skills/agentchef-operator/references/repo-maintenance.md",
+  "plugins/agentchef-workflows/skills/agentchef-operator/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/SKILL.md",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/references/diagram-contract.md",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/offline-diagram-triplet/scripts/render-diagram-triplet.mjs",
+  "plugins/agentchef-workflows/skills/fetch/SKILL.md",
+  "plugins/agentchef-workflows/skills/fetch/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/fetch/assets/fetch-report.template.json",
+  "plugins/agentchef-workflows/skills/fetch/references/capture-protocol.md",
+  "plugins/agentchef-workflows/skills/fetch/references/forward-tests.md",
+  "plugins/agentchef-workflows/skills/fetch/references/implementation-protocol.md",
+  "plugins/agentchef-workflows/skills/fetch/references/safety-boundaries.md",
+  "plugins/agentchef-workflows/skills/fetch/references/sources.md",
+  "plugins/agentchef-workflows/skills/fetch/references/verification-rubric.md",
+  "plugins/agentchef-workflows/skills/fetch/scripts/validate-fetch-report.mjs",
+  "plugins/agentchef-workflows/skills/seo/SKILL.md",
+  "plugins/agentchef-workflows/skills/seo/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/seo/assets/seo-audit-report.template.json",
+  "plugins/agentchef-workflows/skills/seo/references/sources.md",
+  "plugins/agentchef-workflows/skills/seo/scripts/validate-seo-report.mjs",
+  "plugins/agentchef-workflows/skills/evidence-research/SKILL.md",
+  "plugins/agentchef-workflows/skills/evidence-research/agents/openai.yaml",
+  "plugins/agentchef-workflows/skills/evidence-research/assets/research-report.template.json",
+  "plugins/agentchef-workflows/skills/evidence-research/references/sources.md",
+  "plugins/agentchef-workflows/skills/evidence-research/scripts/validate-research-report.mjs",
+  "plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md",
+  "plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md",
+  "plugins/agentchef-workflows/skills/context-budget-planner/agents/openai.yaml",
   ".agents/plugins/marketplace.json"
 ];
 
@@ -523,7 +523,7 @@ if (fs.existsSync(marketplacePath)) {
   }
 }
 
-const pluginManifest = path.join(root, "plugins/codex-chef-workflows/.codex-plugin/plugin.json");
+const pluginManifest = path.join(root, "plugins/agentchef-workflows/.codex-plugin/plugin.json");
 if (fs.existsSync(pluginManifest)) {
   const plugin = JSON.parse(fs.readFileSync(pluginManifest, "utf8"));
   for (const forbiddenKey of ["mcpServers", "apps"]) {
@@ -559,8 +559,8 @@ if (fs.existsSync(pluginManifest)) {
   const marketplacePlugin = marketplacePlugins.find((entry) => entry.name === plugin.name);
   if (!marketplacePlugin) {
     failures.push(`Plugin manifest ${plugin.name} must be listed in .agents/plugins/marketplace.json`);
-  } else if (marketplacePlugin.source?.path !== "./plugins/codex-chef-workflows") {
-    failures.push(`Marketplace path for ${plugin.name} must stay ./plugins/codex-chef-workflows`);
+  } else if (marketplacePlugin.source?.path !== "./plugins/agentchef-workflows") {
+    failures.push(`Marketplace path for ${plugin.name} must stay ./plugins/agentchef-workflows`);
   }
 }
 
@@ -666,7 +666,7 @@ if (fs.existsSync(mcpCatalog)) {
   }
 }
 
-const bundledSkillsDir = path.join(root, "plugins/codex-chef-workflows/skills");
+const bundledSkillsDir = path.join(root, "plugins/agentchef-workflows/skills");
 if (fs.existsSync(bundledSkillsDir)) {
   const bundledSkills = fs.readdirSync(bundledSkillsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(bundledSkillsDir, entry.name, "SKILL.md")))

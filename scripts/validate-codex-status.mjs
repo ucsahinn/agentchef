@@ -237,7 +237,7 @@ if (insideOutputResult.error) {
 } else {
   try {
     const writtenReport = JSON.parse(fs.readFileSync(path.resolve(insideOutputRel), "utf8"));
-    if (writtenReport.schemaVersion !== "codex-chef.status.v1") {
+    if (writtenReport.schemaVersion !== "agentchef.status.v1") {
       fail("codex status --output must write the status JSON report.");
     }
   } catch (error) {
@@ -276,7 +276,7 @@ if (failures.length === 0) {
 }
 
 if (report) {
-  if (report.schemaVersion !== "codex-chef.status.v1") {
+  if (report.schemaVersion !== "agentchef.status.v1") {
     fail("codex status schemaVersion drifted.");
   }
   if (!["ok", "attention", "fail"].includes(report.status)) {
@@ -684,7 +684,7 @@ if (routingResult.error) {
 } else {
   try {
     const routing = JSON.parse(routingResult.stdout);
-    if (routing.schemaVersion !== "codex-chef.routing.v2") fail("codex routing schemaVersion drifted.");
+    if (routing.schemaVersion !== "agentchef.routing.v2") fail("codex routing schemaVersion drifted.");
     if (routing.profileCount < 10) fail("codex routing must include at least 10 profiles.");
     if (routing.delegationPolicy?.mode !== "conditional") {
       fail("codex routing must preserve conditional delegation policy.");

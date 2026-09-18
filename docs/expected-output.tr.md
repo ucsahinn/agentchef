@@ -53,7 +53,7 @@ Operations: ...
 ```
 
 JSON çıktı `schemaVersion:
-codex-chef.install-state-preview.v1` kullanır ve global Codex,
+agentchef.install-state-preview.v1` kullanır ve global Codex,
 Agents veya Git lokasyonlarına yazmaz.
 
 JSON sozlesmesi `schemas/install-state-preview.schema.json` icinde dokumante
@@ -116,7 +116,7 @@ What if: Performing the operation ...
   - MCP setup notes (14):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -172,7 +172,7 @@ Continue with this plan? [Y/n]:
   - MCP setup notes (14):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -211,7 +211,7 @@ Action: planned update-marketplace-entry .../.agents/plugins/marketplace.json
 Warning: <other> non-curated global skill(s) are installed; repair reports them but does not delete user skills.
 ```
 
-JSON ciktisi `schemaVersion: codex-chef.repair.v1` kullanir. `-Repair -WhatIf`
+JSON ciktisi `schemaVersion: agentchef.repair.v1` kullanir. `-Repair -WhatIf`
 ve `npm run repair:install -- --json` no-write kalir. `-Repair` ve
 `npm run repair:install -- --apply` managed drift'i duzeltmeden once backup
 olusturur.
@@ -258,7 +258,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):
@@ -290,7 +290,7 @@ Would install file from ...
   - MCP setup notes (14):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (9):
-    adaptive-agent-routing, codex-chef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
   - Enterprise routing profiles (14):

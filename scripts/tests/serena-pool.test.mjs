@@ -210,7 +210,7 @@ test("stdio bridge exposes the safe tool surface without starting Serena on MCP 
   const port = 48_000 + Math.floor(Math.random() * 1_000);
   const bridge = spawn(process.execPath, [fileURLToPath(moduleUrl), "bridge"], {
     cwd: home,
-    env: { ...process.env, CODEX_HOME: home, CODEX_CHEF_SERENA_POOL_PORT: String(port) },
+    env: { ...process.env, CODEX_HOME: home, AGENTCHEF_SERENA_POOL_PORT: String(port) },
     stdio: ["pipe", "pipe", "pipe"]
   });
   const replies = [];

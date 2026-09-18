@@ -11,7 +11,7 @@ import { scaledTimeout } from "../lib/test-timeouts.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 function fixture(label) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `codex-chef-repair-${label}-`));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `agentchef-repair-${label}-`));
   return {
     root: fixtureRoot,
     codexHome: path.join(fixtureRoot, ".codex"),
@@ -42,7 +42,7 @@ function runRepair(target, flags, extraEnv = {}) {
     timeout: scaledTimeout(120000),
     env: {
       ...process.env,
-      CODEX_CHEF_CODEX_COMMAND: "codex-chef-missing-fixture-command",
+      AGENTCHEF_CODEX_COMMAND: "agentchef-missing-fixture-command",
       ...extraEnv
     }
   });
@@ -79,7 +79,7 @@ test("no-backup repair fails before any write when a managed target already exis
 
 test("no-backup repair cannot prune an existing managed plugin extra", () => {
   const target = fixture("no-backup-prune");
-  const extra = path.join(target.codexHome, "plugins", "codex-chef-workflows", "extra.txt");
+  const extra = path.join(target.codexHome, "plugins", "agentchef-workflows", "extra.txt");
   write(extra, "must survive\n");
 
   const result = runRepair(target, [
@@ -110,7 +110,7 @@ test("repair restores nested support files for a managed direct skill", () => {
 
   const result = runRepair(target, ["--apply"]);
   const payload = report(result);
-  const source = path.join(root, "plugins", "codex-chef-workflows", "skills", "seo", "agents", "openai.yaml");
+  const source = path.join(root, "plugins", "agentchef-workflows", "skills", "seo", "agents", "openai.yaml");
   const installed = path.join(target.agentsHome, "skills", "seo", "agents", "openai.yaml");
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -126,8 +126,8 @@ test("no-backup repair rejects a stale installed plugin cache before managed wri
   );
   const payload = JSON.stringify({
     installed: [{
-      pluginId: "codex-chef-workflows@codex-chef",
-      name: "codex-chef-workflows",
+      pluginId: "agentchef-workflows@agentchef",
+      name: "agentchef-workflows",
       version: "0.0.0-stale",
       installed: true,
       enabled: true
@@ -142,7 +142,7 @@ test("no-backup repair rejects a stale installed plugin cache before managed wri
   if (process.platform !== "win32") fs.chmodSync(fakeCodex, 0o755);
 
   const result = runRepair(target, ["--apply", "--no-backup"], {
-    CODEX_CHEF_CODEX_COMMAND: fakeCodex
+    AGENTCHEF_CODEX_COMMAND: fakeCodex
   });
   const repair = report(result);
   assert.equal(result.status, 1);
@@ -176,7 +176,7 @@ test("repair journals every managed write through durable prepared and applied p
   const result = runRepair(target, ["--apply"]);
   const payload = report(result);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  const journalPath = path.join(payload.backupRoot, ".codex-chef-operation-journal.json");
+  const journalPath = path.join(payload.backupRoot, ".agentchef-operation-journal.json");
   const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
   const agentsMutation = journal.mutations.find((mutation) => mutation.target === agentsPath);
   assert.equal(journal.state, "complete");
@@ -226,8 +226,8 @@ test("repair reconciles a failed post-write transaction without overwriting late
   write(agentsPath, original);
 
   const result = runRepair(target, ["--apply"], {
-    CODEX_CHEF_TEST_MODE: "1",
-    CODEX_CHEF_TEST_REPAIR_FAIL_AFTER_WRITES: "1"
+    AGENTCHEF_TEST_MODE: "1",
+    AGENTCHEF_TEST_REPAIR_FAIL_AFTER_WRITES: "1"
   });
   const payload = report(result);
   assert.equal(result.status, 1);

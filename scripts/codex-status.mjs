@@ -1304,7 +1304,7 @@ const status = failures.length > 0
     : "ok";
 
 const report = {
-  schemaVersion: "codex-chef.status.v1",
+  schemaVersion: "agentchef.status.v1",
   generatedAt: new Date().toISOString(),
   status,
   repoDoctor,

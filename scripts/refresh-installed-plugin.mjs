@@ -6,8 +6,23 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { platformCommand } from "./lib/platform-command.mjs";
 
-export const PLUGIN_ID = "codex-chef-workflows@codex-chef";
-const PLUGIN_NAME = "codex-chef-workflows";
+import { identity } from "./lib/identity.mjs";
+
+export const PLUGIN_ID = identity.pluginId;
+export const LEGACY_PLUGIN_ID = identity.legacyPluginId;
+const PLUGIN_NAME = identity.pluginName;
+
+// The installed id follows the personal marketplace's name: an un-migrated
+// home still publishes the plugin under its legacy marketplace name.
+export function resolvePluginId(agentsHome = process.env.AGENTS_HOME || path.join(os.homedir(), ".agents")) {
+  try {
+    const marketplace = JSON.parse(fs.readFileSync(path.join(agentsHome, "plugins", "marketplace.json"), "utf8").replace(/^\uFEFF/, ""));
+    const name = typeof marketplace?.name === "string" && marketplace.name.trim() ? marketplace.name.trim() : identity.marketplaceName;
+    return `${PLUGIN_NAME}@${name}`;
+  } catch {
+    return PLUGIN_ID;
+  }
+}
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
 
@@ -68,10 +83,18 @@ function parseInstalledPlugins(result, codexHome, phase) {
   return { installed };
 }
 
-function findManagedPlugin(installed) {
+function findManagedPlugin(installed, pluginId = PLUGIN_ID) {
   return installed.find((plugin) =>
-    plugin?.pluginId === PLUGIN_ID
-    || (plugin?.name === PLUGIN_NAME && plugin?.marketplaceName === "codex-chef")
+    plugin?.pluginId === pluginId
+    || plugin?.pluginId === PLUGIN_ID
+    || (plugin?.name === PLUGIN_NAME && [identity.marketplaceName, identity.legacyMarketplaceName].includes(plugin?.marketplaceName))
+  );
+}
+
+export function findLegacyPlugin(installed) {
+  return installed.find((plugin) =>
+    plugin?.pluginId === LEGACY_PLUGIN_ID
+    || (plugin?.name === identity.legacyPluginName)
   );
 }
 
@@ -91,7 +114,8 @@ function defaultCodexRunner({ codexHome, platform }) {
     : platform === "unix"
       ? "linux"
       : platform;
-  const command = process.env.CODEX_CHEF_CODEX_COMMAND
+  const command = process.env.AGENTCHEF_CODEX_COMMAND
+    || process.env.CODEX_CHEF_CODEX_COMMAND
     || platformCommand("codex", commandPlatform);
   return (args) => {
     const invocation = commandInvocation(command, args, commandPlatform);
@@ -229,7 +253,7 @@ function readExpectedVersion() {
   const manifestPath = path.join(
     root,
     "plugins",
-    "codex-chef-workflows",
+    "agentchef-workflows",
     ".codex-plugin",
     "plugin.json"
   );

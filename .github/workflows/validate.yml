@@ -43,7 +43,7 @@ jobs:
       - run: node --check scripts/validate-approval-harmony.mjs
       - run: node --check scripts/validate-codex-doctor.mjs
       - run: node --check scripts/validate-diagram-triplet.mjs
-      - run: node --check plugins/codex-chef-workflows/skills/offline-diagram-triplet/scripts/render-diagram-triplet.mjs
+      - run: node --check plugins/agentchef-workflows/skills/offline-diagram-triplet/scripts/render-diagram-triplet.mjs
       - run: node --check scripts/analyze-token-surfaces.mjs
       - run: node --check scripts/validate-token-surfaces.mjs
       - run: node --check scripts/lib/cli-error-contract.mjs
@@ -99,8 +99,8 @@ jobs:
       - run: node --check scripts/validate-installer-smoke.mjs
       - shell: powershell
         run: |
-          $env:CODEX_HOME = Join-Path $env:TEMP "codex-chef-ci-codex-home"
-          $env:AGENTS_HOME = Join-Path $env:TEMP "codex-chef-ci-agents-home"
+          $env:CODEX_HOME = Join-Path $env:TEMP "agentchef-ci-codex-home"
+          $env:AGENTS_HOME = Join-Path $env:TEMP "agentchef-ci-agents-home"
           powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf -PlainOutput
       - run: npm.cmd run validate:installer-smoke
 
@@ -122,7 +122,7 @@ jobs:
           HOME="$PWD/tmp/ci-home" \
           bash scripts/install.sh --all --target=both --dry-run
       - run: |
-          mkdir -p tmp/ci-agents-home/plugins/sources/codex-chef-workflows tmp/ci-claude-home tmp/ci-home
+          mkdir -p tmp/ci-agents-home/plugins/sources/agentchef-workflows tmp/ci-claude-home tmp/ci-home
           node scripts/install-claude-target.mjs --apply --skip-plugin-register \
             --claude-home "$PWD/tmp/ci-claude-home" --agents-home "$PWD/tmp/ci-agents-home" \
             --home "$PWD/tmp/ci-home" --platform unix --redact-paths
@@ -163,12 +163,12 @@ jobs:
           scripts/tests/cli-error-contract.test.mjs
           scripts/tests/release-readiness.test.mjs
           scripts/tests/external-review.test.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-export.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-delivery.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-delivery-extra-artifact.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-export-memory.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-status.mjs
-          plugins/codex-chef-workflows/skills/gptpro/scripts/test-project-zip.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-export.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-delivery.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-delivery-extra-artifact.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-export-memory.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-status.mjs
+          plugins/agentchef-workflows/skills/gptpro/scripts/test-project-zip.mjs
       - run: npm run validate:chef-cli
       - run: npm run validate:status
       - run: npm run validate:fetch-skill

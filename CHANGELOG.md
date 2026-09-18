@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Rename the on-disk identity from `codex-chef` to `agentchef`: ownership
+  markers (`.agentchef-managed.json`, `.agentchef-source.json`), the
+  operation journal and lock names, backup-folder prefixes, receipt and report
+  schema strings (`agentchef.<name>.vN`), the plugin folder
+  (`plugins/agentchef-workflows`), the operator skill
+  (`agentchef-operator`, with a `compatibilityAliases` entry for the old
+  name), the personal marketplace name and plugin id
+  (`agentchef-workflows@agentchef`), the Git hook banner, the config-merge
+  banners, the npm cache folder, and the `AGENTCHEF_*` environment variables.
+- Read both spellings everywhere (`scripts/lib/identity.mjs`): legacy markers,
+  journals, locks, receipts, backup ids, plugin ids, and `CODEX_CHEF_*`
+  variables keep working, and the installed plugin id follows the personal
+  marketplace's name until it is migrated.
+- Add `npm run chef -- --migrate-identity [--target codex|claude|both] [--apply]`
+  (`scripts/migrate-identity.mjs`): a preview-first, journaled, backup-backed
+  conversion of markers, folders, marketplace entries, plugin registrations, a
+  legacy-banner Git hook (only when its bytes match a shipped template), and
+  Claude receipts and links.
+
 ## 0.9.0 - 2026-09-18
 
 - Add Claude Code as a second install target. Every `manifests/install-plan.json`

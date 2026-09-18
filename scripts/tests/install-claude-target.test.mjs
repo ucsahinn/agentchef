@@ -23,11 +23,11 @@ function fixture() {
   const managedSkill = path.join(agentsHome, "skills", "demo-skill");
   fs.mkdirSync(managedSkill, { recursive: true });
   fs.writeFileSync(path.join(managedSkill, "SKILL.md"), "---\nname: demo-skill\ndescription: demo\n---\n# demo\n");
-  fs.writeFileSync(path.join(managedSkill, ".codex-chef-managed.json"), `${JSON.stringify({ schemaVersion: "codex-chef.direct-skill.v1" })}\n`);
+  fs.writeFileSync(path.join(managedSkill, ".agentchef-managed.json"), `${JSON.stringify({ schemaVersion: "agentchef.direct-skill.v1" })}\n`);
   const foreignSkill = path.join(agentsHome, "skills", "user-agents-skill");
   fs.mkdirSync(foreignSkill, { recursive: true });
   fs.writeFileSync(path.join(foreignSkill, "SKILL.md"), "user\n");
-  fs.mkdirSync(path.join(agentsHome, "plugins", "sources", "codex-chef-workflows"), { recursive: true });
+  fs.mkdirSync(path.join(agentsHome, "plugins", "sources", "agentchef-workflows"), { recursive: true });
   fs.mkdirSync(path.join(claudeHome, "skills", "user-claude-skill"), { recursive: true });
   fs.writeFileSync(path.join(claudeHome, "skills", "user-claude-skill", "SKILL.md"), "mine\n");
   const settings = {
@@ -93,13 +93,13 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(fs.readFileSync(path.join(state.claudeHome, "skills", "user-claude-skill", "SKILL.md"), "utf8"), "mine\n");
   const marketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
   assert.equal(marketplace.name, "agentchef");
-  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./sources/codex-chef-workflows"]);
+  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./sources/agentchef-workflows"]);
   const receipts = fs.readdirSync(path.join(state.claudeHome, "agentchef", "receipts")).sort();
   assert.deepEqual(receipts, ["claude-mcp-merge-receipt.json", "claude-settings-merge-receipt.json"]);
   const installReceipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));
   assert.equal(installReceipt.links.length, 1);
   assert.ok(fs.existsSync(path.join(state.claudeHome, "agentchef", "backups")));
-  assert.ok(!fs.existsSync(path.join(state.claudeHome, ".codex-chef-operation.lock")), "lock released");
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, ".agentchef-operation.lock")), "lock released");
 
   const again = run(state, ["--apply"]);
   assert.ok(again.outcome.results.every((result) => ["current", "skipped"].includes(result.status)), JSON.stringify(again.outcome.results));
@@ -146,7 +146,7 @@ test("an AgentChef-marked copy is adopted into a link only with --adopt-skill-li
   const copy = path.join(state.claudeHome, "skills", "demo-skill");
   fs.mkdirSync(copy, { recursive: true });
   fs.writeFileSync(path.join(copy, "SKILL.md"), "older managed copy\n");
-  fs.writeFileSync(path.join(copy, ".codex-chef-managed.json"), "{}\n");
+  fs.writeFileSync(path.join(copy, ".agentchef-managed.json"), "{}\n");
   const plan = run(state, ["--dry-run"]);
   assert.equal(plan.plan.actions.find((action) => action.kind === "link-directory").links[0].decision, "adoptable-copy");
   const adopted = run(state, ["--apply", "--adopt-skill-links"]);
