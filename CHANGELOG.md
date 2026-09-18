@@ -39,6 +39,8 @@
   installer flows against live homes.
 - Rename the `agentSpaceRoles` catalog key to `coordinatorDomains`; archive
   the 0.5.x changelog history in `CHANGELOG-0.5.md`.
+- Pin `actions/checkout` to v7.0.1 and `actions/setup-node` to v7.0.0 in the
+  validate workflow (the two open Dependabot updates).
 
 ## 0.5.74 - 2026-08-14
 
