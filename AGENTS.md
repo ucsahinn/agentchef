@@ -2,8 +2,10 @@
 
 ## Scope
 
-This repository packages a safe Codex setup starter. Keep edits focused on
-installable templates, docs, validation, and security guardrails.
+This repository packages AgentChef, a safe setup kit for OpenAI Codex CLI and
+Anthropic Claude Code. Keep edits focused on installable templates, docs,
+validation, and security guardrails. `CLAUDE.md` mirrors this file for Claude
+Code sessions; keep both aligned.
 
 For the installable global Codex operating contract, review
 `templates/codex/AGENTS.md` and `catalog/routing-profiles.json`. This root

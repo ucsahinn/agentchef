@@ -18,7 +18,7 @@ installCliErrorBoundary({
   tool: "codex-status",
   argv: args,
   root,
-  prefix: "Codex Chef status error"
+  prefix: "AgentChef status error"
 });
 const DEFAULT_CHILD_TIMEOUT_MS = 120000;
 const RUNTIME_VERIFY_TIMEOUT_MS = 300000;
@@ -87,7 +87,7 @@ for (let index = 0; index < args.length; index += 1) {
 function printHelp() {
   console.log(`Usage: node scripts/codex-status.mjs [options]
 
-Read-only end-user status board for Codex Chef.
+Read-only end-user status board for AgentChef.
 
 Options:
   --json                       Emit machine-readable JSON
@@ -120,7 +120,7 @@ function localText(en, tr) {
 
 const progressEnabled = !options.json;
 if (progressEnabled) {
-  console.log(localText("Codex Chef status", "Codex Chef durumu"));
+  console.log(localText("AgentChef status", "AgentChef durumu"));
   console.log(options.skipRuntime && options.skipCodexDoctorChecks && options.skipCodexCli
     ? localText(
         "Collecting local repository checks; installed runtime, global skill-root inventory, Codex log metadata, and live Codex CLI probes are skipped.",
@@ -260,8 +260,8 @@ function translateNextAction(message) {
       "Yönetilen kurulum drift'ini onarmak için npm run repair:install -- --apply çalıştırın; ardından npm run codex:status komutunu yeniden çalıştırın."
     ],
     [
-      "Review attention items; they do not necessarily mean Codex Chef install is broken.",
-      "Dikkat maddelerini inceleyin; bunlar Codex Chef kurulumunun bozuk olduğu anlamına gelmeyebilir."
+      "Review attention items; they do not necessarily mean AgentChef install is broken.",
+      "Dikkat maddelerini inceleyin; bunlar AgentChef kurulumunun bozuk olduğu anlamına gelmeyebilir."
     ],
     ["No action needed.", "İşlem gerekmiyor."]
   ]);
@@ -605,7 +605,7 @@ function inspectEffectiveControls(skipInstalled = false) {
     hookNote: skipInstalled
       ? "Repo-only mode reports template controls and does not inspect installed hooks."
       : managedHooks === 0
-      ? "Codex Chef enables hooks support but ships no lifecycle hook files; inspect /hooks before relying on user or project hooks."
+      ? "AgentChef enables hooks support but ships no lifecycle hook files; inspect /hooks before relying on user or project hooks."
       : "Managed hook files are present; inspect them before release-sensitive work."
   };
 }
@@ -786,7 +786,7 @@ function inspectCodexCliRuntime() {
     : "unknown";
 
   const ambientWarnings = ambientRelationship === "different"
-    ? ["Ambient Codex CLI status differs from the explicit Codex Chef target; restart Codex or set CODEX_HOME for direct shell diagnostics."]
+    ? ["Ambient Codex CLI status differs from the explicit AgentChef target; restart Codex or set CODEX_HOME for direct shell diagnostics."]
     : [];
   const issues = [
     ...(version.status === "ok" ? [] : [version.summary || `${version.label} needs attention.`]),
@@ -1185,7 +1185,7 @@ function classifyRuntimeInstallState(runtimeReport) {
 
 const runtimeInstallState = classifyRuntimeInstallState(runtime.report);
 const runtimeFailures = runtimeInstallState === "not_installed"
-  ? ["runtime: Codex Chef is not installed at the target Codex home; run `npm run chef -- --preview --no-log` before install or `npm run chef -- --install --apply` when ready."]
+  ? ["runtime: AgentChef is not installed at the target Codex home; run `npm run chef -- --preview --no-log` before install or `npm run chef -- --install --apply` when ready."]
   : runtime.failures.map((failure) => `runtime: ${failure}`);
 
 const failures = [
@@ -1250,7 +1250,7 @@ const report = {
         ? ["Run npm run chef -- --preview --no-log to inspect the install plan, then run npm run chef -- --install --apply when ready."]
         : ["Run npm run repair:install -- --apply to repair managed runtime drift, then rerun npm run codex:status."])
     : attentionReasons.length > 0
-      ? ["Review attention items; they do not necessarily mean Codex Chef install is broken."]
+      ? ["Review attention items; they do not necessarily mean AgentChef install is broken."]
       : ["No action needed."]
 };
 
@@ -1259,7 +1259,7 @@ writeOutput(report);
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  if (!progressEnabled) console.log(localText("Codex Chef status", "Codex Chef durumu"));
+  if (!progressEnabled) console.log(localText("AgentChef status", "AgentChef durumu"));
   console.log(`${localText("Overall", "Genel")}: ${stateText(report.status)}`);
   if (options.details) {
     console.log(`${localText("Use", "Kullanım")}: ${cliQuickStart.interactiveMenu} (${localText("or", "veya")} ${cliQuickStart.auditMode} ${localText("for no repo-local log", "repo-local log istemiyorsanız")})`);
@@ -1351,7 +1351,7 @@ if (options.json) {
     console.log(`${localText("Installed runtime", "Kurulu ortam")}: ${runtimeText}`);
   }
   if (!runtime.report?.skills?.inspected && skillInventory.inspected) {
-    console.log(`${localText("Skills", "Skill'ler")}: ${skillInventory.installed} ${localText("total installed across global roots", "global köklerde toplam kurulu")} (${skillInventory.expected} Codex Chef managed, ${skillInventory.missing.length} ${localText("missing", "eksik")}, ${skillInventory.extraCount} ${localText("other/user-installed", "diğer/kullanıcı kurulu")})`);
+    console.log(`${localText("Skills", "Skill'ler")}: ${skillInventory.installed} ${localText("total installed across global roots", "global köklerde toplam kurulu")} (${skillInventory.expected} AgentChef managed, ${skillInventory.missing.length} ${localText("missing", "eksik")}, ${skillInventory.extraCount} ${localText("other/user-installed", "diğer/kullanıcı kurulu")})`);
   } else if (!runtime.report?.skills?.inspected && skillInventory.inspected === false) {
     console.log(`${localText("Skills", "Skill'ler")}: ${localText("skipped", "atlandı")} (${translateStatusMessage(skillInventory.note)})`);
   }

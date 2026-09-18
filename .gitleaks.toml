@@ -1,4 +1,4 @@
-title = "codex-chef secret scan"
+title = "agentchef secret scan"
 
 [extend]
 useDefault = true

@@ -1,11 +1,11 @@
-# Codex Chef Agents
+# AgentChef Agents
 
 [English](agents.md) | [Türkçe](agents.tr.md)
 
 An agent is the **who** in a Codex workflow: a focused role with a clear job,
 boundaries, and evidence to return.
 
-Codex Chef includes 11 coordination roles and 21 specialist worker roles. They
+AgentChef includes 11 coordination roles and 21 specialist worker roles. They
 are not background services and they do not all run on every task. A role can
 guide the main session without being spawned. Delegation is useful when work can
 run independently, noisy output should stay out of the main thread, or you
@@ -117,7 +117,7 @@ the task becomes done.
 3. Spawned agents inherit the current approval and sandbox boundaries.
 4. Parallel write-heavy work stays limited because overlapping edits create
    coordination cost.
-5. The active user profile remains authoritative; Codex Chef role files do not
+5. The active user profile remains authoritative; AgentChef role files do not
    pin every agent to one model.
 
 The routing board includes a narrow data-documentation route: `data_coordinator`
@@ -147,7 +147,7 @@ also advisory. Neither route grants database, customer-account, or production ac
 
 The eleven installed coordinators own work: leadership, product, backend, data,
 frontend, DevOps, security, QA, design, marketing, and customer support. The 21
-Codex Chef specialists remain narrow task workers. \`catalog/agents.json\` records
+AgentChef specialists remain narrow task workers. \`catalog/agents.json\` records
 the complete 11-to-21 ownership map. A coordinator may select only its cataloged
 worker group (at most four workers), and workers do not delegate further.
 

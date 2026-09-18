@@ -15,7 +15,7 @@ installCliErrorBoundary({
   tool: "codex-doctor",
   argv: args,
   root,
-  prefix: "Codex Chef doctor error"
+  prefix: "AgentChef doctor error"
 });
 
 let jsonOutput = false;
@@ -314,7 +314,7 @@ report.status = failures.length === 0 ? "ok" : "fail";
 if (jsonOutput) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log("Codex Chef doctor");
+  console.log("AgentChef doctor");
   console.log(`Status: ${report.status}`);
   console.log(`Version: ${report.repo.packageVersion || "unknown"}`);
   if (report.agents) {

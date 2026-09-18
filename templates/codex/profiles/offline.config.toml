@@ -1,4 +1,4 @@
-# MCP-offline profile. Disables every Codex Chef-managed MCP transport.
+# MCP-offline profile. Disables every AgentChef-managed MCP transport.
 # It does not change Codex shell, browser, or web-search network permissions.
 
 [mcp_servers.openaiDeveloperDocs]

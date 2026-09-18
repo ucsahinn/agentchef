@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dateChecked": "2026-08-06",
+  "dateChecked": "2026-09-18",
   "minimumSourceBackedItems": 100,
   "minimumDistinctSourceMarkers": 20,
   "requiredGuardrailBlocks": ["Source refresh protocol:", "Cross-repo transfer protocol:", "Research synthesis protocol:", "Adversarial validation protocol:", "Source currency protocol:", "Corpus expansion protocol:", "Expert calibration protocol:"],
@@ -159,7 +159,7 @@
       "sourceMarkers": ["OpenAI Codex subagents"]
     },
     "owasp_asvs": {
-      "url": "https://owasp.org/www-project-application-security-verification-standard/",
+      "url": "https://owasp.org/ASVS/",
       "sourceType": "standards and vendor guidance",
       "stalenessRisk": "low",
       "reviewCadenceDays": 180,
@@ -509,9 +509,9 @@
       "adoptionStatus": "first_party_supplemental",
       "runtimeUse": "supplemental_pattern",
       "runtimeAuthority": false,
-      "defaultRuntimeAuthorityWarning": "Use only for Codex Chef's reviewed local synthesis, validators, completion audits, and repo-specific operating patterns; external behavior still needs the linked authority reference.",
+      "defaultRuntimeAuthorityWarning": "Use only for AgentChef's reviewed local synthesis, validators, completion audits, and repo-specific operating patterns; external behavior still needs the linked authority reference.",
       "relatedAuthorityRefs": ["openai_codex_subagents", "openai_codex_manual", "nist_ssdf"],
-      "sourceMarkers": ["Codex Chef local synthesis"],
+      "sourceMarkers": ["AgentChef local synthesis"],
       "appliesToAgents": ["code_mapper", "docs_researcher", "context_architect", "prompt_architect", "mcp_integrator", "product_strategist", "engineering_planner", "design_reviewer", "devex_auditor", "root_cause_debugger", "qa_lead", "performance_auditor", "google_seo_auditor", "docs_author", "spec_author", "code_reviewer", "frontend_verifier", "security_auditor", "test_verifier", "release_verifier", "codex_doctor"]
     },
     "skills_cli_public_index_searches": {
@@ -659,7 +659,7 @@
     }
   },
   "sourceMarkerAliases": {
-    "codex_chef_local_synthesis": ["Codex Chef agent research corpus", "Codex Chef catalog pattern", "Codex Chef docs", "Codex Chef doctor pattern", "Codex Chef install docs pattern", "Codex Chef install-plan pattern", "Codex Chef local prompt patterns", "Codex Chef local validator pattern", "Codex Chef locale validation", "Codex Chef locale validators", "Codex Chef MCP validator", "Codex Chef package scripts", "Codex Chef package-surface validator", "Codex Chef prompt patterns", "Codex Chef release validator", "Codex Chef repo conventions", "Codex Chef skill verification pattern", "Codex Chef UI standards", "Codex Chef validator pattern", "Codex Chef validators", "Codex Chef Windows setup memory", "Codex review conventions", "Codex verification guidance", "completion-audit guidance", "DevEx onboarding practice", "docs research practice", "enterprise dashboard UX standards", "Git hygiene practice", "incident triage practice", "official docs practice", "product discovery practice", "product strategy practice", "QA practice", "release management practice", "release readiness practice", "risk-based QA practice", "software reliability practice", "software testing practice"],
+    "codex_chef_local_synthesis": ["AgentChef agent research corpus", "AgentChef catalog pattern", "AgentChef docs", "AgentChef doctor pattern", "AgentChef install docs pattern", "AgentChef install-plan pattern", "AgentChef local prompt patterns", "AgentChef local validator pattern", "AgentChef locale validation", "AgentChef locale validators", "AgentChef MCP validator", "AgentChef package scripts", "AgentChef package-surface validator", "AgentChef prompt patterns", "AgentChef release validator", "AgentChef repo conventions", "AgentChef skill verification pattern", "AgentChef UI standards", "AgentChef validator pattern", "AgentChef validators", "AgentChef Windows setup memory", "Codex review conventions", "Codex verification guidance", "completion-audit guidance", "DevEx onboarding practice", "docs research practice", "enterprise dashboard UX standards", "Git hygiene practice", "incident triage practice", "official docs practice", "product discovery practice", "product strategy practice", "QA practice", "release management practice", "release readiness practice", "risk-based QA practice", "software reliability practice", "software testing practice"],
     "context7": ["Context7 Lighthouse", "Context7 Lighthouse docs", "Context7 Next.js docs", "Context7 Next.js/React docs", "Context7 Playwright docs", "Context7 Playwright tracing docs", "Context7 Playwright/Next/Sentry docs", "Context7 Playwright/Vitest docs", "Context7 React", "Context7 React docs", "Context7 React/Next docs", "Context7 React/Next.js docs", "Context7 React/Next/Vitest docs", "Context7 React/Next/Vitest/Playwright docs", "Context7 Sentry docs", "Context7 Vitest docs", "Context7 Vitest/Playwright docs", "Context7 workflow", "https://context7.com/"],
     "diataxis": ["Diataxis documentation framework", "Diataxis explanation guidance", "Diataxis explanation/how-to split", "Diataxis explanation/reference split", "Diataxis how-to guidance", "Diataxis reference guidance", "Diataxis reference/how-to split", "Diataxis tutorials/how-to", "Diataxis user orientation", "Diataxis user-need framing", "https://diataxis.fr/", "https://diataxis.fr/explanation/", "https://diataxis.fr/how-to-guides/", "https://diataxis.fr/reference/"],
     "github_actions_security": ["GitHub Actions secure use", "GitHub Actions security", "GitHub Actions/GitHub Docs", "GitHub workflow hygiene"],
@@ -678,12 +678,12 @@
     "openai_codex_approvals_security": ["https://developers.openai.com/codex/agent-approvals-security#sandbox-and-approvals", "OpenAI approvals", "OpenAI Codex approval/sandbox guidance", "OpenAI Codex approvals/sandbox guidance", "OpenAI Codex config/sandbox guidance", "OpenAI Codex sandbox guidance"],
     "openai_codex_config": ["https://developers.openai.com/codex/config-reference", "OpenAI Codex config docs", "OpenAI Codex config reference", "OpenAI Codex config/MCP docs", "OpenAI Codex config/plugins docs", "OpenAI Codex config/subagents docs", "OpenAI Codex config/subagents/skills docs", "OpenAI Codex glossary/config docs", "OpenAI Codex Windows/config docs"],
     "openai_codex_customization": ["OpenAI Codex AGENTS.md discovery", "OpenAI Codex customization guidance", "OpenAI Codex prompting guidance", "OpenAI Codex research guidance"],
-    "openai_codex_manual": ["Codex Chef local working agreements", "Codex Chef working agreements", "https://developers.openai.com/codex/codex-manual.md", "OpenAI Codex best practices", "OpenAI Codex docs", "OpenAI Codex Windows platform guidance", "OpenAI Codex working agreements", "OpenAI docs"],
+    "openai_codex_manual": ["AgentChef local working agreements", "AgentChef working agreements", "https://developers.openai.com/codex/codex-manual.md", "OpenAI Codex best practices", "OpenAI Codex docs", "OpenAI Codex Windows platform guidance", "OpenAI Codex working agreements", "OpenAI docs"],
     "openai_codex_mcp": ["OpenAI Codex MCP config"],
     "openai_codex_plugins": ["OpenAI Codex plugins/config", "OpenAI Codex plugins/MCP config"],
     "openai_codex_skills": ["OpenAI Codex skills progressive disclosure", "OpenAI Codex skills/config docs", "OpenAI Codex skills/plugins", "OpenAI Codex skills/plugins/config docs", "OpenAI Codex skills/subagents"],
     "openai_codex_subagents": ["https://developers.openai.com/codex/subagents", "OpenAI Codex subagents/config docs"],
-    "owasp_asvs": ["https://owasp.org/www-project-application-security-verification-standard/"],
+    "owasp_asvs": ["https://owasp.org/ASVS/", "https://owasp.org/www-project-application-security-verification-standard/"],
     "playwright_docs": ["https://playwright.dev/docs/test-snapshots", "Playwright docs", "Playwright trace viewer docs", "Playwright tracing docs", "Playwright/Vitest docs", "Vitest/Playwright docs"],
     "powershell_shouldprocess": ["Microsoft PowerShell docs", "Microsoft PowerShell ShouldProcess docs"],
     "reflexion_paper": ["Reflexion research"],

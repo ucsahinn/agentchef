@@ -1,8 +1,14 @@
 # ADR-005: Make Kitchen the single distributable Agent Workspace and retain Chef, Control, and Brain as internal modules
 
+> **Superseded by [ADR-006](006-agentchef-independent-dual-target-product.md) on 2026-09-18.**
+> Kitchen keeps its own hash-pinned copy of the Chef module and does not
+> depend on this repository. This repository continues as an independent,
+> dual-target product; the module-boundary rules below are kept only as
+> history of the Kitchen program.
+
 ## Status
 
-Accepted
+Superseded
 
 ## Date
 

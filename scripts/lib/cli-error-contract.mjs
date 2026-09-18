@@ -150,11 +150,11 @@ export function emitCliError({
         error: { code, message }
       }, null, 2)}\n`);
     } else {
-      fs.writeSync(2, wrapPlainError(stripTerminalControls(String(prefix || "Codex Chef error")), message));
+      fs.writeSync(2, wrapPlainError(stripTerminalControls(String(prefix || "AgentChef error")), message));
     }
   } catch {
     try {
-      fs.writeSync(2, "Codex Chef error: Unable to render a safe error message.\n");
+      fs.writeSync(2, "AgentChef error: Unable to render a safe error message.\n");
     } catch {
       // The process still exits nonzero when even the fixed fallback cannot be written.
     }

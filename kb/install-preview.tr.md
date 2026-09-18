@@ -1,6 +1,6 @@
 # Kurulum Ön İzleme Güvenliği
 
-Codex Chef'in `~/.codex`, `~/.agents` veya opsiyonel Git guard hedeflerine
+AgentChef'in `~/.codex`, `~/.agents` veya opsiyonel Git guard hedeflerine
 yazmadan önce ne yapacağını görmek istiyorsan bu makaleyi kullan.
 
 ## Önerilen Akış

@@ -1,6 +1,6 @@
 # Managed File Drift
 
-Use this article when a validator or runtime check reports Codex Chef-managed
+Use this article when a validator or runtime check reports AgentChef-managed
 files are missing, stale, or different from the repository templates.
 
 ## Managed Surfaces

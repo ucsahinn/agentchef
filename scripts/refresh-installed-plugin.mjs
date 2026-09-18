@@ -213,7 +213,7 @@ export function refreshInstalledPlugin({
 function printHelp() {
   console.log(`Usage: node scripts/refresh-installed-plugin.mjs [options]
 
-Refresh the versioned Codex cache only when Codex Chef is already installed.
+Refresh the versioned Codex cache only when AgentChef is already installed.
 
 Options:
   --apply                 Refresh a stale installed plugin cache
@@ -292,7 +292,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(scriptPath
   try {
     main(process.argv.slice(2));
   } catch (error) {
-    console.error(`Codex Chef plugin refresh error: ${error.message}`);
+    console.error(`AgentChef plugin refresh error: ${error.message}`);
     process.exitCode = 1;
   }
 }

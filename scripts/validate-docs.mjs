@@ -100,8 +100,8 @@ function validateDocText(file) {
   }
   if (rel === "docs/install.md" || rel === "docs/install.tr.md") {
     const portableRequirements = rel === "docs/install.md"
-      ? ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "does not install or control"]
-      : ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "authority layer"];
+      ? ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "installs only its own managed surfaces"]
+      : ["Portable Workspace OS", "CODEX_HOME", "AGENTS_HOME", "yalnızca kendi yönettiği yüzeyleri kurar"];
     for (const required of portableRequirements) {
       if (!text.includes(required)) {
         failures.push(`${rel} must retain the portable Workspace OS boundary: ${required}`);
@@ -109,11 +109,11 @@ function validateDocText(file) {
     }
   }
   if (/^docs\/expected-output(?:\.(?:de|es|pt-BR|tr|fr))?\.md$/.test(rel)) {
-    const versionPattern = /codex-chef@(\d+\.\d+\.\d+)/g;
+    const versionPattern = /agentchef@(\d+\.\d+\.\d+)/g;
     let match;
     while ((match = versionPattern.exec(text)) !== null) {
       if (match[1] !== packageJson.version) {
-        failures.push(`${rel} has stale package example codex-chef@${match[1]}; expected codex-chef@${packageJson.version}`);
+        failures.push(`${rel} has stale package example agentchef@${match[1]}; expected agentchef@${packageJson.version}`);
       }
     }
     if (!text.includes(routingPolicyLine)) {
@@ -123,7 +123,7 @@ function validateDocText(file) {
       for (const requiredExpectedOutput of [
         "PowerShell Non-Interactive Dry Run",
         "PowerShell Interactive Dry Run",
-        "[*] Codex Chef installer",
+        "[*] AgentChef installer",
         "Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled."
       ]) {
         if (!text.includes(requiredExpectedOutput)) failures.push(`${rel} missing current expected-output snippet: ${requiredExpectedOutput}`);

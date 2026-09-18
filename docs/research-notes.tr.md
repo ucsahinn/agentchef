@@ -77,7 +77,7 @@ otoritesi resmi dokümanların yerini almaz.
 - Default kurulabilir skill seti sadece ayri ve yuksek faydali workflow varsa
   genisletilir: systematic debugging, refactor request planning,
   Playwright tabanli webapp testing, MCP server building ve uc first-party
-  Codex Chef ekosistem skill'i mevcut listeyle cakismadan bundled ajanlari
+  AgentChef ekosistem skill'i mevcut listeyle cakismadan bundled ajanlari
   tamamlar.
 - Bir skill sadece install sayisi daha yuksek diye secilmez. SEO marketing,
   prompt-polish, release-only ve framework/vendor-specific skill'ler faydali

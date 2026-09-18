@@ -1,4 +1,4 @@
-# Codex Chef Bilgi Bankası
+# AgentChef Bilgi Bankası
 
 Bilgi bankası, README'den sonra gelen kısa ve iş odaklı cevaplar içindir.
 Tam referans için docs sayfalarını, hızlı karar gereken durumlarda bu

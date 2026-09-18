@@ -158,7 +158,7 @@ veya kayıtlı registry paketini çalıştırmadan etkinleştirir. CLI metadatas
 uyumluluk/keşif pini olarak kalır. Default gate bu sözleşmeyi offline kontrol
 eder; `npm run verify:skills:online` her pinli checkout'u ve npm integrity
 değerini doğrular.
-Hedef yoksa doğrudan kurulur. Geçerli ve kendi içinde tutarlı Codex Chef
+Hedef yoksa doğrudan kurulur. Geçerli ve kendi içinde tutarlı AgentChef
 provenance marker'ı, zorunlu full-tree backup ile managed upgrade'e izin verir.
 Unmarked, foreign veya lokal olarak drift etmiş aynı adlı hedefler default
 olarak korunur. Adoption bilinçli olarak skill bazındadır: operator exact hedefi
@@ -238,7 +238,7 @@ Installer'lar yalniz `codex-chef-workflows` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.
 
-Yonetilen installer on bir canonical lokal workflow dizininin tamamını
+Yonetilen installer on canonical lokal workflow dizininin tamamını
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder; böylece direct invocation
 plugin kurulumuna bağlı kalmaz. Skill başına kalıcı ownership marker,
 Chef-managed veya exact legacy içeriği foreign collision'dan ayırır. Foreign
@@ -264,7 +264,7 @@ davranır.
 repair/reconcile yoludur. `--apply` olmadan read-only calisir ve managed drift,
 eksik config bloklari, marketplace drift'i, managed plugin icindeki ekstra
 dosyalar, curated olmayan skill'ler ve duplicate skill adlarini raporlar.
-`--apply` ile Serena köprüsü dahil yalnızca Codex Chef'in yönettiği dosyaları
+`--apply` ile Serena köprüsü dahil yalnızca AgentChef'in yönettiği dosyaları
 backup alıp onarır, eksik config bloklarini merge eder ve baska marketplace plugin'lerini koruyarak Codex
 Chef marketplace kaydini yeniler.
 
@@ -279,7 +279,7 @@ edebilir; preview bunu asla yapmaz.
 Repair modu user skill'lerini silmez. Ekstra global skill'ler ve duplicate skill
 adlari cleanup adayi olarak raporlanir; cunku Codex'in initial skill-list
 butcesini sisirebilirler ama kullanici tarafindan bilerek kurulmus olabilirler.
-Managed Codex Chef plugin dizini icindeki ekstra dosyalari silmek icin ayrica
+Managed AgentChef plugin dizini icindeki ekstra dosyalari silmek icin ayrica
 `--prune-managed-plugin-extras` flag'i gerekir; bu islem de backup sonrasi
 yalnizca tek managed plugin hedefiyle sinirli kalir.
 
@@ -294,7 +294,7 @@ korur ve sonra `git pull --ff-only` calistirir. Yeni commit cekilirse güncel
 ağaçtan installer dry-run çalıştırıp fresh preview basar; aynı onaylı oturumda lokal
 validation, managed yenileme ve kurulu runtime doğrulamasıyla devam eder. İkinci
 çalıştırma gerekmez. Repo zaten guncelse managed refresh oncesi lokal validation
-calistirir, sonra scoped managed Codex Chef dosyalarini backup alan installer
+calistirir, sonra scoped managed AgentChef dosyalarini backup alan installer
 uzerinden yeniler. Bu refresh kaynakta
 sahip olunan dosyaları senkronlar, ilgisiz dizin eklerini korur ve daha önce
 kurulmuş eski plugin cache'ini yerinde yeniler. Publish, unscoped cleanup, curated global skill kurma, opsiyonel
@@ -327,7 +327,7 @@ Restore backup archive'larini untrusted input kabul eder. `npm run chef --
 --backups --backup <id> --restore` preview'dir. Apply path'i `--apply` ister,
 exact source byte'larini okuyup dogrular, mevcut target'larin fresh rollback
 backup'ini olusturur, unsafe archive path'lerini ve symlink'leri reddeder,
-yalniz aktif Codex veya Agents home altindaki bilinen Codex Chef managed
+yalniz aktif Codex veya Agents home altindaki bilinen AgentChef managed
 dosyalarini restore eder. Sonraki bir write fail olursa daha once yazilan
 target'lar fresh rollback backup'tan geri alinir. Commit-pinned skill
 archive'lari catalog'daki tek bir skill ID ile sinirlanir ve handled failure

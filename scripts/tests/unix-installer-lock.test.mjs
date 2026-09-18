@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { scaledTimeout } from "../lib/test-timeouts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const bash = process.platform === "win32"
@@ -46,7 +47,7 @@ test("Unix installer releases its lock so a fresh home can be installed twice", 
       env,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: 300000,
+      timeout: scaledTimeout(300000),
       windowsHide: true
     });
     assert.equal(first.status, 0, `first install failed:\n${output(first)}`);
@@ -57,7 +58,7 @@ test("Unix installer releases its lock so a fresh home can be installed twice", 
       env,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: 300000,
+      timeout: scaledTimeout(300000),
       windowsHide: true
     });
     assert.equal(second.status, 0, `second install failed:\n${output(second)}`);

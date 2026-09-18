@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -44,7 +45,7 @@ function runRepair(args, codexHome, agentsHome, cwd = root) {
     encoding: "utf8",
     env: fixtureChildEnv(),
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 120000,
+    timeout: scaledTimeout(120000),
     windowsHide: true
   });
 }
@@ -242,7 +243,7 @@ if (externalCwdPlan) {
     fail("repair plan from external cwd must still resolve source files from the repair script location.");
   }
   if (externalCwdPlan.managedFiles?.expected < 30 || !externalCwdPlan.actions?.some((action) => String(action.id || "").startsWith("codex-agents:"))) {
-    fail("repair plan from external cwd must still find managed Codex Chef source files.");
+    fail("repair plan from external cwd must still find managed AgentChef source files.");
   }
 }
 
@@ -346,7 +347,7 @@ if (!chefPlugin || chefPlugin.source?.path !== expectedPluginSource) {
   fail("repair apply must write the portable marketplace-root-relative managed plugin path.");
 }
 if (chefPlugin?.interface?.shortDescription !== "Security-first Codex planning, maintenance, and verification workflows.") {
-  fail("repair apply must preserve Codex Chef marketplace interface metadata.");
+  fail("repair apply must preserve AgentChef marketplace interface metadata.");
 }
 
 const repairedConfig = fs.readFileSync(path.join(codexHome, "config.toml"), "utf8");

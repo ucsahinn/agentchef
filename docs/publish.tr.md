@@ -45,16 +45,16 @@ Oluşan `tmp/release-notes-current.md` lokal release girdisidir; tracked source 
 Açık onay ve temiz staged review sonrasında:
 
 ```bash
-git commit -m "Prepare Codex Chef public docs"
+git commit -m "Prepare AgentChef public docs"
 git push origin main
 ```
 
 Gelecekteki bir sürüm için `<version>` değerini ancak package metadata ve iki release-note dosyası hizalandıktan sonra değiştir:
 
 ```bash
-git tag -a v<version> -m "Codex Chef v<version>"
+git tag -a v<version> -m "AgentChef v<version>"
 git push origin v<version>
-gh release create v<version> --title "Codex Chef v<version>" --notes-file tmp/release-notes-current.md
+gh release create v<version> --title "AgentChef v<version>" --notes-file tmp/release-notes-current.md
 ```
 
 ## Public Durumu Doğrula

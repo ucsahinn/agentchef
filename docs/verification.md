@@ -44,7 +44,7 @@ This runs:
   stale `dateChecked` checks, and per-agent expertise signal coverage.
 - `scripts/validate-mcp-config.mjs`: MCP catalog/config drift checks across
   Windows and Unix Codex templates.
-- `scripts/validate-chef-cli.mjs`: grouped Codex Chef command-center contract,
+- `scripts/validate-chef-cli.mjs`: grouped AgentChef command-center contract,
   accurate write/account-guidance badges, state-aware install preview, curated
   skill ready/missing/invalid fixtures, installed MCP config inventory, log
   location, README usage snippets, and public-safe GitHub auth boundary
@@ -67,7 +67,7 @@ This runs:
 - `scripts/validate-release-readiness.mjs`: release notes, GitHub settings docs,
   workflow hardening, Gitleaks gate documentation, and source artifact hygiene.
 - `scripts/verify-install-runtime.mjs`: optional read-only post-install runtime
-  verification that compares installed Codex Chef targets with the active
+  verification that compares installed AgentChef targets with the active
   Codex CLI `CODEX_HOME`.
 
 Additional release checks:
@@ -169,7 +169,7 @@ Bash dry run:
 ./scripts/install.sh --all --dry-run
 ```
 
-Codex Chef CLI smoke:
+AgentChef CLI smoke:
 
 ```bash
 npm run validate:chef-cli

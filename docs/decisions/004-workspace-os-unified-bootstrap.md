@@ -1,8 +1,14 @@
 # ADR-004: Keep unified Workspace OS bootstrap Windows-owned, preview-first, and state-free
 
+> **Superseded by [ADR-006](006-agentchef-independent-dual-target-product.md) on 2026-09-18.**
+> The three-product bootstrap it describes is no longer pursued in this
+> repository. Its safety constraints (preview-first installation, path
+> ownership, backup before replacement, fail-closed health checks) remain in
+> force and are restated by ADR-006.
+
 ## Status
 
-Proposed
+Superseded
 
 ## Date
 

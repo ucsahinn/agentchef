@@ -1,8 +1,12 @@
 # ADR-002: Compose Brain Content And Windows ACL Status
 
+> **Superseded by [ADR-006](006-agentchef-independent-dual-target-product.md) on 2026-09-18.**
+> The built-in Brain workflow was retired in Codex Chef 0.6.0; this record is
+> kept as history. See [Brain retirement](../brain-retirement.md).
+
 ## Status
 
-Accepted
+Superseded
 
 ## Date
 

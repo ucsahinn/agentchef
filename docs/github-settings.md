@@ -14,20 +14,32 @@ target: GitHub exposes upload through an authenticated web session, while the
 available isolated browser session is anonymous and the public GraphQL field
 still returns GitHub's generated image.
 
+## Repository Rename
+
+The repository was renamed from `codex-chef` to `agentchef` with
+`gh repo rename agentchef`. GitHub redirects the old URL, stars, forks, issues,
+releases, and tags are preserved. After the rename, every local clone must run
+`git remote set-url origin https://github.com/ucsahinn/agentchef.git`, and the
+branch-protection status-check names below must be re-applied because the
+portability job names changed with the Node baseline.
+
 ## Description
 
 ```text
-A cross-platform Codex setup kit with specialist agents, curated skills, safe MCP defaults, preview-first installation, and clear verification.
+An unofficial, cross-platform setup kit for OpenAI Codex CLI and Anthropic Claude Code: specialist agents, curated skills, safe MCP defaults, preview-first installation, and clear verification.
 ```
 
 ## Topics
 
 ```text
+agentchef
 codex
-codex-chef
-openai
 codex-cli
+claude-code
+openai
+anthropic
 ai-agents
+agent-tooling
 mcp
 model-context-protocol
 agent-skills
@@ -63,7 +75,7 @@ validated locally but is not yet uploaded to the account-level setting.
 
 - Default branch: `main`.
 - `main` protection requires `validate`, `windows-installer`,
-  `portability (ubuntu-latest, Node 18)`, and
+  `portability (ubuntu-latest, Node 22)`, and
   `portability (macos-latest, Node 24)` with strict branch freshness.
 - Force-pushes and branch deletion are disabled; repository administrators are
   not enforced so an explicitly approved maintainer push remains possible.
@@ -72,11 +84,11 @@ validated locally but is not yet uploaded to the account-level setting.
 
 ## Release Metadata
 
-For v0.5.74:
+For the next release (replace `<version>`):
 
 ```text
-Title: Codex Chef v0.5.74
-Tag: v0.5.74
+Title: AgentChef v<version>
+Tag: v<version>
 Notes: tmp/release-notes-current.md
 ```
 

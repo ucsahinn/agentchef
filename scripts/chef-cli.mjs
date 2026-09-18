@@ -87,7 +87,7 @@ function localText(en, tr) {
 }
 
 function cliError(en, tr = en) {
-  const prefix = isTr() ? "Codex Chef CLI hatasi" : "Codex Chef CLI error";
+  const prefix = isTr() ? "AgentChef CLI hatasi" : "AgentChef CLI error";
   process.exit(emitCliError({
     tool: "chef",
     error: new CliUsageError(localText(en, tr)),
@@ -155,8 +155,6 @@ const ACTION_FLAGS = new Map([
   ["--skills", "skills"],
   ["--mcp", "mcp"],
   ["--routing", "routing"],
-  ["--continuity", "continuity"],
-  ["--control-brain", "continuity"],
   ["--diagnostics", "diagnostics"],
   ["--diagnose", "diagnostics"],
   ["--processes", "processes"],
@@ -284,7 +282,6 @@ const MENU_ASCII_ICONS = {
   skills: "SK",
   mcp: "MC",
   routing: "RT",
-  continuity: "CB",
   diagnostics: "DG",
   processes: "PS",
   auth: "AU",
@@ -306,7 +303,6 @@ const MENU_RICH_ICONS = {
   skills: "🧠",
   mcp: "🔌",
   routing: "🧭",
-  continuity: "🧩",
   diagnostics: "🔎",
   processes: "⚙️",
   auth: "🔐",
@@ -587,7 +583,7 @@ const MENU_ITEMS = [
   },
   {
     id: "update",
-    label: "Update Codex Chef",
+    label: "Update AgentChef",
     writes: "Typed confirmation: repo/global/network",
     description: "Check, confirm, fast-forward, validate, and refresh managed files in one flow."
   },
@@ -658,12 +654,6 @@ const MENU_ITEMS = [
     description: "List recent Chef log metadata without printing raw log contents."
   },
   {
-    id: "continuity",
-    label: "Control & Brain",
-    writes: "No writes",
-    description: "Show when Control routing activates, whether its MCP is configured, and whether Brain has an explicit vault target."
-  },
-  {
     id: "language",
     label: "Language",
     writes: "No writes",
@@ -700,7 +690,7 @@ const MENU_GROUPS = [
     labelTr: "Yetenekler",
     description: "Curated skills, MCP connectors, and routing ownership.",
     descriptionTr: "Seçili skill'ler, MCP bağlayıcıları ve yönlendirme sahipliği.",
-    itemIds: ["skills", "mcp", "routing", "continuity"]
+    itemIds: ["skills", "mcp", "routing"]
   },
   {
     id: "recovery",
@@ -769,7 +759,6 @@ function menuImportance(item) {
     processes: localText("EVIDENCE", "KANIT"),
     auth: localText("GUIDANCE", "REHBER"),
     logs: localText("HISTORY", "GEÇMİŞ"),
-    continuity: localText("CONTINUITY", "SÜREKLİLİK"),
     language: localText("PREFERENCE", "TERCİH"),
     exit: localText("SESSION", "OTURUM")
   };
@@ -816,7 +805,7 @@ const MENU_TEXT_TR = {
     writes: "Yazmaz"
   },
   update: {
-    label: "Codex Chef'i güncelle",
+    label: "AgentChef'i güncelle",
     description: "Kontrol, onay, Git fast-forward, doğrulama ve yönetilen dosya yenilemeyi tek akışta tamamlar.",
     writes: "Yazılı onay: repo/global/ağ"
   },
@@ -875,11 +864,6 @@ const MENU_TEXT_TR = {
     description: "Ham log içeriğini basmadan son Chef log bilgisini listeler.",
     writes: "Yazmaz"
   },
-  continuity: {
-    label: "Control ve Brain",
-    description: "Control yönlendirmesinin ne zaman açıldığını, MCP yapılandırmasını ve Brain için açık vault hedefi olup olmadığını gösterir.",
-    writes: "Yazmaz"
-  },
   language: {
     label: "Dil",
     description: "İnteraktif CLI dilini Türkçe ve İngilizce arasında değiştirir.",
@@ -932,7 +916,6 @@ function menuItemColor(item) {
     skills: "brightMagenta",
     mcp: "brightCyan",
     routing: "brightBlue",
-    continuity: "brightMagenta",
     diagnostics: "brightGreen",
     processes: "brightCyan",
     auth: "brightYellow",
@@ -1102,7 +1085,7 @@ function printHelpText(value) {
 
 function printHelp() {
   if (isTr()) {
-    printHelpText(`${colorize("Codex Chef CLI", "cyan")}
+    printHelpText(`${colorize("AgentChef CLI", "cyan")}
 
 Kullanım:
   npm run chef
@@ -1111,7 +1094,7 @@ Kullanım:
   npm run chef -- --diagnostics
 
 Komut kısayolları:
-  Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --continuity/--control-brain, --diagnostics, --processes, --auth, --logs
+  Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
   Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --processes --cleanup-stale --apply
   Süreç temizliği: --processes --cleanup-stale [--apply]; --apply olmadan yalnız önizleme
   Yedekler: --backups [--backup ID] [--restore|--delete --apply]
@@ -1127,8 +1110,7 @@ Seçenekler:
   --repo-only    Status için kurulu runtime, global skill kökleri, Codex logları ve Codex CLI problarını atlar
   --profile ID   --routing ile tek routing profilini gösterir
   --diagnose     --diagnostics kısa yolu
-  --control-brain --continuity kısa yolu
-  --backup ID    Belirli Codex Chef yedek arşivini inceler veya geri yükler
+  --backup ID    Belirli AgentChef yedek arşivini inceler veya geri yükler
   --restore      --backup ID için geri yükleme preview'i; dosya kopyalamak için --apply ekle
   --delete       --backup ID için silme preview'i; arşivi silmek için --apply ekle
   --verbose-plan Preview ekranlarında tam install dry-run kanıtını basar
@@ -1138,9 +1120,9 @@ Seçenekler:
   --help         Bu yardımı gösterir
 
 Ekranlar:
-  Sistem durumu, Repo sağlığı, Tam kontrol, Kurulum ön izlemesi, Codex Chef'i güncelle,
+  Sistem durumu, Repo sağlığı, Tam kontrol, Kurulum ön izlemesi, AgentChef'i güncelle,
   Tam kurulum, Kurulumu yenile, Kurulumu onar, Yedekler, Skill kataloğu,
-  MCP bağlayıcıları, Yönlendirme rehberi, Control ve Brain, Tanılama merkezi, Süreç denetimi,
+  MCP bağlayıcıları, Yönlendirme rehberi, Tanılama merkezi, Süreç denetimi,
   Kimlik notları, Son loglar
 
 Detay:
@@ -1151,7 +1133,7 @@ Loglar:
 `);
     return;
   }
-  printHelpText(`${colorize("Codex Chef CLI", "cyan")}
+  printHelpText(`${colorize("AgentChef CLI", "cyan")}
 
 Usage:
   npm run chef
@@ -1160,7 +1142,7 @@ Usage:
   npm run chef -- --diagnostics
 
 Reference actions:
-  Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --continuity/--control-brain, --diagnostics, --processes, --auth, --logs
+  Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
   Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --processes --cleanup-stale --apply
   Process cleanup: --processes --cleanup-stale [--apply]; preview-only without --apply
   Backups: --backups [--backup ID] [--restore|--delete --apply]
@@ -1168,9 +1150,9 @@ Reference actions:
   Verbose preview: --preview --verbose-plan
 
 Operator screens:
-  System status, Repo health, Full checkup, Install preview, Update Codex Chef,
+  System status, Repo health, Full checkup, Install preview, Update AgentChef,
   Full install, Refresh setup, Repair setup, Backups, Skill status & catalog,
-  MCP connectors, Routing guide, Control & Brain, Diagnostics hub, Process audit,
+  MCP connectors, Routing guide, Diagnostics hub, Process audit,
   Auth notes, Recent logs
 
 Options:
@@ -1182,8 +1164,7 @@ Options:
   --repo-only    Skip installed runtime, global skill roots, Codex logs, and Codex CLI probes for status
   --profile ID   Show one routing profile when used with --routing
   --diagnose     Alias for --diagnostics
-  --control-brain Alias for --continuity
-  --backup ID    Inspect or restore a specific Codex Chef backup archive
+  --backup ID    Inspect or restore a specific AgentChef backup archive
   --restore      Preview restore for --backup ID; add --apply to copy files back
   --delete       Preview deletion for --backup ID; add --apply to remove the archive
   --verbose-plan Print the full install dry-run evidence for preview screens
@@ -1253,7 +1234,7 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
     : commandArgs;
   const startedAt = new Date().toISOString();
   const header = [
-    `Codex Chef CLI log`,
+    `AgentChef CLI log`,
     `action=${action}`,
     `startedAt=${startedAt}`,
     `cwd=${redactLocalPaths(root)}`,
@@ -1357,12 +1338,12 @@ async function confirmWriteAction(action, detail, interaction = {}) {
 
 function printHeader() {
   printBrandSignature();
-  printDivider("Codex Chef");
+  printDivider("AgentChef");
   if (supportsColor()) {
     console.log(`${ICONS.chef} ${paint("CODEX CHEF", "bold", "brightCyan")}  ${paint("OPERATOR CONSOLE", "bold", "brightMagenta")}`);
     console.log(`${paint("●", "brightGreen")} ${paint(localText("READY", "HAZIR"), "bold", "brightGreen")}  ${paint("•", "gray")}  ${styleMuted(`v${currentPackageVersion()}  ${gitBranch()}`)}`);
   } else {
-    console.log(`${ICONS.chef} Codex Chef`);
+    console.log(`${ICONS.chef} AgentChef`);
   }
   printWrapped(localText(
     "One operator board for status, setup, backups, skills, MCP connectors, diagnostics, auth notes, and logs.",
@@ -1378,9 +1359,9 @@ function printHeader() {
 function printMenu() {
   printDivider("COMMAND CENTER");
   if (supportsColor()) {
-    console.log(`${paint("✦", "bold", "brightMagenta")} ${styleHeading(localText("Codex Chef command center", "Codex Chef komuta merkezi"))}`);
+    console.log(`${paint("✦", "bold", "brightMagenta")} ${styleHeading(localText("AgentChef command center", "AgentChef komuta merkezi"))}`);
   } else {
-    console.log(styleHeading(localText("Codex Chef command center", "Codex Chef komuta merkezi")));
+    console.log(styleHeading(localText("AgentChef command center", "AgentChef komuta merkezi")));
   }
   printOperatorStatusStrip();
   console.log("");
@@ -1565,7 +1546,7 @@ function runDoctor() {
     ], {
       quiet: true,
       captureOnly: true,
-      waitNote: "Verifying installed Codex Chef runtime; this can take 30-60 seconds."
+      waitNote: "Verifying installed AgentChef runtime; this can take 30-60 seconds."
     });
 
     const parseReport = (result) => {
@@ -1626,7 +1607,7 @@ function runDoctor() {
     "--expect-git-guards",
     "--require-live-runtime"
   ], {
-    waitNote: "Verifying installed Codex Chef runtime; this can take 30-60 seconds."
+    waitNote: "Verifying installed AgentChef runtime; this can take 30-60 seconds."
   });
 }
 
@@ -2056,10 +2037,10 @@ async function runUpdate(interaction = {}) {
     process.stdout.write(dirty.output.endsWith("\n") ? dirty.output : `${dirty.output}\n`);
     console.log(`${ICONS.info} ${localText(
       isMenuInteraction(interaction)
-        ? "Commit, stash, or move local changes, then choose Update Codex Chef again from this menu."
+        ? "Commit, stash, or move local changes, then choose Update AgentChef again from this menu."
         : "Commit, stash, or move local changes, then rerun npm run chef -- --update --apply.",
       isMenuInteraction(interaction)
-        ? "Lokal değişiklikleri commit/stash/move yapın, ardından bu menüden Codex Chef'i güncelle seçeneğini yeniden seçin."
+        ? "Lokal değişiklikleri commit/stash/move yapın, ardından bu menüden AgentChef'i güncelle seçeneğini yeniden seçin."
         : "Lokal değişiklikleri commit/stash/move yapın, sonra npm run chef -- --update --apply tekrar çalıştırın."
     )}`);
     return { ok: false };
@@ -2106,8 +2087,8 @@ async function runUpdate(interaction = {}) {
     const allowed = await confirmWriteAction(
       localText("Update", "Guncelleme"),
       localText(
-        `Codex Chef is already at v${beforeVersion}; validate the current checkout, then refresh managed Codex files and verify the installed runtime.`,
-        `Codex Chef zaten v${beforeVersion} sürümünde; doğrulanacak, managed Codex dosyaları yenilenecek ve kurulu runtime kontrol edilecek.`
+        `AgentChef is already at v${beforeVersion}; validate the current checkout, then refresh managed Codex files and verify the installed runtime.`,
+        `AgentChef zaten v${beforeVersion} sürümünde; doğrulanacak, managed Codex dosyaları yenilenecek ve kurulu runtime kontrol edilecek.`
       ),
       interaction
     );
@@ -2156,11 +2137,11 @@ async function runUpdate(interaction = {}) {
     localText("Update", "Guncelleme"),
     localText(
       versionOrder === 0
-        ? `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef to a newer source revision at v${remoteVersion.value} and refreshes managed files.`
-        : `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards Codex Chef from v${beforeVersion} to v${remoteVersion.value} and refreshes managed files.`,
+        ? `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards AgentChef to a newer source revision at v${remoteVersion.value} and refreshes managed files.`
+        : `Update validates fetched commit ${candidate.value.slice(0, 12)}, then fast-forwards AgentChef from v${beforeVersion} to v${remoteVersion.value} and refreshes managed files.`,
       versionOrder === 0
-        ? `Güncelleme alınan ${candidate.value.slice(0, 12)} commit'ini doğrular, ardından Codex Chef'i v${remoteVersion.value} sürümündeki daha yeni kaynak revizyonuna fast-forward eder ve managed Codex dosyalarını yeniler.`
-        : `Güncelleme Codex Chef'i v${beforeVersion} sürümünden v${remoteVersion.value} sürümüne fast-forward eder, doğrular ve managed Codex dosyalarını yeniler.`
+        ? `Güncelleme alınan ${candidate.value.slice(0, 12)} commit'ini doğrular, ardından AgentChef'i v${remoteVersion.value} sürümündeki daha yeni kaynak revizyonuna fast-forward eder ve managed Codex dosyalarını yeniler.`
+        : `Güncelleme AgentChef'i v${beforeVersion} sürümünden v${remoteVersion.value} sürümüne fast-forward eder, doğrular ve managed Codex dosyalarını yeniler.`
     ),
     interaction
   );
@@ -2257,7 +2238,7 @@ function outputValue(output, label) {
 
 function operationLabel(kind) {
   const labels = {
-    update: localText("Update Codex Chef", "Codex Chef'i güncelle"),
+    update: localText("Update AgentChef", "AgentChef'i güncelle"),
     install: localText("Full install", "Tam kurulum"),
     reset: localText("Force refresh", "Zorunlu yenileme"),
     repair: localText("Repair setup", "Kurulumu onar")
@@ -2354,8 +2335,8 @@ async function runInstall(interaction = {}) {
 
   if (installation.kind === "current") {
     console.log(`${ICONS.ok} ${localText(
-      "The complete Codex Chef setup is already current; nothing needs to be installed.",
-      "Codex Chef kurulumu zaten eksiksiz ve güncel; kurulacak bir şey yok."
+      "The complete AgentChef setup is already current; nothing needs to be installed.",
+      "AgentChef kurulumu zaten eksiksiz ve güncel; kurulacak bir şey yok."
     )}`);
     return { ok: true, skipped: true };
   }
@@ -2442,7 +2423,7 @@ async function runReset(interaction = {}) {
   }
   const allowed = await confirmWriteAction(
     "Reset",
-    "Reset refreshes managed Codex Chef files after backup with installer force mode; unrelated user files remain out of scope.",
+    "Reset refreshes managed AgentChef files after backup with installer force mode; unrelated user files remain out of scope.",
     interaction
   );
   if (!allowed) return { ok: false, skipped: true };
@@ -2479,7 +2460,7 @@ async function runRepair(interaction = {}) {
   }
   const allowed = await confirmWriteAction(
     "Repair",
-    "Repair can update managed Codex Chef files after backup while preserving unrelated user files.",
+    "Repair can update managed AgentChef files after backup while preserving unrelated user files.",
     interaction
   );
   if (!allowed) return { ok: false, skipped: true };
@@ -2987,7 +2968,7 @@ function recoverStaleRestoreStages(items) {
 
 function restoreBackupArchiveUnlocked(archivePath, plan) {
   if (plan.files.length === 0) {
-    throw new Error("Selected backup archive has no restorable managed Codex Chef files.");
+    throw new Error("Selected backup archive has no restorable managed AgentChef files.");
   }
   const verified = [];
   for (const item of plan.files) {
@@ -3363,7 +3344,7 @@ function printBackupInspect(archivePath, plan, interaction = {}) {
     )}`);
   }
   if (plan.files.length === 0) {
-    console.log(`${ICONS.info} ${localText("No restorable managed Codex Chef files found.", "Geri yuklenebilir managed Codex Chef dosyasi bulunamadi.")}`);
+    console.log(`${ICONS.info} ${localText("No restorable managed AgentChef files found.", "Geri yuklenebilir managed AgentChef dosyasi bulunamadi.")}`);
     return;
   }
   printRows(
@@ -3503,8 +3484,8 @@ async function runBackups(interaction = {}, requested = {}) {
       );
       printSurfaceNote(localText("Location", "Konum"), redactLocalPaths(archivePath));
       console.log(`${ICONS.info} ${localText(
-        "Deletion is limited to this resolved Codex Chef backup archive under the canonical backup root.",
-        "Silme yalnız canonical backup root altında resolve edilen bu Codex Chef yedek arşiviyle sınırlıdır."
+        "Deletion is limited to this resolved AgentChef backup archive under the canonical backup root.",
+        "Silme yalnız canonical backup root altında resolve edilen bu AgentChef yedek arşiviyle sınırlıdır."
       )}`);
       if (!writeFlowRequested(interaction)) {
         console.log(`${ICONS.info} ${localText("No backup archive deleted. Rerun with --apply to delete this archive.", "Yedek arşivi silinmedi. Bu arşivi silmek için --apply ile tekrar çalıştırın.")}`);
@@ -3521,8 +3502,8 @@ async function runBackups(interaction = {}, requested = {}) {
         : await confirmWriteAction(
           localText("Backup delete", "Yedek silme"),
           localText(
-            "Delete removes the selected Codex Chef backup archive. This does not touch live managed files, but the deleted archive cannot be restored unless you have another copy.",
-            "Silme seçili Codex Chef yedek arşivini kaldırır. Live managed dosyalara dokunmaz, ama başka kopya yoksa bu arşivden geri dönemezsiniz."
+            "Delete removes the selected AgentChef backup archive. This does not touch live managed files, but the deleted archive cannot be restored unless you have another copy.",
+            "Silme seçili AgentChef yedek arşivini kaldırır. Live managed dosyalara dokunmaz, ama başka kopya yoksa bu arşivden geri dönemezsiniz."
           ),
           interaction
         );
@@ -3554,8 +3535,8 @@ async function runBackups(interaction = {}, requested = {}) {
     const allowed = await confirmWriteAction(
       localText("Backup restore", "Yedek geri yukleme"),
       localText(
-        "Restore copies selected managed Codex Chef files from the backup archive after creating a rollback backup of current targets.",
-        "Geri yukleme, mevcut hedeflerin rollback yedegini olusturduktan sonra secili managed Codex Chef dosyalarini arsivden kopyalar."
+        "Restore copies selected managed AgentChef files from the backup archive after creating a rollback backup of current targets.",
+        "Geri yukleme, mevcut hedeflerin rollback yedegini olusturduktan sonra secili managed AgentChef dosyalarini arsivden kopyalar."
       ),
       interaction
     );
@@ -3799,7 +3780,7 @@ function skillStateText(state) {
 
 function printCuratedSkillStates(installable, installation) {
   console.log("");
-  console.log(styleHeading(localText("Codex Chef-managed skill status", "Codex Chef yönetimli skill durumu")));
+  console.log(styleHeading(localText("AgentChef-managed skill status", "AgentChef yönetimli skill durumu")));
   installable.forEach((skill, index) => {
     const state = installation.states.get(skill.name);
     const color = state === "ready" ? "brightGreen" : state === "invalid" ? "brightYellow" : "brightMagenta";
@@ -3879,8 +3860,8 @@ async function runSkills(interaction = {}) {
   printSurfaceHeader(
     localText("Skill status & catalog", "Skill durumu ve katalog"),
     localText(
-      `${managedSkills.length} Codex Chef-managed skills: ${installable.length} commit-pinned upstream and ${bundled.length} bundled/direct.`,
-      `${managedSkills.length} Codex Chef yönetimli skill: ${installable.length} commit-pinned upstream ve ${bundled.length} bundled/direct.`
+      `${managedSkills.length} AgentChef-managed skills: ${installable.length} commit-pinned upstream and ${bundled.length} bundled/direct.`,
+      `${managedSkills.length} AgentChef yönetimli skill: ${installable.length} commit-pinned upstream ve ${bundled.length} bundled/direct.`
     ),
     ICONS.docs
   );
@@ -3913,8 +3894,8 @@ async function runSkills(interaction = {}) {
     if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
     if (installation.missing === 0 && installation.invalid === 0) {
       console.log(`${ICONS.ok} ${localText(
-        "All Codex Chef-managed skills are installed and ready.",
-        "Tüm Codex Chef yönetimli skill'ler kurulu ve hazır."
+        "All AgentChef-managed skills are installed and ready.",
+        "Tüm AgentChef yönetimli skill'ler kurulu ve hazır."
       )}`);
       return { ok: true };
     }
@@ -4014,8 +3995,8 @@ async function runSkills(interaction = {}) {
   if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
   if (installation.missing === 0 && installation.invalid === 0) {
     console.log(`${ICONS.ok} ${localText(
-      "All Codex Chef-managed skills are installed and ready.",
-      "Tüm Codex Chef yönetimli skill'ler kurulu ve hazır."
+      "All AgentChef-managed skills are installed and ready.",
+      "Tüm AgentChef yönetimli skill'ler kurulu ve hazır."
     )}`);
     return { ok: true };
   }
@@ -4160,182 +4141,6 @@ function printMcpInstallationSummary(installation) {
     "Live status was not probed; these states come from the installed config only.",
     "Canlı durum ölçülmedi; bu durumlar yalnız kurulu config dosyasından okunur."
   )));
-}
-
-function inspectGlobalSkill(name) {
-  const matches = [
-    path.join(codexHome(), "skills", name),
-    path.join(agentsHome(), "skills", name)
-  ].filter((target) => fs.existsSync(target));
-  if (matches.length === 0) return { ready: false, state: "missing" };
-  if (matches.length > 1) return { ready: false, state: "duplicate-global-roots" };
-  try {
-    const state = inspectSkillTree(matches[0], name);
-    return {
-      ready: state.valid === true,
-      state: state.valid ? "ready" : state.reason,
-      path: redactLocalPaths(matches[0])
-    };
-  } catch (error) {
-    return {
-      ready: false,
-      state: sanitizeCliError(error, { root }),
-      path: redactLocalPaths(matches[0])
-    };
-  }
-}
-
-function inspectBrainContinuity() {
-  const source = path.join(root, "plugins", "codex-chef-workflows", "skills", "codex-chef-brain");
-  const installedAgentsHome = agentsHome();
-  const target = path.join(installedAgentsHome, "skills", "codex-chef-brain");
-  const skillErrorOptions = {
-    root,
-    pathRedactions: [{ target: installedAgentsHome, replacement: "${AGENTS_HOME}" }]
-  };
-  let skill = { ready: false, state: "missing" };
-  try {
-    const state = inspectDirectSkillTarget(source, target);
-    skill = {
-      ready: state.status === "managed",
-      state: state.status === "managed"
-        ? "ready"
-        : sanitizeCliError(state.reason || state.status, skillErrorOptions)
-    };
-  } catch (error) {
-    skill = { ready: false, state: sanitizeCliError(error, skillErrorOptions) };
-  }
-
-  const configuredTarget = String(process.env.CODEX_CHEF_BRAIN_HOME || "").trim();
-  const vault = {
-    configured: Boolean(configuredTarget),
-    exists: configuredTarget ? fs.existsSync(configuredTarget) : false,
-    target: configuredTarget ? redactLocalPaths(path.resolve(configuredTarget)) : null,
-    status: configuredTarget ? "not-checked" : "not-configured"
-  };
-  if (configuredTarget) {
-    const result = spawnSync(process.execPath, [
-      path.join(root, "scripts", "brain-cli.mjs"),
-      "status",
-      "--target",
-      configuredTarget,
-      "--json"
-    ], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 30000,
-      windowsHide: true
-    });
-    if (!result.error && String(result.stdout || "").trim()) {
-      try {
-        const report = JSON.parse(result.stdout);
-        vault.status = report.ok === true ? "ok" : "attention";
-        vault.contentOk = report.contentStatus?.ok ?? null;
-        vault.securityOk = report.securityStatus?.ok ?? null;
-        if (result.status !== 0) {
-          vault.error = Array.isArray(report.errors) && report.errors.length > 0
-            ? report.errors.map((message) => sanitizeCliError(message, { root })).join("; ")
-            : `exit ${result.status}`;
-        }
-      } catch (error) {
-        vault.status = "invalid-status-output";
-        vault.error = sanitizeCliError(error, { root });
-      }
-    } else {
-      vault.status = "attention";
-      vault.error = sanitizeCliError(
-        result.error?.message || result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status}`,
-        { root }
-      );
-    }
-  }
-  return { skill, vault };
-}
-
-function runContinuity() {
-  const { configured } = parseInstalledMcpConfig();
-  const controlConfig = configured.get("codex_control");
-  const control = {
-    router: inspectGlobalSkill("codex-control-router"),
-    configured: Boolean(controlConfig),
-    enabled: controlConfig?.enabled ?? false,
-    liveStatus: "session-MCP-only",
-    liveProbe: {
-      cliSubprocessCanProbe: false,
-      availableFrom: "current-codex-session-mcp",
-      explanation: "This CLI verifies installed configuration only; live project health must be queried through the current Codex session's Control MCP."
-    }
-  };
-  const brain = inspectBrainContinuity();
-  brain.vault.scope = "local CODEX_CHEF_BRAIN_HOME only; separate from Control project Brain mappings";
-  const payload = {
-    schemaVersion: "codex-chef.continuity.v1",
-    control,
-    brain,
-    boundaries: {
-      immediateWork: "current-session",
-      controlActivation: "explicit delayed, background, recurring, restart-resilient, monitored, or Control-managed request",
-      controlProposalIsExecutionAuthority: false,
-      brainAutomaticCapture: false,
-      brainWritesRequirePreviewAndExplicitApply: true,
-      controlBrainBridge: "bounded read-only context only when explicitly requested and project-mapped",
-      controlProjectBrainMappingIsSeparateFromLocalVault: true
-    }
-  };
-
-  if (options.json) {
-    console.log(JSON.stringify(payload, null, 2));
-    return { ok: true };
-  }
-
-  printSurfaceHeader(
-    localText("Control & Brain continuity", "Control ve Brain sürekliliği"),
-    localText(
-      "Read-only visibility for background routing and durable project knowledge. Neither surface runs automatically.",
-      "Arka plan yönlendirmesi ve kalıcı proje bilgisi için yazmasız görünürlük. İki yüzey de kendiliğinden çalışmaz."
-    ),
-    ICONS.docs
-  );
-  console.log(styleHeading("Codex Chef Control"));
-  printWrapped(`${localText("Router skill", "Router skill")}: ${control.router.ready ? localText("ready", "hazır") : localText(`attention (${control.router.state})`, `dikkat (${control.router.state})`)}`);
-  printWrapped(`codex_control MCP: ${control.configured ? (control.enabled ? localText("configured and enabled", "yapılandırılmış ve açık") : localText("configured but disabled", "yapılandırılmış ama kapalı")) : localText("not configured", "yapılandırılmamış")}`);
-  printWrapped(localText(
-    "This CLI verifies installed Control configuration only. Live project health is queried by the current Codex session through the Control MCP.",
-    "Bu CLI yalnızca kurulu Control yapılandırmasını doğrular. Canlı proje sağlığı, mevcut Codex oturumundan Control MCP ile sorgulanır."
-  ), { indent: "- " });
-  printWrapped(localText(
-    "Immediate work stays in the current session. Control activates only for an explicit delayed, background, recurring, restart-resilient, monitored, or Control-managed request.",
-    "Anlık işler mevcut oturumda kalır. Control yalnız açıkça gecikmeli, arka plan, tekrarlı, yeniden başlatmaya dayanıklı, izlenen veya Control yönetimli isteklerde etkinleşir."
-  ), { indent: "- " });
-  printWrapped(localText(
-    "A prepared Control proposal is not execution approval; the Control console remains the authority.",
-    "Hazırlanmış Control önerisi çalıştırma onayı değildir; yetki Control konsolunda kalır."
-  ), { indent: "- " });
-
-  console.log("");
-  console.log(styleHeading("Codex Chef Brain"));
-  printWrapped(`${localText("Brain skill", "Brain skill")}: ${brain.skill.ready ? localText("ready", "hazır") : localText(`attention (${brain.skill.state})`, `dikkat (${brain.skill.state})`)}`);
-  printWrapped(`${localText("Vault target", "Vault hedefi")}: ${brain.vault.configured ? `${brain.vault.status} (${brain.vault.target})` : localText("not configured; set CODEX_CHEF_BRAIN_HOME or pass --target explicitly", "yapılandırılmamış; CODEX_CHEF_BRAIN_HOME ayarlayın veya açıkça --target verin")}`);
-  printWrapped(localText(
-    "The local CODEX_CHEF_BRAIN_HOME vault is separate from any Brain mapping owned by a Control project.",
-    "Yerel CODEX_CHEF_BRAIN_HOME vault'u, Control projesinin yönettiği Brain eşlemesinden ayrıdır."
-  ), { indent: "- " });
-  printWrapped(localText(
-    "Automatic chat capture and automatic Brain writes are disabled by design. Capture, backup, and restore are preview-first and require explicit apply.",
-    "Otomatik sohbet kaydı ve otomatik Brain yazması tasarım gereği kapalıdır. Capture, backup ve restore önce ön izleme yapar ve açık apply ister."
-  ), { indent: "- " });
-  printWrapped(localText(
-    "Control may read only a bounded project-mapped Brain context when the user explicitly requests it; Control never writes to Brain.",
-    "Control yalnız kullanıcı açıkça istediğinde proje eşlemeli sınırlı Brain bağlamını okuyabilir; Brain'e asla yazmaz."
-  ), { indent: "- " });
-
-  console.log("");
-  console.log(styleHeading(localText("Safe next checks", "Güvenli sonraki kontroller")));
-  printWrapped("codex-control console", { indent: "- " });
-  printWrapped("npm run brain -- status --target <vault> --json", { indent: "- " });
-  printWrapped("npm run test:brain", { indent: "- " });
-  return { ok: true };
 }
 
 async function runMcp(interaction = {}) {
@@ -4505,7 +4310,7 @@ function runAuth() {
   console.log(styleHeading(localText("Notes:", "Notlar:")));
   console.log(`- ${colorize(localText("Do not paste tokens", "Token yapıştırmayın"), "yellow")} ${localText("into repo files, AGENTS.md, skills, rules, or shell history.", "repo dosyalarına, AGENTS.md'ye, skill'lere, rule'lara veya shell history'ye.")}`);
   console.log(`- ${localText("Keep personal account repair, token scope decisions, and global Git credential configuration outside this public repo.", "Kişisel account repair, token scope kararları ve global Git credential config'i bu public repo dışında tutun.")}`);
-  console.log(`- ${localText("Do not store workflow or release tokens in Codex Chef templates, examples, logs, or docs.", "Workflow veya release token'larını Codex Chef template, example, log veya docs içinde saklamayın.")}`);
+  console.log(`- ${localText("Do not store workflow or release tokens in AgentChef templates, examples, logs, or docs.", "Workflow veya release token'larını AgentChef template, example, log veya docs içinde saklamayın.")}`);
   console.log(`- ${localText("Authenticated MCP connectors still remain disabled until a task needs them.", "Auth isteyen MCP connector'ları bir task gerek duyana kadar disabled kalır.")}`);
   return { ok: true };
 }
@@ -4631,7 +4436,7 @@ function translateCliMessage(message) {
   if (!isTr()) return text;
   return text
     .replace("No action needed.", "Ek aksiyon gerekmiyor.")
-    .replace("Review attention items; they do not necessarily mean Codex Chef install is broken.", "Dikkat maddelerini inceleyin; bunlar her zaman Codex Chef kurulumunun bozuk olduğu anlamına gelmez.")
+    .replace("Review attention items; they do not necessarily mean AgentChef install is broken.", "Dikkat maddelerini inceleyin; bunlar her zaman AgentChef kurulumunun bozuk olduğu anlamına gelmez.")
     .replace("git status --short is clean.", "git status --short temiz.")
     .replace(/git status --short reports (\d+) changed line\(s\)\./, "git status --short $1 değişen satır bildiriyor.")
     .replace("Runtime, MCP, Git, routing, and log metadata checks.", "Kurulu ortam, MCP, Git, yönlendirme ve log metadata kontrolleri.")
@@ -5033,8 +4838,6 @@ async function runAction(action, interaction = {}) {
       return runMcp(interaction);
     case "routing":
       return runRouting();
-    case "continuity":
-      return runContinuity();
     case "diagnostics":
       return runDiagnostics();
     case "processes":
@@ -5146,8 +4949,8 @@ async function runMenu() {
     console.log("");
     printBrandSignature();
     console.log(styleMuted(localText(
-      "U.C.S. Codex Chef session closed.",
-      "U.C.S. Codex Chef oturumu kapatıldı."
+      "U.C.S. AgentChef session closed.",
+      "U.C.S. AgentChef oturumu kapatıldı."
     )));
   }
 }
@@ -5174,7 +4977,7 @@ try {
       error,
       argv: args,
       root,
-      prefix: localText("Codex Chef CLI error", "Codex Chef CLI hatasi")
+      prefix: localText("AgentChef CLI error", "AgentChef CLI hatasi")
     });
   }
 }

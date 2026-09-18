@@ -16,10 +16,6 @@ if (unknownArgs.length > 0) {
 
 const requiredFiles = [
   "README.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
-  "README.pt-BR.md",
   "README.tr.md",
   "docs/release-notes.md",
   "docs/release-notes.tr.md",

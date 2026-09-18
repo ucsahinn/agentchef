@@ -1,6 +1,6 @@
 # Contributing
 
-Codex Chef changes global developer tooling, so small and reviewable beats clever and surprising. Explain the behavior you are changing, keep the diff focused, and include evidence that matches the risk.
+AgentChef changes global developer tooling, so small and reviewable beats clever and surprising. Explain the behavior you are changing, keep the diff focused, and include evidence that matches the risk.
 
 ## Ground Rules
 

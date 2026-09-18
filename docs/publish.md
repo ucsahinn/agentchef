@@ -45,16 +45,16 @@ The generated file is `tmp/release-notes-current.md`; it is local release input,
 After explicit approval and a clean staged review:
 
 ```bash
-git commit -m "Prepare Codex Chef public docs"
+git commit -m "Prepare AgentChef public docs"
 git push origin main
 ```
 
 For a future version, replace `<version>` only after package metadata and both release-note files are aligned:
 
 ```bash
-git tag -a v<version> -m "Codex Chef v<version>"
+git tag -a v<version> -m "AgentChef v<version>"
 git push origin v<version>
-gh release create v<version> --title "Codex Chef v<version>" --notes-file tmp/release-notes-current.md
+gh release create v<version> --title "AgentChef v<version>" --notes-file tmp/release-notes-current.md
 ```
 
 ## Verify The Public State

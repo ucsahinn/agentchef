@@ -338,11 +338,11 @@ $CodexHome = Resolve-InstallPath $CodexHome
 $AgentsHome = Resolve-InstallPath $AgentsHome
 
 if ($Repair) {
-  Write-Section "Codex Chef repair"
+  Write-Section "AgentChef repair"
   if ($WhatIfPreference) {
     Write-Note "Mode: repair preview; no files will be changed"
   } else {
-    Write-Note "Mode: backup-backed repair of managed Codex Chef drift"
+    Write-Note "Mode: backup-backed repair of managed AgentChef drift"
   }
   $RepairScript = Join-Path $RepoRoot "scripts\repair-install.mjs"
   $RepairArgs = @(
@@ -388,7 +388,7 @@ if ($Update) {
 }
 
 if ($Interactive -and (Test-AnyManagedTargetExists) -and -not $Force) {
-  if (Read-YesNo -Prompt "Replace existing managed Codex Chef files after backup instead of preserving/merging?" -Default $false) {
+  if (Read-YesNo -Prompt "Replace existing managed AgentChef files after backup instead of preserving/merging?" -Default $false) {
     $Force = $true
   }
 }
@@ -412,7 +412,7 @@ function Get-CanonicalOperationLockRoots {
   $roots = @($CodexHome, $AgentsHome) |
     ForEach-Object { [System.IO.Path]::GetFullPath($_).TrimEnd('\', '/') } |
     Sort-Object { $_.ToLowerInvariant() } -Unique
-  if ($roots.Count -eq 0) { throw "Codex Chef operation lock requires at least one managed home." }
+  if ($roots.Count -eq 0) { throw "AgentChef operation lock requires at least one managed home." }
   return @($roots)
 }
 
@@ -457,7 +457,7 @@ function Acquire-OperationLock {
         Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
       }
     }
-    throw "Another Codex Chef operation is already in progress for a managed Codex home; refusing concurrent install."
+    throw "Another AgentChef operation is already in progress for a managed Codex home; refusing concurrent install."
   }
   $Script:OperationLockPaths = @($acquired)
 }
@@ -546,9 +546,8 @@ function Invoke-Change {
   return $false
 }
 
-function Assert-ManagedWriteTarget {
-  param([Parameter(Mandatory=$true)][string]$Path)
-  $targetFull = [System.IO.Path]::GetFullPath($Path)
+function Resolve-ManagedWriteRoot {
+  param([Parameter(Mandatory=$true)][string]$TargetFull)
   $roots = @(
     [System.IO.Path]::GetFullPath($CodexHome).TrimEnd('\', '/'),
     [System.IO.Path]::GetFullPath($AgentsHome).TrimEnd('\', '/')
@@ -556,41 +555,83 @@ function Assert-ManagedWriteTarget {
   if ($InstallGitGuards) {
     $gitIgnoreTarget = [System.IO.Path]::GetFullPath((Join-Path $HOME ".gitignore_global"))
     $hooksRoot = [System.IO.Path]::GetFullPath((Join-Path $HOME ".githooks")).TrimEnd('\', '/')
-    if ($targetFull.Equals($gitIgnoreTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ($TargetFull.Equals($gitIgnoreTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
       $roots += [System.IO.Path]::GetFullPath($HOME).TrimEnd('\', '/')
     }
     if (
-      $targetFull.Equals($hooksRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
-      $targetFull.StartsWith($hooksRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+      $TargetFull.Equals($hooksRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+      $TargetFull.StartsWith($hooksRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
     ) {
       $roots += $hooksRoot
     }
   }
-  $helper = Join-Path $RepoRoot "scripts\assert-managed-target.mjs"
 
   foreach ($root in $roots) {
     if (
-      $targetFull.Equals($root, [System.StringComparison]::OrdinalIgnoreCase) -or
-      $targetFull.StartsWith($root + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+      $TargetFull.Equals($root, [System.StringComparison]::OrdinalIgnoreCase) -or
+      $TargetFull.StartsWith($root + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
     ) {
-      & node $helper $root $targetFull | Out-Null
-      if ($LASTEXITCODE -ne 0) {
-        throw "Managed write target became unsafe; refusing access: $Path"
-      }
-      return
+      return $root
     }
   }
 
-  throw "Refusing to access unmanaged install target: $Path"
+  throw "Refusing to access unmanaged install target: $TargetFull"
 }
+
+function Assert-ManagedWriteTarget {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  $targetFull = [System.IO.Path]::GetFullPath($Path)
+  $root = Resolve-ManagedWriteRoot -TargetFull $targetFull
+  $helper = Join-Path $RepoRoot "scripts\assert-managed-target.mjs"
+  & node $helper $root $targetFull | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Managed write target became unsafe; refusing access: $Path"
+  }
+}
+
+function Assert-ManagedWriteTargets {
+  # Verify a whole set of targets with one helper process per managed root.
+  # Directory syncs pass every file and parent here instead of spawning Node
+  # twice per copied file, which dominated install time on Windows.
+  param([Parameter(Mandatory=$true)][string[]]$Paths)
+  $helper = Join-Path $RepoRoot "scripts\assert-managed-target.mjs"
+  $groups = @{}
+  foreach ($candidate in $Paths) {
+    $targetFull = [System.IO.Path]::GetFullPath($candidate)
+    $root = Resolve-ManagedWriteRoot -TargetFull $targetFull
+    if (-not $groups.ContainsKey($root)) {
+      $groups[$root] = New-Object System.Collections.Generic.List[string]
+    }
+    if (-not $groups[$root].Contains($targetFull)) {
+      $groups[$root].Add($targetFull)
+    }
+  }
+  foreach ($root in @($groups.Keys)) {
+    $listPath = [System.IO.Path]::GetTempFileName()
+    try {
+      [System.IO.File]::WriteAllLines($listPath, [string[]]$groups[$root].ToArray(), (New-Object System.Text.UTF8Encoding($false)))
+      & node $helper $root --list $listPath | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        throw "Managed write target became unsafe; refusing access under: $root"
+      }
+    } finally {
+      Remove-Item -LiteralPath $listPath -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
+$Script:EnsuredDirectories = @{}
 
 function Ensure-Dir {
   param([Parameter(Mandatory=$true)][string]$Path)
+  $key = [System.IO.Path]::GetFullPath($Path).TrimEnd('\', '/').ToLowerInvariant()
+  if ($Script:EnsuredDirectories.ContainsKey($key)) { return }
   Assert-ManagedWriteTarget $Path
   Invoke-Change -Target $Path -Action "Ensure directory exists" -ScriptBlock {
     Assert-ManagedWriteTarget $Path
     New-Item -ItemType Directory -Force -Path $Path | Out-Null
   } | Out-Null
+  $Script:EnsuredDirectories[$key] = $true
 }
 
 function Get-RelativePathSafe {
@@ -693,10 +734,10 @@ function Install-CodexConfig {
     Backup-Target $Destination
     $MergeScript = Join-Path $RepoRoot "scripts\merge-codex-config.mjs"
     $MergeArgs = @($MergeScript, $Source, $Destination)
-    $Action = "Merge missing Codex Chef config blocks from $Source"
+    $Action = "Merge missing AgentChef config blocks from $Source"
     if ($Update) {
       $MergeArgs += "--sync-managed-tables"
-      $Action = "Synchronize managed Codex Chef config blocks from $Source"
+      $Action = "Synchronize managed AgentChef config blocks from $Source"
     }
     if ($WhatIfPreference) {
       $DryRunArgs = @($MergeArgs) + "--dry-run"
@@ -776,17 +817,25 @@ function Install-Directory {
     Prepare-InstallTree -Destination $Destination -Source $Source -BackupPath $backupPath
     $sourceFull = [System.IO.Path]::GetFullPath($Source).TrimEnd([char[]]@('\', '/'))
     $destinationFull = [System.IO.Path]::GetFullPath($Destination)
+    $copies = New-Object System.Collections.Generic.List[object]
+    $targets = New-Object System.Collections.Generic.List[string]
     Get-ChildItem -LiteralPath $Source -Recurse -File -Force | ForEach-Object {
       $fileFull = [System.IO.Path]::GetFullPath($_.FullName)
       $relative = $fileFull.Substring($sourceFull.Length).TrimStart([char[]]@('\', '/'))
       $target = [System.IO.Path]::Combine($destinationFull, $relative)
-      Assert-ManagedWriteTarget $target
       $targetParent = Split-Path -Parent $target
-      if ($targetParent) {
-        Assert-ManagedWriteTarget $targetParent
-        [System.IO.Directory]::CreateDirectory($targetParent) | Out-Null
+      if ($targetParent) { $targets.Add($targetParent) }
+      $targets.Add($target)
+      $copies.Add([pscustomobject]@{ Source = $_.FullName; Target = $target; Parent = $targetParent })
+    }
+    if ($targets.Count -gt 0) {
+      Assert-ManagedWriteTargets -Paths $targets.ToArray()
+    }
+    foreach ($copy in $copies) {
+      if ($copy.Parent) {
+        [System.IO.Directory]::CreateDirectory($copy.Parent) | Out-Null
       }
-      [System.IO.File]::Copy($_.FullName, $target, $true)
+      [System.IO.File]::Copy($copy.Source, $copy.Target, $true)
     }
   }
   if ($changed) {
@@ -795,11 +844,11 @@ function Install-Directory {
   }
 }
 
-Write-Section "Codex Chef installer"
+Write-Section "AgentChef installer"
 Write-Note "Codex home: $CodexHome"
 Write-Note "Agents home: $AgentsHome"
 if ($Update) {
-  Write-Note "Mode: update managed targets after backup; preserve user config and synchronize Codex Chef tables"
+  Write-Note "Mode: update managed targets after backup; preserve user config and synchronize AgentChef tables"
 } elseif ($Force) {
   Write-Note "Mode: refresh source-owned managed targets after backup; preserve unrelated directory extras"
 } else {
@@ -820,13 +869,13 @@ if ($WhatIfPreference) {
 }
 if ($Interactive) {
   if ($Update) {
-    Write-Note "Existing config policy: backup + synchronize managed Codex Chef tables while preserving user-owned settings"
+    Write-Note "Existing config policy: backup + synchronize managed AgentChef tables while preserving user-owned settings"
   } else {
-    Write-Note "Existing config policy: backup + merge missing Codex Chef blocks unless Force is enabled"
+    Write-Note "Existing config policy: backup + merge missing AgentChef blocks unless Force is enabled"
   }
   Write-Note "Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled."
   if (-not (Read-YesNo -Prompt "Continue with this plan?" -Default $true)) {
-    throw "Codex Chef install cancelled by user."
+    throw "AgentChef install cancelled by user."
   }
 }
 
@@ -886,7 +935,7 @@ foreach ($DirectSkill in $DirectSkills) {
     Prepare-InstallWrite -Path (Join-Path $DirectTarget ".codex-chef-managed.json") -BackupPath $markerBackup
     & node @DirectMarkArgs | Out-Null
     if ($LASTEXITCODE -ne 0) {
-      throw "Cannot record Codex Chef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
+      throw "Cannot record AgentChef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
     }
     Mark-InstallWriteApplied -Path (Join-Path $DirectTarget ".codex-chef-managed.json")
   }
@@ -902,7 +951,7 @@ $marketplaceCheckExit = $LASTEXITCODE
 if ($marketplaceCheckExit -eq 2) {
   Backup-Target $MarketplacePath
   $marketplaceBackup = if ($Script:LastBackupPath) { $Script:LastBackupPath } else { "-" }
-  $changed = Invoke-Change -Target $MarketplacePath -Action "Upsert Codex Chef plugin marketplace entry" -ScriptBlock {
+  $changed = Invoke-Change -Target $MarketplacePath -Action "Upsert AgentChef plugin marketplace entry" -ScriptBlock {
     Assert-ManagedWriteTarget $MarketplacePath
     Prepare-InstallWrite -Path $MarketplacePath -BackupPath $marketplaceBackup
     & node $MarketplaceHelper $MarketplacePath $MarketplacePluginTarget --write
@@ -1037,7 +1086,7 @@ if (-not $WhatIfPreference -and -not $NoBackup) {
 }
 & node @PluginRefreshArgs
 if ($LASTEXITCODE -ne 0) {
-  throw "Refresh installed Codex Chef plugin cache failed with code $LASTEXITCODE."
+  throw "Refresh installed AgentChef plugin cache failed with code $LASTEXITCODE."
 }
 
 Write-Section "Capability board"
@@ -1071,9 +1120,9 @@ if ($SkippedExistingCount -gt 0) {
   Write-Note "$SkippedExistingCount existing managed target(s) were preserved; use -Force only for a deliberate backup-backed replacement"
 }
 if ($WhatIfPreference) {
-  Write-Action -Status "completed" -Message "Codex Chef dry run"
+  Write-Action -Status "completed" -Message "AgentChef dry run"
 } else {
-  Write-Action -Status "completed" -Message "Codex Chef install"
+  Write-Action -Status "completed" -Message "AgentChef install"
   Write-Note "Restart Codex, then run:"
   Write-Host "    codex doctor --summary"
   Write-Host "    npm run codex:routing"

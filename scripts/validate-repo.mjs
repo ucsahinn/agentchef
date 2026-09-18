@@ -7,10 +7,6 @@ const failures = [];
 
 const requiredFiles = [
   "README.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
-  "README.pt-BR.md",
   "README.tr.md",
   "SECURITY.md",
   "llms.txt",
@@ -19,6 +15,7 @@ const requiredFiles = [
   "CODE_OF_CONDUCT.md",
   "CONTRIBUTING.md",
   "CHANGELOG.md",
+  "CHANGELOG-0.5.md",
   "AGENTS.md",
   "package.json",
   "docs/how-to.md",
@@ -41,8 +38,8 @@ const requiredFiles = [
   "docs/release-notes.tr.md",
   "docs/expected-output.md",
   "docs/expected-output.tr.md",
-  "docs/ecc-compatibility.md",
-  "docs/ecc-compatibility.tr.md",
+  "docs/harness-compatibility.md",
+  "docs/harness-compatibility.tr.md",
   "docs/advisory-sources.md",
   "docs/advisory-sources.tr.md",
   "docs/best-practices.md",
@@ -478,24 +475,12 @@ if (fs.existsSync(packageJsonPath)) {
 
 const readmeText = [
   "README.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
-  "README.pt-BR.md",
   "README.tr.md"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 for (const requiredPattern of [
-  /README\.de\.md/,
-  /README\.es\.md/,
-  /README\.fr\.md/,
-  /README\.pt-BR\.md/,
   /README\.tr\.md/,
-  /Deutsch/,
-  /Espa/,
-  /Portugu/,
-  /Fran/,
   /Türkçe/,
-  /readme-6%20languages/,
+  /readme-2%20languages/,
   /English and Turkish/i,
   /Knowledge base/,
   /Bilgi bankas/,
@@ -592,8 +577,8 @@ if (fs.existsSync(skillCatalog)) {
   if (!String(catalog.skillsCliIntegrity || "").startsWith("sha512-")) {
     failures.push("Public skill catalog must pin the Skills CLI registry integrity.");
   }
-  if (skills.length !== 57) {
-    failures.push(`Public skill catalog contract expects 57 entries; found ${skills.length}.`);
+  if (skills.length !== 56) {
+    failures.push(`Public skill catalog contract expects 56 entries; found ${skills.length}.`);
   }
   if (skills.filter((skill) => skill.install === true).length !== 15) {
     failures.push("Public skill catalog contract expects 15 full-install skills.");
@@ -687,8 +672,8 @@ if (fs.existsSync(bundledSkillsDir)) {
     .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(bundledSkillsDir, entry.name, "SKILL.md")))
     .map((entry) => entry.name)
     .sort();
-  if (bundledSkills.length !== 11) {
-    failures.push(`Public bundled workflow contract expects 11 skills; found ${bundledSkills.length}.`);
+  if (bundledSkills.length !== 10) {
+    failures.push(`Public bundled workflow contract expects 10 skills; found ${bundledSkills.length}.`);
   }
   for (const doc of ["docs/skills.md", "docs/skills.tr.md"]) {
     if (!fs.existsSync(path.join(root, doc))) continue;

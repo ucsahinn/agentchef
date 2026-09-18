@@ -7,7 +7,7 @@ browser evidence, semantic code navigation, private account data, or database
 access. That makes them useful, but it also means each server needs a clear
 boundary.
 
-Codex Chef knows about 16 MCP servers. The balanced starter enables two:
+AgentChef knows about 16 MCP servers. The balanced starter enables two:
 remote `openaiDeveloperDocs` plus the local lazy `serena` bridge. Six additional
 local stdio helpers remain defined but disabled, preserving capability without
 eagerly starting their Node/Python trees in every concurrent session. Serena

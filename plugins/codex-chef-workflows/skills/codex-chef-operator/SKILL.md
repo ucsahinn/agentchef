@@ -1,11 +1,11 @@
 ---
 name: codex-chef-operator
-description: Maintain, audit, and improve Codex Chef setup repositories. Use for README/docs/template/catalog/installer/validation updates, release-readiness work, and safe Codex starter maintenance without weakening security, leaking local state, or changing external systems.
+description: Maintain, audit, and improve AgentChef setup repositories. Use for README/docs/template/catalog/installer/validation updates, release-readiness work, and safe Codex starter maintenance without weakening security, leaking local state, or changing external systems.
 ---
 
-# Codex Chef Operator
+# AgentChef Operator
 
-Use this skill when maintaining the Codex Chef repository or a
+Use this skill when maintaining the AgentChef repository or a
 derived local setup.
 
 ## Reference Routing

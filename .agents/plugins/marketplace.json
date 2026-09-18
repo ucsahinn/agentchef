@@ -13,7 +13,7 @@
       },
       "category": "Productivity",
       "interface": {
-        "displayName": "Codex Chef Workflows",
+        "displayName": "AgentChef Workflows",
         "shortDescription": "Security-first Codex planning, maintenance, and verification workflows."
       }
     }

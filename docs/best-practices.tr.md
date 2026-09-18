@@ -114,7 +114,7 @@ gerektiriyorsa skill yap. Tool veya dağıtım gerekiyorsa plugin olarak paketle
 
 Buyuk agent starter repolari faydali desenler verebilir, ama toptan import
 edilmemelidir. Guncel ECC kaynakli politika
-[docs/ecc-compatibility.tr.md](ecc-compatibility.tr.md) icindedir.
+[docs/harness-compatibility.tr.md](harness-compatibility.tr.md) icindedir.
 
 Alinabilecekler:
 

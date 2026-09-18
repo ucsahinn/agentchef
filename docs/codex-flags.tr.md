@@ -25,7 +25,7 @@ https://developers.openai.com/codex/cli/reference
 | `--dangerously-bypass-approvals-and-sandbox` | Normal lokal geliştirme için kullanma. |
 | `--dangerously-bypass-hook-trust` | Sadece hook source dışarıda ayrıca doğrulanıyorsa. |
 
-Codex Chef uc istege bagli MCP maliyet profili kurar. Acikca secilmedikce dengeli varsayilani degistirmezler:
+AgentChef uc istege bagli MCP maliyet profili kurar. Acikca secilmedikce dengeli varsayilani degistirmezler:
 
 ```bash
 codex --profile full
@@ -51,7 +51,7 @@ agent baslatma, MCP acma veya onay ayari degisikligi yapmaz.
 `multi-session`, ikincil eşzamanlı oturumlarda lokal stdio MCP'leri kapatır;
 agent, skill, uzak OpenAI docs, built-in memory, hook ve app yüzeylerini korur.
 
-Sahiplik farkındalıklı Codex Chef süreç komutları:
+Sahiplik farkındalıklı AgentChef süreç komutları:
 
 ```bash
 npm run chef -- --processes --no-log

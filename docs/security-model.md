@@ -238,7 +238,7 @@ Installers upsert only the `codex-chef-workflows` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing
 marketplace file is invalid, unreadable, or not a JSON object.
 
-The managed installer synchronizes all eleven canonical local workflow
+The managed installer synchronizes all ten canonical local workflow
 directories to `AGENTS_HOME/skills/<name>`, so direct invocation does not
 depend on plugin installation. A durable per-skill ownership marker
 distinguishes Chef-managed or exact legacy content from a foreign collision.
@@ -272,12 +272,12 @@ claiming runtime parity.
 have a global Codex setup. Without `--apply`, it is read-only and reports
 managed drift, missing config blocks, marketplace drift, extra managed plugin
 files, non-curated skills, and duplicate skill names. With `--apply`, it backs
-up and repairs only Codex Chef-managed files, including the Serena bridge,
+up and repairs only AgentChef-managed files, including the Serena bridge,
 merges missing config blocks, and
-updates the Codex Chef marketplace entry while preserving unrelated marketplace
+updates the AgentChef marketplace entry while preserving unrelated marketplace
 plugins. With explicit apply authority, the CLI may backup and replace a
 managed target; preview never does so. It also reports or refreshes stale versioned cache state only for an
-already-installed Codex Chef plugin.
+already-installed AgentChef plugin.
 
 `--no-backup` is accepted only when the complete resolved operation is
 creation-only and all selected targets are absent. Any existing target, merge,
@@ -287,7 +287,7 @@ preflight reject the run before its first write.
 Repair mode does not delete user skills. Extra global skills and duplicate
 skill names are cleanup candidates because they can pressure Codex's initial
 skill-list budget, but they may have been installed intentionally. Deleting
-extra files inside the managed Codex Chef plugin directory requires the
+extra files inside the managed AgentChef plugin directory requires the
 explicit `--prune-managed-plugin-extras` flag and still stays scoped to that
 single managed plugin target after backup.
 
@@ -304,7 +304,7 @@ by running the installer dry-run from the updated tree, continues local validati
 refresh in the same approved session, and verifies installed-runtime parity; a
 second invocation is not required. If the repository is already current, it
 runs local validation before the managed refresh, then refreshes scoped managed
-Codex Chef files through the backup-backed installer. That refresh synchronizes
+AgentChef files through the backup-backed installer. That refresh synchronizes
 source-owned files, preserves unrelated directory extras, and refreshes an
 already-installed stale plugin cache in place. It
 does not install the plugin for users who have not opted in or publish. It does
@@ -316,17 +316,17 @@ credentials, or enable account/database/broad-filesystem connectors.
 
 ## Portable Workspace OS Boundary
 
-Codex Chef is portable because its installer resolves `CODEX_HOME` and
+AgentChef is portable because its installer resolves `CODEX_HOME` and
 `AGENTS_HOME` at execution time rather than embedding a machine path. A
 repository-relative temporary root is suitable for preview and isolated smoke
 testing; a real home remains an explicit user choice and any managed replacement
 stays backup-backed.
 
 The package boundary is intentional: Chef installs Codex capability and
-distribution assets only. It does not install or control Codex Chef Control,
-read or write Codex Chef Brain, connect to a Kitchen database, adopt existing
+distribution assets only. It does not install or control companion tools such
+as a memory engine or a control plane, read or write their data, adopt existing
 terminal sessions, or transfer `auth.json`, session, credential, or machine
-state between PCs. Those systems may integrate through their separately
+state between PCs. Those tools may integrate through their separately
 versioned, least-privilege contracts, never through an installer side effect.
 
 `npm run chef -- --backups` lists backup archives under the active Codex home
@@ -354,7 +354,7 @@ Restore treats backup archives as untrusted input. `npm run chef -- --backups
 --backup <id> --restore` is a preview. The apply path requires `--apply`,
 loads and verifies the exact source bytes, creates a fresh rollback backup of
 current targets, rejects unsafe archive paths and symlinks, and restores only
-known Codex Chef-managed files under the active Codex or Agents homes. If a
+known AgentChef-managed files under the active Codex or Agents homes. If a
 later write fails, already-written targets are restored from the fresh rollback
 backup. Commit-pinned skill archives are limited to a cataloged skill ID and
 replace that skill tree atomically enough to preserve exact-tree semantics

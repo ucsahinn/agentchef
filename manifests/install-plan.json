@@ -16,7 +16,6 @@
       "codex-chef-operator-direct-skill",
       "context-budget-planner-direct-skill",
       "adaptive-agent-routing-direct-skill",
-      "codex-chef-brain-direct-skill",
       "external-review-workflow-direct-skill",
       "gptpro-direct-skill",
       "gptpro-handoff-direct-skill",
@@ -41,7 +40,6 @@
       "codex-chef-operator-direct-skill",
       "context-budget-planner-direct-skill",
       "adaptive-agent-routing-direct-skill",
-      "codex-chef-brain-direct-skill",
       "external-review-workflow-direct-skill",
       "gptpro-direct-skill",
       "gptpro-handoff-direct-skill",
@@ -80,7 +78,7 @@
       "collision": "merge-missing-blocks-unless-force-backup-before-replace",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "Canonical template plus user-owned overlay: existing model, profile, approval, sandbox, project trust, and unrelated MCP values are preserved outside Force. Codex Chef-managed agent/MCP safety tables are synchronized explicitly; Force replaces the file only after backup."
+      "conflictPolicy": "Canonical template plus user-owned overlay: existing model, profile, approval, sandbox, project trust, and unrelated MCP values are preserved outside Force. AgentChef-managed agent/MCP safety tables are synchronized explicitly; Force replaces the file only after backup."
     },
     {
       "id": "codex-profile-launcher",
@@ -175,7 +173,7 @@
     {
       "id": "codex-chef-operator-direct-skill",
       "kind": "copy-directory",
-      "summary": "Install the Codex Chef operator workflow for direct routing-profile invocation.",
+      "summary": "Install the AgentChef operator workflow for direct routing-profile invocation.",
       "source": "plugins/codex-chef-workflows/skills/codex-chef-operator",
       "destination": "${AGENTS_HOME}/skills/codex-chef-operator",
       "ownershipMarker": "${AGENTS_HOME}/skills/codex-chef-operator/.codex-chef-managed.json",
@@ -183,7 +181,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The operator skill is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The operator skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "context-budget-planner-direct-skill",
@@ -196,7 +194,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The context planner is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The context planner is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "adaptive-agent-routing-direct-skill",
@@ -209,20 +207,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The routing skill is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "codex-chef-brain-direct-skill",
-      "kind": "copy-directory",
-      "summary": "Install the local Markdown Brain workflow for direct invocation.",
-      "source": "plugins/codex-chef-workflows/skills/codex-chef-brain",
-      "destination": "${AGENTS_HOME}/skills/codex-chef-brain",
-      "ownershipMarker": "${AGENTS_HOME}/skills/codex-chef-brain/.codex-chef-managed.json",
-      "platforms": ["windows", "unix"],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The Brain workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The routing skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "external-review-workflow-direct-skill",
@@ -235,7 +220,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The external review workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The external review workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "gptpro-direct-skill",
@@ -248,7 +233,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The GPT Pro context workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The GPT Pro context workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "gptpro-handoff-direct-skill",
@@ -261,7 +246,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The GPT Pro handoff workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The GPT Pro handoff workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "fetch-direct-skill",
@@ -274,7 +259,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the same canonical source as the plugin-bundled version only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact target is explicitly adopted; implicit invocation remains disabled."
+      "conflictPolicy": "The direct skill is synchronized from the same canonical source as the plugin-bundled version only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact target is explicitly adopted; implicit invocation remains disabled."
     },
     {
       "id": "seo-direct-skill",
@@ -287,7 +272,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact SEO target is explicitly adopted."
+      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact SEO target is explicitly adopted."
     },
     {
       "id": "evidence-research-direct-skill",
@@ -300,7 +285,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact evidence-research target is explicitly adopted."
+      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact evidence-research target is explicitly adopted."
     },
     {
       "id": "offline-diagram-triplet-direct-skill",
@@ -313,7 +298,7 @@
       "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "The offline diagram workflow is synchronized from the canonical plugin source only when the target is absent, marked as Codex Chef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
+      "conflictPolicy": "The offline diagram workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
     },
     {
       "id": "codex-plugin-marketplace-source",
@@ -337,7 +322,7 @@
       "collision": "upsert-entry-with-backup",
       "backup": true,
       "risk": "medium",
-      "conflictPolicy": "Only the Codex Chef plugin entry is added or updated after backup; unrelated marketplace plugins are preserved and invalid marketplace JSON fails closed."
+      "conflictPolicy": "Only the AgentChef plugin entry is added or updated after backup; unrelated marketplace plugins are preserved and invalid marketplace JSON fails closed."
     },
     {
       "id": "git-ignore-global",
@@ -423,12 +408,12 @@
       "collision": "preserve-foreign-update-owned-mandatory-backup-explicit-adoption-required",
       "backup": true,
       "risk": "high",
-      "conflictPolicy": "Only locked package/skill pairs are allowed. Unmarked, foreign, or locally drifted same-name targets are preserved and skipped by default. A valid Codex Chef provenance marker permits a mandatory-backup managed upgrade; replacing any other exact target requires a separately reviewed per-skill --adopt-existing invocation."
+      "conflictPolicy": "Only locked package/skill pairs are allowed. Unmarked, foreign, or locally drifted same-name targets are preserved and skipped by default. A valid AgentChef provenance marker permits a mandatory-backup managed upgrade; replacing any other exact target requires a separately reviewed per-skill --adopt-existing invocation."
     },
     {
       "id": "installed-plugin-cache-refresh",
       "kind": "refresh-plugin-cache",
-      "summary": "Refresh an already-installed Codex Chef plugin cache when its version is stale.",
+      "summary": "Refresh an already-installed AgentChef plugin cache when its version is stale.",
       "source": "${CODEX_HOME}/plugins/codex-chef-workflows",
       "destination": "${CODEX_HOME}/plugins/cache",
       "pluginId": "codex-chef-workflows@codex-chef",

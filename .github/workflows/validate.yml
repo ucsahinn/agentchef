@@ -106,7 +106,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node: 18
+            node: 22
           - os: macos-latest
             node: 24
     steps:
@@ -120,12 +120,9 @@ jobs:
       - run: npm run validate:installer
       - run: npm run test:bash-portability
       - run: npm run validate:installer-smoke
-      - if: matrix.node == 18
+      - if: matrix.node == 22
         run: >-
           node --test
-          scripts/tests/brain-foundation.test.mjs
-          scripts/tests/brain-cli.test.mjs
-          scripts/tests/brain-permissions-windows.test.mjs
           scripts/tests/coordination-runtime.test.mjs
           scripts/tests/growth-skills.test.mjs
           scripts/tests/cli-error-contract.test.mjs

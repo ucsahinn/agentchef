@@ -5,21 +5,24 @@ import path from "node:path";
 const root = path.resolve(process.cwd());
 const failures = [];
 const locales = [
-  { file: "README.de.md", label: "Deutsch" },
-  { file: "README.es.md", label: "Español" },
   { file: "README.md", label: "English" },
-  { file: "README.pt-BR.md", label: "Português (Brasil)" },
-  { file: "README.tr.md", label: "Türkçe" },
-  { file: "README.fr.md", label: "Français" }
+  { file: "README.tr.md", label: "Türkçe" }
 ];
+const retiredLocales = ["README.de.md", "README.es.md", "README.fr.md", "README.pt-BR.md"];
 const sharedSignals = [
   "assets/banner.svg",
-  "readme-6%20languages",
+  "readme-2%20languages",
   "npm run check"
 ];
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
+}
+
+for (const file of retiredLocales) {
+  if (fs.existsSync(path.join(root, file))) {
+    failures.push(`Retired README summary must not return; English and Turkish are the only entry points: ${file}`);
+  }
 }
 
 for (const { file } of locales) {
@@ -35,10 +38,12 @@ for (const { file } of locales) {
   for (const signal of sharedSignals) {
     if (!text.includes(signal)) failures.push(`${file} missing public entry signal: ${signal}`);
   }
-  if (!/unofficial|inoffiziell|no oficial|não oficial|non officiel|resmi olmayan|resmi OpenAI ürünü değildir/i.test(text)) {
-    failures.push(`${file} must state that Codex Chef is unofficial.`);
+  if (!/unofficial|resmi olmayan|resmi bir OpenAI veya Anthropic ürünü değildir/i.test(text)) {
+    failures.push(`${file} must state that AgentChef is unofficial.`);
   }
-  if (!text.includes("OpenAI") || !text.includes("Codex")) failures.push(`${file} must name OpenAI and Codex.`);
+  for (const vendor of ["OpenAI", "Anthropic", "Codex", "Claude Code"]) {
+    if (!text.includes(vendor)) failures.push(`${file} must name ${vendor}.`);
+  }
   if (/(?:TODO|TBD|translation needed|lorem ipsum)/i.test(text)) failures.push(`${file} contains placeholder text.`);
 }
 
@@ -50,6 +55,7 @@ const canonicalReadmes = [
       "docs/skills.md",
       "docs/mcp-catalog.md",
       "docs/README.md",
+      "docs/release-notes.md",
       "kb/README.md",
       "assets/workflow-overview.svg"
     ]
@@ -61,6 +67,7 @@ const canonicalReadmes = [
       "docs/skills.tr.md",
       "docs/mcp-catalog.tr.md",
       "docs/README.tr.md",
+      "docs/release-notes.tr.md",
       "kb/README.tr.md",
       "assets/workflow-overview.tr.svg"
     ]

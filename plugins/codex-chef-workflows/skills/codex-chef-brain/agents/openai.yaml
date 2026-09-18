@@ -1,7 +1,0 @@
-interface:
-  display_name: "Codex Chef Brain"
-  short_description: "Curate a safe local project memory vault."
-  default_prompt: "Use $codex-chef-brain to capture, retrieve, or consolidate durable project knowledge safely."
-
-policy:
-  allow_implicit_invocation: true

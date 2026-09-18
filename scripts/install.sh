@@ -76,7 +76,7 @@ fi
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Required command not found for Codex Chef Bash install: $1" >&2
+    echo "Required command not found for AgentChef Bash install: $1" >&2
     echo "Install Git Bash, WSL, or a POSIX shell environment with coreutils, then rerun the installer." >&2
     exit 127
   fi
@@ -331,7 +331,7 @@ CODEX_HOME_DIR="$(normalize_install_path "$CODEX_HOME_DIR")"
 AGENTS_HOME_DIR="$(normalize_install_path "$AGENTS_HOME_DIR")"
 
 if [ "$REPAIR" -eq 1 ]; then
-  section "Codex Chef repair"
+  section "AgentChef repair"
   REPAIR_ARGS=(
     "$REPO_ROOT/scripts/repair-install.mjs"
     "--redact-paths"
@@ -345,7 +345,7 @@ if [ "$REPAIR" -eq 1 ]; then
   if [ "$DRY_RUN" -eq 1 ]; then
     note "Mode: repair preview; no files will be changed"
   else
-    note "Mode: backup-backed repair of managed Codex Chef drift"
+    note "Mode: backup-backed repair of managed AgentChef drift"
     REPAIR_ARGS+=("--apply")
   fi
   if [ "$NO_BACKUP" -eq 1 ]; then
@@ -378,7 +378,7 @@ if [ "$UPDATE" -eq 1 ]; then
 fi
 
 if [ "$INTERACTIVE" -eq 1 ] && [ "$FORCE" -ne 1 ] && any_managed_target_exists; then
-  if yes_no "Replace existing managed Codex Chef files after backup instead of preserving/merging?" "no"; then
+  if yes_no "Replace existing managed AgentChef files after backup instead of preserving/merging?" "no"; then
     FORCE=1
   fi
 fi
@@ -463,7 +463,7 @@ acquire_operation_lock() {
     const { canonicalizeOperationLockRoots } = await import(pathToFileURL(process.argv[1]).href);
     for (const root of canonicalizeOperationLockRoots({ roots: process.argv.slice(2) })) console.log(root);
   ' "$REPO_ROOT/scripts/lib/operation-lock.mjs" "$CODEX_HOME_DIR" "$AGENTS_HOME_DIR")"; then
-    echo "Could not resolve managed roots for the Codex Chef operation lock." >&2
+    echo "Could not resolve managed roots for the AgentChef operation lock." >&2
     exit 1
   fi
   OPERATION_LOCK_ROOTS=()
@@ -472,7 +472,7 @@ acquire_operation_lock() {
     if [ -n "$resolved_root" ]; then OPERATION_LOCK_ROOTS+=("$resolved_root"); fi
   done <<< "$canonical_lock_roots"
   if [ "${#OPERATION_LOCK_ROOTS[@]}" -eq 0 ]; then
-    echo "Could not resolve managed roots for the Codex Chef operation lock." >&2
+    echo "Could not resolve managed roots for the AgentChef operation lock." >&2
     exit 1
   fi
   local root lock_dir owner_path
@@ -486,7 +486,7 @@ acquire_operation_lock() {
     lock_dir="$root/.codex-chef-operation.lock"
     if ! mkdir "$lock_dir" 2>/dev/null; then
       release_operation_locks
-      echo "Another Codex Chef operation is already in progress for $root; refusing concurrent install." >&2
+      echo "Another AgentChef operation is already in progress for $root; refusing concurrent install." >&2
       exit 1
     fi
     OPERATION_LOCK_DIRS+=("$lock_dir")
@@ -494,7 +494,7 @@ acquire_operation_lock() {
     if ! node -e 'const fs=require("fs"); fs.writeFileSync(process.argv[1], `${JSON.stringify({ pid: Number(process.argv[3]), operation: "install", startedAt: new Date().toISOString(), id: process.argv[2] })}\n`, { encoding: "utf8", flag: "wx" });' "$owner_path" "$OPERATION_LOCK_ID" "$$"; then
       rmdir "$lock_dir" 2>/dev/null || true
       release_operation_locks
-      echo "Could not record the Codex Chef operation lock owner." >&2
+      echo "Could not record the AgentChef operation lock owner." >&2
       exit 1
     fi
   done
@@ -511,6 +511,41 @@ run_change() {
     return 1
   fi
   "$@"
+}
+
+# Resolve the managed root that owns a directory-sync destination.
+managed_root_for() {
+  case "$1" in
+    "$CODEX_HOME_DIR"|"$CODEX_HOME_DIR"/*) printf '%s\n' "$CODEX_HOME_DIR" ;;
+    "$AGENTS_HOME_DIR"|"$AGENTS_HOME_DIR"/*) printf '%s\n' "$AGENTS_HOME_DIR" ;;
+    *)
+      echo "Refusing to access unmanaged install target: $1" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# Verify a whole newline-separated target list with one helper process. A
+# directory sync used to spawn Node twice per copied file, which dominated
+# install time; the list form keeps the same per-path checks.
+assert_managed_write_targets() {
+  local managed_root="$1"
+  local list_file="$2"
+  local native_root="$managed_root"
+  local native_list="$list_file"
+  # Under Git Bash/MSYS the shell converts POSIX-looking arguments to Windows
+  # paths before Node sees them, but file contents are passed through verbatim.
+  # Convert both sides explicitly so root and targets stay comparable; on
+  # macOS/Linux cygpath is absent and the paths are already native.
+  if command -v cygpath >/dev/null 2>&1; then
+    native_root="$(cygpath -w "$managed_root")"
+    native_list="$(cygpath -w "$list_file")"
+    cygpath -w -f "$list_file" > "$list_file.native" && mv -f "$list_file.native" "$list_file"
+  fi
+  if ! node "$REPO_ROOT/scripts/assert-managed-target.mjs" "$native_root" --list "$native_list" >/dev/null; then
+    echo "Managed write target became unsafe; refusing access under: $managed_root" >&2
+    exit 1
+  fi
 }
 
 assert_managed_write_target() {
@@ -675,10 +710,10 @@ install_codex_config() {
     ensure_dir "$(dirname "$destination")"
     backup_target "$destination"
     local merge_args=("$REPO_ROOT/scripts/merge-codex-config.mjs" "$source" "$destination")
-    local merge_action="merge missing Codex Chef config blocks from $source"
+    local merge_action="merge missing AgentChef config blocks from $source"
     if [ "$UPDATE" -eq 1 ]; then
       merge_args+=("--sync-managed-tables")
-      merge_action="synchronize managed Codex Chef config blocks from $source"
+      merge_action="synchronize managed AgentChef config blocks from $source"
     fi
     if [ "$DRY_RUN" -eq 1 ]; then
       run_change "$destination" "$merge_action" true || true
@@ -737,21 +772,30 @@ install_directory() {
   assert_managed_directory_target "$destination"
   prepare_install_tree "$destination" "$source" "$directory_backup"
   if run_change "$destination" "sync source-owned files from $source while preserving unrelated extras" true; then
+    local managed_root list_file rel
+    managed_root="$(managed_root_for "$destination")"
+    list_file="$(mktemp "${TMPDIR:-/tmp}/codex-chef-targets.XXXXXX")"
     (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
       rel="${rel#./}"
-      ensure_dir "$(dirname "$destination/$rel")"
-      managed_copy_file "$source/$rel" "$destination/$rel"
+      printf '%s\n%s\n' "$(dirname "$destination/$rel")" "$destination/$rel"
+    done > "$list_file"
+    assert_managed_write_targets "$managed_root" "$list_file"
+    rm -f "$list_file"
+    (cd "$source" && find . -type f -print) | while IFS= read -r rel; do
+      rel="${rel#./}"
+      mkdir -p "$(dirname "$destination/$rel")"
+      cp "$source/$rel" "$destination/$rel"
     done
     mark_install_tree_applied "$destination" "$source"
     action "synced directory" "$destination"
   fi
 }
 
-section "Codex Chef installer"
+section "AgentChef installer"
 note "Codex home: $CODEX_HOME_DIR"
 note "Agents home: $AGENTS_HOME_DIR"
 if [ "$UPDATE" -eq 1 ]; then
-  note "Mode: update managed targets after backup; preserve user config and synchronize Codex Chef tables"
+  note "Mode: update managed targets after backup; preserve user config and synchronize AgentChef tables"
 elif [ "$FORCE" -eq 1 ]; then
   note "Mode: refresh source-owned managed targets after backup; preserve unrelated directory extras"
 else
@@ -772,13 +816,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 if [ "$INTERACTIVE" -eq 1 ]; then
   if [ "$UPDATE" -eq 1 ]; then
-    note "Existing config policy: backup + synchronize managed Codex Chef tables while preserving user-owned settings"
+    note "Existing config policy: backup + synchronize managed AgentChef tables while preserving user-owned settings"
   else
-    note "Existing config policy: backup + merge missing Codex Chef blocks unless force is enabled"
+    note "Existing config policy: backup + merge missing AgentChef blocks unless force is enabled"
   fi
   note "Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled."
   if ! yes_no "Continue with this plan?" "yes"; then
-    echo "Codex Chef install cancelled by user." >&2
+    echo "AgentChef install cancelled by user." >&2
     exit 1
   fi
 fi
@@ -860,7 +904,7 @@ MARKETPLACE_PATH="$MARKETPLACE_DIR/marketplace.json"
 ensure_dir "$MARKETPLACE_DIR"
 assert_managed_write_target "$MARKETPLACE_PATH"
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "Would upsert Codex Chef plugin marketplace entry: $MARKETPLACE_PATH"
+  echo "Would upsert AgentChef plugin marketplace entry: $MARKETPLACE_PATH"
 else
   MARKETPLACE_HELPER="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
   if node "$MARKETPLACE_HELPER" "$MARKETPLACE_PATH" "$MARKETPLACE_PLUGIN_TARGET" --check
@@ -1046,7 +1090,7 @@ if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
   PLUGIN_REFRESH_ARGS+=("--apply")
 fi
 if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
-  echo "Refresh installed Codex Chef plugin cache failed." >&2
+  echo "Refresh installed AgentChef plugin cache failed." >&2
   exit 1
 fi
 
@@ -1106,9 +1150,9 @@ if [ "$SKIPPED_EXISTING_COUNT" -gt 0 ]; then
   note "$SKIPPED_EXISTING_COUNT existing managed target(s) were preserved; use --force only for a deliberate backup-backed replacement"
 fi
 if [ "$DRY_RUN" -eq 1 ]; then
-  action "completed" "Codex Chef dry run"
+  action "completed" "AgentChef dry run"
 else
-  action "completed" "Codex Chef install"
+  action "completed" "AgentChef install"
   note "Restart Codex, then run:"
   echo "    codex doctor --summary"
   echo "    npm run codex:routing"

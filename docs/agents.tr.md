@@ -1,11 +1,11 @@
-# Codex Chef Agent'ları
+# AgentChef Agent'ları
 
 [English](agents.md) | [Türkçe](agents.tr.md)
 
 Agent, Codex workflow'undaki **kim** sorusunun cevabıdır: görevi, sınırı ve
 döndüreceği kanıt belli olan uzman bir rol.
 
-Codex Chef 11 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
+AgentChef 11 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
 planda sürekli çalışan servisler değildir ve her görevde topluca açılmaz. Bir
 rol, subagent başlatılmadan da ana oturuma yol gösterebilir. Delegasyon; işler
 bağımsız ilerleyebiliyorsa, gürültülü çıktıyı ana thread'den ayırmak gerekiyorsa
@@ -109,7 +109,7 @@ gerekip gerekmediğine ana oturum karar verir.
 3. Spawn edilen agent'lar mevcut onay ve sandbox sınırlarını miras alır.
 4. Aynı dosyalara dokunan paralel işler koordinasyon maliyeti yarattığı için
    write-heavy delegasyon sınırlı tutulur.
-5. Aktif kullanıcı profili yetkili kalır; Codex Chef rol dosyaları her agent'ı
+5. Aktif kullanıcı profili yetkili kalır; AgentChef rol dosyaları her agent'ı
    tek bir modele sabitlemez.
 
 Veri rotası dardır: `data_coordinator`, `docs_researcher` ile salt-okunur lineage,

@@ -22,8 +22,8 @@ Resmi kaynaklar:
 | `AGENTS.md` | Kalici repo/global calisma anlasmalari | Repo-local onceligi koruyan incelenmis global rehber | `npm run validate` |
 | `config.toml` | Model, sandbox, approval, MCP, feature ve profile ayarlari | Workspace-write sandbox ve on-request approval | `npm run validate:mcp` |
 | Rules | Dar komut approval varsayilanlari | Sadece dogrulama komutlari; destructive/publish aksiyonlari gated | `npm run validate:content` |
-| Skills | Progressive disclosure ile yeniden kullanilabilir workflow'lar | Commit-pinned curated kurulumlar ve GPT Pro context/handoff, yetkili reconstruction, kanıta dayalı SEO, izlenebilir deep research dahil on bir yerel plugin skill'i | `npm run verify:skills` |
-| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On bir skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; bundled MCP/app yok | `npm run validate` |
+| Skills | Progressive disclosure ile yeniden kullanilabilir workflow'lar | Commit-pinned curated kurulumlar ve GPT Pro context/handoff, yetkili reconstruction, kanıta dayalı SEO, izlenebilir deep research dahil on yerel plugin skill'i | `npm run verify:skills` |
+| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; bundled MCP/app yok | `npm run validate` |
 | MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli iki varsayılan; Context7, diğer lokal stdio yardımcıları ve auth isteyen connector'lar ihtiyaç olana kadar kapalı | `npm run validate:mcp` |
 | Subagents | Evidence-heavy uzman delegasyonu | Sandbox'li role dosyalariyla 21 incelenmis uzman ajan | `npm run validate:agents` |
 | Doctor/status | No-write saglik ve drift ozeti | Default repo-only; opsiyonel global varlik kontrolu | `npm run codex:doctor` |
@@ -184,7 +184,7 @@ Bu repo bu ayrimi korur:
 - Curated public ve first-party skill'ler `catalog/skills.json` icinde kalir.
 - Installable skill'ler reviewed `package`, `skill`, `sourceUrl`, `license`,
   `risk` ve `lastChecked` alanlarini tasimalidir.
-- Local plugin on bir workflow sunar; GPT Pro context ve manifest-bound handoff,
+- Local plugin on workflow sunar; GPT Pro context ve manifest-bound handoff,
   enterprise operator, zero-network offline diagram triplet, explicit-only Fetch,
   kanıta dayalı `$seo`, izlenebilir `$evidence-research` ve context budget
   planner bunların içindedir.

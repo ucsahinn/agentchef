@@ -3,7 +3,7 @@
 Opsiyonel skill kurulumu yavaşsa, beklenmedik prompt üretiyorsa veya public
 skill kaynaklarını çözerken hata veriyorsa bu makaleyi kullan.
 
-## Codex Chef Neyi Kontrol Eder?
+## AgentChef Neyi Kontrol Eder?
 
 - `catalog/skills.json` incelenmiş kurulabilir skill listesini tutar.
 - `catalog/skills-lock.json` incelenmiş kaynak metadata'sını kaydeder.

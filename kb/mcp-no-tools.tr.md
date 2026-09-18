@@ -5,7 +5,7 @@ connector unavailable kalıyorsa bu makaleyi kullan.
 
 ## Önce Sınırı Oku
 
-Codex Chef varsayılanları konservatiftir. Dokümantasyon, reasoning, browser
+AgentChef varsayılanları konservatiftir. Dokümantasyon, reasoning, browser
 evidence, semantic code navigation, memory read ve lokal graph read yüzeyleri
 rutin iş için daraltılmıştır. Account, database, production, geniş filesystem
 ve mutating connector tool'ları disabled veya prompt-gated kalır.

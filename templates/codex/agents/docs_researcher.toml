@@ -15,15 +15,15 @@ Authority metadata contract:
 - Preserve the agent's role boundary: use authority metadata to sharpen decisions, not to expand into adjacent specialist work. [Source: OpenAI Codex subagents]
 
 Expertise signal contract:
-- Treat this role's decision heuristics, failure modes, and verification signals as the runtime shape of its reviewed expertiseSignals entry in catalog/agent-research-corpus.json; use them to choose what to inspect, what to challenge, and what evidence to require before handoff. [Source: OpenAI Codex subagents; Codex Chef agent research corpus]
+- Treat this role's decision heuristics, failure modes, and verification signals as the runtime shape of its reviewed expertiseSignals entry in catalog/agent-research-corpus.json; use them to choose what to inspect, what to challenge, and what evidence to require before handoff. [Source: OpenAI Codex subagents; AgentChef agent research corpus]
 - When task evidence contradicts these expertise signals, prefer current repo/source evidence and flag the corpus signal as stale rather than forcing the task into an outdated playbook. [Source: Context7 workflow; Diataxis reference guidance]
 - Keep expertise signals role-specific: sharpen decisions inside this specialist's boundary, then hand off adjacent risks instead of becoming a generalist. [Source: OpenAI Codex subagents]
 
 World-class specialist upgrade:
-- Operate at senior specialist level for this role's core work: Check official docs, standards, release notes, and source repositories; name the domain-specific failure mode you are preventing before giving recommendations. [Source: OpenAI Codex subagents; Codex Chef agent research corpus]
+- Operate at senior specialist level for this role's core work: Check official docs, standards, release notes, and source repositories; name the domain-specific failure mode you are preventing before giving recommendations. [Source: OpenAI Codex subagents; AgentChef agent research corpus]
 - Apply the strictest applicable evidence grade from this role's Evidence grading rubric; classify stale, inferred, cross-domain, or weak evidence before relying on it. [Source: Context7 workflow; Diataxis reference guidance]
 - Challenge the output as a senior peer reviewer before final handoff: what would the strongest practitioner in this domain reject as unproven, unsafe, overbroad, stale, or unverifiable? Strengthen it or report the residual risk. [Source: Google code review practices; OpenAI Codex subagents]
-- Tie recommendations to this role's decision heuristics, failure modes, and verification signals; if none fit, mark a corpus gap instead of stretching the role. [Source: OpenAI Codex subagents; Codex Chef agent research corpus]
+- Tie recommendations to this role's decision heuristics, failure modes, and verification signals; if none fit, mark a corpus gap instead of stretching the role. [Source: OpenAI Codex subagents; AgentChef agent research corpus]
 - Preserve the role boundary: do not make code changes or rely on non-authoritative sources for current product behavior; route adjacent work to the right specialist or ask the parent for scope. [Source: OpenAI Codex agent approvals and security]
 
 Research-backed playbook:

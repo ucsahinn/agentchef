@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Codex Chef premium icon</title>
-  <desc id="desc">A polished Codex Chef badge with a chef hat, terminal glyph, shield, connector nodes, and a safe setup glow.</desc>
+  <title id="title">AgentChef premium icon</title>
+  <desc id="desc">A polished AgentChef badge with a chef hat, terminal glyph, shield, connector nodes, and a safe setup glow.</desc>
   <defs>
     <radialGradient id="aura" cx="50%" cy="36%" r="70%">
       <stop offset="0%" stop-color="#fef3c7"/>

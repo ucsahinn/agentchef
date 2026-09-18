@@ -16,12 +16,24 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: target
+    attributes:
+      label: Target agent / Hedef ajan
+      options:
+        - OpenAI Codex CLI
+        - Anthropic Claude Code
+        - Both / İkisi
+        - Not applicable / Uygulanamaz
+    validations:
+      required: true
+  - type: dropdown
     id: area
     attributes:
       label: Area / Alan
       options:
         - Install script
         - Codex config template
+        - Claude Code settings or plugin
         - Agents
         - MCP catalog
         - Skills catalog
@@ -51,11 +63,11 @@ body:
     id: environment
     attributes:
       label: Environment / Ortam
-      description: OS, shell, Codex surface, Node version, and installer used. / OS, shell, Codex yüzeyi, Node sürümü ve kullanılan installer.
+      description: OS, shell, agent CLI and version, Node version, and installer used. / OS, shell, ajan CLI ve sürümü, Node sürümü ve kullanılan installer.
       placeholder: |
         OS:
         Shell:
-        Codex surface:
+        Agent CLI (codex --version / claude --version):
         Node:
         Installer:
   - type: checkboxes

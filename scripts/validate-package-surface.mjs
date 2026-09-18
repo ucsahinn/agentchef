@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -36,7 +37,7 @@ function runNpmPackDryRun() {
       npm_config_update_notifier: "false"
     },
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 120000,
+    timeout: scaledTimeout(120000),
     windowsHide: true
   });
 }
@@ -46,7 +47,7 @@ function gitTrackedFiles() {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30000,
+    timeout: scaledTimeout(30000),
     windowsHide: true
   });
   if (result.error) {
@@ -107,16 +108,13 @@ const requiredFileEntries = [
   ".gitleaks.toml",
   "AGENTS.md",
   "CHANGELOG.md",
+  "CHANGELOG-0.5.md",
   "CODE_OF_CONDUCT.md",
   "CONTRIBUTING.md",
   "LICENSE",
   "llms.txt",
   "PRIVACY.md",
-  "README.de.md",
-  "README.es.md",
-  "README.fr.md",
   "README.md",
-  "README.pt-BR.md",
   "README.tr.md",
   "SECURITY.md",
   "SUPPORT.md",
@@ -125,7 +123,6 @@ const requiredFileEntries = [
   "docs/",
   "kb/",
   "manifests/",
-  "packages/",
   "plugins/",
   "schemas/",
   "scripts/",
@@ -185,10 +182,6 @@ if (result.error) {
     "README.md",
     "llms.txt",
     "README.tr.md",
-    "README.de.md",
-    "README.es.md",
-    "README.fr.md",
-    "README.pt-BR.md",
     "kb/README.md",
     "kb/README.tr.md",
     "kb/install-preview.md",
@@ -216,12 +209,6 @@ if (result.error) {
     "catalog/agent-research-corpus.json",
     "catalog/agents.json",
     "catalog/routing-profiles.json",
-    "packages/contracts/package.json",
-    "packages/contracts/schemas/event-envelope.v1.schema.json",
-    "packages/contracts/src/index.mjs",
-    "packages/contracts/src/module-compatibility.mjs",
-    "packages/contracts/test/envelope.test.mjs",
-    "packages/contracts/test/module-compatibility.test.mjs",
     "scripts/chef-cli.mjs",
     "scripts/codex-doctor.mjs",
     "scripts/codex-routing-board.mjs",
@@ -230,7 +217,6 @@ if (result.error) {
     "scripts/validate-diagram-triplet.mjs",
     "scripts/validate-content-safety.mjs",
     "scripts/validate-agent-config.mjs",
-    "scripts/validate-chef-module-manifest.mjs",
     "scripts/validate-agent-research-corpus.mjs",
     "scripts/validate-codex-doctor.mjs",
     "scripts/validate-codex-status.mjs",
@@ -246,9 +232,7 @@ if (result.error) {
     "scripts/validate-workflow-security.mjs",
     "scripts/codex-process-hygiene.mjs",
     "scripts/tests/process-hygiene.test.mjs",
-    "scripts/tests/chef-module-manifest.test.mjs",
     "manifests/install-plan.json",
-    "manifests/chef-module.manifest.v1.json",
     "catalog/mcp-servers.json",
     "templates/codex/serena-pool.mjs",
     "plugins/codex-chef-workflows/hooks/process-hygiene.json",

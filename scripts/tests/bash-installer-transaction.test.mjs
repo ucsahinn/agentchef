@@ -5,13 +5,14 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { scaledTimeout } from "../lib/test-timeouts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const bash = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "bash";
 
 function runInstaller(env) {
   return spawnSync(bash, ["scripts/install.sh", "--plain-output"], {
-    cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 300000, windowsHide: true
+    cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: scaledTimeout(300000), windowsHide: true
   });
 }
 

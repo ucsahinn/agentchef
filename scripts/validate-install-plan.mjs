@@ -326,7 +326,7 @@ for (const operation of manifest.operations || []) {
     validateDestinationPath(operation, "source", operation.source);
     validateDestinationPath(operation, "destination", operation.destination);
     if (operation.pluginId !== "codex-chef-workflows@codex-chef") {
-      fail(`Operation ${operation.id} must declare the managed Codex Chef plugin id`);
+      fail(`Operation ${operation.id} must declare the managed AgentChef plugin id`);
     }
   }
 

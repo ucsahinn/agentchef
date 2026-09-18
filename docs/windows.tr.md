@@ -52,7 +52,7 @@ codex.cmd --version
 npm.cmd run chef -- --processes --no-log
 ```
 
-Codex Chef'in programatik command resolver'i Windows'ta `npm.cmd`, `npx.cmd`
+AgentChef'in programatik command resolver'i Windows'ta `npm.cmd`, `npx.cmd`
 ve `codex.cmd`; Unix'te uzantisiz komutlari secer. Boylece interaktif shell'de
 calisip ajan veya child process'te PowerShell script-policy ya da executable
 resolution farki nedeniyle bozulan komutlar onlenir.

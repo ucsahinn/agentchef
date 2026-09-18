@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -51,7 +52,7 @@ function runInstaller(codexHome, agentsHome, extraArgs = [], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-      timeout: 180000
+      timeout: scaledTimeout(180000)
     });
   }
 
@@ -64,7 +65,7 @@ function runInstaller(codexHome, agentsHome, extraArgs = [], {
     env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 180000
+    timeout: scaledTimeout(180000)
   });
 }
 
@@ -93,7 +94,7 @@ function runInstallerPreview(codexHome, agentsHome) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-      timeout: 180000
+      timeout: scaledTimeout(180000)
     });
   }
 
@@ -107,7 +108,7 @@ function runInstallerPreview(codexHome, agentsHome) {
     env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 180000
+    timeout: scaledTimeout(180000)
   });
 }
 
@@ -140,7 +141,7 @@ function runApprovalHarmonyWithoutCodexCli() {
     env: envWithoutCodexCli(),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 120000,
+    timeout: scaledTimeout(120000),
     windowsHide: true
   });
 }
@@ -301,7 +302,7 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
     try {
       const marketplace = JSON.parse(read(marketplacePath));
       const chefEntries = (marketplace.plugins || []).filter((plugin) => plugin?.name === "codex-chef-workflows");
-      if (chefEntries.length !== 1) fail(`${label} marketplace must contain exactly one Codex Chef plugin entry.`);
+      if (chefEntries.length !== 1) fail(`${label} marketplace must contain exactly one AgentChef plugin entry.`);
       const chef = chefEntries[0];
       const marketplaceRoot = path.resolve(agentsHome, "..");
       const expectedPluginSource = `./${path.relative(
@@ -309,7 +310,7 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
         path.join(agentsHome, "plugins", "sources", "codex-chef-workflows")
       ).replaceAll(path.sep, "/")}`;
       if (chef && chef.source?.path !== expectedPluginSource) {
-        fail(`${label} marketplace Codex Chef plugin path must be portable and marketplace-root-relative.`);
+        fail(`${label} marketplace AgentChef plugin path must be portable and marketplace-root-relative.`);
       }
     } catch (error) {
       fail(`${label} marketplace is not parseable JSON: ${error.message}`);
@@ -388,7 +389,7 @@ function runSafetyPreflight(codexHome, agentsHome, extraArgs = [], extraEnv = {}
     env: { ...process.env, ...extraEnv },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30000,
+    timeout: scaledTimeout(30000),
     windowsHide: true
   });
 }
@@ -405,7 +406,7 @@ function runInstallSurfacePreflight(codexHome, agentsHome) {
     env: process.env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30000,
+    timeout: scaledTimeout(30000),
     windowsHide: true
   });
 }
@@ -422,7 +423,7 @@ function runDirectSkillTargetPreflight(source, target, allowAdopt = false) {
     env: process.env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 30000,
+    timeout: scaledTimeout(30000),
     windowsHide: true
   });
 }
@@ -461,7 +462,7 @@ function assertNoBackupInventoryGate() {
   ];
   for (const scenario of scenarios) {
     const fixtureSlug = scenario.name.replace(/[^a-z0-9-]+/gi, "-");
-    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef No Backup [${fixtureSlug}] #-`));
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef No Backup [${fixtureSlug}] #-`));
     const codexHome = path.join(fixtureRoot, ".codex");
     const agentsHome = path.join(fixtureRoot, ".agents");
     scenario.prepare({ codexHome, agentsHome, fixtureRoot });
@@ -470,7 +471,7 @@ function assertNoBackupInventoryGate() {
     assertIncludes(output, "creation-only", `No-backup ${scenario.name} preflight`);
   }
 
-  const gitRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef No Backup [git-global] #-"));
+  const gitRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef No Backup [git-global] #-"));
   const gitHome = path.join(gitRoot, "home");
   const globalConfig = path.join(gitRoot, "global.gitconfig");
   ensureDir(gitHome);
@@ -486,7 +487,7 @@ function assertNoBackupInventoryGate() {
 
 function runGitGuardAdoptionScenario() {
   progress("Git guard narrow adoption receipt and restore");
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Git Guard Adoption #-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Git Guard Adoption #-"));
   const home = path.join(fixtureRoot, "home");
   const codexHome = path.join(fixtureRoot, ".codex");
   const agentsHome = path.join(fixtureRoot, ".agents");
@@ -576,7 +577,7 @@ function runGitGuardAdoptionScenario() {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
-    timeout: 30000
+    timeout: scaledTimeout(30000)
   });
   assertRunOk(restore, "Installer Git guard receipt restore");
   if (read(ignorePath) !== foreignIgnore || read(hookPath) !== foreignHook) {
@@ -613,7 +614,7 @@ function runInstallerSafetyScenarios() {
     });
 
   progress("no-backup creation-only install");
-  const creationRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [creation] #-"));
+  const creationRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Safety [creation] #-"));
   const creationCodexHome = path.join(creationRoot, ".codex");
   const creationAgentsHome = path.join(creationRoot, ".agents");
   const creationOutput = assertRunOk(
@@ -624,7 +625,7 @@ function runInstallerSafetyScenarios() {
   assertDefaultBoundaries(creationOutput, "Installer no-backup creation-only smoke");
 
   progress("no-backup existing-target rejection");
-  const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [no-backup-existing] #-"));
+  const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Safety [no-backup-existing] #-"));
   const existingCodexHome = path.join(existingRoot, ".codex");
   const existingAgentsHome = path.join(existingRoot, ".agents");
   ensureDir(existingCodexHome);
@@ -667,10 +668,10 @@ function runInstallerSafetyScenarios() {
 
   for (const leaf of ["codex-profile.mjs", "serena-pool.mjs", "full.config.toml"]) {
     progress(`preflight unsafe leaf ${leaf}`);
-    const leafRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef Install Safety [${leaf}] #-`));
+    const leafRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef Install Safety [${leaf}] #-`));
     const leafCodexHome = path.join(leafRoot, ".codex");
     const leafAgentsHome = path.join(leafRoot, ".agents");
-    const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef Install Safety [${leaf}-external] #-`));
+    const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef Install Safety [${leaf}-external] #-`));
     ensureDir(leafCodexHome);
     fs.writeFileSync(path.join(externalRoot, "sentinel.txt"), "unchanged\n", "utf8");
     fs.symlinkSync(externalRoot, path.join(leafCodexHome, leaf), process.platform === "win32" ? "junction" : "dir");
@@ -688,7 +689,7 @@ function runInstallerSafetyScenarios() {
   }
 
   progress("Git guard ownership conflict rejection");
-  const guardsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Safety [git-guards] #-"));
+  const guardsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Safety [git-guards] #-"));
   const guardsHome = path.join(guardsRoot, "home");
   const guardsCodexHome = path.join(guardsRoot, ".codex");
   const guardsAgentsHome = path.join(guardsRoot, ".agents");
@@ -788,7 +789,7 @@ if (process.argv.includes("--safety")) {
 
 function initializeCuratedSkillInstallerFixture() {
   const fixtureRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "Codex Chef Install Smoke [curated-status] #-")
+    path.join(os.tmpdir(), "AgentChef Install Smoke [curated-status] #-")
   );
   const sourceRepo = path.join(fixtureRoot, "source");
   const catalogPath = path.join(fixtureRoot, "skills.json");
@@ -816,7 +817,7 @@ function initializeCuratedSkillInstallerFixture() {
   assertRunOk(
     git([
       "-c",
-      "user.name=Codex Chef",
+      "user.name=AgentChef",
       "-c",
       "user.email=chef@example.invalid",
       "commit",
@@ -856,11 +857,11 @@ function initializeCuratedSkillInstallerFixture() {
 // A clean install with independently rooted homes covers both the zero-config
 // and split-home contracts. Keep the homes in separate temp roots rather than
 // repeating the same full installation later in this smoke suite.
-const zeroCodexRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [zero-codex] #-"));
-const zeroAgentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [zero-agents] #-"));
+const zeroCodexRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [zero-codex] #-"));
+const zeroAgentsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [zero-agents] #-"));
 const zeroCodexHome = path.join(zeroCodexRoot, ".codex");
 const zeroAgentsHome = path.join(zeroAgentsRoot, ".agents");
-const previewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [preview] #-"));
+const previewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [preview] #-"));
 const previewCodexHome = path.join(previewRoot, ".codex");
 const previewAgentsHome = path.join(previewRoot, ".agents");
 
@@ -926,7 +927,7 @@ if (fs.existsSync(path.join(previewCodexHome, "config.toml")) || fs.existsSync(p
   fail("Installer full preview smoke must not write Codex or Agents files.");
 }
 
-const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [rollback] #-"));
+const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [rollback] #-"));
 const rollbackCodexHome = path.join(rollbackRoot, ".codex");
 const rollbackAgentsHome = path.join(rollbackRoot, ".agents");
 const rollbackAgentsPath = path.join(rollbackCodexHome, "AGENTS.md");
@@ -960,7 +961,7 @@ if (canonicalPathForCompare(path.dirname(zeroCodexHome)) === canonicalPathForCom
   fail("Installer zero-config smoke must use independent CODEX_HOME and AGENTS_HOME roots.");
 }
 
-const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [existing] #-"));
+const existingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [existing] #-"));
 const codexHome = path.join(existingRoot, ".codex");
 const agentsHome = path.join(existingRoot, ".agents");
 ensureDir(codexHome);
@@ -1055,7 +1056,7 @@ const directAdoptionScenarios = [
 const foreignSkillFixtures = [];
 for (const scenario of directAdoptionScenarios) {
   const collisionRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `Codex Chef Install Smoke [foreign-${scenario.name}] #-`)
+    path.join(os.tmpdir(), `AgentChef Install Smoke [foreign-${scenario.name}] #-`)
   );
   collisionRoots.push(collisionRoot);
   const collisionCodexHome = path.join(collisionRoot, ".codex");
@@ -1070,7 +1071,7 @@ for (const scenario of directAdoptionScenarios) {
   if (collisionResult.error) {
     fail(`Installer foreign ${scenario.display} collision could not run: ${collisionResult.error.message}`);
   } else if (collisionResult.status === 0) {
-    fail(`Installer must fail closed before writes when AGENTS_HOME/skills/${scenario.name} is not Codex Chef-managed.`);
+    fail(`Installer must fail closed before writes when AGENTS_HOME/skills/${scenario.name} is not AgentChef-managed.`);
   }
   if (
     fs.existsSync(collisionCodexHome)
@@ -1091,7 +1092,7 @@ for (const scenario of directAdoptionScenarios) {
 // all explicit adoption flags together once. The installer still performs a
 // real preflight and writes every selected target; this avoids repeating the
 // same full baseline install four times.
-const adoptionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [foreign-adoption] #-"));
+const adoptionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [foreign-adoption] #-"));
 collisionRoots.push(adoptionRoot);
 const adoptionCodexHome = path.join(adoptionRoot, ".codex");
 const adoptionAgentsHome = path.join(adoptionRoot, ".agents");
@@ -1123,11 +1124,11 @@ const adoptFlag = process.platform === "win32" ? "-AdoptFetchSkill" : "--adopt-f
 const foreignSkill = "---\nname: fetch\n---\n\nUser-owned unrelated Fetch workflow.\n";
 
 for (const variant of ["root-link", "nested-link"]) {
-  const linkRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef Install Smoke [fetch-${variant}] #-`));
+  const linkRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef Install Smoke [fetch-${variant}] #-`));
   const linkCodexHome = path.join(linkRoot, ".codex");
   const linkAgentsHome = path.join(linkRoot, ".agents");
   const linkFetchRoot = path.join(linkAgentsHome, "skills", "fetch");
-  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `Codex Chef External Fetch [${variant}] #-`));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef External Fetch [${variant}] #-`));
   const externalSkill = "---\nname: external-fetch\n---\n\nMust remain unchanged.\n";
   ensureDir(path.dirname(linkFetchRoot));
   if (variant === "root-link") {
@@ -1173,7 +1174,7 @@ for (const variant of ["root-link", "nested-link"]) {
   }
 }
 
-const danglingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "Codex Chef Install Smoke [fetch-dangling-root] #-"));
+const danglingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [fetch-dangling-root] #-"));
 const danglingCodexHome = path.join(danglingRoot, ".codex");
 const danglingAgentsHome = path.join(danglingRoot, ".agents");
 const danglingFetchRoot = path.join(danglingAgentsHome, "skills", "fetch");
@@ -1207,14 +1208,14 @@ for (const scenario of [
   { name: "agents-plugin-parent", home: "agents" }
 ]) {
   const linkedAncestorRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `Codex Chef Install Smoke [${scenario.name}] #-`)
+    path.join(os.tmpdir(), `AgentChef Install Smoke [${scenario.name}] #-`)
   );
   const linkedAncestorCodexHome = path.join(linkedAncestorRoot, ".codex");
   const linkedAncestorAgentsHome = path.join(linkedAncestorRoot, ".agents");
   const selectedHome = scenario.home === "codex" ? linkedAncestorCodexHome : linkedAncestorAgentsHome;
   const untouchedHome = scenario.home === "codex" ? linkedAncestorAgentsHome : linkedAncestorCodexHome;
   const externalRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `Codex Chef Install Smoke [${scenario.name}-external] #-`)
+    path.join(os.tmpdir(), `AgentChef Install Smoke [${scenario.name}-external] #-`)
   );
   ensureDir(selectedHome);
   fs.symlinkSync(externalRoot, path.join(selectedHome, "plugins"), process.platform === "win32" ? "junction" : "dir");
@@ -1239,14 +1240,14 @@ for (const scenario of [
 
 for (const home of ["codex", "agents"]) {
   const linkedHomeRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `Codex Chef Install Smoke [${home}-home-link] #-`)
+    path.join(os.tmpdir(), `AgentChef Install Smoke [${home}-home-link] #-`)
   );
   const linkedHomeCodex = path.join(linkedHomeRoot, ".codex");
   const linkedHomeAgents = path.join(linkedHomeRoot, ".agents");
   const selectedHome = home === "codex" ? linkedHomeCodex : linkedHomeAgents;
   const untouchedHome = home === "codex" ? linkedHomeAgents : linkedHomeCodex;
   const externalRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `Codex Chef Install Smoke [${home}-home-link-external] #-`)
+    path.join(os.tmpdir(), `AgentChef Install Smoke [${home}-home-link-external] #-`)
   );
   fs.writeFileSync(path.join(externalRoot, "sentinel.txt"), "unchanged\n", "utf8");
   fs.symlinkSync(externalRoot, selectedHome, process.platform === "win32" ? "junction" : "dir");

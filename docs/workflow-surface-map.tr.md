@@ -88,14 +88,14 @@ Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-
 
 Public GStack reposu browser pairing, cookie import, deploy automation,
 continuous checkpoint commit, domain memory ve raw CDP gibi faydali workflow'lar
-gosteriyor. Bunlar Codex Chef'te default kurulum degil; cunku token, tunnel,
+gosteriyor. Bunlar AgentChef'te default kurulum degil; cunku token, tunnel,
 kalici browser state, production sistemi veya auto-commit davranisi getiriyor.
-Codex Chef guvenli esdegerleri korur: browser MCP entry'leri prompt-gated,
+AgentChef guvenli esdegerleri korur: browser MCP entry'leri prompt-gated,
 release verification push/deploy'dan ayridir, memory secret-aware calisir ve
 tekrar kullanilabilir workflow'lar genis command shim yerine skill olarak gelir.
 
 Public ECC reposu cok daha buyuk bir cross-harness operating-system yuzeyi
-gosteriyor. Codex Chef manifest/state preview, katalog, doctor check, plugin
+gosteriyor. AgentChef manifest/state preview, katalog, doctor check, plugin
 paketleme ve validation gate fikirlerini alir; fakat wholesale cross-harness
 sync, hook prompt injection, varsayilan acik authenticated connector ve
 review edilmemis dev skill kataloglarini bloke eder.

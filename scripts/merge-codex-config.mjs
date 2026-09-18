@@ -399,23 +399,23 @@ if (fullTemplateInstall && !options.dryRun) {
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else if (fullTemplateInstall && options.dryRun) {
-  console.log("Would install full Codex Chef config template.");
+  console.log("Would install full AgentChef config template.");
 } else if (fullTemplateInstall) {
-  console.log("Installed full Codex Chef config template.");
+  console.log("Installed full AgentChef config template.");
 } else if (missingRootAssignments.length === 0 && missing.length === 0 && removedDeprecatedFields.length === 0 && updatedManagedFields.length === 0 && updatedManagedTables.length === 0) {
-  console.log("Codex config already contains all managed Codex Chef blocks.");
+  console.log("Codex config already contains all managed AgentChef blocks.");
 } else if (options.dryRun) {
   const parts = [];
-  if (missingRootAssignments.length > 0) parts.push(`merge ${missingRootAssignments.length} missing Codex Chef root default(s): ${missingRootAssignments.map((entry) => entry.key).join(", ")}`);
-  if (missing.length > 0) parts.push(`merge ${missing.length} missing Codex Chef config block(s): ${missing.map((entry) => entry.tableName).join(", ")}`);
+  if (missingRootAssignments.length > 0) parts.push(`merge ${missingRootAssignments.length} missing AgentChef root default(s): ${missingRootAssignments.map((entry) => entry.key).join(", ")}`);
+  if (missing.length > 0) parts.push(`merge ${missing.length} missing AgentChef config block(s): ${missing.map((entry) => entry.tableName).join(", ")}`);
   if (removedDeprecatedFields.length > 0) parts.push(`remove deprecated managed field(s): ${removedDeprecatedFields.join(", ")}`);
   if (updatedManagedFields.length > 0) parts.push(`update managed field(s): ${updatedManagedFields.join(", ")}`);
   if (updatedManagedTables.length > 0) parts.push(`sync managed table(s): ${updatedManagedTables.join(", ")}`);
   console.log(`Would ${parts.join("; ")}`);
 } else {
   const parts = [];
-  if (missingRootAssignments.length > 0) parts.push(`merged ${missingRootAssignments.length} missing Codex Chef root default(s): ${missingRootAssignments.map((entry) => entry.key).join(", ")}`);
-  if (missing.length > 0) parts.push(`merged ${missing.length} missing Codex Chef config block(s): ${missing.map((entry) => entry.tableName).join(", ")}`);
+  if (missingRootAssignments.length > 0) parts.push(`merged ${missingRootAssignments.length} missing AgentChef root default(s): ${missingRootAssignments.map((entry) => entry.key).join(", ")}`);
+  if (missing.length > 0) parts.push(`merged ${missing.length} missing AgentChef config block(s): ${missing.map((entry) => entry.tableName).join(", ")}`);
   if (removedDeprecatedFields.length > 0) parts.push(`removed deprecated managed field(s): ${removedDeprecatedFields.join(", ")}`);
   if (updatedManagedFields.length > 0) parts.push(`updated managed field(s): ${updatedManagedFields.join(", ")}`);
   if (updatedManagedTables.length > 0) parts.push(`synced managed table(s): ${updatedManagedTables.join(", ")}`);

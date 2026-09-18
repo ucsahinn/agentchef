@@ -39,10 +39,7 @@ if (exists(agentsRel)) {
     "Routing plan:",
     "Routing result:",
     "adaptive-agent-routing",
-    "preserve the active profile's model and reasoning choices",
-    "Codex Chef Control Routing",
-    "codex-control-router",
-    "Brain write and workspace write remain disabled"
+    "preserve the active profile's model and reasoning choices"
   ]) {
     if (!text.includes(required)) fail(`Compact global AGENTS.md missing: ${required}`);
   }

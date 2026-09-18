@@ -26,7 +26,7 @@ installCliErrorBoundary({
   tool: "verify-install-runtime",
   argv: args,
   root,
-  prefix: "Codex Chef runtime verification error"
+  prefix: "AgentChef runtime verification error"
 });
 const options = {
   json: false,
@@ -81,7 +81,7 @@ for (let index = 0; index < args.length; index += 1) {
 function printHelp() {
   console.log(`Usage: node scripts/verify-install-runtime.mjs [options]
 
-Read-only runtime verification for an installed Codex Chef setup.
+Read-only runtime verification for an installed AgentChef setup.
 
 Options:
   --codex-home <path>     Installed Codex home to inspect
@@ -105,7 +105,7 @@ Options:
 const progressEnabled = !options.json;
 const probes = [];
 if (progressEnabled) {
-  console.log("Codex Chef install runtime verification");
+  console.log("AgentChef install runtime verification");
   console.log("Collecting installed file, Codex CLI, MCP, skill, and Git guard checks; this can take 30-60 seconds.");
 }
 
@@ -732,7 +732,7 @@ function inspectPluginRuntime(failures, warnings) {
   );
   if (result.error || result.status !== 0) {
     const detail = result.error?.message || `exit ${result.status}`;
-    const message = `Could not inspect Codex Chef plugin state with installed CODEX_HOME: ${detail}`;
+    const message = `Could not inspect AgentChef plugin state with installed CODEX_HOME: ${detail}`;
     (options.requireLiveRuntime ? failures : warnings).push(message);
     return { inspected: false, error: detail };
   }
@@ -746,21 +746,21 @@ function inspectPluginRuntime(failures, warnings) {
     const entry = entries.find((plugin) => plugin?.name === "codex-chef-workflows");
     if (!entry) {
       warnings.push(
-        "Codex Chef plugin is neither installed nor discoverable in the active marketplace set; managed direct skills remain the guaranteed invocation path."
+        "AgentChef plugin is neither installed nor discoverable in the active marketplace set; managed direct skills remain the guaranteed invocation path."
       );
       return { inspected: true, found: false, installed: false, enabled: false };
     }
     const expectedVersion = readJson("plugins/codex-chef-workflows/.codex-plugin/plugin.json").version;
     if (entry.installed !== true) {
       warnings.push(
-        "Codex Chef plugin is discoverable but not installed; namespaced plugin calls require explicit installation and a new session."
+        "AgentChef plugin is discoverable but not installed; namespaced plugin calls require explicit installation and a new session."
       );
     } else if (entry.enabled !== true) {
-      warnings.push("Codex Chef plugin is installed but disabled; namespaced plugin calls are unavailable.");
+      warnings.push("AgentChef plugin is installed but disabled; namespaced plugin calls are unavailable.");
     }
     if (entry.installed === true && entry.version !== expectedVersion) {
       failures.push(
-        `Installed Codex Chef plugin version drifted: expected ${expectedVersion}, got ${entry.version || "unknown"}.`
+        `Installed AgentChef plugin version drifted: expected ${expectedVersion}, got ${entry.version || "unknown"}.`
       );
     }
     return {
@@ -875,10 +875,10 @@ function inspectGitGuards(failures) {
   const configuredExcludes = (excludes.stdout || "").trim();
   const configuredHooks = (hooks.stdout || "").trim();
   if (!sameFilesystemPath(configuredExcludes, ignorePath)) {
-    failures.push("Global Git core.excludesfile does not point at the Codex Chef guard file.");
+    failures.push("Global Git core.excludesfile does not point at the AgentChef guard file.");
   }
   if (!sameFilesystemPath(configuredHooks, hooksPath)) {
-    failures.push("Global Git core.hooksPath does not point at the Codex Chef hooks directory.");
+    failures.push("Global Git core.hooksPath does not point at the AgentChef hooks directory.");
   }
 
   return {
@@ -911,7 +911,7 @@ report.status = failures.length > 0 ? "fail" : warnings.length > 0 ? "attention"
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  if (!progressEnabled) console.log("Codex Chef install runtime verification");
+  if (!progressEnabled) console.log("AgentChef install runtime verification");
   console.log(`Status: ${report.status}`);
   console.log(`Codex home: ${report.installed.codexHome}`);
   console.log(`Agents home: ${report.installed.agentsHome}`);

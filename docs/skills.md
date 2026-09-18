@@ -1,4 +1,4 @@
-# Codex Chef Skills
+# AgentChef Skills
 
 [English](skills.md) | [Türkçe](skills.tr.md)
 
@@ -14,10 +14,10 @@ reference.
 
 Official Codex reference: [Build skills](https://developers.openai.com/codex/skills)
 
-## 🍱 Eleven Bundled Workflows
+## 🍱 Ten Bundled Workflows
 
-These live in the Codex Chef plugin and travel with the repository. The
-installer synchronizes all eleven from that same canonical source to
+These live in the AgentChef plugin and travel with the repository. The
+installer synchronizes all ten from that same canonical source to
 `AGENTS_HOME/skills/<name>`, so every workflow can be called directly. Examples
 include `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`,
 `$seo <target>`, and `$evidence-research <question>`. Fetch remains
@@ -32,7 +32,6 @@ install or enable it. To use namespaced calls such as
 | Skill | Use it for |
 | --- | --- |
 | [`codex-chef-operator`](../plugins/codex-chef-workflows/skills/codex-chef-operator/SKILL.md) | Keep this starter aligned without weakening installer or security boundaries. |
-| [`codex-chef-brain`](../plugins/codex-chef-workflows/skills/codex-chef-brain/SKILL.md) | Preview, capture, retrieve, back up, and restore selected project knowledge in a user-owned Markdown vault. |
 | [`context-budget-planner`](../plugins/codex-chef-workflows/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
 | [`adaptive-agent-routing`](../plugins/codex-chef-workflows/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
 | [`external-review-workflow`](../plugins/codex-chef-workflows/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
@@ -69,7 +68,7 @@ verification checks that the pair still resolves.
 
 ## 🧰 Other Cataloged Workflows
 
-The following names remain discoverable, but Codex Chef does not automatically
+The following names remain discoverable, but AgentChef does not automatically
 install them. Some are local compatibility names; others are specialized
 upstream options intentionally kept out of the default skill list.
 
@@ -106,7 +105,7 @@ upstream options intentionally kept out of the default skill list.
 ## What “Cataloged” Does And Does Not Mean
 
 - A catalog entry is reviewed metadata, not proof that the skill is installed.
-- A bundled skill lives in this repository's plugin. All eleven bundled
+- A bundled skill lives in this repository's plugin. All ten bundled
   workflows are also synchronized as managed direct skills without creating a
   second canonical source in the repository.
 - An `install: true` entry is eligible for the full install profile.

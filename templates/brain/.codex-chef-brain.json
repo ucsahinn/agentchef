@@ -1,7 +1,0 @@
-{
-  "schemaVersion": "codex-chef.brain.v1",
-  "templateVersion": "1.0.0",
-  "managedBy": "codex-chef",
-  "ownership": "user-data",
-  "overwritePolicy": "never"
-}

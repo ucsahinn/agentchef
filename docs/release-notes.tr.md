@@ -1,28 +1,32 @@
 # Sürüm Notları
 
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v0.5.74 - 2026-08-14
 
-Codex Chef 0.5.74 son bagimsiz Codex Chef bakim surumudur. Bagimsiz kurulum
-sozlesmesini korurken, bu sozlesmeyi her desteklenen CI hostunda kanitlamak
-icin gereken platformlar arasi test fixture'larini duzeltir.
+Codex Chef 0.5.74, yalnızca Codex hedefleyen son bağımsız sürümdür. Bağımsız
+kurulum sözleşmesini korurken, bu sözleşmeyi her desteklenen CI hostunda
+kanıtlamak için gereken platformlar arası test fixture'larını düzeltir.
 
-### Neler Degisti?
+### Neler Değişti?
 
-- Platformlar arasi fixture'larda POSIX gecici home'lara Windows yol kurallari
-  uygulamak yerine, calisan hostun repair sozlesmesini kullanir.
-- Tam yonetilen durum assertion'undan once Unix Git-hook fixture'ini
-  calistirilabilir yapar ve Windows ACL denetiminin desteklenmedigi
-  platformlardaki belgelenmis unavailable Brain-health projeksiyonunu kabul
+- Platformlar arası fixture'larda POSIX geçici home'lara Windows yol kuralları
+  uygulamak yerine, çalışan hostun repair sözleşmesini kullanır.
+- Tam yönetilen durum assertion'ından önce Unix Git-hook fixture'ını
+  çalıştırılabilir yapar ve Windows ACL denetiminin desteklenmediği
+  platformlardaki belgelenmiş unavailable Brain-health projeksiyonunu kabul
   eder.
 
-### Urun Siniri
+### Ürün Sınırı
 
-Bu surum bagimsiz kurulabilir kalir ve bu repoda belgelenen uyumluluk
-taahhutlerini tasir. Kitchen'i kurmaz; global Codex, Agents, Git, Brain,
-oturum, credential veya cache durumunu Kitchen'a tasimaz. Kitchen migration
-cutover sonrasinda Kitchen tek public installer ve release train olacak;
-Chef, [ADR-005](decisions/005-kitchen-unified-workspace-and-module-boundaries.md)
-uyumluluk ve migration kurallariyla yonetilen versioned bir dahili modul
-olacak.
+Bu sürüm bağımsız kurulabilir ve bu repoda belgelenen uyumluluk taahhütlerini
+taşır. Kitchen'ı **kurmaz**; global Codex, Agents, Git, oturum, credential veya
+cache durumunu hiçbir yere taşımaz.
+
+Bu sürümden sonraki yön
+[ADR-006](decisions/006-agentchef-independent-dual-target-product.md) içinde
+kayıtlıdır: proje bağımsız bir ürün olarak devam eder, Kitchen'a katılmaz,
+yerleşik Brain workflow'u ayrı `dual-agent-brain` motoru lehine emekli edilir
+(bkz. [Brain emekliliği](brain-retirement.tr.md)) ve bir sonraki sürüm hattı
+Claude Code'u ikinci kurulum hedefi olarak ekler. Aksini söyleyen bir sürüm
+yayınlanana kadar installer yalnızca Codex'i hedefler.
