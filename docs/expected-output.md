@@ -10,7 +10,7 @@ Discovery output stays no-write and human-readable:
 
 ```text
 AgentChef install profiles
-Package: agentchef@0.9.0
+Package: agentchef@1.0.0
 Platform: windows
 Targets: codex
 
@@ -26,7 +26,7 @@ plugin source tree, Git guards, curated skills) are counted once:
 
 ```text
 AgentChef install profiles
-Package: agentchef@0.9.0
+Package: agentchef@1.0.0
 Platform: windows
 Targets: codex, claude
 

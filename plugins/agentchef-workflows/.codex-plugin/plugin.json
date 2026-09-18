@@ -1,6 +1,6 @@
 {
   "name": "agentchef-workflows",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "Security-first AgentChef workflows for setup maintenance, planning, review, reconstruction, and verification.",
   "skills": "./skills/",
   "hooks": [

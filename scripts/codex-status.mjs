@@ -298,6 +298,8 @@ function run(command, commandArgs, extra = {}) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: extra.timeout || DEFAULT_CHILD_TIMEOUT_MS,
+    // Plugin and MCP listings on a large home can exceed the 1 MiB default.
+    maxBuffer: 64 * 1024 * 1024,
     windowsHide: true,
     env: extra.env || process.env
   });

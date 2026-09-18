@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-09-18
 
 - Rename the on-disk identity from `codex-chef` to `agentchef`: ownership
   markers (`.agentchef-managed.json`, `.agentchef-source.json`), the
@@ -28,6 +28,17 @@
 - Link only catalog skills into `~/.claude/skills`: a managed directory that
   left `catalog/skills.json` (such as the retired `codex-chef-brain`) is
   reported as `retired` and never linked, adopted, or removed.
+- Follow-ups from review: Codex removal deletes every ownership-marker spelling
+  present in a direct skill folder, `plan-install --redact-paths` reports the
+  real shape of the `.claude.json` path (an explicit `--claude-json` elsewhere
+  shows as `${CLAUDE_JSON}`), and the install contract derives the default
+  Claude home from `CLAUDE_CONFIG_DIR` itself.
+- Raise the runtime verifier probe buffer: `codex plugin list --available
+  --json` on a home with many plugins exceeded the 1 MiB default and the
+  plugin-state check reported `ENOBUFS` instead of a result.
+- Retitle the shipped global Git ignore template (`# AgentChef global Git
+  ignore.`); the previous template hash stays in the legacy ownership list, so
+  an installed copy is still recognized and refreshed by `--install-git-guards`.
 
 ## 0.9.0 - 2026-09-18
 

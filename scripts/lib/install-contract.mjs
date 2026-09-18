@@ -358,18 +358,26 @@ function sourcePreflightArtifacts(operations, options) {
   return [...new Set(artifacts)];
 }
 
-// Mirrors resolveClaudeHomes without the environment: callers that honour
-// CLAUDE_CONFIG_DIR pass claudeJson explicitly. A Claude home other than the
-// default ${HOME}/.claude counts as relocated and holds .claude.json itself;
+// Mirrors resolveClaudeHomes with platform-aware path joins so a contract can
+// be planned for another platform: CLAUDE_CONFIG_DIR (from `env`, default
+// process.env) or an explicit Claude home other than ${HOME}/.claude relocates
+// the config directory, and only then does .claude.json live inside it;
 // otherwise Claude Code keeps the file at ${HOME}/.claude.json.
-function defaultClaudeJsonPath({ platform, home, claudeHome }) {
+function contractClaudeHomes({ platform, home, claudeHome, claudeJson }, env) {
   const defaultHome = joinTargetPath(platform, home, ".claude");
-  const resolvedHome = claudeHome ? normalizeTargetPath(claudeHome, platform) : defaultHome;
+  const configDir = claudeHome || env.CLAUDE_CONFIG_DIR || null;
+  const resolvedHome = configDir ? normalizeTargetPath(configDir, platform) : defaultHome;
   const same = platform === "windows" ? resolvedHome.toLowerCase() === defaultHome.toLowerCase() : resolvedHome === defaultHome;
-  return same ? joinTargetPath(platform, home, ".claude.json") : joinTargetPath(platform, resolvedHome, ".claude.json");
+  const relocated = Boolean(env.CLAUDE_CONFIG_DIR) || (Boolean(claudeHome) && !same);
+  return {
+    claudeHome: resolvedHome,
+    claudeJson: claudeJson || joinTargetPath(platform, relocated ? resolvedHome : home, ".claude.json")
+  };
 }
 
-export function resolveInstallContract(rawOptions) {
+export function resolveInstallContract(rawOptionsWithEnv) {
+  const { env = process.env, ...rawOptions } = rawOptionsWithEnv;
+  const claudeHomes = contractClaudeHomes(rawOptions, env);
   const options = {
     root: repositoryRoot,
     profile: rawOptions.all ? "all" : "default",
@@ -379,8 +387,8 @@ export function resolveInstallContract(rawOptions) {
     force: false,
     noBackup: false,
     targets: defaultTargets,
-    claudeHome: rawOptions.claudeHome || joinTargetPath(rawOptions.platform, rawOptions.home, ".claude"),
-    claudeJson: rawOptions.claudeJson || defaultClaudeJsonPath(rawOptions),
+    claudeHome: claudeHomes.claudeHome,
+    claudeJson: claudeHomes.claudeJson,
     ...rawOptions
   };
   options.targets = normalizeTargets(options.targets);
