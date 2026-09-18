@@ -13,8 +13,9 @@ npm run dev:assert-scratch
 ```
 
 `CLAUDE_CONFIG_DIR`, user-scope `.claude.json` dahil tüm Claude config dizinini
-taşır. Bir scratch dizinine karşı üretilen plan `~/.claude` hakkında hiçbir şey
-söylemez.
+taşır; değişken yokken bu dosya `~/.claude` içinde değil, onun yanında
+`~/.claude.json` konumundadır. Bir scratch dizinine karşı üretilen plan
+`~/.claude` hakkında hiçbir şey söylemez.
 
 ## Temiz Karar Akışı
 

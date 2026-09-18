@@ -247,7 +247,8 @@ gerektiren bir çakışma olarak kalır.
 Her manifest işlemi hedefini adlandırır (`codex`, `claude` veya `shared`).
 Codex hedefi varsayılandır; Claude hedefi yalnızca açık bir `--target` ya da
 etkileşimli onayla seçilir. Claude tarafındaki işlemler yalnızca `CLAUDE_HOME`
-(`CLAUDE_CONFIG_DIR` veya `~/.claude`), kullanıcı kapsamlı `.claude.json` ve
+(`CLAUDE_CONFIG_DIR` veya `~/.claude`), kullanıcı kapsamlı `.claude.json`
+(`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun içinde) ve
 paylaşılan `AGENTS_HOME/plugins` ağacına yazabilir; `${HOME}/.claude` gibi
 sabit bir hedef reddedilmeye devam eder. AgentChef'in sahibi olmadığı Claude
 dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen

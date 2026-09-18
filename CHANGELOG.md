@@ -20,6 +20,14 @@
   conversion of markers, folders, marketplace entries, plugin registrations, a
   legacy-banner Git hook (only when its bytes match a shipped template), and
   Claude receipts and links.
+- Fix where the Claude target finds the user-scope `.claude.json`:
+  `~/.claude.json` by default, and `$CLAUDE_CONFIG_DIR/.claude.json` only when
+  that variable (or a relocated `--claude-home`) moves the config directory.
+  0.9.0 merged MCP entries into `~/.claude/.claude.json`, which Claude Code
+  never reads without the variable; the upgrade guide covers the stray file.
+- Link only catalog skills into `~/.claude/skills`: a managed directory that
+  left `catalog/skills.json` (such as the retired `codex-chef-brain`) is
+  reported as `retired` and never linked, adopted, or removed.
 
 ## 0.9.0 - 2026-09-18
 

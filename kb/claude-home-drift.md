@@ -13,7 +13,8 @@ npm run dev:assert-scratch
 ```
 
 `CLAUDE_CONFIG_DIR` relocates the whole Claude config directory, including the
-user-scope `.claude.json`. A plan produced against a scratch directory says
+user-scope `.claude.json`; without it that file lives at `~/.claude.json`, next
+to `~/.claude`, not inside it. A plan produced against a scratch directory says
 nothing about `~/.claude`.
 
 ## Clean Decision Flow

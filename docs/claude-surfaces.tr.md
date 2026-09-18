@@ -14,7 +14,7 @@ Kontrol tarihi: 2026-09-18 (Claude Code 2.1.276).
 | Kök | Varsayılan | Geçersiz kılma | Notlar |
 | --- | --- | --- | --- |
 | Claude config dizini | `~/.claude` | `CLAUDE_CONFIG_DIR` | `.claude.json` dosyasını da taşır; bu yüzden bir scratch dizini her şeyi izole eder. |
-| User-scope MCP ve hesap durumu | `~/.claude/.claude.json` (config dizininin içinde) | `CLAUDE_CONFIG_DIR` ile birlikte taşınır | AgentChef yalnızca `mcpServers` anahtarını okur ve yazar. |
+| User-scope MCP ve hesap durumu | `~/.claude.json` (home dizininde, `~/.claude` klasörünün yanında) | `CLAUDE_CONFIG_DIR` ayarlıysa `$CLAUDE_CONFIG_DIR/.claude.json`, ya da `--claude-json` | AgentChef yalnızca `mcpServers` anahtarını okur ve yazar. |
 | Paylaşımlı skill'ler ve plugin marketplace | `~/.agents` | `AGENTS_HOME` | Codex hedefiyle paylaşılır; tek yönetilen ağaç. |
 
 Geliştirme ve testler üçünü de bir scratch köküne yönlendirmelidir;
@@ -28,8 +28,8 @@ Geliştirme ve testler üçünü de bir scratch köküne yönlendirmelidir;
 | Serena bridge | `~/.claude/agentchef/serena-pool.mjs` | AgentChef dosyası | yedekle, sonra yenile; durum `CODEX_HOME/serena-pool` altında yaşar, böylece iki ajan tek tembel backend'i paylaşır |
 | İzinler | `~/.claude/settings.json` → `permissions.allow`, `permissions.ask` | yan receipt `~/.claude/agentchef/receipts/claude-settings-merge-receipt.json` | yalnızca toplamsal; mevcut kurallar, `deny` listeleri, `env` ve hook'lar asla kaldırılmaz ya da yeniden sıralanmaz |
 | Süreç hijyeni hook'u | bu sürümde yayınlanmaz | yalnızca Codex plugin'i | Claude Code oturum sonunda kendi MCP alt süreçlerini durdurur; Claude dalı sonraki bir sürüm için planlıdır |
-| MCP sunucuları | `~/.claude/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | aynı ada sahip bir sunucuya dokunulmaz |
-| Skill bağlantıları | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | dizin bağlantısı (Windows'ta junction) | yabancı gerçek dizinler atlanır; AgentChef marker'lı kopyalar yalnız `--adopt-skill-links` ile benimsenir |
+| MCP sunucuları | `~/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | aynı ada sahip bir sunucuya dokunulmaz |
+| Skill bağlantıları | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | dizin bağlantısı (Windows'ta junction) | yabancı gerçek dizinler atlanır; AgentChef marker'lı kopyalar yalnız `--adopt-skill-links` ile benimsenir; katalogdan çıkmış yönetilen dizinler `retired` olarak raporlanır ve dokunulmaz |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef dosyası | yedekle, sonra yenile |
 | Plugin kurulumu | Claude'un plugin cache'i | Claude Code (`claude plugin`) | AgentChef `claude plugin marketplace add` ve `claude plugin install agentchef-workflows@agentchef` çalıştırır; cache'i asla doğrudan yazmaz |
 | Kurulum receipt'i | `~/.claude/agentchef/install-receipt.json` | AgentChef dosyası | status, repair ve kaldırma için kurulan dosyaları, bağlantıları, receipt'leri ve komutları listeler |

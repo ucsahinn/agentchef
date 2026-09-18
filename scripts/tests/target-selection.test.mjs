@@ -76,28 +76,42 @@ test("both-target contract is the union of both selections in manifest order", (
   assert.ok(bothIds.indexOf("claude-plugin-register") < bothIds.indexOf("installed-plugin-cache-refresh"));
 });
 
-test("unix contract resolves the Claude JSON next to the Claude home", () => {
-  const contract = resolveInstallContract({
+test("unix contract keeps the Claude JSON in the home directory unless the Claude home is relocated", () => {
+  const base = {
     manifest,
     platform: "unix",
     codexHome: "/opt/agentchef-home/.codex",
     agentsHome: "/opt/agentchef-home/.agents",
-    claudeHome: "/opt/agentchef-home/.claude",
     home: "/opt/agentchef-home",
     targets: "claude"
-  });
+  };
+  const contract = resolveInstallContract({ ...base, claudeHome: "/opt/agentchef-home/.claude" });
   const mcp = contract.operations.find((action) => action.id === "claude-mcp-merge");
-  assert.equal(mcp.destination, "/opt/agentchef-home/.claude/.claude.json");
+  assert.equal(mcp.destination, "/opt/agentchef-home/.claude.json", "default Claude home: Claude Code reads ~/.claude.json");
   const register = contract.operations.find((action) => action.id === "claude-plugin-register");
   assert.match(register.command, /^claude plugin marketplace add \/opt\/agentchef-home\/\.agents\/plugins && claude plugin install/);
+  const relocated = resolveInstallContract({ ...base, claudeHome: "/opt/claude-config" });
+  assert.equal(relocated.operations.find((action) => action.id === "claude-mcp-merge").destination, "/opt/claude-config/.claude.json", "a relocated config directory holds .claude.json itself");
+  const explicit = resolveInstallContract({ ...base, claudeHome: "/opt/claude-config", claudeJson: "/elsewhere/.claude.json" });
+  assert.equal(explicit.operations.find((action) => action.id === "claude-mcp-merge").destination, "/elsewhere/.claude.json");
 });
 
 test("resolveClaudeHomes follows CLAUDE_CONFIG_DIR and explicit overrides", () => {
   const fromEnv = resolveClaudeHomes({ env: { CLAUDE_CONFIG_DIR: path.join("C:\\", "cfg") }, home: "C:\\Home" });
   assert.equal(fromEnv.claudeHome, path.resolve(path.join("C:\\", "cfg")));
   assert.equal(fromEnv.claudeJson, path.resolve(path.join("C:\\", "cfg", ".claude.json")));
+  assert.equal(fromEnv.relocated, true);
   const fallback = resolveClaudeHomes({ env: {}, home: "C:\\Home" });
   assert.equal(fallback.claudeHome, path.resolve(path.join("C:\\Home", ".claude")));
+  assert.equal(fallback.claudeJson, path.resolve(path.join("C:\\Home", ".claude.json")), "without CLAUDE_CONFIG_DIR Claude Code keeps .claude.json in the home directory");
+  assert.equal(fallback.relocated, false);
+  const sameAsDefault = resolveClaudeHomes({ env: {}, home: "C:\\Home", claudeHome: path.join("C:\\Home", ".claude") });
+  assert.equal(sameAsDefault.claudeJson, path.resolve(path.join("C:\\Home", ".claude.json")), "an explicit default Claude home is not a relocation");
+  const envSameAsDefault = resolveClaudeHomes({ env: { CLAUDE_CONFIG_DIR: path.join("C:\\Home", ".claude") }, home: "C:\\Home" });
+  assert.equal(envSameAsDefault.claudeJson, path.resolve(path.join("C:\\Home", ".claude", ".claude.json")), "a set CLAUDE_CONFIG_DIR relocates even when it names the default folder");
+  const moved = resolveClaudeHomes({ env: {}, home: "C:\\Home", claudeHome: "D:\\claude" });
+  assert.equal(moved.claudeJson, path.resolve(path.join("D:\\claude", ".claude.json")), "a relocated Claude home holds .claude.json itself");
+  assert.equal(moved.relocated, true);
   const explicit = resolveClaudeHomes({ env: { CLAUDE_CONFIG_DIR: "C:\\ignored" }, home: "C:\\Home", claudeHome: "D:\\claude", claudeJson: "D:\\elsewhere\\.claude.json" });
   assert.equal(explicit.claudeHome, path.resolve("D:\\claude"));
   assert.equal(explicit.claudeJson, path.resolve("D:\\elsewhere\\.claude.json"));

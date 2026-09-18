@@ -17,6 +17,14 @@ kabul etmeye devam eder; güncelleme günü hiçbir şey bozulmaz.
 - `npm run chef -- --migrate-identity --target both` dönüşümü ön izler;
   `--apply` ile `CODEX_HOME/backups/agentchef-migrate-*` altına yedek alarak
   çalıştırır.
+- Claude hedefi MCP girdilerini artık Claude Code'un okuduğu dosyaya
+  birleştirir: `~/.claude.json`, ya da yalnızca değişken ayarlıysa
+  `$CLAUDE_CONFIG_DIR/.claude.json`. 0.9.0 bunun yerine
+  `~/.claude/.claude.json` yazıyordu; bu dosya makinende varsa
+  [güncelleme rehberine](upgrade.tr.md) bak.
+- Skill bağlantıları yalnızca hâlâ katalogda olan skill'leri kapsar;
+  katalogdan çıkmış yönetilen bir dizin (örneğin emekli `codex-chef-brain`)
+  `retired` olarak raporlanır ve dokunulmaz.
 
 ### Ürün Sınırı
 

@@ -58,6 +58,17 @@ Old backup folders keep their names and stay listed by `npm run chef -- --backup
 Legacy `CODEX_CHEF_*` environment variables keep working and are reported so
 you can rename them yourself.
 
+1.0.0 also corrects where the Claude target finds the user-scope `.claude.json`:
+`~/.claude.json` in the home directory, or `$CLAUDE_CONFIG_DIR/.claude.json`
+only when that variable is set. 0.9.0 merged its MCP entries into
+`~/.claude/.claude.json`, a file Claude Code does not read without the
+variable. If a 0.9.0 Claude install left that file behind, rerun the installer
+(it merges into the right file and rewrites the receipt), then delete the stray
+`~/.claude/.claude.json` yourself once you have checked it holds nothing else.
+The skill-link step now links only skills that are still in
+`catalog/skills.json`; a managed directory that left the catalog is reported as
+`retired` and left alone.
+
 ## Upgrading From 0.6.0 To 0.9.0
 
 0.9.0 adds Claude Code as a second install target. For an existing Codex

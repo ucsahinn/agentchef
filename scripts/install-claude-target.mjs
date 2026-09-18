@@ -6,6 +6,8 @@
 // Writes are lock-guarded, journaled, backup-backed, and receipt-tracked.
 // Files AgentChef does not own (settings.json, .claude.json) are merged
 // additively and recorded in sidecar receipts under ${CLAUDE_HOME}/agentchef/.
+// .claude.json lives at ~/.claude.json unless CLAUDE_CONFIG_DIR (or a relocated
+// --claude-home) moves the config directory; see lib/targets/claude.mjs.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -69,14 +71,24 @@ function fileState(destination, sourceBuffer) {
   return fs.readFileSync(destination).equals(sourceBuffer) ? "identical" : "drift";
 }
 
-function managedSkillNames(agentsHome) {
+// Skills AgentChef knows: catalog entries plus their compatibility aliases (an
+// un-migrated home still carries the legacy operator folder name). A managed
+// directory outside that set was retired from the catalog; it is reported as
+// `retired` and never linked, adopted, or removed.
+function knownSkillNames() {
+  const catalog = readJson("catalog/skills.json");
+  return new Set([...catalog.skills.map((skill) => skill.name), ...Object.keys(catalog.compatibilityAliases || {})]);
+}
+
+function managedSkillEntries(agentsHome) {
   const skillsRoot = path.join(agentsHome, "skills");
   if (!fs.existsSync(skillsRoot)) return [];
+  const known = knownSkillNames();
   return fs.readdirSync(skillsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink())
     .filter((entry) => managedSkillMarkers.some((marker) => fs.existsSync(path.join(skillsRoot, entry.name, marker))))
-    .map((entry) => entry.name)
-    .sort();
+    .map((entry) => ({ name: entry.name, known: known.has(entry.name) }))
+    .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
 }
 
 // Shape verified with `claude plugin validate --strict` (Claude Code 2.1.276):
@@ -166,12 +178,13 @@ export function planClaudeInstall(options) {
     backup: true
   });
 
-  const links = managedSkillNames(agentsHome).map((name) => {
+  const links = managedSkillEntries(agentsHome).map(({ name, known }) => {
     const target = path.join(agentsHome, "skills", name);
     const link = path.join(claudeHome, "skills", name);
     const inspection = inspectSkillLink(link, target);
     let decision = "skip";
-    if (inspection.status === "absent") decision = "create";
+    if (!known) decision = "retired";
+    else if (inspection.status === "absent") decision = "create";
     else if (inspection.status === "link-current") decision = "current";
     else if (inspection.status === "real-directory") {
       const chefCopy = managedSkillMarkers.some((marker) => fs.existsSync(path.join(link, marker)));
@@ -216,7 +229,9 @@ export function planClaudeInstall(options) {
 
 function redact(value, options) {
   if (!options.redactPaths || typeof value !== "string") return value;
+  // .claude.json first: by default it sits next to the Claude home and shares its prefix.
   return value
+    .replaceAll(options.claudeJson, "${CLAUDE_JSON}")
     .replaceAll(options.claudeHome, "${CLAUDE_HOME}")
     .replaceAll(options.agentsHome, "${AGENTS_HOME}")
     .replaceAll(options.home, "${HOME}");
@@ -236,14 +251,25 @@ function redactPlan(plan, options) {
   };
 }
 
-function backupInto(backupRoot, claudeHome, agentsHome, target) {
+function sameFilePath(left, right) {
+  const a = path.resolve(left);
+  const b = path.resolve(right);
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+// Backups mirror the three places a Claude install may write: the Claude home
+// ("claude"), the shared agents home ("agents"), and the user-scope
+// .claude.json, which sits in the home directory by default ("home").
+function backupInto(backupRoot, roots, target) {
   const stat = lstatOrNull(target);
   if (!stat) return null;
-  const relative = isPathInside(target, claudeHome)
-    ? path.join("claude", path.relative(claudeHome, target))
-    : isPathInside(target, agentsHome)
-      ? path.join("agents", path.relative(agentsHome, target))
-      : null;
+  const relative = isPathInside(target, roots.claudeHome)
+    ? path.join("claude", path.relative(roots.claudeHome, target))
+    : isPathInside(target, roots.agentsHome)
+      ? path.join("agents", path.relative(roots.agentsHome, target))
+      : roots.claudeJson && sameFilePath(target, roots.claudeJson)
+        ? path.join("home", path.basename(target))
+        : null;
   if (!relative) throw new Error(`Refusing to back up a target outside the managed roots: ${target}`);
   const destination = path.join(backupRoot, relative);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -288,9 +314,10 @@ function assertSkillLinkPath(link, claudeHome) {
 export function applyClaudeInstall(options, plan) {
   const { claudeHome, claudeJson, agentsHome } = options;
   const roots = [claudeHome, agentsHome];
+  const backupRoots = { claudeHome, agentsHome, claudeJson: options.claudeJson };
   for (const action of plan.actions) {
-    if (action.destination) assertManagedTargetPath(action.destination, [...roots, path.dirname(claudeJson)]);
-    for (const link of action.links || []) assertSkillLinkPath(link, claudeHome);
+    if (action.destination) assertManagedTargetPath(action.destination, action.destination === claudeJson ? [path.dirname(claudeJson)] : roots);
+    for (const link of action.links || []) if (link.decision !== "retired") assertSkillLinkPath(link, claudeHome);
   }
   const foreignLinks = plan.actions.find((action) => action.kind === "link-directory").links.filter((link) => link.decision === "foreign");
   if (foreignLinks.length > 0) {
@@ -320,7 +347,7 @@ export function applyClaudeInstall(options, plan) {
           continue;
         }
         if (action.state === "foreign") throw new Error(`Refusing to replace a linked or non-regular file: ${action.destination}`);
-        const backup = options.noBackup ? null : backupInto(backupRoot, claudeHome, agentsHome, action.destination);
+        const backup = options.noBackup ? null : backupInto(backupRoot, backupRoots, action.destination);
         if (backup) journal.recordBackup(backup);
         journal.prepareMutation({ target: action.destination, backup });
         const buffer = fs.readFileSync(path.join(repoRoot, action.source));
@@ -338,7 +365,7 @@ export function applyClaudeInstall(options, plan) {
           if (previous) installed.receipts.push(receiptPath);
           continue;
         }
-        const backup = options.noBackup ? null : backupInto(backupRoot, claudeHome, agentsHome, action.destination);
+        const backup = options.noBackup ? null : backupInto(backupRoot, backupRoots, action.destination);
         if (backup) journal.recordBackup(backup);
         const before = fileSha256(action.destination);
         journal.prepareMutation({ target: action.destination, backup });
@@ -374,7 +401,7 @@ export function applyClaudeInstall(options, plan) {
             continue;
           }
           if (link.decision === "replace-copy-with-link") {
-            const backup = backupInto(backupRoot, claudeHome, agentsHome, link.link);
+            const backup = backupInto(backupRoot, backupRoots, link.link);
             journal.recordBackup(backup);
             journal.prepareMutation({ target: link.link, backup, link: true });
             fs.rmSync(link.link, { recursive: true, force: true });
@@ -393,7 +420,7 @@ export function applyClaudeInstall(options, plan) {
           results.push({ id: action.id, status: "current" });
           continue;
         }
-        const backup = options.noBackup ? null : backupInto(backupRoot, claudeHome, agentsHome, action.destination);
+        const backup = options.noBackup ? null : backupInto(backupRoot, backupRoots, action.destination);
         if (backup) journal.recordBackup(backup);
         journal.prepareMutation({ target: action.destination, backup });
         writeFileAtomic(action.destination, Buffer.from(`${JSON.stringify(action.document, null, 2)}\n`, "utf8"));
@@ -494,6 +521,7 @@ export function applyClaudeRemoval(options, plan) {
   if (!plan.present) return { results: [{ id: "claude-remove", status: "nothing-installed" }], backupRoot: null };
   const { claudeHome, agentsHome } = options;
   const roots = [claudeHome, agentsHome];
+  const backupRoots = { claudeHome, agentsHome, claudeJson: options.claudeJson };
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;
   const backupRoot = path.join(claudeHome, "agentchef", "backups", `agentchef-remove-${stamp}`);
   fs.mkdirSync(backupRoot, { recursive: true });
@@ -506,8 +534,8 @@ export function applyClaudeRemoval(options, plan) {
         results.push({ id: `revert:${path.basename(entry.receiptPath)}`, status: entry.decision });
         continue;
       }
-      assertManagedTargetPath(entry.target, [...roots, path.dirname(options.claudeJson)]);
-      const backup = backupInto(backupRoot, claudeHome, agentsHome, entry.target);
+      assertManagedTargetPath(entry.target, entry.target === options.claudeJson ? [path.dirname(options.claudeJson)] : roots);
+      const backup = backupInto(backupRoot, backupRoots, entry.target);
       if (backup) journal.recordBackup(backup);
       journal.prepareMutation({ target: entry.target, backup });
       writeFileAtomic(entry.target, Buffer.from(`${JSON.stringify(entry.removal.next, null, 2)}\n`, "utf8"));
@@ -523,7 +551,7 @@ export function applyClaudeRemoval(options, plan) {
         continue;
       }
       assertSkillLinkPath(link, claudeHome);
-      const backup = backupInto(backupRoot, claudeHome, agentsHome, link.link);
+      const backup = backupInto(backupRoot, backupRoots, link.link);
       if (backup) journal.recordBackup(backup);
       journal.prepareMutation({ target: link.link, backup: null, link: true });
       removeSkillLink(link.link);
@@ -536,7 +564,7 @@ export function applyClaudeRemoval(options, plan) {
         continue;
       }
       assertManagedTargetPath(file.path, roots);
-      const backup = backupInto(backupRoot, claudeHome, agentsHome, file.path);
+      const backup = backupInto(backupRoot, backupRoots, file.path);
       if (backup) journal.recordBackup(backup);
       journal.prepareMutation({ target: file.path, backup });
       fs.rmSync(file.path, { force: true });
