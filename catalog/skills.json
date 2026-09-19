@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "dateChecked": "2026-06-20",
+  "dateChecked": "2026-09-19",
   "skillsCliVersion": "1.5.20",
   "skillsCliIntegrity": "sha512-lPl5KzMfTW+qwHFwc8t6R+wAqmdmSHw1+HWbGdJ/FZYbWLdB34bAZNFWiencM5DVoRaKAgXArmfTWMlNAbl9Gg==",
   "installCommand": "node scripts/install-pinned-skill.mjs --package <package> --commit <commit> --skill <skill> --cli-version 1.5.20",

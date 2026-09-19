@@ -11,6 +11,15 @@ const warnings = [];
 const rulesPath = path.join(root, "templates", "codex", "rules", "default.rules");
 const rulesText = fs.readFileSync(rulesPath, "utf8");
 
+// The exact MCP pin lives in the catalog; reading it here keeps this matrix from
+// going stale on every version bump.
+function context7Package() {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, "catalog", "mcp-servers.json"), "utf8"));
+  const server = catalog.servers.find((entry) => entry.name === "context7");
+  if (!server?.package) throw new Error("catalog/mcp-servers.json has no context7 package pin");
+  return server.package;
+}
+
 function fail(message) {
   failures.push(message);
 }
@@ -178,7 +187,7 @@ const matrix = [
   ["codex mcp list", ["codex.cmd", "mcp", "list"], "allow"],
   ["codex doctor json", ["codex.cmd", "doctor", "--json"], "allow"],
   ["codex execpolicy check", ["codex.cmd", "execpolicy", "check", "--rules", "templates/codex/rules/default.rules", "git", "status"], "allow"],
-  ["exact Context7 MCP startup requires approval", ["npx.cmd", "-y", "@upstash/context7-mcp@3.2.1"], "prompt"],
+  ["exact Context7 MCP startup requires approval", ["npx.cmd", "-y", context7Package()], "prompt"],
   ["ad-hoc npx package", ["npx.cmd", "-y", "left-pad@1.3.0"], "no-match"],
   ["read-only GitHub PR view", ["gh", "pr", "view", "1"], "allow"],
   ["read-only GitHub run watch", ["gh", "run", "watch", "1"], "allow"],

@@ -94,7 +94,7 @@ to expose:
 ```toml
 [mcp_servers.filesystem]
 enabled = true
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem@2026.1.14", "<NARROW_ABSOLUTE_PATH>"]
+args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "<NARROW_ABSOLUTE_PATH>"]
 default_tools_approval_mode = "prompt"
 ```
 
@@ -115,6 +115,20 @@ default_tools_approval_mode = "prompt"
 Replace `<PROJECT_REF>` before enabling. Authentication belongs to the
 connector's OAuth flow; never put a database URL, access token, or password in
 the repository.
+
+## Why one server stays on an older pin
+
+`codebase-memory` remains pinned at `0.8.1` while every other server moved to
+its current release. `0.11.0` adds an executable-identity check that refuses to
+start when the user cache directory grants write rights to another local
+account, and upgrading also forces a one-time full reindex of every project
+graph. Both are reasonable choices by that project, but they turn a version
+bump into an environment prerequisite, so the pin only moves once the newer
+build has been started successfully on a reviewed machine.
+
+Every other pin in this catalog was verified by starting the server over stdio,
+completing the MCP handshake, and comparing the tool names it advertises with
+the allowlist recorded here.
 
 ## The Boundary I Keep
 

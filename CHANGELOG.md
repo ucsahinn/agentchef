@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Refresh the MCP catalog: `@upstash/context7-mcp` 4.1.1,
+  `chrome-devtools-mcp` 1.9.0, `@playwright/mcp` 0.0.82, and the three
+  `@modelcontextprotocol/*` servers at 2026.8.31. Each pin was verified by
+  starting the server over stdio, completing the handshake, and diffing the
+  advertised tool names against the allowlist, rather than from release notes.
+- Keep `codebase-memory` pinned at 0.8.1: 0.11.0 refuses to start when the
+  user cache directory is writable by another local account, and it forces a
+  one-time full reindex.
+- Drop `navigate_page_history` from the `chrome-devtools` allowlist and
+  approval tables. Probing both the old and the new version shows the tool has
+  never existed; page history is a parameter of `navigate_page`.
+- Read the Context7 pin from the catalog in the approval-harmony matrix instead
+  of repeating the version string, so the case cannot go stale on a bump.
+- Re-date the agent, skill, and MCP catalogs after re-checking them: skills by
+  resolving all 15 pinned sources online, agents by the Codex config
+  compatibility validator against the installed CLI.
+
 - Print `AGENTCHEF` in the operator console header; the colour branch still
   carried the pre-rename `CODEX CHEF` wordmark.
 - Introduce the Serena bridge to its backend as `agentchef-serena-pool`.
