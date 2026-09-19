@@ -114,8 +114,8 @@ incompatible, or deliberately disconnected:
 | Companion-dependent status | Show `unavailable`, `unknown`, or `stale` with a safe reason and last-observed time when available. | Present cached state as current or treat an observation as an approval. |
 | Recovery | Require a deliberate local retry after the operator restores the separately owned companion. | Auto-start the companion, transfer credentials, or silently broaden permissions. |
 
-Connectivity, parsing, schema, and permission failures are contained by Codex
-Chef. They do not weaken its approval gates and do not block the independent
+Connectivity, parsing, schema, and permission failures are contained by
+AgentChef. They do not weaken its approval gates and do not block the independent
 local workflow. A disconnected state is a safety posture, not proof of a failed
 installation.
 

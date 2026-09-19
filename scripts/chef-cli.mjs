@@ -1386,7 +1386,7 @@ function printHeader() {
   printBrandSignature();
   printDivider("AgentChef");
   if (supportsColor()) {
-    console.log(`${ICONS.chef} ${paint("CODEX CHEF", "bold", "brightCyan")}  ${paint("OPERATOR CONSOLE", "bold", "brightMagenta")}`);
+    console.log(`${ICONS.chef} ${paint("AGENTCHEF", "bold", "brightCyan")}  ${paint("OPERATOR CONSOLE", "bold", "brightMagenta")}`);
     console.log(`${paint("●", "brightGreen")} ${paint(localText("READY", "HAZIR"), "bold", "brightGreen")}  ${paint("•", "gray")}  ${styleMuted(`v${currentPackageVersion()}  ${gitBranch()}`)}`);
   } else {
     console.log(`${ICONS.chef} AgentChef`);

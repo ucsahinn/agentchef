@@ -174,8 +174,8 @@ manifest durumunu, dogrulanmis restorable dosya sayisini, size ve hash
 bilgilerini gosterir ama file content basmaz. Manifest, tum dosya seti, hash'ler
 ve target allowlist gecmeden bir archive restorable diye etiketlenmez. Restore,
 `--apply` verilmedikce preview'dir. Apply path'i exact source byte'larini okuyup
-dogrular, mevcut target'lar icin yeni rollback backup olusturur ve bilinen Codex
-Chef managed dosyalarini rollback korumali bir transaction olarak geri yazar.
+dogrular, mevcut target'lar icin yeni rollback backup olusturur ve bilinen AgentChef
+managed dosyalarini rollback korumali bir transaction olarak geri yazar.
 Commit-pinned skill replacement backup'lari namespaced manifest kullanir ve
 replacement'tan dosya birakmadan onceki skill tree'sini birebir geri yukler.
 Restore,
@@ -336,8 +336,8 @@ Kullanışlı parametreler:
 - `-Force`: yedek aldıktan sonra yönetilen tekil dosyaları değiştirir ve
   yönetilen dizinlerde yalnızca kaynakta sahip olunan girdileri senkronlar.
   İlgisiz ek dosyalar korunur. Bunu sadece bilinçli upgrade için, `-WhatIf` çıktısını inceledikten sonra
-  kullan. Vermezsen mevcut `config.toml` önce yedeklenir ve sadece eksik Codex
-  Chef bloklarını alır; mevcut ajan dosyaları ve rule dosyaları atlanır.
+  kullan. Vermezsen mevcut `config.toml` önce yedeklenir ve sadece eksik AgentChef
+  bloklarını alır; mevcut ajan dosyaları ve rule dosyaları atlanır.
   Kisisel plugin marketplace dosyasi komple degistirilmez; sadece AgentChef
   kaydi backup sonrasi eklenir veya guncellenir, ilgisiz plugin kayitlari
   korunur.

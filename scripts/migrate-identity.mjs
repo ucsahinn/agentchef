@@ -68,6 +68,84 @@ function curatedSkillNames() {
   return catalog.skills.filter((skill) => skill.install === true).map((skill) => skill.name);
 }
 
+// Strings inside ${CODEX_HOME}/config.toml that AgentChef itself wrote: the
+// template banner, the merge banner, and its own plugin id (which Codex also
+// uses as the `[hooks.state."<plugin id>:<hook>"]` key prefix). Nothing else in
+// the file is rewritten, so user tables, project trust entries, and other
+// products keep their names — `codex-chef-kitchen@codex-chef-kitchen` never
+// matches `codex-chef-workflows@codex-chef`.
+const codexConfigBanners = Object.freeze([
+  Object.freeze(["# Windows-first Codex Chef.", "# Windows-first AgentChef."]),
+  Object.freeze(["# Unix/WSL Codex Chef.", "# Unix/WSL AgentChef."]),
+  Object.freeze(["# Codex Chef merged config blocks.", "# AgentChef merged config blocks."])
+]);
+
+// A TOML table header on its own line, e.g. `[hooks.state."<plugin id>:…"]`.
+// Deliberately strict so an array value spanning lines is never mistaken for one.
+const tomlTableHeader = /^\s*\[\[?[^\]]+\]\]?\s*$/;
+
+// Rewrites only what AgentChef itself wrote. Banner comments are plain
+// replacements. Table headers carrying the legacy plugin id are renamed, unless
+// the renamed header already exists — Codex writes its own hook-state table as
+// soon as the plugin is re-added under the new id, and two identical tables
+// would make the file unparseable — in which case the legacy table is dropped
+// with the lines that belong to it.
+export function planCodexConfigRewrite(input) {
+  let banners = 0;
+  let text = input;
+  for (const [from, to] of codexConfigBanners) {
+    const hits = text.split(from).length - 1;
+    if (hits === 0) continue;
+    banners += hits;
+    text = text.split(from).join(to);
+  }
+
+  const lines = text.split("\n");
+  const headers = new Set(lines.filter((line) => tomlTableHeader.test(line)).map((line) => line.trim()));
+  const kept = [];
+  let renamed = 0;
+  let dropped = 0;
+  let dropping = false;
+  for (const line of lines) {
+    if (tomlTableHeader.test(line)) {
+      dropping = false;
+      if (line.includes(identity.legacyPluginId)) {
+        const renamedHeader = line.split(identity.legacyPluginId).join(identity.pluginId);
+        if (headers.has(renamedHeader.trim())) {
+          dropping = true;
+          dropped += 1;
+          continue;
+        }
+        renamed += 1;
+        kept.push(renamedHeader);
+        continue;
+      }
+    } else if (dropping) {
+      continue;
+    }
+    kept.push(line);
+  }
+
+  const output = kept.join("\n");
+  return { text: output, banners, renamed, dropped, occurrences: banners + renamed + dropped, changed: output !== input };
+}
+
+export function countCodexConfigRewrites(text) {
+  return planCodexConfigRewrite(text).occurrences;
+}
+
+export function rewriteCodexConfigText(text) {
+  return planCodexConfigRewrite(text).text;
+}
+
+function listFilesRecursive(directory) {
+  let total = 0;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    total += entry.isDirectory() ? listFilesRecursive(path.join(directory, entry.name)) : 1;
+  }
+  return total;
+}
+
 // ------------------------------------------------------------------ planning
 export function planIdentityMigration(options) {
   const { codexHome, agentsHome, claudeHome, claudeJson, home, targets } = options;
@@ -156,6 +234,31 @@ export function planIdentityMigration(options) {
         `codex plugin add ${identity.pluginId}`
       ]
     });
+
+    const configPath = path.join(codexHome, "config.toml");
+    const configStat = lstatOrNull(configPath);
+    if (configStat?.isFile() && !configStat.isSymbolicLink()) {
+      const planned = planCodexConfigRewrite(fs.readFileSync(configPath, "utf8"));
+      note("codex-config", "rewrite-codex-config", configPath, planned.changed ? "rewrite" : "current", {
+        occurrences: planned.occurrences,
+        banners: planned.banners,
+        renamedTables: planned.renamed,
+        droppedDuplicateTables: planned.dropped
+      });
+    } else {
+      note("codex-config", "rewrite-codex-config", configPath, configStat ? "foreign" : "absent");
+    }
+
+    // `codex plugin remove` clears the legacy marketplace's cache but leaves the
+    // directory tree behind; remove it only while it holds no files at all.
+    const legacyCache = path.join(codexHome, "plugins", "cache", identity.legacyMarketplaceName);
+    const legacyCacheStat = lstatOrNull(legacyCache);
+    if (legacyCacheStat?.isDirectory() && !legacyCacheStat.isSymbolicLink()) {
+      const files = listFilesRecursive(legacyCache);
+      note("codex-legacy-plugin-cache", "remove-empty-directory", legacyCache, files === 0 ? "remove-legacy" : "foreign", { files });
+    } else {
+      note("codex-legacy-plugin-cache", "remove-empty-directory", legacyCache, "absent");
+    }
   }
 
   // 4. Git hook that still carries a legacy template.
@@ -272,6 +375,22 @@ export function applyIdentityMigration(options, plan) {
           journal.markApplied(step.target);
           record(step.id, "legacy-removed");
         }
+        continue;
+      }
+      if (step.kind === "rewrite-codex-config") {
+        const text = fs.readFileSync(step.target, "utf8");
+        mutateFile(step.target, () => fs.writeFileSync(step.target, rewriteCodexConfigText(text)));
+        record(step.id, "rewritten", { occurrences: step.occurrences });
+        continue;
+      }
+      if (step.kind === "remove-empty-directory") {
+        const backup = backupInto(backupRoot, homeRoots, step.target);
+        if (backup) journal.recordBackup(backup);
+        journal.prepareMutation({ target: step.target, backup });
+        // Verified to hold no files during planning; nested empty folders may remain.
+        fs.rmSync(step.target, { recursive: true, force: true });
+        journal.markApplied(step.target);
+        record(step.id, "legacy-removed");
         continue;
       }
       if (step.kind === "rewrite-marker") {

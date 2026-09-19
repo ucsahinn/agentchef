@@ -34,11 +34,11 @@ kurulum ve çalışma kiti: **OpenAI Codex CLI** ve **Anthropic Claude Code**.
 kurulur. Başkasının özel bilgisayarını, credential'larını, session'larını veya
 lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 
-> **Bugün ne kuruluyor?** Bu sürüm Codex CLI yüzeyini (`~/.codex`,
-> `~/.agents`) yönetir. Claude Code kurulum hedefi bir sonraki sürüm
-> hattındadır; plan
-> [ADR-006](docs/decisions/006-agentchef-independent-dual-target-product.md)
-> içinde, yayınlanan davranış ise her zaman
+> **Bugün ne kuruluyor?** Bu sürüm iki hedefi de kurar: Codex CLI yüzeyi
+> (`~/.codex`, `~/.agents`) ve Claude Code yüzeyi (`~/.claude`);
+> `--target codex|claude|both` ile seçilir. Her hedefin ne aldığı
+> [hedef yetenek haritasında](docs/target-capability-map.tr.md) listelidir;
+> yayınlanan davranış ise her zaman
 > [sürüm notlarında](docs/release-notes.tr.md) yazılıdır. Kalıcı, oturumlar
 > arası hafıza bu kitin değil, ayrı
 > [`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)

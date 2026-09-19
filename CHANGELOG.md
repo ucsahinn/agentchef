@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Print `AGENTCHEF` in the operator console header; the colour branch still
+  carried the pre-rename `CODEX CHEF` wordmark.
+- Introduce the Serena bridge to its backend as `agentchef-serena-pool`.
+- Extend `--migrate-identity` to `CODEX_HOME/config.toml`: AgentChef's own
+  template and merge banners and its plugin-id keys (including the
+  `[hooks.state."<plugin id>:…"]` entry) are rewritten, and an emptied legacy
+  plugin-cache directory is removed. Foreign tables, project trust entries, and
+  other products' plugin, marketplace, and hook state are left untouched.
+
 ## 1.0.0 - 2026-09-18
 
 - Rename the on-disk identity from `codex-chef` to `agentchef`: ownership

@@ -288,8 +288,8 @@ repair/reconcile yoludur. `--apply` olmadan read-only calisir ve managed drift,
 eksik config bloklari, marketplace drift'i, managed plugin icindeki ekstra
 dosyalar, curated olmayan skill'ler ve duplicate skill adlarini raporlar.
 `--apply` ile Serena köprüsü dahil yalnızca AgentChef'in yönettiği dosyaları
-backup alıp onarır, eksik config bloklarini merge eder ve baska marketplace plugin'lerini koruyarak Codex
-Chef marketplace kaydini yeniler.
+backup alıp onarır, eksik config bloklarini merge eder ve baska marketplace plugin'lerini koruyarak AgentChef
+marketplace kaydini yeniler.
 
 `--no-backup` yalnızca çözümlenen operasyonun bütünü yeni dosya oluşturuyorsa ve
 seçilen hedeflerin tamamı yoksa kabul edilir. Mevcut bir hedef, birleştirme,

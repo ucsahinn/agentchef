@@ -48,6 +48,15 @@ npm run chef -- --migrate-identity --target both       # ön izleme, iki hedef
 npm run chef -- --migrate-identity --target both --apply
 ```
 
+Göç ayrıca AgentChef'in `CODEX_HOME/config.toml` içine kendi yazdığı banner
+yorumlarını ve plugin id anahtarlarını (`[hooks.state."<plugin id>:…"]` dahil)
+yeniden yazar ve boşalmış eski plugin-cache klasörünü kaldırır. Plugin yeni
+id'siyle yeniden eklenmişse o hook-state tablosunu Codex zaten yazmıştır; bu
+durumda eski tablo yeniden adlandırılmaz, silinir; böylece dosyada asla aynı
+tablodan iki tane oluşmaz. Başka ürünlerin
+tabloları, proje güven girdileri ve kendi ayarların bu dosyada hiç
+değiştirilmez.
+
 Göç; işaretçileri, operator skill klasörünü ve plugin klasörlerini yeniden
 adlandırır; marketplace girdisini, adını ve plugin id'sini yeniden yazar;
 yalnızca baytları gönderilen bir şablonla eşleşen eski banner'lı Git hook'unu

@@ -147,8 +147,8 @@ worker'larını `Agent(agentchef:<worker>)` ile başlatabilir. AgentChef
 | `support_coordinator` | `devex_auditor` |
 
 Kurulumda çalışan on bir koordinatör vardır: leadership, product, backend, data,
-frontend, DevOps, security, QA, design, marketing ve customer support. 21 Codex
-Chef uzmanı dar görev worker'ı olarak kalır. \`catalog/agents.json\` eksiksiz
+frontend, DevOps, security, QA, design, marketing ve customer support. 21 AgentChef
+uzmanı dar görev worker'ı olarak kalır. \`catalog/agents.json\` eksiksiz
 11→21 sahiplik eşlemesini tutar. Bir koordinatör yalnızca katalogdaki worker
 grubunu (en çok dört worker) seçebilir; worker daha fazla delege etmez.
 
