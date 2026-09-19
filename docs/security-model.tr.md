@@ -251,7 +251,11 @@ etkileşimli onayla seçilir. Claude tarafındaki işlemler yalnızca `CLAUDE_HO
 (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun içinde) ve
 paylaşılan `AGENTS_HOME/plugins` ağacına yazabilir; `${HOME}/.claude` gibi
 sabit bir hedef reddedilmeye devam eder. AgentChef'in sahibi olmadığı Claude
-dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen
+Bir güncelleme, daha önce kendi yazdığı MCP girdisini yenileyebilir; ama yalnızca
+`.claude.json` içindeki değer makbuzdaki hash ile eşleşmeye devam ettiği sürece.
+Düzenlenmiş ya da AgentChef'in hiç yazmadığı bir girdi raporlanır ve olduğu gibi
+bırakılır. İzin kuralları her modda yalnızca eklemeli kalır. AgentChef'in sahibi
+olmadığı Claude dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen
 her girdi `~/.claude/agentchef/receipts/` altındaki yan makbuza yazılır;
 onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdilere
 dokunur. Claude plugin önbelleği `claude plugin` CLI'sına aittir ve asla elle

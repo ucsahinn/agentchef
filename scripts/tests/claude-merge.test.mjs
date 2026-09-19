@@ -128,3 +128,52 @@ test("receipts round-trip and only remove the entries they recorded", () => {
   assert.deepEqual(pristine.next, original);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test("an MCP entry is refreshed only while it still matches the receipt", () => {
+  const catalog = {
+    servers: [
+      { name: "context7", transport: "stdio", package: "@upstash/context7-mcp@9.9.9" },
+      { name: "serena", transport: "stdio", package: "ignored" }
+    ]
+  };
+  const options = { platform: "unix", claudeHome: "/opt/agentchef-home/.claude", serverNames: ["context7"] };
+
+  // First install: the entry is created and recorded.
+  const fresh = planMcpMerge({}, catalog, options);
+  assert.equal(fresh.changed, true);
+  const recorded = fresh.entries.filter((entry) => entry.kind === "object-key");
+  assert.equal(recorded.length, 1);
+  const installed = fresh.next;
+
+  // Without the flag an existing entry is never touched, exactly as before.
+  const older = { servers: [{ name: "context7", transport: "stdio", package: "@upstash/context7-mcp@1.0.0" }] };
+  const untouched = planMcpMerge(installed, older, { ...options, previousEntries: recorded });
+  assert.equal(untouched.changed, false);
+  assert.equal(untouched.skipped[0].reason, "already-present");
+
+  // With the flag, and the value still matching the receipt, it is refreshed.
+  const refreshed = planMcpMerge(installed, older, { ...options, previousEntries: recorded, refresh: true });
+  assert.equal(refreshed.changed, true);
+  assert.match(refreshed.entries[0].preview, /refreshed/);
+  assert.deepEqual(refreshed.next.mcpServers.context7.args, ["-y", "@upstash/context7-mcp@1.0.0"]);
+
+  // Re-running against the same catalog has nothing to do.
+  const again = planMcpMerge(refreshed.next, older, { ...options, previousEntries: refreshed.entries, refresh: true });
+  assert.equal(again.changed, false);
+  assert.equal(again.skipped[0].reason, "current");
+
+  // A user edit no longer matches the recorded hash, so it is left alone.
+  const edited = structuredClone(installed);
+  edited.mcpServers.context7.env = { MY_KEY: "1" };
+  const respected = planMcpMerge(edited, older, { ...options, previousEntries: recorded, refresh: true });
+  assert.equal(respected.changed, false);
+  assert.equal(respected.skipped[0].reason, "user-modified");
+  assert.deepEqual(respected.next.mcpServers.context7.env, { MY_KEY: "1" });
+
+  // An entry AgentChef never wrote is not its to refresh either.
+  const foreign = { mcpServers: { context7: { type: "stdio", command: "my-own-thing" } } };
+  const kept = planMcpMerge(foreign, older, { ...options, previousEntries: [], refresh: true });
+  assert.equal(kept.changed, false);
+  assert.equal(kept.skipped[0].reason, "already-present");
+  assert.equal(kept.next.mcpServers.context7.command, "my-own-thing");
+});

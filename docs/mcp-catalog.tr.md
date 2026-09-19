@@ -85,7 +85,7 @@ Filesystem için erişilecek yeri mümkün olan en dar workspace olarak belirle:
 ```toml
 [mcp_servers.filesystem]
 enabled = true
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem@2026.1.14", "<DAR_MUTLAK_PATH>"]
+args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "<DAR_MUTLAK_PATH>"]
 default_tools_approval_mode = "prompt"
 ```
 
@@ -107,6 +107,20 @@ default_tools_approval_mode = "prompt"
 `<PROJECT_REF>` değerini etkinleştirmeden önce değiştir. Kimlik doğrulama
 connector'ın OAuth akışına aittir; database URL'si, access token veya parola
 repoya yazılmaz.
+
+## Neden bir sunucu eski pinde kalıyor?
+
+Diğer sunucular güncel sürüme taşınırken `codebase-memory` `0.8.1` pininde
+kalıyor. `0.11.0`, kullanıcı cache dizini başka bir yerel hesaba yazma hakkı
+veriyorsa çalışmayı reddeden bir çalıştırılabilir kimlik kontrolü ekliyor;
+ayrıca yükseltme her proje grafiği için tek seferlik tam yeniden indeksleme
+gerektiriyor. İkisi de o projenin makul tercihleri ama sürüm yükseltmesini bir
+ortam ön koşuluna çeviriyor; bu yüzden pin ancak yeni sürüm incelenmiş bir
+makinede başarıyla başlatıldıktan sonra ilerler.
+
+Bu katalogdaki diğer bütün pinler, sunucu stdio üzerinden başlatılıp MCP
+el sıkışması tamamlanarak ve sunucunun bildirdiği araç adları buradaki izin
+listesiyle karşılaştırılarak doğrulandı.
 
 ## Koruduğum Sınır
 

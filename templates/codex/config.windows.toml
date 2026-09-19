@@ -185,7 +185,7 @@ tool_timeout_sec = 120
 [mcp_servers.context7]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "@upstash/context7-mcp@3.2.1"]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "@upstash/context7-mcp@4.1.1"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
 startup_timeout_sec = 20
@@ -194,7 +194,7 @@ tool_timeout_sec = 120
 [mcp_servers.sequential-thinking]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-sequential-thinking@2025.12.18"]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-sequential-thinking@2026.8.31"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "approve"
 startup_timeout_sec = 20
@@ -203,7 +203,7 @@ tool_timeout_sec = 120
 [mcp_servers.playwright]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "@playwright/mcp@0.0.76", "--isolated", "--block-service-workers"]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "@playwright/mcp@0.0.82", "--isolated", "--block-service-workers"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
 enabled_tools = ["browser_snapshot", "browser_take_screenshot", "browser_console_messages", "browser_network_requests", "browser_wait_for", "browser_resize", "browser_navigate", "browser_navigate_back", "browser_close", "browser_tabs"]
@@ -244,10 +244,10 @@ approval_mode = "prompt"
 [mcp_servers.chrome-devtools]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "chrome-devtools-mcp@1.2.0", "--isolated", "--no-usage-statistics", "--redactNetworkHeaders", "--viewport", "1366x900"]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "chrome-devtools-mcp@1.9.0", "--isolated", "--no-usage-statistics", "--redactNetworkHeaders", "--viewport", "1366x900"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
-enabled_tools = ["list_pages", "select_page", "take_snapshot", "take_screenshot", "list_console_messages", "get_console_message", "list_network_requests", "wait_for", "resize_page", "navigate_page", "navigate_page_history", "close_page"]
+enabled_tools = ["list_pages", "select_page", "take_snapshot", "take_screenshot", "list_console_messages", "get_console_message", "list_network_requests", "wait_for", "resize_page", "navigate_page", "close_page"]
 startup_timeout_sec = 20
 tool_timeout_sec = 180
 
@@ -279,9 +279,6 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.chrome-devtools.tools.navigate_page]
-approval_mode = "prompt"
-
-[mcp_servers.chrome-devtools.tools.navigate_page_history]
 approval_mode = "prompt"
 
 [mcp_servers.chrome-devtools.tools.close_page]
@@ -335,7 +332,7 @@ approval_mode = "approve"
 [mcp_servers.memory]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-memory@2026.1.26"]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-memory@2026.8.31"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
 startup_timeout_sec = 20
@@ -399,7 +396,7 @@ approval_mode = "approve"
 [mcp_servers.filesystem]
 enabled = false
 command = "cmd.exe"
-args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-filesystem@2026.1.14", "."]
+args = ["/d", "/s", "/c", "npx.cmd", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "."]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }
 default_tools_approval_mode = "prompt"
 startup_timeout_sec = 20

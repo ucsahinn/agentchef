@@ -1134,6 +1134,7 @@ if ($InstallClaude) {
   )
   if ($WhatIfPreference) { $ClaudeArgs += "--dry-run" } else { $ClaudeArgs += "--apply" }
   if ($NoBackup) { $ClaudeArgs += "--no-backup" }
+  if ($Update) { $ClaudeArgs += "--refresh-managed" }
   if ($AdoptSkillLinks) { $ClaudeArgs += "--adopt-skill-links" }
   if ($SkipClaudePluginRegister) { $ClaudeArgs += "--skip-plugin-register" }
   & node @ClaudeArgs

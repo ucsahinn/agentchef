@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+- Point the external-review skill and the CLI usage at a command that resolves.
+  Both told people to run `chef review ...`, but the package is private with no
+  bin entry and the skill installs into other repositories, so every step failed
+  at the first line. The validator now checks for the runnable form.
+- Drop `Codex` from three bundled skill descriptions. Those descriptions are the
+  trigger text a Claude Code session matches against, so the routing, context
+  budget, and diagram skills were unlikely to fire on the Claude target at all.
+- Name real routing profiles in the adaptive-agent-routing reference: two ids it
+  used are not defined in `catalog/routing-profiles.json`.
+- Tell a Claude subagent that has no execution tool to ask the parent for command
+  output. Codex read-only still allows commands, so only the Claude rendering
+  loses them, and roles such as the reviewer and the security auditor were being
+  told to pull evidence from a diff they cannot produce.
+
+- Let an update refresh the Claude Code MCP entries AgentChef wrote, so a
+  catalog version bump reaches an installed home instead of stopping at the
+  first install. The entry is only rewritten while its value still hashes to
+  what the receipt records; an edited entry, or one AgentChef never wrote, is
+  reported and left alone. `-Update` (`--update`) passes the new
+  `--refresh-managed` flag, mirroring how the Codex side synchronizes its
+  managed config tables. Permission rules remain strictly additive.
+- Key object and container receipt entries by pointer when merging receipts, so
+  a refreshed value replaces the record of the value it replaced instead of
+  leaving a stale entry for removal to trip over.
+
+- Refresh the MCP catalog: `@upstash/context7-mcp` 4.1.1,
+  `chrome-devtools-mcp` 1.9.0, `@playwright/mcp` 0.0.82, and the three
+  `@modelcontextprotocol/*` servers at 2026.8.31. Each pin was verified by
+  starting the server over stdio, completing the handshake, and diffing the
+  advertised tool names against the allowlist, rather than from release notes.
+- Keep `codebase-memory` pinned at 0.8.1: 0.11.0 refuses to start when the
+  user cache directory is writable by another local account, and it forces a
+  one-time full reindex.
+- Drop `navigate_page_history` from the `chrome-devtools` allowlist and
+  approval tables. Probing both the old and the new version shows the tool has
+  never existed; page history is a parameter of `navigate_page`.
+- Read the Context7 pin from the catalog in the approval-harmony matrix instead
+  of repeating the version string, so the case cannot go stale on a bump.
+- Re-date the agent, skill, and MCP catalogs after re-checking them: skills by
+  resolving all 15 pinned sources online, agents by the Codex config
+  compatibility validator against the installed CLI.
+
 - Print `AGENTCHEF` in the operator console header; the colour branch still
   carried the pre-rename `CODEX CHEF` wordmark.
 - Introduce the Serena bridge to its backend as `agentchef-serena-pool`.

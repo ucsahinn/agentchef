@@ -166,7 +166,14 @@ export function planClaudeInstall(options) {
 
   const mcpCatalog = readJson("catalog/mcp-servers.json");
   const claudeJsonCurrent = readJsonOrDefault(claudeJson, {});
-  const mcpPlan = planMcpMerge(claudeJsonCurrent, mcpCatalog, { platform, claudeHome });
+  // The previous receipt is what proves an existing entry is still AgentChef's.
+  const mcpReceipt = readReceipt(path.join(claudeHome, "agentchef", "receipts", "claude-mcp-merge-receipt.json"));
+  const mcpPlan = planMcpMerge(claudeJsonCurrent, mcpCatalog, {
+    platform,
+    claudeHome,
+    previousEntries: mcpReceipt?.entries || [],
+    refresh: Boolean(options.refreshManaged)
+  });
   actions.push({
     id: "claude-mcp-merge",
     kind: "json-merge",
@@ -288,14 +295,24 @@ function writeFileAtomic(target, buffer) {
   fs.renameSync(temporary, target);
 }
 
+// An array item is identified by its value, because one pointer can own several
+// of them. An object key or a container is identified by its pointer alone, so
+// a refreshed value replaces the record of the value it replaced instead of
+// leaving a stale one behind for removal to trip over.
 function mergeReceiptEntries(previous, added) {
-  const seen = new Set();
+  const positionByKey = new Map();
   const merged = [];
   for (const entry of [...(previous?.entries || []), ...added]) {
-    const key = `${entry.kind}:${entry.pointer}:${entry.valueSha256}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(entry);
+    const key = entry.kind === "array-item"
+      ? `${entry.kind}:${entry.pointer}:${entry.valueSha256}`
+      : `${entry.kind}:${entry.pointer}`;
+    const at = positionByKey.get(key);
+    if (at === undefined) {
+      positionByKey.set(key, merged.length);
+      merged.push(entry);
+      continue;
+    }
+    merged[at] = entry;
   }
   return merged;
 }
@@ -613,6 +630,7 @@ export function resolveClaudeInstallOptions(raw = {}) {
     claudeJson: raw.claudeJson || homes.claudeJson,
     agentsHome: path.resolve(raw.agentsHome || process.env.AGENTS_HOME || path.join(home, ".agents")),
     apply: Boolean(raw.apply),
+    refreshManaged: Boolean(raw.refreshManaged),
     remove: Boolean(raw.remove),
     noBackup: Boolean(raw.noBackup),
     agentsLockHeld: Boolean(raw.agentsLockHeld),
@@ -638,6 +656,7 @@ function parseArgs(argv) {
     else if (arg === "--redact-paths") raw.redactPaths = true;
     else if (arg === "--claude-home") { raw.claudeHome = requireCliValue(argv, index, arg); index += 1; }
     else if (arg === "--claude-json") { raw.claudeJson = requireCliValue(argv, index, arg); index += 1; }
+    else if (arg === "--refresh-managed") { raw.refreshManaged = true; }
     else if (arg === "--agents-home") { raw.agentsHome = requireCliValue(argv, index, arg); index += 1; }
     else if (arg === "--home") { raw.home = requireCliValue(argv, index, arg); index += 1; }
     else if (arg === "--platform") { raw.platform = requireCliValue(argv, index, arg); index += 1; }
@@ -654,6 +673,10 @@ function printHelp() {
 Options:
   --claude-home <path>        Override CLAUDE_CONFIG_DIR (default ~/.claude)
   --claude-json <path>        Override the user-scope .claude.json location
+  --refresh-managed           Update MCP entries whose value still matches this
+                              install's receipt, so a catalog version bump
+                              reaches an installed home; user-edited entries
+                              are reported and left alone
   --agents-home <path>        Override AGENTS_HOME (default ~/.agents)
   --home <path>               Override HOME for planning only
   --platform <name>           windows or unix (defaults to current platform)

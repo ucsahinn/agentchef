@@ -754,11 +754,11 @@ function print(value) {
 function usage() {
   console.log(`AgentChef external review
 
-Usage:
-  chef review pack --target <repo> [--out <outside-dir>] [--max-part-bytes <n>] [--apply]
-  chef review handoff --target <repo> --manifest <file> [--apply]
-  chef review verify --target <repo> --manifest <file> --report <json>
-  chef review status --target <repo> --manifest <file>
+Usage: (<agentchef> is your AgentChef checkout; there is no installed chef binary)
+  node <agentchef>/scripts/external-review-cli.mjs review pack --target <repo> [--out <outside-dir>] [--max-part-bytes <n>] [--apply]
+  node <agentchef>/scripts/external-review-cli.mjs review handoff --target <repo> --manifest <file> [--apply]
+  node <agentchef>/scripts/external-review-cli.mjs review verify --target <repo> --manifest <file> --report <json>
+  node <agentchef>/scripts/external-review-cli.mjs review status --target <repo> --manifest <file>
 
 Safety:
   pack and handoff are preview-only unless --apply is present.

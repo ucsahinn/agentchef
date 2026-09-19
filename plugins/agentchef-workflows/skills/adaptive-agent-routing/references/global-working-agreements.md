@@ -15,7 +15,7 @@ Agent roles inherit the active profile. Omitted model and reasoning fields are i
 - `evidence-backed-research`: `$evidence-research` in the main thread with optional `docs_researcher` or `product_strategist` review, source ledger, and explicit uncertainty.
 - `context-surface-decision`: `context_architect` and, for reusable prompts, `prompt_architect`.
 - `data-systems`: `data_coordinator` with `docs_researcher` for read-only data documentation, lineage, catalog, quality, and source evidence. Application implementation, database access, or database performance work return a parent-routed handoff for `backend_coordinator`; security and operations needs return to the parent for their appropriate coordinator. Private data and database access remain explicitly gated.
-- `data-information-quality`: `data_coordinator` with `docs_researcher` for source lineage, metadata, data catalogs, and information-quality evidence; private data and database access remain explicitly gated.
+- `data-systems`: `data_coordinator` with `docs_researcher` for source lineage, metadata, data catalogs, and information-quality evidence; private data and database access remain explicitly gated.
 - `bug-root-cause`: `root_cause_debugger`; add `test_verifier` when reproduction or verification can run independently.
 - `bounded-feature`: main-thread implementation with `engineering_planner`, `test_verifier`, or `code_reviewer` only when separable.
 - `frontend-ui`: `design_reviewer` and `frontend_verifier`; add browser evidence through Playwright or Chrome DevTools.
@@ -24,7 +24,7 @@ Agent roles inherit the active profile. Omitted model and reasoning fields are i
 - `release-or-publish`: `release_verifier`, `test_verifier`, and `security_auditor`; all external writes remain explicitly gated.
 - `seo-web-quality`: `google_seo_auditor`, `performance_auditor`, or `frontend_verifier` according to evidence needed.
 - `onboarding-support`: `support_coordinator` with `devex_auditor` for setup diagnostics, first success, recovery guidance, and support-flow evidence; account and production actions remain explicitly gated.
-- `support-onboarding`: `support_coordinator` with `devex_auditor` for setup friction, first-run, recovery guidance, and support-flow evidence; account and production actions remain explicitly gated.
+- `onboarding-support`: `support_coordinator` with `devex_auditor` for setup friction, first-run, recovery guidance, and support-flow evidence; account and production actions remain explicitly gated.
 - `docs-and-adrs`: `docs_author` or `devex_auditor` for independent documentation and onboarding checks.
 - `external-deep-review`: `code_reviewer`, with `security_auditor` or `test_verifier` only when separable; use `external-review-workflow` for a manual, hash-pinned, zero-upload handoff.
 - `gptpro-project-context`: use `gptpro` to create a fresh, hash-bound GPT Pro context delivery; ZIP upload remains manual and text bundles remain the fallback.
