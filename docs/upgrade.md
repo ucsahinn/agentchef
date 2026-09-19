@@ -48,6 +48,14 @@ npm run chef -- --migrate-identity --target both       # preview, both targets
 npm run chef -- --migrate-identity --target both --apply
 ```
 
+The migration also rewrites the banner comments and the plugin-id keys
+AgentChef itself wrote into `CODEX_HOME/config.toml` (including the
+`[hooks.state."<plugin id>:…"]` key) and removes an emptied legacy plugin-cache
+directory. When the plugin has already been re-added under its new id, Codex has
+written that hook-state table itself; the legacy table is then dropped rather
+than renamed, so the file never ends up with two identical tables. Other products' tables, project trust entries, and your own settings
+in that file are never touched.
+
 The migration renames markers, the operator skill folder, and the plugin
 folders; rewrites the marketplace entry, name, and plugin id; refreshes a Git
 hook that still carries the legacy banner (only when its bytes match a shipped

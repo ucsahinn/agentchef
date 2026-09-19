@@ -11,6 +11,7 @@ import { identity } from "../lib/identity.mjs";
 import { inspectDirectSkillTarget } from "../manage-direct-skill-target.mjs";
 import { inspectPinnedSkillOwnership, hashSkillTree } from "../lib/skill-provenance.mjs";
 import { KNOWN_LEGACY_FILE_SHA256 } from "../lib/global-git-guards.mjs";
+import { countCodexConfigRewrites, planCodexConfigRewrite } from "../migrate-identity.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const helper = path.join(root, "scripts", "migrate-identity.mjs");
@@ -36,6 +37,27 @@ function legacyFixture({ withClaude }) {
   const agentsHome = path.join(home, ".agents");
   const claudeHome = path.join(home, ".claude");
   const pluginSource = path.join(root, "plugins", identity.pluginName);
+
+  // A config.toml exactly as a pre-1.0.0 install left it: AgentChef's own
+  // banners and plugin-id keys next to another product's entries.
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, "config.toml"), [
+    "# Windows-first Codex Chef.",
+    "",
+    '[hooks.state."codex-chef-workflows@codex-chef:hooks/process-hygiene.json:session_end:0:0"]',
+    'trusted_hash = "sha256:abc"',
+    "",
+    '[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]',
+    'trusted_hash = "sha256:def"',
+    "",
+    "[projects.'d:\\projects\\demo\\codex-chef']",
+    'trust_level = "trusted"',
+    "",
+    "# Codex Chef merged config blocks. Existing user-defined tables were preserved.",
+    "[agents.demo]",
+    'description = "demo"',
+    ""
+  ].join("\n"));
 
   copyTree(pluginSource, path.join(codexHome, "plugins", identity.legacyPluginName));
   copyTree(pluginSource, path.join(agentsHome, "plugins", "sources", identity.legacyPluginName));
@@ -212,4 +234,67 @@ test("identity migration previews, converts, and is idempotent for both targets"
   const secondStatuses = again.outcome.results.map((result) => result.status);
   assert.ok(secondStatuses.every((status) => ["current", "absent", "skipped", "no-marker"].includes(status)), JSON.stringify(again.outcome.results));
   fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("the Codex config keeps every foreign entry while AgentChef's own banners and plugin id are rewritten", () => {
+  const state = legacyFixture({ withClaude: false });
+  const configPath = path.join(state.codexHome, "config.toml");
+  const before = fs.readFileSync(configPath, "utf8");
+  const legacyCache = path.join(state.codexHome, "plugins", "cache", identity.legacyMarketplaceName);
+  fs.mkdirSync(path.join(legacyCache, "emptied"), { recursive: true });
+
+  const preview = run(state, ["--dry-run"]);
+  const planned = preview.steps.find((step) => step.id === "codex-config");
+  assert.equal(planned.decision, "rewrite");
+  assert.equal(planned.occurrences, 3, "the two banners and one plugin-id key");
+  assert.equal(fs.readFileSync(configPath, "utf8"), before, "a preview writes nothing");
+
+  run(state, ["--apply"]);
+  const after = fs.readFileSync(configPath, "utf8");
+  assert.ok(after.includes("# Windows-first AgentChef."), "template banner rewritten");
+  assert.ok(after.includes("# AgentChef merged config blocks."), "merge banner rewritten");
+  assert.ok(after.includes('[hooks.state."agentchef-workflows@agentchef:hooks/process-hygiene.json:session_end:0:0"]'), "our hook-state key rewritten");
+  assert.ok(after.includes('trusted_hash = "sha256:abc"'), "the recorded hash moves with the key");
+  assert.ok(after.includes('[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]'), "another product's hook state is untouched");
+  assert.ok(after.includes("[projects.'d:\\projects\\demo\\codex-chef']"), "project trust paths are untouched");
+  assert.ok(after.includes("[agents.demo]"), "user tables survive");
+  assert.equal(countCodexConfigRewrites(after), 0, "nothing left to rewrite");
+  assert.ok(!fs.existsSync(legacyCache), "a legacy cache directory holding no files is removed");
+
+  const again = run(state, ["--dry-run"]);
+  assert.equal(again.steps.find((step) => step.id === "codex-config").decision, "current", "second run has nothing to do");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a hook-state table already written under the new plugin id makes the legacy table a duplicate", () => {
+  // Codex writes its own hook-state table as soon as the plugin is re-added
+  // under the new id, so renaming the legacy table would produce two identical
+  // TOML tables and the config would stop parsing.
+  const config = [
+    "# Windows-first Codex Chef.",
+    "",
+    `[hooks.state."${identity.legacyPluginId}:hooks/process-hygiene.json:session_end:0:0"]`,
+    'trusted_hash = "sha256:old"',
+    "",
+    `[hooks.state."${identity.pluginId}:hooks/process-hygiene.json:session_end:0:0"]`,
+    'trusted_hash = "sha256:new"',
+    "",
+    '[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]',
+    'trusted_hash = "sha256:kitchen"',
+    ""
+  ].join("\n");
+
+  const planned = planCodexConfigRewrite(config);
+  assert.equal(planned.renamed, 0, "nothing is renamed onto an existing table");
+  assert.equal(planned.dropped, 1, "the legacy duplicate is dropped");
+  assert.equal(planned.banners, 1);
+
+  const headers = planned.text.split("\n").filter((line) => line.startsWith("["));
+  assert.equal(new Set(headers).size, headers.length, "no duplicate table headers");
+  assert.ok(!planned.text.includes(identity.legacyPluginId), "the legacy id is gone");
+  assert.ok(planned.text.includes('trusted_hash = "sha256:new"'), "Codex's own record is kept");
+  assert.ok(!planned.text.includes('trusted_hash = "sha256:old"'), "the stale record leaves with its table");
+  assert.ok(planned.text.includes('[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]'), "another product is untouched");
+  assert.ok(planned.text.includes('trusted_hash = "sha256:kitchen"'));
+  assert.equal(planCodexConfigRewrite(planned.text).changed, false, "idempotent");
 });

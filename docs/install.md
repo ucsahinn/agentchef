@@ -164,8 +164,8 @@ Update synchronizes source-owned files after backup and preserves unrelated
 extras in managed directories. It also synchronizes managed config tables and
 preserves user-owned `config.toml` settings. It does not install curated global skills
 or optional global Git guards; use `--install --apply` or `--skills --apply`
-when you want those explicit surfaces. An already-installed namespaced Codex
-Chef plugin is refreshed and version-verified after its managed source is
+when you want those explicit surfaces. An already-installed namespaced AgentChef
+plugin is refreshed and version-verified after its managed source is
 synchronized; update leaves an uninstalled plugin uninstalled.
 
 Inspect or restore AgentChef backup archives through the same CLI:

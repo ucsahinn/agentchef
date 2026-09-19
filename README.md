@@ -34,11 +34,12 @@ terminal agents, **OpenAI Codex CLI** and **Anthropic Claude Code**. It is built
 you a reviewed starting point without copying somebody else's private machine,
 credentials, sessions, or local memory.
 
-> **What ships today.** This release manages the Codex CLI surface
-> (`~/.codex`, `~/.agents`). The Claude Code install target is the next
-> release line; the plan is recorded in
-> [ADR-006](docs/decisions/006-agentchef-independent-dual-target-product.md)
-> and the shipped behavior is always stated in the
+> **What ships today.** This release installs both targets: the Codex CLI
+> surface (`~/.codex`, `~/.agents`) and the Claude Code surface
+> (`~/.claude`), selected with `--target codex|claude|both`. What each
+> target receives is listed in the
+> [target capability map](docs/target-capability-map.md), and the shipped
+> behavior is always stated in the
 > [release notes](docs/release-notes.md). Durable cross-session memory is
 > the job of the separate [`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)
 > engine, not of this kit.

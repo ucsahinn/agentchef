@@ -155,8 +155,8 @@ and activates it without executing fetched repository code or the recorded
 registry package. The CLI metadata remains a compatibility/discovery pin. The
 default gate checks this contract offline; `npm run
 verify:skills:online` verifies every pinned checkout and the npm integrity value.
-An absent target is installed directly. A valid, internally consistent Codex
-Chef provenance marker permits a managed upgrade with a mandatory full-tree
+An absent target is installed directly. A valid, internally consistent AgentChef
+provenance marker permits a managed upgrade with a mandatory full-tree
 backup. Unmarked, foreign, or locally drifted same-name targets are preserved
 by default. Adoption is deliberately per-skill: the operator must inspect the
 exact target and rerun only that helper command with `--adopt-existing`; there

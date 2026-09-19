@@ -353,7 +353,7 @@ export async function waitForSession(backend, clientId) {
         throw new Error("Pinned Serena exited before it became ready.");
       }
       try {
-        const initialized = await postMcp(backend.endpoint, { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "codex-chef-serena-pool", version: "0.1.0" } } });
+        const initialized = await postMcp(backend.endpoint, { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "agentchef-serena-pool", version: "0.1.0" } } });
         const sessionId = initialized.sessionId;
         if (!sessionId) throw new Error("Serena did not return an MCP session id.");
         await postMcp(backend.endpoint, { jsonrpc: "2.0", method: "notifications/initialized", params: {} }, sessionId);
