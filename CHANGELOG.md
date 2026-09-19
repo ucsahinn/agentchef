@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Point the external-review skill and the CLI usage at a command that resolves.
+  Both told people to run `chef review ...`, but the package is private with no
+  bin entry and the skill installs into other repositories, so every step failed
+  at the first line. The validator now checks for the runnable form.
+- Drop `Codex` from three bundled skill descriptions. Those descriptions are the
+  trigger text a Claude Code session matches against, so the routing, context
+  budget, and diagram skills were unlikely to fire on the Claude target at all.
+- Name real routing profiles in the adaptive-agent-routing reference: two ids it
+  used are not defined in `catalog/routing-profiles.json`.
+- Tell a Claude subagent that has no execution tool to ask the parent for command
+  output. Codex read-only still allows commands, so only the Claude rendering
+  loses them, and roles such as the reviewer and the security auditor were being
+  told to pull evidence from a diff they cannot produce.
+
 - Let an update refresh the Claude Code MCP entries AgentChef wrote, so a
   catalog version bump reaches an installed home instead of stopping at the
   first install. The entry is only rewritten while its value still hashes to

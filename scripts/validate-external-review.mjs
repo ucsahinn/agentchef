@@ -35,7 +35,9 @@ if (!chef.includes('args[0] === "review"')) failures.push("chef CLI does not dis
 if (/\b(?:fetch|https?:|curl|Invoke-WebRequest|danger-full-access|ignore-rules)\b/i.test(cli)) {
   failures.push("External review CLI must stay zero-network and must not include unsafe execution flags.");
 }
-for (const command of ["chef review pack", "chef review handoff", "chef review verify", "chef review status"]) {
+// The skill must name a command that resolves: there is no installed `chef`
+// binary, so every step runs the CLI from an AgentChef checkout.
+for (const command of ["review pack", "review handoff", "review verify", "review status"]) {
   if (!skill.includes(command)) failures.push(`External review skill missing command: ${command}`);
 }
 if (!routing.profiles.some((profile) => profile.id === "external-deep-review")) {

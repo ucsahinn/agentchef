@@ -333,7 +333,7 @@
       "evidence": ["The package contains only tracked text files and records SHA-256 hashes, exclusions, commit, branch, and dirty state.", "Handoff performs no upload and verify rejects stale snapshots or reports that do not match the manifest."],
       "boundary": "Do not expose live filesystem access, upload automatically, include secrets or local agent state, pin a model, widen sandbox privileges, or apply external findings without local reproduction.",
       "owner": "code_reviewer with security_auditor and test_verifier",
-      "primarySurface": "chef review CLI, external review schemas, and bundled workflow skill",
+      "primarySurface": "external review CLI, external review schemas, and bundled workflow skill",
       "durability": "Durable local workflow contract; external transmission remains a separate user-controlled action.",
       "privilegeDelta": "read-only preview by default; local output writes require --apply and must stay outside the target.",
       "validationGate": "npm run test:external-review and npm run validate:external-review plus live snapshot hash verification.",

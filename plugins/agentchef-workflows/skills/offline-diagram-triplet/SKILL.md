@@ -1,6 +1,6 @@
 ---
 name: offline-diagram-triplet
-description: "Create editable offline diagrams from an English description or Mermaid source. Use when Codex should emit a triplet: Mermaid source, an editable .excalidraw file for excalidraw.com, and rendered SVG/PNG assets with zero network access."
+description: "Create editable offline diagrams from an English description or Mermaid source. Use when the agent should emit a triplet: Mermaid source, an editable .excalidraw file for excalidraw.com, and rendered SVG/PNG assets with zero network access."
 ---
 
 # Offline Diagram Triplet

@@ -10,17 +10,17 @@ without handing an external service live filesystem access.
 
 ## Workflow
 
-1. Preview a package with `chef review pack --target <repo>`.
+1. Preview a package with `node <agentchef>/scripts/external-review-cli.mjs review pack --target <repo>`.
 2. Write it outside the target only after approval with
-   `chef review pack --target <repo> --out <outside-dir> --apply`.
+   `node <agentchef>/scripts/external-review-cli.mjs review pack --target <repo> --out <outside-dir> --apply`.
 3. Confirm freshness and preview the handoff with
-   `chef review handoff --target <repo> --manifest <manifest>`.
+   `node <agentchef>/scripts/external-review-cli.mjs review handoff --target <repo> --manifest <manifest>`.
 4. Write the local handoff with the same command plus `--apply`.
 5. The user manually chooses whether and where to submit the bundle.
 6. Save the returned JSON report locally and run
-   `chef review verify --target <repo> --manifest <manifest> --report <json>`.
+   `node <agentchef>/scripts/external-review-cli.mjs review verify --target <repo> --manifest <manifest> --report <json>`.
 7. Recheck later with
-   `chef review status --target <repo> --manifest <manifest>`.
+   `node <agentchef>/scripts/external-review-cli.mjs review status --target <repo> --manifest <manifest>`.
 
 Read `references/review-protocol.md` before packaging, handing off, or
 verifying a review.

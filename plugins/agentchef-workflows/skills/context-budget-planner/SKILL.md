@@ -1,6 +1,6 @@
 ---
 name: context-budget-planner
-description: Plan token and context usage before broad Codex work. Use for repo-wide, research-heavy, multi-agent, documentation-heavy, or long-running tasks that need a context budget, source priority map, compaction handoff, and verification gates.
+description: Plan token and context usage before broad agent work. Use for repo-wide, research-heavy, multi-agent, documentation-heavy, or long-running tasks that need a context budget, source priority map, compaction handoff, and verification gates.
 ---
 
 # Context Budget Planner

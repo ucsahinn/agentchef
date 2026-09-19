@@ -1,6 +1,6 @@
 ---
 name: adaptive-agent-routing
-description: Select the narrowest useful Codex agent, skill, MCP, and config route for non-trivial work. Use when delegation, context placement, specialist ownership, duplicate skill aliases, or routing visibility materially affects execution; avoid for trivial single-surface work.
+description: Select the narrowest useful agent, skill, MCP, and config route for non-trivial work. Use when delegation, context placement, specialist ownership, duplicate skill aliases, or routing visibility materially affects execution; avoid for trivial single-surface work.
 ---
 
 # Adaptive Agent Routing
