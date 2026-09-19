@@ -252,6 +252,10 @@ conflict that needs explicit adoption.
 Every manifest operation names its target (`codex`, `claude`, or `shared`).
 The Codex target is the default; the Claude target is selected only by an
 explicit `--target` or an interactive confirmation. Claude-side files that
+An update may refresh an MCP entry it wrote earlier, but only while the value
+in `.claude.json` still hashes to what the receipt records. An entry that was
+edited, or that AgentChef never wrote, is reported and left as it is. Permission
+rules stay strictly additive in every mode. Claude files
 AgentChef does not own (`settings.json`, `.claude.json`) are merged
 additively and every added entry is recorded in a sidecar receipt under
 `~/.claude/agentchef/receipts/`; repair, status, and removal act only on

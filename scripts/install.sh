@@ -1161,6 +1161,7 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
   )
   if [ "$DRY_RUN" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--dry-run"); else CLAUDE_TARGET_ARGS+=("--apply"); fi
   if [ "$NO_BACKUP" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--no-backup"); fi
+  if [ "$UPDATE" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--refresh-managed"); fi
   if [ "$ADOPT_SKILL_LINKS" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--adopt-skill-links"); fi
   if [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--skip-plugin-register"); fi
   if ! node "${CLAUDE_TARGET_ARGS[@]}"; then

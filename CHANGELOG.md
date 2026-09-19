@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Let an update refresh the Claude Code MCP entries AgentChef wrote, so a
+  catalog version bump reaches an installed home instead of stopping at the
+  first install. The entry is only rewritten while its value still hashes to
+  what the receipt records; an edited entry, or one AgentChef never wrote, is
+  reported and left alone. `-Update` (`--update`) passes the new
+  `--refresh-managed` flag, mirroring how the Codex side synchronizes its
+  managed config tables. Permission rules remain strictly additive.
+- Key object and container receipt entries by pointer when merging receipts, so
+  a refreshed value replaces the record of the value it replaced instead of
+  leaving a stale entry for removal to trip over.
+
 - Refresh the MCP catalog: `@upstash/context7-mcp` 4.1.1,
   `chrome-devtools-mcp` 1.9.0, `@playwright/mcp` 0.0.82, and the three
   `@modelcontextprotocol/*` servers at 2026.8.31. Each pin was verified by
