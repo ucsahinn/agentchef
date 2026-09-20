@@ -1,7 +1,7 @@
 ---
 name: code-mapper
 description: "Read-only explorer that maps relevant files, call paths, ownership boundaries, and existing patterns before implementation."
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
 permissionMode: default
 ---

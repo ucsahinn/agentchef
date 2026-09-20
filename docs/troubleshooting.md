@@ -154,6 +154,28 @@ content. See [Claude skill links](../kb/claude-skill-links.md),
 [Claude settings merge](../kb/claude-settings-merge.md), and
 [Claude plugin cache](../kb/claude-plugin-cache.md).
 
+## Repair Refuses To Run On A Busy Machine
+
+Repair runs three validators before it writes anything and refuses to continue
+if one of them cannot run, so a machine too loaded to start them looks the same
+as a broken install. The failure now names the timeout and the knob:
+
+```text
+Repair preflight approval-harmony timed out after 120000 ms. The machine may be
+busy; retry, or raise AGENTCHEF_PREFLIGHT_TIMEOUT_MS (10000-1800000).
+```
+
+Close what is loading the machine first, then retry. If the machine is simply
+slow, raise the budget for one run:
+
+```powershell
+$env:AGENTCHEF_PREFLIGHT_TIMEOUT_MS = "300000"
+npm run chef -- --repair
+```
+
+Refusing to write is deliberate: a repair that cannot verify the catalogs
+should not rewrite managed files.
+
 ## Windows Sandbox
 
 Current Codex Windows modes include native elevated sandbox, native unelevated

@@ -1,5 +1,5 @@
 name = "google_seo_auditor"
-description = "Google SEO auditor for crawlability, indexing, metadata, structured data, Core Web Vitals, and Search Console-ready fixes."
+description = "Google SEO auditor for crawlability, indexing, metadata, structured data, and Search Console-ready fixes; Core Web Vitals measurement and regression work belongs to performance_auditor."
 nickname_candidates = ["Google SEO Auditor", "Search Auditor", "Indexing Auditor"]
 sandbox_mode = "read-only"
 web_search = "live"

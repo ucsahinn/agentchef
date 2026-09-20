@@ -22,6 +22,7 @@ import {
 import { PLUGIN_ID, refreshInstalledPlugin } from "./refresh-installed-plugin.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
 import { createOperationJournal } from "./lib/operation-journal.mjs";
+import { envValue, identity } from "./lib/identity.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -722,6 +723,19 @@ function repairManagedFiles(contract) {
   };
 }
 
+// Repair refuses to write when a preflight validator cannot run, which is the
+// right posture but makes the time budget operator-visible: on a loaded machine
+// these validators are slow, and a timeout should be raisable rather than a
+// dead end.
+const PREFLIGHT_TIMEOUT_DEFAULT_MS = 120000;
+
+function preflightTimeoutMs() {
+  const raw = envValue("PREFLIGHT_TIMEOUT_MS", process.env);
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (Number.isFinite(parsed) && parsed >= 10000 && parsed <= 1800000) return parsed;
+  return PREFLIGHT_TIMEOUT_DEFAULT_MS;
+}
+
 function runPreflightValidators() {
   const checks = [
     ["agent-config", "scripts/validate-agent-config.mjs"],
@@ -729,6 +743,7 @@ function runPreflightValidators() {
     ["approval-harmony", "scripts/validate-approval-harmony.mjs"]
   ];
   const results = [];
+  const timeoutMs = preflightTimeoutMs();
 
   for (const [id, script] of checks) {
     const result = spawnSync(process.execPath, [script], {
@@ -736,7 +751,7 @@ function runPreflightValidators() {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-      timeout: 120000
+      timeout: timeoutMs
     });
     const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
     const ok = !result.error && result.status === 0;
@@ -747,7 +762,12 @@ function runPreflightValidators() {
       outputPreview: output ? output.split(/\r?\n/).slice(0, 8) : []
     });
     if (result.error) {
-      failures.push(`Repair preflight ${id} could not run: ${result.error.message}`);
+      // A timeout here usually means a loaded machine, not a broken validator,
+      // so name the knob instead of leaving the operator with a dead end.
+      const timedOut = result.error.code === "ETIMEDOUT" || /ETIMEDOUT/.test(result.error.message || "");
+      failures.push(timedOut
+        ? `Repair preflight ${id} timed out after ${timeoutMs} ms. The machine may be busy; retry, or raise ${identity.envPrefix}PREFLIGHT_TIMEOUT_MS (10000-1800000).`
+        : `Repair preflight ${id} could not run: ${result.error.message}`);
     } else if (result.status !== 0) {
       failures.push(`Repair preflight ${id} failed: ${output}`);
     }

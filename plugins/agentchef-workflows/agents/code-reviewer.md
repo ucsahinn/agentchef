@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: "Fresh-context senior code reviewer for diffs, PRs, and risky changes."
-tools: Read, Grep, Glob, WebSearch, WebFetch
+tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
 permissionMode: default
 ---

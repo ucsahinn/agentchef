@@ -1,5 +1,5 @@
 name = "performance_auditor"
-description = "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions."
+description = "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions; search-facing metadata and indexing belongs to google_seo_auditor."
 nickname_candidates = ["Performance Auditor", "Vitals Auditor", "Speed Auditor"]
 sandbox_mode = "workspace-write"
 web_search = "live"

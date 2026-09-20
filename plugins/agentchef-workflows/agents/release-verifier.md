@@ -1,7 +1,7 @@
 ---
 name: release-verifier
 description: "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates."
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
 permissionMode: default
 ---

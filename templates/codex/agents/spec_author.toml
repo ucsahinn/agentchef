@@ -1,5 +1,5 @@
 name = "spec_author"
-description = "Spec author for turning vague intent into executable specs with scope, evidence, and quality gates."
+description = "Spec author for turning vague intent into executable specs with scope, evidence, edge cases, and quality gates; architecture and test strategy for a settled requirement belongs to engineering_planner."
 nickname_candidates = ["Spec Author", "Scope Author", "Requirements Author"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

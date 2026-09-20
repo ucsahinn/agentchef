@@ -1,7 +1,7 @@
 ---
 name: product-strategist
 description: "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation."
-tools: Read, Grep, Glob, WebSearch, WebFetch
+tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
 permissionMode: default
 ---

@@ -154,6 +154,28 @@ düzenlediğini gösterir; senin içeriğin olarak korunur. Bkz.
 [Claude ayar birleştirme](../kb/claude-settings-merge.tr.md) ve
 [Claude plugin önbelleği](../kb/claude-plugin-cache.tr.md).
 
+## Onarım Yoğun Makinede Çalışmayı Reddediyor
+
+Onarım, hiçbir şey yazmadan önce üç doğrulayıcı koşar ve biri çalışamazsa devam
+etmeyi reddeder; bu yüzden onları başlatamayacak kadar yüklü bir makine, bozuk
+bir kurulumla aynı görünür. Hata artık zaman aşımını ve ilgili ayarı söylüyor:
+
+```text
+Repair preflight approval-harmony timed out after 120000 ms. The machine may be
+busy; retry, or raise AGENTCHEF_PREFLIGHT_TIMEOUT_MS (10000-1800000).
+```
+
+Önce makineyi yoran işi kapat, sonra yeniden dene. Makine yalnızca yavaşsa tek
+bir koşu için bütçeyi yükselt:
+
+```powershell
+$env:AGENTCHEF_PREFLIGHT_TIMEOUT_MS = "300000"
+npm run chef -- --repair
+```
+
+Yazmayı reddetmesi bilinçlidir: katalogları doğrulayamayan bir onarım, yönetilen
+dosyaları yeniden yazmamalıdır.
+
 ## Windows Sandbox
 
 Güncel Codex Windows modları native elevated sandbox, native unelevated sandbox
