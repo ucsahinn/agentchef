@@ -1,7 +1,12 @@
-// Additive merge of an AgentChef fragment into Claude Code's settings.json.
-// Rules: never remove or reorder anything the user has; never overwrite an
+// Merge of an AgentChef fragment into Claude Code's settings.json. Additive by
+// default: never remove or reorder anything the user has; never overwrite an
 // existing scalar; append missing permission rules, missing hook handlers, and
-// missing env keys; report every addition as a receipt entry. Containers
+// missing env keys; report every addition as a receipt entry.
+//
+// With `retire`, and only then, a permission rule this install added may also be
+// taken back, once the fragment stops asking for it and the value still hashes
+// to what the receipt records. One occurrence is removed per recorded rule, so a
+// duplicate the user added survives, and `deny` is never changed. Containers
 // (permissions, permissions.<list>, env, hooks, hooks.<event>) are created
 // lazily, only when something is appended into them, and are recorded as
 // "container" entries so --remove can prune them again when they end up empty.
@@ -84,9 +89,18 @@ export function planSettingsMerge(current, fragment, { previousEntries = [], ret
       // Take back only what this install added and no longer wants.
       const owned = recordedRules.get(list);
       const wantedSet = new Set(wanted.map(String));
-      const removals = owned
-        ? existingRules.filter((rule) => owned.has(valueSha256(String(rule))) && !wantedSet.has(String(rule)))
-        : [];
+      // One occurrence per recorded rule: ownership is tracked by value, so a
+      // second identical rule in the file is somebody else's and stays.
+      const retirable = new Set();
+      if (owned) {
+        for (const rule of existingRules) {
+          const value = String(rule);
+          if (wantedSet.has(value)) continue;
+          if (!owned.has(valueSha256(value))) continue;
+          retirable.add(value);
+        }
+      }
+      const removals = [...retirable];
       if (additions.length === 0 && removals.length === 0) continue;
       const permissions = ensureContainer(next, "permissions", "object", [], entries);
       const target = ensureContainer(permissions, list, "array", ["permissions"], entries);
