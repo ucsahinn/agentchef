@@ -965,7 +965,12 @@ function inspectClaudePluginCache(claudeHome, agentsHome) {
   const stale = [];
   for (const version of served) {
     const cachedAgents = path.join(cacheRoot, version, "agents");
-    if (!fs.existsSync(cachedAgents)) continue;
+    // A served copy with no agents directory differs from every managed role
+    // file, so it is maximal drift rather than something to skip over.
+    if (!fs.existsSync(cachedAgents)) {
+      stale.push({ version, differing: names.length, total: names.length });
+      continue;
+    }
     const differing = names.filter((name) => {
       const cached = path.join(cachedAgents, name);
       if (!fs.existsSync(cached)) return true;

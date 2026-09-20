@@ -9,7 +9,8 @@
   though the install verifies clean, which is exactly how an agent change can
   land on disk and never reach a session. The runtime verifier now compares the
   served copy with the source and prints the reinstall command; older cache
-  directories are not served and are not reported.
+  directories are not served and are not reported. A served copy with no agent
+  definitions at all counts as full drift rather than being skipped.
 
 - Make the repair preflight timeout visible and adjustable. Repair refuses to
   write when a validator cannot run, which is the right posture, but the budget
