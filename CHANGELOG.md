@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Report a Claude plugin cache copy that no longer matches the managed source.
+  Claude Code serves a plugin from its own cache and refreshes it by version,
+  while the plugin source is a local directory whose contents can change without
+  a version bump. Every session then loads the previous role definitions even
+  though the install verifies clean, which is exactly how an agent change can
+  land on disk and never reach a session. The runtime verifier now compares the
+  served copy with the source and prints the reinstall command; older cache
+  directories are not served and are not reported.
+
 - Make the repair preflight timeout visible and adjustable. Repair refuses to
   write when a validator cannot run, which is the right posture, but the budget
   was a hardcoded two minutes and the failure said only `spawnSync ETIMEDOUT`,

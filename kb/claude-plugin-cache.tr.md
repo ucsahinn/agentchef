@@ -36,6 +36,32 @@ node scripts/install-claude-target.mjs --json --redact-paths
    skill bağlantısı kazanır, plugin ise ad-alanlı olanı korur.
 4. Her plugin değişikliğinden sonra yeni bir Claude Code oturumu başlat.
 
+## Sürüm Değişmeden Bayatlayan Cache Kopyası
+
+Claude Code bir plugin'i yönetilen marketplace kaynağından değil, kendi cache
+kopyasından yükler ve o kopyayı sürüme göre tazeler. AgentChef'in plugin kaynağı
+yerel bir dizin olduğu için içeriği sürüm aynı kalırken değişebilir. Bu olduğunda
+kurulum temiz doğrulanmasına ve `claude plugin list` doğru sürümü göstermesine
+rağmen her oturum önceki rol tanımlarını yüklemeye devam eder.
+
+`npm run verify:install:runtime -- --target claude` sunulan cache kopyasını
+yönetilen kaynakla karşılaştırır ve bunu söyler:
+
+```text
+Warning: the Claude plugin cache copy 1.0.0 differs from the managed source in
+21 of 32 agent files, so sessions load stale definitions
+```
+
+Plugin'i yeniden kurarak tazele, sonra yeni bir oturum başlat:
+
+```bash
+claude plugin uninstall agentchef-workflows@agentchef
+claude plugin install agentchef-workflows@agentchef --scope user
+```
+
+Cache altında kalan eski sürüm dizinleri sunulmaz ve raporlanmaz. Yalnızca
+yönetilen kaynağın kuracağı sürüm karşılaştırılır.
+
 ## Durma Koşulları
 
 - Yenilemeyi zorlamak için `~/.claude/plugins/cache` dizinini silme; `claude

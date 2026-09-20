@@ -35,6 +35,33 @@ node scripts/install-claude-target.mjs --json --redact-paths
    unqualified name and the plugin keeps the namespaced one.
 4. Start a new Claude Code session after any plugin change.
 
+## A Cache Copy That Went Stale Without A Version Change
+
+Claude Code serves a plugin from its own cache copy, not from the managed
+marketplace source, and it refreshes that copy by version. AgentChef's plugin
+source is a local directory, so its contents can change while the version stays
+the same. When that happens every session keeps loading the previous role
+definitions even though the install verifies clean and `claude plugin list`
+reports the right version.
+
+`npm run verify:install:runtime -- --target claude` compares the served cache
+copy with the managed source and says so:
+
+```text
+Warning: the Claude plugin cache copy 1.0.0 differs from the managed source in
+21 of 32 agent files, so sessions load stale definitions
+```
+
+Refresh it by reinstalling the plugin, then start a new session:
+
+```bash
+claude plugin uninstall agentchef-workflows@agentchef
+claude plugin install agentchef-workflows@agentchef --scope user
+```
+
+Older version directories left under the cache are not served and are not
+reported. Only the version the managed source would install is compared.
+
 ## Stop Conditions
 
 - Do not delete `~/.claude/plugins/cache` to force a refresh; use the `claude
