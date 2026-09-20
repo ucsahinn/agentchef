@@ -1,7 +1,7 @@
 ---
 name: test-verifier
 description: "Validation specialist for lint, typecheck, tests, build, smoke checks, and failure evidence."
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
 permissionMode: default
 ---

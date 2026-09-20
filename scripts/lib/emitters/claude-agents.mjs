@@ -44,9 +44,13 @@ function yamlString(value) {
   return JSON.stringify(String(value));
 }
 
+// A Claude subagent tools list is an allowlist, and one that names no mcp__
+// entry filters MCP tools out completely. A role is granted a server only when
+// catalog/agents.json says its instructions depend on that server.
 function toolsFor(agent) {
   const base = agent.sandboxMode === "workspace-write" ? writeTools : readOnlyTools;
-  const tools = agent.webSearch ? [...base, ...webTools] : base;
+  const withWeb = agent.webSearch ? [...base, ...webTools] : base;
+  const tools = [...withWeb, ...(agent.claudeMcp || []).map((server) => `mcp__${server}`)];
   const disallowed = agent.sandboxMode === "workspace-write"
     ? ["NotebookEdit"]
     : ["Write", "Edit", "NotebookEdit", "Bash"];

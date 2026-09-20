@@ -1,7 +1,7 @@
 ---
 name: frontend-verifier
 description: "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows."
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
 permissionMode: default
 ---

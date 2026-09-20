@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Give a Claude specialist the MCP servers its own instructions depend on. A
+  subagent `tools:` list is an allowlist, and one that names no `mcp__` entry
+  filters MCP out entirely, so every role told to consult Context7 or the Serena
+  bridge could not reach it. 21 roles now declare the servers their role file
+  actually references, recorded as `claudeMcp` in `catalog/agents.json` so the
+  grant is reviewable data rather than a guess in the emitter.
+- Add `scripts/validate-agent-surface-consistency.mjs` to `check`. Each of its
+  six checks exists because a real defect reached a release past the structural
+  validators: an unreachable specialist, two roles in different coordinator
+  domains claiming the same work, a routing profile id the catalog never
+  defined, a role asked for command output it cannot produce, a bundled skill
+  description that only triggers on one target, and a command naming a binary
+  this package does not ship.
+- Route `spec_author` and `qa_lead`, which no routing profile could reach, and
+  give the Core Web Vitals and edge-case overlaps a boundary clause naming the
+  other role, the way `design_reviewer` already did.
+
 - Let an update retire a Claude permission rule it added earlier once the
   fragment no longer asks for it. A version bump used to add the new pinned
   package rule and keep the old one forever, which widened the allowed set on
