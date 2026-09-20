@@ -207,6 +207,12 @@ test("an update retires only the permission rules this install added and no long
   assert.ok(kept.next.permissions.allow.includes("Bash(my-own-tool *)"), "user rules are never retired");
   assert.ok(!kept.next.permissions.allow.includes("Bash(npx -y demo-mcp@1.0.0 *)"));
 
+  // A duplicate of an owned rule belongs to whoever added the second copy.
+  const duplicated = { permissions: { allow: ['Bash(npx -y demo-mcp@1.0.0 *)', 'Bash(npx -y demo-mcp@1.0.0 *)'], deny: [] } };
+  const oneLeft = planSettingsMerge(duplicated, newFragment, { previousEntries: owned, retire: true });
+  assert.deepEqual(oneLeft.next.permissions.allow.filter((rule) => rule.includes('1.0.0')).length, 1, 'only one occurrence is taken back');
+  assert.equal(oneLeft.retired.length, 1);
+
   // A rule still wanted by the fragment is never retired.
   const stillWanted = planSettingsMerge(before, oldFragment, { previousEntries: owned, retire: true });
   assert.deepEqual(stillWanted.next.permissions.allow, ["Bash(npx -y demo-mcp@1.0.0 *)"]);
