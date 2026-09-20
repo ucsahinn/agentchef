@@ -15,10 +15,14 @@
 //   5. A bundled skill description that names one harness as the actor will not
 //      trigger on the other target, even though the skill ships to both.
 //   6. A command in a bundled skill that resolves to nothing fails at step one.
+//   7. An MCP server granted to a role that is not installed for that target
+//      produces an allowlist entry matching nothing, which removes the very
+//      capability the grant was written to give.
 import fs from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(process.cwd());
+const BACKTICK = String.fromCharCode(96);
 const failures = [];
 const notes = [];
 const fail = (message) => failures.push(message);
@@ -77,23 +81,35 @@ const collisionPhrases = [
   }
 }
 
-// 3. Profile ids named in the routing skill must exist in the catalog.
+// 3. Profile ids named in the routing skill must exist in the catalog. Every
+// hyphenated backticked token is treated as a claim about a profile unless it
+// is a name the catalogs already explain, so a missing profile cannot hide
+// behind an id shape this check did not anticipate.
 {
   const reference = path.join(root, "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md");
   if (fs.existsSync(reference)) {
-    const text = fs.readFileSync(reference, "utf8");
-    const named = new Set([...text.matchAll(/`([a-z][a-z0-9-]{4,})`/g)].map((match) => match[1]));
-    // Only names that look like profile ids: hyphenated and not a known agent,
-    // skill, or command word.
-    const knownNames = new Set([
+    const referenceText = fs.readFileSync(reference, "utf8");
+    const skillCatalog = readJson("catalog/skills.json");
+    const known = new Set([
       ...(agents.agents || []).map((agent) => agent.name),
-      ...(agents.coordinators || []).map((coordinator) => coordinator.name)
+      ...(agents.coordinators || []).map((coordinator) => coordinator.name),
+      ...(agents.coordinatorDomains || []).map((domain) => domain.id),
+      ...(skillCatalog.skills || []).map((skill) => skill.name),
+      ...Object.keys(skillCatalog.compatibilityAliases || {}),
+      ...(readJson("catalog/mcp-servers.json").servers || []).map((server) => server.name)
     ]);
-    const skills = new Set((readJson("catalog/skills.json").skills || []).map((skill) => skill.name));
-    const suspects = [...named].filter((name) => name.includes("-") && !knownNames.has(name) && !skills.has(name));
-    const phantom = suspects.filter((name) => !profileIds.has(name) && /^(data|frontend|security|release|docs|repo|bug|bounded|context|current|evidence|external|gptpro|mcp|onboarding|seo|starter|support)-/.test(name));
+    // Hyphenated tokens that are prose, flags, or file names, not routing ids.
+    const notProfileIds = new Set([
+      "read-only", "workspace-write", "official-first", "use-when-available-and-approved",
+      "narrowest-owner", "parent-routed-handoff", "agents-md", "claude-md", "pre-commit",
+      "dual-agent-brain", "cross-domain", "single-owner", "no-network", "on-request",
+      "web-search", "danger-full-access", "ignore-rules", "zero-network", "read-write"
+    ]);
+    const tokenPattern = new RegExp(BACKTICK + "([a-z][a-z0-9]*(?:-[a-z0-9]+)+)" + BACKTICK, "g");
+    const phantom = [...new Set([...referenceText.matchAll(tokenPattern)].map((match) => match[1]))]
+      .filter((name) => !known.has(name) && !notProfileIds.has(name) && !profileIds.has(name));
     if (phantom.length > 0) {
-      fail(`routing reference names profile ids the catalog does not define: ${phantom.join(", ")}`);
+      fail("routing reference names hyphenated ids that no catalog defines: " + phantom.join(", "));
     }
   }
 }
@@ -166,6 +182,27 @@ const collisionPhrases = [
         if (relative.endsWith(".mjs") && !fs.existsSync(path.join(root, relative))) {
           fail(`${name}: names \`node ${target}\`, which does not resolve to a file in this repository`);
         }
+      }
+    }
+  }
+}
+
+// 7. A granted MCP server has to exist and has to be one AgentChef installs
+// for Claude Code. A name that matches nothing produces an allowlist entry
+// granting nothing, which silently removes the capability it was written to
+// give.
+{
+  const catalogued = new Set((readJson("catalog/mcp-servers.json").servers || []).map((server) => server.name));
+  // Kept in step with claudeDefaultServers in lib/claude-mcp-merge.mjs.
+  const installedForClaude = new Set(["context7", "serena"]);
+  for (const agent of agents.agents || []) {
+    for (const server of agent.claudeMcp || []) {
+      if (!catalogued.has(server)) {
+        fail(agent.name + ' is granted MCP server "' + server + '", which catalog/mcp-servers.json does not define');
+        continue;
+      }
+      if (!installedForClaude.has(server)) {
+        fail(agent.name + ' is granted MCP server "' + server + '", which AgentChef does not install for the Claude target, so the grant would never resolve');
       }
     }
   }
