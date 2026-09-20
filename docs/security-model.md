@@ -254,8 +254,10 @@ The Codex target is the default; the Claude target is selected only by an
 explicit `--target` or an interactive confirmation. Claude-side files that
 An update may refresh an MCP entry it wrote earlier, but only while the value
 in `.claude.json` still hashes to what the receipt records. An entry that was
-edited, or that AgentChef never wrote, is reported and left as it is. Permission
-rules stay strictly additive in every mode. Claude files
+edited, or that AgentChef never wrote, is reported and left as it is. Permission rules are additive by
+default. An update may also retire a rule it added earlier once the fragment no
+longer asks for it, under the same ownership proof, so a moved package pin does
+not leave its old allow rule behind forever. The `deny` list is never changed. Claude files
 AgentChef does not own (`settings.json`, `.claude.json`) are merged
 additively and every added entry is recorded in a sidecar receipt under
 `~/.claude/agentchef/receipts/`; repair, status, and removal act only on

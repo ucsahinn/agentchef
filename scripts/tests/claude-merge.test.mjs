@@ -12,6 +12,7 @@ import {
   readReceipt,
   receiptSchemaVersion,
   removeRecordedEntries,
+  valueSha256,
   writeReceipt
 } from "../lib/json-merge-receipt.mjs";
 
@@ -176,4 +177,38 @@ test("an MCP entry is refreshed only while it still matches the receipt", () => 
   assert.equal(kept.changed, false);
   assert.equal(kept.skipped[0].reason, "already-present");
   assert.equal(kept.next.mcpServers.context7.command, "my-own-thing");
+});
+
+test("an update retires only the permission rules this install added and no longer wants", () => {
+  const before = { permissions: { allow: ["Bash(npx -y demo-mcp@1.0.0 *)"], ask: [], deny: ["Bash(rm *)"] } };
+  const oldFragment = { permissions: { allow: ["Bash(npx -y demo-mcp@1.0.0 *)"] } };
+  const first = planSettingsMerge(before, oldFragment);
+  assert.equal(first.changed, false, "the rule is already there");
+
+  // Pretend AgentChef wrote it, then the pin moves.
+  const owned = [{ kind: "array-item", pointer: "/permissions/allow", valueSha256: valueSha256("Bash(npx -y demo-mcp@1.0.0 *)"), preview: "Bash(npx -y demo-mcp@1.0.0 *)" }];
+  const newFragment = { permissions: { allow: ["Bash(npx -y demo-mcp@2.0.0 *)"] } };
+
+  // Without the flag the old rule stays, exactly as before.
+  const additive = planSettingsMerge(before, newFragment, { previousEntries: owned });
+  assert.deepEqual(additive.next.permissions.allow, ["Bash(npx -y demo-mcp@1.0.0 *)", "Bash(npx -y demo-mcp@2.0.0 *)"]);
+  assert.equal((additive.retired || []).length, 0);
+
+  // With the flag the superseded rule is taken back.
+  const retiring = planSettingsMerge(before, newFragment, { previousEntries: owned, retire: true });
+  assert.deepEqual(retiring.next.permissions.allow, ["Bash(npx -y demo-mcp@2.0.0 *)"]);
+  assert.equal(retiring.retired.length, 1);
+  assert.equal(retiring.retired[0].preview, "Bash(npx -y demo-mcp@1.0.0 *)");
+  assert.deepEqual(retiring.next.permissions.deny, ["Bash(rm *)"], "deny is never touched");
+
+  // A rule the user wrote has no record, so it survives a retire pass.
+  const withUserRule = { permissions: { allow: ["Bash(npx -y demo-mcp@1.0.0 *)", "Bash(my-own-tool *)"], deny: [] } };
+  const kept = planSettingsMerge(withUserRule, newFragment, { previousEntries: owned, retire: true });
+  assert.ok(kept.next.permissions.allow.includes("Bash(my-own-tool *)"), "user rules are never retired");
+  assert.ok(!kept.next.permissions.allow.includes("Bash(npx -y demo-mcp@1.0.0 *)"));
+
+  // A rule still wanted by the fragment is never retired.
+  const stillWanted = planSettingsMerge(before, oldFragment, { previousEntries: owned, retire: true });
+  assert.deepEqual(stillWanted.next.permissions.allow, ["Bash(npx -y demo-mcp@1.0.0 *)"]);
+  assert.equal(stillWanted.retired.length, 0);
 });

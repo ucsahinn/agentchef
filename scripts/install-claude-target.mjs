@@ -152,13 +152,18 @@ export function planClaudeInstall(options) {
   const settingsPath = path.join(claudeHome, "settings.json");
   const settingsFragment = readJson("templates/claude/settings.fragment.json");
   const settingsCurrent = readJsonOrDefault(settingsPath, {});
-  const settingsPlan = planSettingsMerge(settingsCurrent, { permissions: settingsFragment.permissions });
+  const settingsReceipt = readReceipt(path.join(claudeHome, "agentchef", "receipts", "claude-settings-merge-receipt.json"));
+  const settingsPlan = planSettingsMerge(settingsCurrent, { permissions: settingsFragment.permissions }, {
+    previousEntries: settingsReceipt?.entries || [],
+    retire: Boolean(options.refreshManaged)
+  });
   actions.push({
     id: "claude-settings-merge",
     kind: "json-merge",
     destination: settingsPath,
     state: settingsPlan.changed ? (fs.existsSync(settingsPath) ? "merge" : "create") : "identical",
     entries: settingsPlan.entries.map((entry) => entry.preview),
+    retired: (settingsPlan.retired || []).map((entry) => entry.preview),
     skipped: settingsPlan.skipped.length,
     plan: settingsPlan,
     backup: true
@@ -299,10 +304,12 @@ function writeFileAtomic(target, buffer) {
 // of them. An object key or a container is identified by its pointer alone, so
 // a refreshed value replaces the record of the value it replaced instead of
 // leaving a stale one behind for removal to trip over.
-function mergeReceiptEntries(previous, added) {
+function mergeReceiptEntries(previous, added, retired = []) {
   const positionByKey = new Map();
   const merged = [];
+  const dropped = new Set(retired.map((entry) => `array-item:${entry.pointer}:${entry.valueSha256}`));
   for (const entry of [...(previous?.entries || []), ...added]) {
+    if (entry.kind === "array-item" && dropped.has(`array-item:${entry.pointer}:${entry.valueSha256}`)) continue;
     const key = entry.kind === "array-item"
       ? `${entry.kind}:${entry.pointer}:${entry.valueSha256}`
       : `${entry.kind}:${entry.pointer}`;
@@ -393,7 +400,7 @@ export function applyClaudeInstall(options, plan) {
           target: action.destination,
           beforeSha256: before,
           afterSha256: fileSha256(action.destination),
-          entries: mergeReceiptEntries(previous, action.plan.entries),
+          entries: mergeReceiptEntries(previous, action.plan.entries, action.plan.retired || []),
           backupPath: backup
         });
         if (fs.existsSync(receiptPath)) fs.rmSync(receiptPath);

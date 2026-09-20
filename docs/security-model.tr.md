@@ -254,7 +254,10 @@ sabit bir hedef reddedilmeye devam eder. AgentChef'in sahibi olmadığı Claude
 Bir güncelleme, daha önce kendi yazdığı MCP girdisini yenileyebilir; ama yalnızca
 `.claude.json` içindeki değer makbuzdaki hash ile eşleşmeye devam ettiği sürece.
 Düzenlenmiş ya da AgentChef'in hiç yazmadığı bir girdi raporlanır ve olduğu gibi
-bırakılır. İzin kuralları her modda yalnızca eklemeli kalır. AgentChef'in sahibi
+bırakılır. İzin kuralları varsayılan olarak
+eklemelidir. Güncelleme, aynı sahiplik kanıtıyla, fragment artık istemediğinde daha
+önce eklediği bir kuralı geri de alabilir; böylece taşınan bir paket pini eski
+allow kuralını sonsuza kadar geride bırakmaz. `deny` listesi hiç değiştirilmez. AgentChef'in sahibi
 olmadığı Claude dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen
 her girdi `~/.claude/agentchef/receipts/` altındaki yan makbuza yazılır;
 onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdilere
