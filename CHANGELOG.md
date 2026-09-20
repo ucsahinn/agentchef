@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Let an update retire a Claude permission rule it added earlier once the
+  fragment no longer asks for it. A version bump used to add the new pinned
+  package rule and keep the old one forever, which widened the allowed set on
+  every bump. A rule is only taken back under the same ownership proof used for
+  MCP entries, and `deny` is never changed.
+
 - Point the external-review skill and the CLI usage at a command that resolves.
   Both told people to run `chef review ...`, but the package is private with no
   bin entry and the skill installs into other repositories, so every step failed
