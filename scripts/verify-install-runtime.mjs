@@ -933,6 +933,49 @@ function inspectGitGuards(failures) {
 // the claude CLI are the evidence. Missing CLI is a warning unless
 // --require-live-runtime is set; a broken managed file or a receipt entry that
 // disappeared is a failure.
+// Claude Code serves a plugin from its own cache copy. That copy is refreshed
+// by version, so a content change without a version bump leaves sessions
+// loading stale definitions while every managed file still verifies clean.
+function inspectClaudePluginCache(claudeHome, agentsHome) {
+  const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
+  const cacheRoot = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows");
+  if (!fs.existsSync(source) || !fs.existsSync(cacheRoot)) return { inspected: false };
+  let versions;
+  try {
+    versions = fs.readdirSync(cacheRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch {
+    return { inspected: false };
+  }
+  if (versions.length === 0) return { inspected: false };
+  // Only the version this source would install is served to a session; older
+  // cache directories are leftovers Claude never loads.
+  let installedVersion = null;
+  try {
+    installedVersion = JSON.parse(fs.readFileSync(path.join(source, ".claude-plugin", "plugin.json"), "utf8")).version || null;
+  } catch {
+    installedVersion = null;
+  }
+  const served = installedVersion && versions.includes(installedVersion) ? [installedVersion] : versions.slice(-1);
+  // Compare the agent definitions, which are what a session actually loads.
+  const sourceAgents = path.join(source, "agents");
+  if (!fs.existsSync(sourceAgents)) return { inspected: false };
+  const names = fs.readdirSync(sourceAgents).filter((name) => name.endsWith(".md"));
+  const stale = [];
+  for (const version of served) {
+    const cachedAgents = path.join(cacheRoot, version, "agents");
+    if (!fs.existsSync(cachedAgents)) continue;
+    const differing = names.filter((name) => {
+      const cached = path.join(cachedAgents, name);
+      if (!fs.existsSync(cached)) return true;
+      return fileSha256(cached) !== fileSha256(path.join(sourceAgents, name));
+    });
+    if (differing.length > 0) stale.push({ version, differing: differing.length, total: names.length });
+  }
+  return { inspected: true, versions, served, stale };
+}
+
 function inspectClaudeRuntime(failures, warnings) {
   const claudeHome = options.claudeHome;
   const receiptPath = path.join(claudeHome, "agentchef", claudeInstallReceiptName);
@@ -986,6 +1029,13 @@ function inspectClaudeRuntime(failures, warnings) {
   let cli = { inspected: false };
   if (version && !version.error && version.status === 0) {
     cli = { inspected: true, version: String(version.stdout || "").trim().split(/\r?\n/)[0] || null };
+    const cache = inspectClaudePluginCache(claudeHome, options.agentsHome);
+    cli.pluginCache = cache;
+    for (const entry of cache.stale || []) {
+      warnings.push(
+        `the Claude plugin cache copy ${entry.version} differs from the managed source in ${entry.differing} of ${entry.total} agent files, so sessions load stale definitions; refresh it with: claude plugin uninstall agentchef-workflows@agentchef && claude plugin install agentchef-workflows@agentchef --scope user`
+      );
+    }
     const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
     const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
     cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
