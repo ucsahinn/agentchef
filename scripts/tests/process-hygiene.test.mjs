@@ -400,3 +400,30 @@ test("cleanup rejects a receipt whose claimed owner identity no longer matches i
   assert.deepEqual(calls, []);
   assert.equal(results[0].stopped, false);
 });
+
+test("MCP servers a live Claude Code session started are active, never orphans", async () => {
+  // AgentChef installs for Claude Code too. A Claude session parents MCP
+  // servers exactly like a Codex session, and with no Codex ancestor those trees
+  // used to be reported as orphans that the manual cleanup would terminate.
+  const { analyzeProcessSnapshot } = await import(hygieneModuleUrl);
+  const snapshot = [
+    // A native Claude Code session with a context7 server.
+    proc(700, 1, "claude.exe", "claude.exe"),
+    proc(710, 700, "cmd.exe", "cmd /c npx.cmd -y @upstash/context7-mcp@4.1.1"),
+    proc(711, 710, "node.exe", "node @upstash/context7-mcp/dist/index.js"),
+    // An npm-installed Claude Code session with a playwright server.
+    proc(800, 1, "node.exe", "node C:\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js"),
+    proc(810, 800, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.82"),
+    proc(811, 810, "node.exe", "node @playwright/mcp/dist/index.js"),
+    // A tree whose owner is really gone: this one is still an orphan.
+    proc(900, 999, "cmd.exe", "cmd /c npx.cmd -y codebase-memory-mcp@0.8.1"),
+    proc(901, 900, "node.exe", "node codebase-memory-mcp/dist/index.js")
+  ];
+  const report = analyzeProcessSnapshot(snapshot, { now, orphanGraceMs: 60_000 });
+
+  assert.equal(report.claudeSessions, 2, "both launch styles count as a session");
+  assert.equal(report.localMcpInstances, 3);
+  assert.equal(report.activeMcpInstances, 2, "both Claude-owned trees are active");
+  assert.deepEqual(report.cleanupCandidates.map((item) => item.rootPid), [900], "only the genuinely unowned tree is a candidate");
+  assert.ok(!report.cleanupCandidates.some((item) => [710, 810].includes(item.rootPid)), "no Claude-owned tree may ever be selected");
+});

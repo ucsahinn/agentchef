@@ -31,9 +31,9 @@ npm run --silent chef -- --processes --json --no-log
 
 Schema-v2 denetimi şunları ayrı raporlar:
 
-- aktif Codex oturumları;
+- aktif Codex ve Claude Code oturumları;
 - mantıksal lokal MCP instance'ları ve yardımcı süreç sayıları;
-- aktif Codex oturumuna ait MCP ağaçları;
+- aktif bir Codex veya Claude Code oturumuna ait MCP ağaçları;
 - güvenlik bekleme süresi henüz dolmamış sahipsiz ağaçlar;
 - eski ve sahipsiz temizlik adayları;
 - ilgisiz Node, Python, Serena ve uvx süreçleri.
@@ -93,7 +93,10 @@ Resmî kaynaklar:
   fan-out'u sınırlar.
 - Denetim eski ve sahipsiz aday bulmazsa ham Node/Python sayısı yüksek diye
   hiçbir şeyi durdurma.
-- Claude Code oturumları bu sürümde kapsam dışıdır: oturum sonu hook'u yalnızca
-  Codex plugin manifestinde yayınlanır ve denetim yalnızca Codex oturum
-  sahiplerini tanır. Claude Code oturum bitince kendi MCP alt süreçlerini
-  kendisi durdurur; bu hook'un Claude dalı sonraki bir sürüm için planlıdır.
+- Denetim, çalışan bir Claude Code oturumunu tıpkı bir Codex oturumu gibi MCP
+  sahibi olarak tanır; bu yüzden açık bir Claude oturumunun başlattığı MCP
+  sunucuları aktiftir ve asla temizlik adayı olmaz. Öncesinde bu ağaçların
+  Codex üst süreci olmadığı için yetim olarak raporlanıyor ve elle temizlik,
+  açık her Claude Code oturumunun MCP sunucularını sonlandırıyordu.
+- Oturum sonu hook'u hâlâ yalnızca Codex plugin manifestinde yayınlanır. Claude
+  Code oturum bitince kendi MCP alt süreçlerini kendisi durdurur.
