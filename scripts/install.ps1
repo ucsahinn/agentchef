@@ -48,6 +48,8 @@ $AgentsHome = if ($env:AGENTS_HOME) { $env:AGENTS_HOME } else { Join-Path $HOME 
 # Claude Code surface through scripts/install-claude-target.mjs; both runs the
 # shared operations once. Transaction state (lock, journal, backups) stays
 # under CODEX_HOME for every target.
+# ValidateSet accepts any capitalization; forward one canonical spelling.
+$Target = $Target.ToLowerInvariant()
 $InstallCodex = $Target -in @("codex", "both")
 $InstallClaude = $Target -in @("claude", "both")
 if (-not $ClaudeHome) {
@@ -210,7 +212,7 @@ function Invoke-InstallTargetPreflight {
   if ($InstallClaude) { $SurfaceArgs += @("--claude-home", $ClaudeHome) }
   & node @SurfaceArgs | Out-Null
   if ($LASTEXITCODE -ne 0) {
-    throw "Managed install surface contains an unsafe linked path; refusing all writes."
+    throw "Install surface preflight failed (see the message above); refusing all writes."
   }
 
   $PluginSource = Join-Path $RepoRoot "plugins\agentchef-workflows"

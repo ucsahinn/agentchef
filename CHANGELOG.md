@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Accept the install target in any capitalization, and stop mislabeling a failed
+  preflight. PowerShell's `ValidateSet` let `-Target Claude` through, the value
+  was forwarded verbatim to a case-sensitive Node parser, and the installer
+  reported the rejection as "Managed install surface contains an unsafe linked
+  path", a security error pointing at a symlink that did not exist. Bash refused
+  the same input outright, so the two installers disagreed. Both installers and
+  the shared parser now normalize the value, and the preflight message no longer
+  asserts a cause it did not establish. Found by an independent installer
+  parity review run on GPT-6-Luna through Codex.
+
 - Give the Claude CLI probes their own switch. `--skip-codex-cli` is documented as
   skipping `codex doctor` and `codex mcp list`, but it also skipped every live
   Claude check: the version, `plugin validate`, `mcp list`, the plugin-cache
