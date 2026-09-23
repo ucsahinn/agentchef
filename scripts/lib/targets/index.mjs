@@ -17,7 +17,9 @@ export const defaultTargets = Object.freeze(["codex"]);
 
 export function parseTargetSelection(value) {
   if (value === undefined || value === null || value === "") return new Set(defaultTargets);
-  const parts = String(value).split(/[,+\s]+/).filter(Boolean);
+  // Case-insensitive, like PowerShell's ValidateSet, so every entry point
+  // agrees on what it accepts.
+  const parts = String(value).toLowerCase().split(/[,+\s]+/).filter(Boolean);
   const selected = new Set();
   for (const part of parts) {
     if (part === "both" || part === "all") {

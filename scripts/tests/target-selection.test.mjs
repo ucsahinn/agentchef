@@ -121,3 +121,13 @@ test("resolveClaudeHomes follows CLAUDE_CONFIG_DIR and explicit overrides", () =
   assert.equal(explicit.claudeHome, path.resolve("D:\\claude"));
   assert.equal(explicit.claudeJson, path.resolve("D:\\elsewhere\\.claude.json"));
 });
+
+test("target selection is case-insensitive, matching PowerShell's ValidateSet", () => {
+  // PowerShell accepted `-Target Claude` and forwarded it verbatim; a
+  // case-sensitive parser then rejected it and the installer reported the
+  // failure as an unsafe linked path. Every entry point accepts any casing.
+  assert.deepEqual([...parseTargetSelection("CLAUDE")], ["claude"]);
+  assert.deepEqual([...parseTargetSelection("Codex")], ["codex"]);
+  assert.deepEqual([...parseTargetSelection("Both")].sort(), [...targetIds].sort());
+  assert.throws(() => parseTargetSelection("Bogus"), /Unknown install target: bogus/);
+});

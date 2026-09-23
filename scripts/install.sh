@@ -53,7 +53,8 @@ for arg in "$@"; do
     --plain-output) PLAIN_OUTPUT=1 ;;
     --interactive) INTERACTIVE=1 ;;
     --target=*)
-      TARGET="${arg#*=}"
+      # Case-insensitive, matching the PowerShell installer.
+      TARGET="$(printf '%s' "${arg#*=}" | tr '[:upper:]' '[:lower:]')"
       case "$TARGET" in
         codex|claude|both) ;;
         *)
@@ -265,7 +266,7 @@ preflight_install_targets() {
   )
   if [ "$INSTALL_CLAUDE" -eq 1 ]; then surface_args+=("--claude-home" "$CLAUDE_HOME_DIR"); fi
   if ! node "${surface_args[@]}" >/dev/null; then
-    echo "Managed install surface contains an unsafe linked path; refusing all writes." >&2
+    echo "Install surface preflight failed (see the message above); refusing all writes." >&2
     exit 1
   fi
 
