@@ -40,6 +40,7 @@ const options = {
   expectSkills: false,
   expectGitGuards: false,
   skipCodexCli: false,
+  skipClaudeCli: false,
   skipDoctorProbe: false,
   offline: false,
   noMcpProbe: false,
@@ -61,6 +62,7 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--expect-skills") options.expectSkills = true;
   else if (arg === "--expect-git-guards") options.expectGitGuards = true;
   else if (arg === "--skip-codex-cli") options.skipCodexCli = true;
+  else if (arg === "--skip-claude-cli") options.skipClaudeCli = true;
   else if (arg === "--skip-doctor-probe") options.skipDoctorProbe = true;
   else if (arg === "--offline") options.offline = true;
   else if (arg === "--no-mcp-probe") options.noMcpProbe = true;
@@ -116,6 +118,7 @@ Options:
   --expect-skills         Fail if installable curated skills are missing
   --expect-git-guards     Fail if optional global Git guard files/settings are missing
   --skip-codex-cli        Do not call codex doctor or codex mcp list
+  --skip-claude-cli       Do not call the claude CLI (version, plugin validate, mcp list)
   --skip-doctor-probe     Do not call codex doctor; MCP and plugin probes may still run
   --offline               Skip all live Codex CLI/runtime probes
   --no-mcp-probe          Run doctor probes but skip codex mcp list
@@ -1030,7 +1033,9 @@ function inspectClaudeRuntime(failures, warnings) {
     return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
   });
   const claude = platformCommand("claude", process.platform === "win32" ? "windows" : "unix");
-  const version = options.skipCodexCli ? null : runProbe("claude --version", claude, ["--version"], { timeout: options.probeTimeoutMs });
+  // Claude has its own switch: skipping the Codex CLI must not silently skip
+  // every live Claude check along with it.
+  const version = options.skipClaudeCli ? null : runProbe("claude --version", claude, ["--version"], { timeout: options.probeTimeoutMs });
   let cli = { inspected: false };
   if (version && !version.error && version.status === 0) {
     cli = { inspected: true, version: String(version.stdout || "").trim().split(/\r?\n/)[0] || null };
@@ -1052,7 +1057,7 @@ function inspectClaudeRuntime(failures, warnings) {
       cli.mcpServers = ["context7", "serena"].filter((name) => new RegExp(`^\\s*${name}\\b`, "m").test(listed));
       if (cli.mcpList !== "ok") (options.requireLiveRuntime ? failures : warnings).push("claude mcp list did not succeed with the installed Claude home.");
     }
-  } else if (!options.skipCodexCli) {
+  } else if (!options.skipClaudeCli) {
     (options.requireLiveRuntime ? failures : warnings).push("claude CLI is not available on PATH; Claude Code runtime evidence is file-based only.");
   }
   return { inspected: true, installed: true, claudeHome: redact(claudeHome), files, links, receipts, cli };
