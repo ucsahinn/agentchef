@@ -38,9 +38,9 @@ npm run --silent chef -- --processes --json --no-log
 
 The schema-v2 audit reports:
 
-- active Codex sessions;
+- active Codex and Claude Code sessions;
 - logical local MCP instances and their helper-process count;
-- MCP trees owned by an active Codex session;
+- MCP trees owned by an active Codex or Claude Code session;
 - recently unowned trees still inside the safety grace period;
 - old unowned cleanup candidates;
 - unrelated Node, Python, Serena, and uvx processes.
@@ -100,7 +100,10 @@ Official references:
   multi-window capacity.
 - If the audit finds no old unowned candidates, do not stop anything merely
   because the raw Node/Python count is high.
-- Claude Code sessions are not covered in this release: the session-end hook
-  ships only in the Codex plugin manifest, and the audit recognizes Codex
-  session owners only. Claude Code stops its own MCP children when a session
-  ends; the Claude branch of this hook is planned for a later release.
+- The audit recognizes a live Claude Code session as an MCP owner, exactly
+  like a Codex session, so the MCP servers a running Claude session started
+  are active and are never cleanup candidates. Before this, those trees had no
+  Codex ancestor, were reported as orphans, and a manual cleanup would have
+  terminated the MCP servers of every open Claude Code session.
+- The session-end hook still ships only in the Codex plugin manifest. Claude
+  Code stops its own MCP children when a session ends.

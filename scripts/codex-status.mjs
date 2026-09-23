@@ -35,6 +35,7 @@ const options = {
   skipRuntime: false,
   skipCodexDoctorChecks: false,
   skipCodexCli: false,
+  skipClaudeCli: false,
   output: null,
   forceOutput: false,
   lang: "en",
@@ -70,6 +71,7 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--skip-runtime") options.skipRuntime = true;
   else if (arg === "--skip-codex-doctor-checks") options.skipCodexDoctorChecks = true;
   else if (arg === "--skip-codex-cli") options.skipCodexCli = true;
+  else if (arg === "--skip-claude-cli") options.skipClaudeCli = true;
   else if (arg === "--force-output") options.forceOutput = true;
   else if (arg === "--output") {
     options.output = requireCliValue(args, index, "--output");
@@ -120,6 +122,7 @@ Options:
   --skip-runtime               Skip installed runtime verification
   --skip-codex-doctor-checks   Skip direct Codex CLI doctor check summary
   --skip-codex-cli             Skip Codex CLI version/login/MCP probes
+  --skip-claude-cli            Skip Claude CLI version/plugin/MCP probes in the Claude summary
   --target <selection>         codex (default), claude, or both: add the Claude Code target summary
   --codex-home <path>          Installed Codex home to inspect
   --agents-home <path>         Installed Agents home to inspect
@@ -1199,7 +1202,9 @@ const claudeTarget = !options.inspectClaude
             "--claude-home", options.claudeHome,
             "--skip-doctor-probe",
             "--no-mcp-probe",
-            ...(options.skipCodexCli ? ["--skip-codex-cli"] : [])
+            // The Claude summary skips the Claude CLI only when asked to; the
+            // Codex switch no longer reaches it.
+            ...(options.skipClaudeCli ? ["--skip-claude-cli"] : [])
           ],
           "verify:install:runtime --target claude",
           { timeout: RUNTIME_VERIFY_TIMEOUT_MS }

@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- Give the Claude CLI probes their own switch. `--skip-codex-cli` is documented as
+  skipping `codex doctor` and `codex mcp list`, but it also skipped every live
+  Claude check: the version, `plugin validate`, `mcp list`, the plugin-cache
+  drift check, and even the warning that the `claude` CLI is missing.
+  `codex-status` forwarded it into its Claude summary, so
+  `--target claude --skip-codex-cli` reported Claude as verified while checking
+  none of it. `--skip-claude-cli` now controls those probes in both tools.
+  Found by an independent review run on GPT-6-Luna through Codex.
+
+- Recognize a live Claude Code session as an MCP owner in the process-hygiene
+  audit. Ownership meant "has a Codex ancestor", so the MCP servers a running
+  Claude Code session started were reported as orphans and a manual
+  `--cleanup-stale --apply` would have terminated them. On the machine this was
+  found on, 42 of 46 MCP trees belonged to seven live Claude sessions and none
+  were actually unowned. Both launch styles are recognized, the native binary
+  and the npm CLI entry, and `--processes` now reports Claude Code sessions.
+  The session-end hook stays Codex-only, since it runs inside a Codex session.
+
 - Report a Claude plugin cache copy that no longer matches the managed source.
   Claude Code serves a plugin from its own cache and refreshes it by version,
   while the plugin source is a local directory whose contents can change without

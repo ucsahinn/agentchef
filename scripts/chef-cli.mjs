@@ -4794,6 +4794,9 @@ function runProcesses() {
     )} ${payload.error}`);
   }
   console.log(`${styleLabel(localText("Codex sessions", "Codex oturumları"))}: ${payload.codexSessions}`);
+  if (Number.isInteger(payload.claudeSessions)) {
+    console.log(`${styleLabel(localText("Claude Code sessions", "Claude Code oturumları"))}: ${payload.claudeSessions}`);
+  }
   console.log(`${styleLabel(localText("Local MCP instances", "Yerel MCP instance'ları"))}: ${payload.localMcpInstances} (${payload.activeMcpInstances} ${localText("active", "aktif")}, ${payload.orphanCandidates} ${localText("orphan candidates", "yetim adayı")}, ${payload.graceInstances} ${localText("in grace", "bekleme süresinde")})`);
   console.log(`${styleLabel(localText("MCP helper processes", "MCP yardımcı süreçleri"))}: ${payload.mcpHelperProcesses} (${payload.mcpWorkingSetMb} MB)`);
   console.log(`${styleLabel(localText("Unrelated runtimes", "İlgisiz runtime'lar"))}: node=${payload.unrelatedRuntimes.node}, python=${payload.unrelatedRuntimes.python}, serena=${payload.unrelatedRuntimes.serena}, uvx=${payload.unrelatedRuntimes.uvx}`);

@@ -25,6 +25,9 @@ const MCP_SIGNATURES = [
 ];
 
 const CODEX_LAUNCHER_PATTERN = /@openai[\\/]+codex[\\/]+bin[\\/]+codex\.js/i;
+// A Claude Code session parents MCP servers exactly like a Codex session does.
+// Native installs run claude(.exe); npm installs run node on the CLI entry.
+const CLAUDE_LAUNCHER_PATTERN = /@anthropic-ai[\\/]+claude-code[\\/]|claude-code[\\/]+cli\.(?:m?js)/i;
 const CONTROL_PATTERN = /codex-chef-control|control-mcp/i;
 const BRIDGE_PROCESS_NAMES = new Set([
   "cmd",
@@ -91,6 +94,18 @@ function isCodexProcess(processEntry) {
     || CODEX_LAUNCHER_PATTERN.test(String(processEntry?.commandLine || ""));
 }
 
+function isClaudeProcess(processEntry) {
+  return normalizeName(processEntry?.name) === "claude"
+    || CLAUDE_LAUNCHER_PATTERN.test(String(processEntry?.commandLine || ""));
+}
+
+// Either agent owns the MCP servers it starts. Ownership is what decides
+// whether a tree is active, so it must know about both targets AgentChef
+// installs for; otherwise one agent's live servers look orphaned to the other.
+function isSessionOwnerProcess(processEntry) {
+  return isCodexProcess(processEntry) || isClaudeProcess(processEntry);
+}
+
 function isControlProcess(processEntry) {
   return CONTROL_PATTERN.test(String(processEntry?.commandLine || ""));
 }
@@ -138,10 +153,14 @@ function nearestCodexAncestor(processEntry, byPid) {
   return walkAncestors(processEntry?.parentPid, byPid).find(isCodexProcess) || null;
 }
 
+function nearestSessionOwner(processEntry, byPid) {
+  return walkAncestors(processEntry?.parentPid, byPid).find(isSessionOwnerProcess) || null;
+}
+
 function highestTaggedAncestor(processEntry, server, byPid) {
   let root = processEntry;
   for (const ancestor of walkAncestors(processEntry?.parentPid, byPid)) {
-    if (isCodexProcess(ancestor) || isControlProcess(ancestor)) break;
+    if (isSessionOwnerProcess(ancestor) || isControlProcess(ancestor)) break;
     if (mcpServerFor(ancestor) === server) root = ancestor;
   }
   return root;
@@ -169,7 +188,7 @@ function instanceTreePids(rootPid, children, instanceRootPids) {
     const entry = queue.shift();
     if (!entry || visited.has(entry.pid)) continue;
     visited.add(entry.pid);
-    if (isCodexProcess(entry) || isControlProcess(entry) || instanceRootPids.has(entry.pid)) {
+    if (isSessionOwnerProcess(entry) || isControlProcess(entry) || instanceRootPids.has(entry.pid)) {
       continue;
     }
     processIds.add(entry.pid);
@@ -213,7 +232,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
   for (const entry of normalized) {
     const server = tagByPid.get(entry.pid);
     if (!server) continue;
-    const owner = nearestCodexAncestor(entry, byPid);
+    const owner = nearestSessionOwner(entry, byPid);
     const root = highestTaggedAncestor(entry, server, byPid);
     const key = owner
       ? `active:${owner.pid}:${root.pid}:${server}`
@@ -237,7 +256,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
     group.processIds = instanceTreePids(group.rootPid, children, instanceRootPids);
     for (const taggedPid of group.taggedProcessIds) group.processIds.add(taggedPid);
     for (const ancestor of walkAncestors(byPid.get(group.rootPid)?.parentPid, byPid)) {
-      if (isCodexProcess(ancestor) || isControlProcess(ancestor) || instanceRootPids.has(ancestor.pid)) {
+      if (isSessionOwnerProcess(ancestor) || isControlProcess(ancestor) || instanceRootPids.has(ancestor.pid)) {
         break;
       }
       if (!BRIDGE_PROCESS_NAMES.has(normalizeName(ancestor.name))) break;
@@ -278,7 +297,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
   for (const entry of normalized) {
     const runtime = RUNTIME_NAMES.get(normalizeName(entry.name));
     if (!runtime) continue;
-    if (isCodexProcess(entry) || isControlProcess(entry) || relatedPids.has(entry.pid)) continue;
+    if (isSessionOwnerProcess(entry) || isControlProcess(entry) || relatedPids.has(entry.pid)) continue;
     unrelatedRuntimes[runtime] += 1;
   }
 
@@ -338,6 +357,11 @@ export function analyzeProcessSnapshot(processes, options = {}) {
     detailAvailable: true,
     codexSessions: sessions.length,
     codexProcessCount: normalized.filter(isCodexProcess).length,
+    claudeProcessCount: normalized.filter(isClaudeProcess).length,
+    // A session is a Claude process with no Claude ancestor; its helpers and
+    // relaunched children are part of the same session.
+    claudeSessions: normalized.filter((entry) => isClaudeProcess(entry)
+      && !walkAncestors(entry.parentPid, byPid).some(isClaudeProcess)).length,
     localMcpInstances: instances.length,
     activeMcpInstances: instances.filter((instance) => instance.state === "active").length,
     orphanCandidates: cleanupCandidates.length,
@@ -353,7 +377,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
     instances,
     cleanupCandidates,
     safety: [
-      "Active MCP trees with a live Codex ancestor are never cleanup candidates.",
+      "Active MCP trees with a live Codex or Claude Code ancestor are never cleanup candidates.",
       "Unowned MCP trees stay in a grace period before they can be selected.",
       "Unrelated Node, Python, browser, product, and development-server processes are excluded.",
       "Cleanup requires explicit --apply, except for a separately trusted SessionEnd ownership snapshot."
@@ -373,7 +397,7 @@ export function verifyCleanupPlan(processes, plan) {
     };
     if (!sameProcessIdentity(current, expected)) return false;
     if (mcpServerFor(current) !== item.server) return false;
-    if (nearestCodexAncestor(current, byPid)) return false;
+    if (nearestSessionOwner(current, byPid)) return false;
     return highestTaggedAncestor(current, item.server, byPid)?.pid === rootPid;
   });
 }
@@ -498,7 +522,7 @@ function receiptMatchesPlan(item, byPid) {
     || receipt.server !== item?.server
     || mcpServerFor(root) !== item?.server
     || highestTaggedAncestor(root, item.server, byPid)?.pid !== rootPid
-    || nearestCodexAncestor(root, byPid)) return null;
+    || nearestSessionOwner(root, byPid)) return null;
   if (!Array.isArray(receipt.ownerChain) || receipt.ownerChain.length === 0
     || Number(receipt.ownerPid) !== Number(receipt.ownerChain[0]?.pid)
     || receipt.ownerChain.some((owner) => !Number.isInteger(Number(owner?.pid)) || !normalizeCreatedAt(owner?.createdAt))) return null;
@@ -816,6 +840,7 @@ function printHumanAudit(report) {
   console.log("Codex process hygiene");
   console.log(`Status: ${report.status}`);
   console.log(`Codex sessions: ${report.codexSessions}`);
+  if (Number.isInteger(report.claudeSessions)) console.log(`Claude Code sessions: ${report.claudeSessions}`);
   console.log(`Local MCP instances: ${report.localMcpInstances} (${report.activeMcpInstances} active, ${report.orphanCandidates} orphan candidates, ${report.graceInstances} in grace)`);
   console.log(`MCP helper processes: ${report.mcpHelperProcesses} (${report.mcpWorkingSetMb} MB working set)`);
   console.log(`Unrelated runtimes: node=${report.unrelatedRuntimes.node}, python=${report.unrelatedRuntimes.python}, serena=${report.unrelatedRuntimes.serena}, uvx=${report.unrelatedRuntimes.uvx}`);
