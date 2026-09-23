@@ -377,7 +377,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
     instances,
     cleanupCandidates,
     safety: [
-      "Active MCP trees with a live Codex ancestor are never cleanup candidates.",
+      "Active MCP trees with a live Codex or Claude Code ancestor are never cleanup candidates.",
       "Unowned MCP trees stay in a grace period before they can be selected.",
       "Unrelated Node, Python, browser, product, and development-server processes are excluded.",
       "Cleanup requires explicit --apply, except for a separately trusted SessionEnd ownership snapshot."
