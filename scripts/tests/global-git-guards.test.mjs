@@ -554,3 +554,24 @@ test("legacy v1 receipts retain strict final-state restore behavior", () => {
   assert.equal(result.recovered, false);
   assert.equal(fs.existsSync(targetPaths(fx).ignore), false);
 });
+
+test("a hook shipped by an earlier AgentChef release is replaced without adoption", (t) => {
+  const fx = fixture();
+  const { hook } = targetPaths(fx);
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+  // The 1.0.0 hook, exactly as that release shipped it.
+  const shipped = spawnSync("git", ["show", "715d0b8:templates/git/pre-commit"], { cwd: repoRoot, encoding: "buffer", windowsHide: true });
+  if (shipped.status !== 0) {
+    t.skip("the 1.0.0 commit is not in this clone");
+    return;
+  }
+  fs.mkdirSync(path.dirname(hook), { recursive: true });
+  fs.writeFileSync(hook, shipped.stdout);
+  const owned = inspectGlobalGitGuards(options(fx)).files.find((entry) => entry.id === "pre-commit-hook");
+  assert.equal(owned.action, "replace");
+  assert.equal(owned.adoptionRequired, false);
+
+  fs.writeFileSync(hook, "#!/usr/bin/env node\n// the user's own hook\n");
+  const foreign = inspectGlobalGitGuards(options(fx)).files.find((entry) => entry.id === "pre-commit-hook");
+  assert.equal(foreign.action, "conflict");
+});

@@ -455,6 +455,9 @@ if (!fs.existsSync(catalogPath)) {
       if (/\[apps\._default\][\s\S]*?\ndefault_tools_enabled\s*=/.test(text)) {
         fail(`${configFile} must not use apps._default.default_tools_enabled; Codex strict config rejects it.`);
       }
+      if (/^s*sandbox_private_desktops*=/m.test(text)) {
+        fail(`${configFile} must not use windows.sandbox_private_desktop; Codex 0.156 strict config rejects it.`);
+      }
 
       for (const name of runtimeNames) {
         if (!configNames.has(name)) fail(`${configFile} missing agent block for ${name}.`);

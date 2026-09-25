@@ -619,7 +619,11 @@ function repairManagedFiles(contract) {
       const directSkill = directSkills.find((entry) => entry.name === skillName);
       if (!directSkill) throw new Error(`Resolved ownership marker has no matching direct skill: ${action.id}`);
       const sourceRoot = path.join(root, action.source);
-      const markerWasCurrent = ["managed", "managed-with-extras"].includes(inspectDirectSkillTarget(sourceRoot, targetRoot).status);
+      // A leftover pre-1.0.0 marker next to a valid current one is not current:
+      // rewriting the marker retires it.
+      const legacyMarker = path.join(targetRoot, identity.legacyManagedMarker);
+      const hasLegacyMarker = fs.existsSync(legacyMarker);
+      const markerWasCurrent = !hasLegacyMarker && ["managed", "managed-with-extras"].includes(inspectDirectSkillTarget(sourceRoot, targetRoot).status);
       if (markerWasCurrent) {
         current += 1;
         continue;
@@ -627,10 +631,15 @@ function repairManagedFiles(contract) {
       const status = options.apply ? "applied" : "planned";
       if (options.apply) {
         if (fs.existsSync(action.destination)) backupTarget(action.destination);
+        if (hasLegacyMarker) {
+          backupTarget(legacyMarker);
+          prepareTransactionWrite(legacyMarker);
+        }
         prepareTransactionWrite(action.destination);
         writeDirectSkillMarker(sourceRoot, targetRoot, {
           allowAdopt: shouldAdoptDirectSkill(directSkill)
         });
+        if (hasLegacyMarker) trackTransactionWrite(legacyMarker);
         trackTransactionWrite(action.destination);
       }
       recordAction({

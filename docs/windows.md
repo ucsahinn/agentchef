@@ -20,7 +20,6 @@ The Windows template sets:
 ```toml
 [windows]
 sandbox = "elevated"
-sandbox_private_desktop = true
 ```
 
 If your machine cannot use elevated sandboxing, change to:

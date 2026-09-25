@@ -422,9 +422,15 @@ for (const forbidden of ["#!/usr/bin/env sh", "grep -E", "grep -Ei", "command -v
     failures.push(`templates/git/pre-commit must not depend on POSIX shell tooling: ${forbidden}`);
   }
 }
+// A history-wide scan in a commit hook blocks every later commit once any
+// secret was ever committed; the hook must scan staged changes only.
+if (/\[\s*"detect"/.test(preCommitHook)) {
+  failures.push("templates/git/pre-commit must not run a history-wide `gitleaks detect`; scan staged changes only.");
+}
 for (const required of [
   "git\", [\"diff\", \"--cached\", \"--name-only\", \"--diff-filter=ACMR\"]",
-  "gitleaks\", [\"detect\", \"--redact\", \"--no-banner\", \"--verbose\"]",
+  "[\"git\", \"--staged\", \"--redact\", \"--no-banner\", \"--verbose\"]",
+  "[\"protect\", \"--staged\", \"--redact\", \"--no-banner\", \"--verbose\"]",
   "sqlite3",
   "Blocked staged secret-like or local-state files"
 ]) {

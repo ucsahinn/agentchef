@@ -20,7 +20,6 @@ Windows template şunu ayarlar:
 ```toml
 [windows]
 sandbox = "elevated"
-sandbox_private_desktop = true
 ```
 
 Makinen `elevated` sandbox kullanamıyorsa şuna düşebilirsin:

@@ -14,6 +14,7 @@ import { KNOWN_LEGACY_FILE_SHA256 } from "../lib/global-git-guards.mjs";
 import { countCodexConfigRewrites, planCodexConfigRewrite } from "../migrate-identity.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const legacyHookFixture = path.join(root, "scripts", "tests", "fixtures", "pre-commit-0.9.0.txt");
 const helper = path.join(root, "scripts", "migrate-identity.mjs");
 const platform = process.platform === "win32" ? "windows" : "unix";
 
@@ -102,8 +103,8 @@ function legacyFixture({ withClaude }) {
     ]
   }, null, 2)}\n`);
 
-  const template = fs.readFileSync(path.join(root, "templates", "git", "pre-commit"), "utf8");
-  const legacyHook = template.replace(identity.hookBanner, identity.legacyHookBanner);
+  // The hook exactly as 0.9.0 shipped it, legacy banner included.
+  const legacyHook = fs.readFileSync(legacyHookFixture);
   fs.mkdirSync(path.join(home, ".githooks"), { recursive: true });
   fs.writeFileSync(path.join(home, ".githooks", "pre-commit"), legacyHook);
 
@@ -156,9 +157,9 @@ function run(state, args) {
 }
 
 test("legacy template hashes match the shipped Git hook with the legacy banner", () => {
-  const template = fs.readFileSync(path.join(root, "templates", "git", "pre-commit"), "utf8");
-  const legacyHook = template.replace(identity.hookBanner, identity.legacyHookBanner);
-  assert.ok(KNOWN_LEGACY_FILE_SHA256["pre-commit-hook"].includes(sha256(Buffer.from(legacyHook))), "the legacy hook differs from the current template only by its banner");
+  const legacyHook = fs.readFileSync(legacyHookFixture);
+  assert.ok(legacyHook.includes(identity.legacyHookBanner), "the fixture is the legacy-banner hook");
+  assert.ok(KNOWN_LEGACY_FILE_SHA256["pre-commit-hook"].includes(sha256(legacyHook)), "the 0.9.0 hook is recognized as AgentChef's own");
 });
 
 test("legacy markers are still recognized as managed before any migration", () => {
