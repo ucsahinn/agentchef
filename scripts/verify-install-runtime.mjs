@@ -259,6 +259,14 @@ function runProbe(name, command, commandArgs, extra = {}) {
   return result;
 }
 
+// A timeout says which knob raises it; a bare "spawnSync cmd.exe ETIMEDOUT"
+// reads like a broken CLI.
+function doctorProbeError(error) {
+  return error?.code === "ETIMEDOUT"
+    ? `timed out after ${options.doctorTimeoutMs} ms; if codex doctor is just slow on this machine, raise --doctor-timeout-ms`
+    : error.message;
+}
+
 function parseCodexDoctorRuntime(doctor, warnings, label) {
   let activeCodexHome = null;
   let activeConfig = null;
@@ -657,7 +665,7 @@ function inspectCodexRuntime(failures, warnings) {
   if (options.ambientDoctor) {
     const ambientDoctor = runProbe("ambient codex doctor", codexCommand(), ["doctor", "--json"], { timeout: options.doctorTimeoutMs });
     if (ambientDoctor.error) {
-      warnings.push(`Could not run ambient codex doctor --json: ${ambientDoctor.error.message}`);
+      warnings.push(`Could not run ambient codex doctor --json: ${doctorProbeError(ambientDoctor.error)}`);
       ambient = { inspected: false, error: ambientDoctor.error.message };
     } else {
       ambient = {
@@ -682,7 +690,7 @@ function inspectCodexRuntime(failures, warnings) {
   if (options.skipDoctorProbe) {
     runtime.doctor = { inspected: false, note: "Skipped by --skip-doctor-probe." };
   } else if (doctor.error) {
-    (options.requireLiveRuntime ? failures : warnings).push(`Could not run codex doctor --json with installed CODEX_HOME: ${doctor.error.message}`);
+    (options.requireLiveRuntime ? failures : warnings).push(`Could not run codex doctor --json with installed CODEX_HOME: ${doctorProbeError(doctor.error)}`);
     runtime.error = doctor.error.message;
   } else {
     Object.assign(runtime, {

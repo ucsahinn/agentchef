@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Say when `codex doctor` timed out, and how to allow more time. The runtime
+  verifier reported "spawnSync cmd.exe ETIMEDOUT", which reads like a broken
+  CLI. On this machine `codex doctor --json` took between 11 and 64 seconds
+  against a 12-second default; the warning now names the limit and
+  `--doctor-timeout-ms`.
+
 - Scan only staged changes in the global pre-commit hook. It ran `gitleaks
   detect` without `--staged`, which scans the whole history: once a secret had
   ever been committed, even one deleted since, every later commit in that
