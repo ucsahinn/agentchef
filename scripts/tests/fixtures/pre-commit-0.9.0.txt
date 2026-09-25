@@ -1,0 +1,46 @@
+#!/usr/bin/env node
+const { spawnSync } = require("node:child_process");
+
+function run(command, args, options = {}) {
+  return spawnSync(command, args, {
+    encoding: "utf8",
+    windowsHide: true,
+    ...options
+  });
+}
+
+function exitCode(result) {
+  return Number.isInteger(result.status) ? result.status : 1;
+}
+
+console.log("[codex-chef] pre-commit guard");
+
+const staged = run("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"]);
+if (staged.status !== 0) {
+  process.stderr.write(staged.stderr || staged.stdout || "git diff --cached failed\n");
+  process.exit(exitCode(staged));
+}
+
+const blockedPaths = staged.stdout
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter(Boolean)
+  .filter((file) => /(^|[\\/])(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx|kdbx|sqlite|sqlite3|db|dump)$)/i.test(file));
+
+if (blockedPaths.length > 0) {
+  console.error("Blocked staged secret-like or local-state files:");
+  for (const file of blockedPaths) console.error(`- ${file}`);
+  console.error("Move secrets to local env/secret stores and stage explicit safe files only.");
+  process.exit(1);
+}
+
+const gitleaksVersion = run("gitleaks", ["version"]);
+if (gitleaksVersion.status === 0) {
+  const gitleaks = spawnSync("gitleaks", ["detect", "--redact", "--no-banner", "--verbose"], {
+    stdio: "inherit",
+    windowsHide: true
+  });
+  process.exit(exitCode(gitleaks));
+}
+
+console.log("gitleaks not found; skipping secret scan.");
