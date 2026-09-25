@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Make the Codex config compatibility check actually load the config, and drop
+  `windows.sandbox_private_desktop`. The check ran `codex --strict-config
+  --version`, which exits 0 without reading `config.toml`; it passed even with an
+  invented table. Codex 0.156 retired `windows.sandbox_private_desktop`, so the
+  shipped Windows template failed a strict load and every session warned about
+  it, while the check stayed green. The check now runs `codex exec
+  --strict-config` against a provider that does not exist, which stops right
+  after a successful load, covers the rendered profiles, and fails if an
+  unknown-field canary is not rejected. The template no longer sets the key, and
+  config merge and repair remove it from existing installs.
+
+- Retire a pre-1.0.0 ownership marker that repair used to leave behind. A direct
+  skill carrying both `.agentchef-managed.json` and `.codex-chef-managed.json`
+  counted as current, so the legacy marker stayed forever. Repair now rewrites
+  the marker, backs up the legacy one, and removes it inside the same rollback
+  transaction.
+
+- Explain why a pre-1.0.0 backup cannot be restored. Such an archive stores paths
+  under the old Codex Chef names; restore maps only current AgentChef paths, so
+  it blocked with a list of every file and no reason. Blocking is kept on
+  purpose, since mapping old names onto a migrated home would mix the two
+  identities, but the preview now says so and the JSON reports
+  `legacyIdentityEntries`. Both found by an independent review run on
+  GPT-6-Luna through Codex.
+
 - Accept the install target in any capitalization, and stop mislabeling a failed
   preflight. PowerShell's `ValidateSet` let `-Target Claude` through, the value
   was forwarded verbatim to a case-sensitive Node parser, and the installer

@@ -171,7 +171,6 @@ network_access = false
 
 [windows]
 sandbox = "elevated"
-sandbox_private_desktop = true
 
 # Balanced multi-session MCP baseline. Use --profile full for one primary
 # capability-heavy session and --profile multi-session for secondary windows.

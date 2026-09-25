@@ -21,7 +21,7 @@ import {
 } from "./lib/cli-error-contract.mjs";
 import { classifyGitStatus } from "./lib/git-worktree.mjs";
 import { acquireOperationLock } from "./lib/operation-lock.mjs";
-import { acceptsSchema, backupKind, identity, journalFileNames } from "./lib/identity.mjs";
+import { acceptsSchema, backupKind, identity, journalFileNames, legacyProductName } from "./lib/identity.mjs";
 import {
   buildProcessAudit,
   terminateCleanupPlan
@@ -2868,6 +2868,13 @@ function pinnedSkillIds() {
   );
 }
 
+// Archive entries written under the pre-1.0.0 identity. They stay unsupported
+// on purpose: mapping them onto current paths would mix the two identities.
+function legacyIdentityEntries(relatives) {
+  const legacy = legacyProductName;
+  return relatives.filter((relative) => relative.replaceAll("\\", "/").split("/").some((part) => part.startsWith(legacy) || part.startsWith(`.${legacy}`)));
+}
+
 function mapBackupRelativeToTarget(relative, pinnedSkill = null) {
   const normalized = relative.replaceAll("\\", "/");
   const exact = managedRestoreAllowlist().get(normalized);
@@ -3511,6 +3518,13 @@ function printBackupInspect(archivePath, plan, interaction = {}) {
       `Unsupported entries are not restorable by this CLI: ${plan.unsupported.join(", ")}`,
       `Bu CLI tarafindan geri yuklenemeyen girdiler: ${plan.unsupported.join(", ")}`
     )}`);
+    const legacyCount = legacyIdentityEntries(plan.unsupported).length;
+    if (legacyCount > 0) {
+      console.log(`${ICONS.info} ${localText(
+        `${legacyCount} of them use the pre-1.0.0 Codex Chef names. Restore writes only current AgentChef paths, so it will not recreate the old identity next to a migrated one; copy anything you still need from this archive by hand.`,
+        `Bunlarin ${legacyCount} tanesi 1.0.0 oncesi Codex Chef adlarini kullaniyor. Geri yukleme yalnizca guncel AgentChef yollarina yazar, bu yuzden goc etmis kurulumun yanina eski kimligi yeniden olusturmaz; hala gereken dosyalari bu arsivden elle kopyalayin.`
+      )}`);
+    }
   }
   if (plan.files.length === 0) {
     console.log(`${ICONS.info} ${localText("No restorable managed AgentChef files found.", "Geri yuklenebilir managed AgentChef dosyasi bulunamadi.")}`);
@@ -3620,6 +3634,7 @@ async function runBackups(interaction = {}, requested = {}) {
           sha256: file.sha256
         })),
         unsupported: plan.unsupported,
+        legacyIdentityEntries: legacyIdentityEntries(plan.unsupported).length,
         issues: plan.issues,
         manifestVerified: plan.manifestVerified
       };

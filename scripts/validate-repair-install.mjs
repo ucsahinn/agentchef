@@ -138,6 +138,10 @@ write(
     "enabled = true",
     "default_tools_enabled = true",
     "",
+    "[windows]",
+    "sandbox = \"elevated\"",
+    "sandbox_private_desktop = true",
+    "",
     "[mcp_servers.supabase]",
     "enabled = false",
     "command = \"cmd.exe\"",
@@ -175,6 +179,18 @@ for (const skill of directSkills) {
     }, null, 2) + "\n"
   );
 }
+// A pre-1.0.0 marker left next to a current one must be retired, not ignored.
+const dualMarkerSkill = directSkills[0].name;
+write(
+  path.join(agentsHome, "skills", dualMarkerSkill, ".codex-chef-managed.json"),
+  JSON.stringify({
+    schemaVersion: "codex-chef.managed-direct-skill.v1",
+    manager: "codex-chef",
+    component: "direct-skill",
+    name: dualMarkerSkill,
+    source: `plugins/codex-chef-workflows/skills/${dualMarkerSkill}`
+  }, null, 2) + "\n"
+);
 write(
   path.join(agentsHome, "plugins", "marketplace.json"),
   JSON.stringify({
@@ -210,6 +226,9 @@ if (plan) {
   }
   if (!plan.config?.removedDeprecatedFields?.includes("apps._default.default_tools_enabled")) {
     fail("repair plan must report deprecated managed config fields.");
+  }
+  if (!plan.config?.removedDeprecatedFields?.includes("windows.sandbox_private_desktop")) {
+    fail("repair plan must report the retired windows.sandbox_private_desktop field.");
   }
   if (!plan.config?.updatedManagedFields?.includes("apps._default.enabled")) {
     fail("repair plan must report managed app connector default updates.");
@@ -313,6 +332,9 @@ if (!fs.existsSync(path.join(pluginTarget, "extra.txt"))) {
 if (!fs.existsSync(path.join(marketplacePluginTarget, "marketplace-extra.txt"))) {
   fail("repair apply must not delete marketplace mirror extras without the explicit prune flag.");
 }
+if (fs.existsSync(path.join(agentsHome, "skills", dualMarkerSkill, ".codex-chef-managed.json"))) {
+  fail("repair apply must retire a legacy ownership marker left next to a current one.");
+}
 for (const skill of directSkills) {
   const directTarget = path.join(agentsHome, "skills", skill.name);
   if (
@@ -356,6 +378,9 @@ if (!repairedConfig.includes("# user setting must stay") || !repairedConfig.incl
 }
 if (repairedConfig.includes("default_tools_enabled")) {
   fail("repair apply must remove deprecated managed apps._default.default_tools_enabled.");
+}
+if (repairedConfig.includes("sandbox_private_desktop")) {
+  fail("repair apply must remove the retired windows.sandbox_private_desktop field.");
 }
 if (!/\[apps\._default\][\s\S]*?\nenabled\s*=\s*false/.test(repairedConfig)) {
   fail("repair apply must set apps._default.enabled = false.");

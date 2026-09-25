@@ -242,6 +242,12 @@ function normalizeManagedFields(text) {
       next.push(line);
       continue;
     }
+    // Codex 0.156 rejects this key under --strict-config and warns on every
+    // start otherwise; earlier AgentChef templates wrote it.
+    if (currentTable === "windows" && /^\s*sandbox_private_desktop\s*=/.test(line)) {
+      addUnique(removedDeprecatedFields, "windows.sandbox_private_desktop");
+      continue;
+    }
     if (appsSeen && /^\s*default_tools_enabled\s*=/.test(line)) {
       addUnique(removedDeprecatedFields, "apps._default.default_tools_enabled");
       continue;
