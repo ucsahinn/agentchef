@@ -35,12 +35,22 @@ if (blockedPaths.length > 0) {
 }
 
 const gitleaksVersion = run("gitleaks", ["version"]);
-if (gitleaksVersion.status === 0) {
-  const gitleaks = spawnSync("gitleaks", ["detect", "--redact", "--no-banner", "--verbose"], {
-    stdio: "inherit",
-    windowsHide: true
-  });
-  process.exit(exitCode(gitleaks));
+if (gitleaksVersion.status !== 0) {
+  console.log("gitleaks not found; skipping secret scan.");
+  process.exit(0);
 }
 
-console.log("gitleaks not found; skipping secret scan.");
+// Scan only what is being committed. `gitleaks detect` without --staged scans
+// the whole history, so a secret that was ever committed (even one removed
+// since) would block every later commit in that repository, and large
+// repositories would slow down on each commit. Auditing history is a separate,
+// deliberate step: gitleaks git --redact --no-banner
+// gitleaks 8.19+ provides `git --staged`; older releases have `protect --staged`.
+const scanArgs = run("gitleaks", ["git", "--help"]).status === 0
+  ? ["git", "--staged", "--redact", "--no-banner", "--verbose"]
+  : ["protect", "--staged", "--redact", "--no-banner", "--verbose"];
+const gitleaks = spawnSync("gitleaks", scanArgs, {
+  stdio: "inherit",
+  windowsHide: true
+});
+process.exit(exitCode(gitleaks));

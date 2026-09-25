@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Scan only staged changes in the global pre-commit hook. It ran `gitleaks
+  detect` without `--staged`, which scans the whole history: once a secret had
+  ever been committed, even one deleted since, every later commit in that
+  repository was blocked, and each commit got slower as history grew.
+  Reproduced in a scratch repository: a clean commit was refused over a key
+  removed two commits earlier. The hook now runs `gitleaks git --staged`
+  (gitleaks 8.19+) or `protect --staged` on older releases, still blocks a newly
+  staged secret, and the 1.0.0 hook is recognized as AgentChef's own so it is
+  upgraded without `--adopt-file`. Found because this machine's owner had
+  already patched their own copy for the same reason.
+
 - Make the Codex config compatibility check actually load the config, and drop
   `windows.sandbox_private_desktop`. The check ran `codex --strict-config
   --version`, which exits 0 without reading `config.toml`; it passed even with an

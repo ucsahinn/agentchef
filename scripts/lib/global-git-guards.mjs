@@ -10,7 +10,11 @@ export const LEGACY_RECEIPT_SCHEMA = "codex-chef.global-git-guards-receipt";
 // without an adoption flag; anything else stays a conflict.
 export const KNOWN_LEGACY_FILE_SHA256 = Object.freeze({
   "gitignore-global": Object.freeze(["2b2fd5e71c4348956f249a730cf3df6c5f423b15b83d9ff3d5a35138b50d0751", "2b2fd5e71c4348956f249a730cf3df6c5f423b15b83d9ff3d5a35138b50d0751"]),
-  "pre-commit-hook": Object.freeze(["22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b", "22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b"])
+  "pre-commit-hook": Object.freeze([
+    "22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b",
+    // 1.0.0 hook: scanned the whole history with `gitleaks detect` on every commit.
+    "d7d0af11c07cd01baa29b7fe00f10ceb1af4d20bfeee63fbe66001948f349731"
+  ])
 });
 export const RECEIPT_VERSION = 2;
 export const LEGACY_RECEIPT_VERSION = 1;
