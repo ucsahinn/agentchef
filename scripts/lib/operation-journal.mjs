@@ -321,6 +321,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
           if (mutation.backup) {
             fs.mkdirSync(path.dirname(target), { recursive: true });
             fs.cpSync(mutation.backup, target, { recursive: true, force: true });
+          } else if (mutation.link && mutation.before?.kind === "link" && mutation.before.target) {
+            // A removed link has no file backup; its target was recorded
+            // before the change, so the link itself is recreated.
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.symlinkSync(mutation.before.target, target, process.platform === "win32" ? "junction" : "dir");
           }
         }
         journal.reconciliation = { attemptedAt: new Date().toISOString(), unresolved };

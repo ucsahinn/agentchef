@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Recreate a removed skill link when a Claude removal rolls back. A link has no
+  file backup, so the rollback left it deleted even though the journal had
+  recorded where it pointed. It is now recreated as a link to the same managed
+  directory (junction on Windows), never as a copy. Found by a read-only
+  GPT-6-Luna review of journal recovery.
+
 - Release a Serena bridge's sessions when it disconnects. Each bridge client
   got a Serena session per project backend, kept in the manager until that
   backend went idle, so a continuously used project accumulated one session per
