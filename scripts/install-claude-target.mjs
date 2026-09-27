@@ -33,7 +33,7 @@ import {
 import { planSettingsMerge } from "./lib/claude-settings-merge.mjs";
 import { planMcpMerge } from "./lib/claude-mcp-merge.mjs";
 import { createSkillLink, inspectSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { managedMarkerNames, sourceMarkerNames } from "./lib/identity.mjs";
 
@@ -220,7 +220,7 @@ export function planClaudeInstall(options) {
     backup: true
   });
 
-  const claudeCommand = platformCommand("claude", platform);
+  const claudeCommand = "claude";
   actions.push({
     id: "claude-plugin-register",
     kind: "claude-plugin-register",
@@ -458,8 +458,7 @@ export function applyClaudeInstall(options, plan) {
           results.push({ id: action.id, status: "skipped" });
           continue;
         }
-        const claudeCommand = platformCommand("claude", options.platform);
-        const probe = spawnSync(claudeCommand, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000, shell: false });
+        const probe = spawnHarnessCli("claude", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
         if (probe.error || probe.status !== 0) {
           results.push({ id: action.id, status: "skipped", reason: "claude CLI not available; run the listed commands after installing Claude Code" });
           continue;
@@ -469,7 +468,7 @@ export function applyClaudeInstall(options, plan) {
           ["plugin", "marketplace", "add", path.join(agentsHome, "plugins")],
           ["plugin", "install", `${pluginName}@${claudeMarketplaceName}`, "--scope", "user"]
         ]) {
-          const run = spawnSync(claudeCommand, argv, { encoding: "utf8", windowsHide: true, timeout: 120000, shell: false });
+          const run = spawnHarnessCli("claude", argv, { encoding: "utf8", windowsHide: true, timeout: 120000 }, options.platform);
           outcomes.push({ argv: argv.join(" "), status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
           installed.commands.push(argv.join(" "));
           if (run.status !== 0) break;
@@ -533,7 +532,7 @@ export function planClaudeRemoval(options) {
     const removal = removeRecordedEntries(mergeReceipt, document);
     return { receiptPath: mergeReceiptPath, target: mergeReceipt.target, decision: removal.removed.length > 0 ? "revert" : "nothing-to-revert", removed: removal.removed.length, kept: removal.kept.length, removal };
   });
-  const claudeCommand = platformCommand("claude", options.platform);
+  const claudeCommand = "claude";
   const commands = options.skipPluginRegister ? [] : [
     `${claudeCommand} plugin uninstall ${pluginName}@${claudeMarketplaceName}`,
     `${claudeCommand} plugin marketplace remove ${claudeMarketplaceName}`
@@ -595,24 +594,39 @@ export function applyClaudeRemoval(options, plan) {
       journal.markApplied(file.path);
       results.push({ id: `delete:${path.basename(file.path)}`, status: "removed" });
     }
+    // The plugin registration lives in Claude Code's own state, reachable only
+    // through its CLI. While it may still be registered, the install receipt
+    // stays so a rerun retries exactly this step, and the removal fails.
+    let unregisterIncomplete = false;
     if (plan.commands.length > 0) {
-      const claudeCommand = platformCommand("claude", options.platform);
-      const probe = spawnSync(claudeCommand, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000, shell: false });
+      const probe = spawnHarnessCli("claude", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
+      const recordedRegistration = (plan.receipt?.commands || []).some((command) => String(command).startsWith("plugin install"));
       if (probe.error || probe.status !== 0) {
-        results.push({ id: "claude-plugin-unregister", status: "skipped", reason: "claude CLI not available; run the listed commands manually" });
+        unregisterIncomplete = recordedRegistration;
+        results.push(recordedRegistration
+          ? { id: "claude-plugin-unregister", status: "attention", reason: "claude CLI not available; the plugin is still registered" }
+          : { id: "claude-plugin-unregister", status: "not-registered", reason: "claude CLI not available and no registration was recorded" });
       } else {
         for (const argv of [["plugin", "uninstall", `${pluginName}@${claudeMarketplaceName}`], ["plugin", "marketplace", "remove", claudeMarketplaceName]]) {
-          const run = spawnSync(claudeCommand, argv, { encoding: "utf8", windowsHide: true, timeout: 120000, shell: false });
-          results.push({ id: `claude ${argv.join(" ")}`, status: run.status === 0 ? "done" : "attention", output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
+          const run = spawnHarnessCli("claude", argv, { encoding: "utf8", windowsHide: true, timeout: 120000 }, options.platform);
+          const output = `${run.stdout || ""}${run.stderr || ""}`.trim();
+          // Claude Code exits 1 for an entry that is already gone.
+          const status = run.status === 0 ? "done" : /\bnot found\b/i.test(output) ? "already-absent" : "attention";
+          if (status === "attention") unregisterIncomplete = true;
+          results.push({ id: `claude ${argv.join(" ")}`, status, output: output.slice(0, 400) });
         }
       }
     }
-    journal.prepareMutation({ target: plan.receiptPath, backup: null });
-    fs.rmSync(plan.receiptPath, { force: true });
-    journal.markApplied(plan.receiptPath);
+    if (unregisterIncomplete) {
+      results.push({ id: "claude-remove", status: "incomplete", reason: "plugin registration not removed; install receipt kept so a rerun retries it" });
+    } else {
+      journal.prepareMutation({ target: plan.receiptPath, backup: null });
+      fs.rmSync(plan.receiptPath, { force: true });
+      journal.markApplied(plan.receiptPath);
+    }
     journal.finish("complete");
     spawnSync(process.execPath, [path.join(repoRoot, "scripts", "write-backup-manifest.mjs"), "--backup-root", backupRoot, "--operation", "claude-remove"], { stdio: "ignore", windowsHide: true });
-    return { results, backupRoot };
+    return { results, backupRoot, incomplete: unregisterIncomplete, manualCommands: unregisterIncomplete ? plan.commands : [] };
   } catch (error) {
     try {
       journal.finish("failed");
@@ -735,6 +749,7 @@ function main() {
   if (options.remove) {
     const removalPlan = planClaudeRemoval(options);
     const removal = options.apply ? applyClaudeRemoval(options, removalPlan) : null;
+    if (removal?.incomplete) process.exitCode = 1;
     if (options.json) {
       console.log(JSON.stringify({ schemaVersion: claudeInstallSchemaVersion, mode: "remove", dryRunOnly: !options.apply, plan: { present: removalPlan.present, files: removalPlan.files, links: removalPlan.links, receipts: removalPlan.receipts.map(({ removal: _removal, ...rest }) => rest), commands: removalPlan.commands }, outcome: removal }, null, 2));
       return;
@@ -742,6 +757,11 @@ function main() {
     printRemovalPlan(removalPlan, options);
     if (removal) for (const result of removal.results) console.log(`  - ${result.id}: ${result.status}${result.reason ? ` (${result.reason})` : ""}`);
     else console.log("\nNo files were changed. Add --apply to run this removal.");
+    if (removal?.incomplete) {
+      console.error("\nRemoval is incomplete: the AgentChef plugin may still be registered in Claude Code.");
+      console.error("Run these, then rerun this removal to finish:");
+      for (const command of removal.manualCommands) console.error(`  ${command}`);
+    }
     return;
   }
   const plan = planClaudeInstall(options);

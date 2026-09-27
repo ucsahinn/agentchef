@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 
 import { identity } from "./lib/identity.mjs";
 
@@ -114,21 +114,21 @@ function defaultCodexRunner({ codexHome, platform }) {
     : platform === "unix"
       ? "linux"
       : platform;
-  const command = process.env.AGENTCHEF_CODEX_COMMAND
-    || process.env.CODEX_CHEF_CODEX_COMMAND
-    || platformCommand("codex", commandPlatform);
+  const override = process.env.AGENTCHEF_CODEX_COMMAND || process.env.CODEX_CHEF_CODEX_COMMAND;
+  const spawnOptions = {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CODEX_HOME: codexHome
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 60000,
+    windowsHide: true
+  };
   return (args) => {
-    const invocation = commandInvocation(command, args, commandPlatform);
-    return spawnSync(invocation.executable, invocation.args, {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        CODEX_HOME: codexHome
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 60000,
-      windowsHide: true
-    });
+    if (!override) return spawnHarnessCli("codex", args, spawnOptions, commandPlatform);
+    const invocation = commandInvocation(override, args, commandPlatform);
+    return spawnSync(invocation.executable, invocation.args, spawnOptions);
   };
 }
 
