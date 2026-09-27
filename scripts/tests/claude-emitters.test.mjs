@@ -71,6 +71,25 @@ test("Claude permissions are derived from the Codex rules without wildcard grant
   assert.ok(!Object.hasOwn(permissions, "deny") || permissions.deny.every((rule) => /^[A-Za-z]+\(.+\)$/.test(rule)));
 });
 
+test("allow rules that can run code or write files carry an ask guard, or are asked outright", () => {
+  const rulesText = fs.readFileSync(path.join(root, "templates", "codex", "rules", "default.rules"), "utf8");
+  const { permissions } = emitClaudePermissions(rulesText);
+  // Each was measured to run code or write a file through its allow rule.
+  for (const [allowed, guard] of [
+    ["Bash(rg *)", "Bash(rg *--pre*)"],
+    ["Bash(git diff *)", "Bash(git diff *--output*)"],
+    ["Bash(git log *)", "Bash(git log *--output*)"],
+    ["Bash(git show *)", "Bash(git show *--output*)"]
+  ]) {
+    assert.ok(permissions.allow.includes(allowed), `${allowed} stays usable`);
+    assert.ok(permissions.ask.includes(guard), `${guard} must outrank ${allowed}`);
+  }
+  for (const demoted of ["Bash(node --check *)", "Bash(git ls-remote *)"]) {
+    assert.equal(permissions.allow.includes(demoted), false, `${demoted} must not be auto-allowed`);
+    assert.ok(permissions.ask.includes(demoted));
+  }
+});
+
 test("the Claude plugin manifest mirrors the Codex manifest version and lists every agent file", () => {
   const agents = emitClaudeAgents({ catalog, roleDirectory, pluginName: "agentchef" });
   const manifest = renderClaudePluginManifest(root, [...agents.keys()]);

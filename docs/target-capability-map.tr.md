@@ -44,6 +44,7 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | `[projects."path"].trust_level` | klasör güven istemi ve `.claude/settings.local.json` | installer tarafından **eşlenmiyor** |
 | `[features]`, `[memories]`, `[apps]` | karşılığı yok | **eşlenmiyor** |
 | `[mcp_servers.X.tools.Y]` onay tabloları | `permissions` içindeki `mcp__X__Y` kuralları | sunucunun kurulu olduğu yerde eşleniyor |
+| Bir `allow` önek kuralı Codex OS sandbox'ı içinde çalışır | Claude Code'da varsayılan OS sandbox'ı yoktur; açık bir `allow` kuralı ayrıca kendi salt-okunur bayrak analizini de atlar | **daraltıldı**: yalnızca Claude'a özel `ask` kuralları `rg --pre`, `git diff/log/show --output` ve `--ext-diff`, `gitleaks --report-path` biçimlerini korur; `node --check` ve `git ls-remote` Claude'da `ask` olur |
 | Hook güveni: Codex hook'u etkinleştirmeden önce tam kaynağını inceler | Claude, plugin etkinleştirilir etkinleştirilmez plugin hook'larını çalıştırır | **güvenlik farkı**: AgentChef bu sürümde Claude Code'a hiç hook yayınlamaz |
 
 ## Sahiplik modeli farkları
