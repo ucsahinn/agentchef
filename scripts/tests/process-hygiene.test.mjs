@@ -407,7 +407,7 @@ test("Serena backends the pool manager started are owned by it, never orphans", 
   // used to be a cleanup candidate that --cleanup-stale --apply would kill.
   const { analyzeProcessSnapshot } = await import(hygieneModuleUrl);
   const snapshot = [
-    proc(500, 1, "node.exe", "\"C:\\Program Files\\nodejs\\node.exe\" C:\\Users\\demo\\.codex\\serena-pool.mjs manager"),
+    proc(500, 1, "node.exe", "\"C:\\Program Files\\nodejs\\node.exe\" D:\\tools\\codex-home\\serena-pool.mjs manager"),
     proc(510, 500, "uvx.exe", "uvx --from git+https://github.com/oraios/serena.git@22c135a serena start-mcp-server --transport streamable-http --host 127.0.0.1 --port 50192"),
     proc(511, 510, "python.exe", "python -m serena start-mcp-server --transport streamable-http"),
     // A Serena server with no live owner at all is still a candidate.
