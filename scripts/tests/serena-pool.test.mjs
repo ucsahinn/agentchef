@@ -260,3 +260,24 @@ test("the pooled Serena backend starts in a read-only mode that removes every wr
   assert.match(source, /if \(health\?\.profile === MANAGER_PROFILE\) return;/);
   assert.ok(source.indexOf('pathName: "/shutdown"') > source.indexOf("async function ensureManager"), "a stale manager is shut down before a new one starts");
 });
+
+test("a disconnecting bridge releases its Serena sessions on every backend and only its own", async () => {
+  const { createSerenaPool } = await import(moduleUrl.href);
+  const pool = createSerenaPool({
+    resolveProjectRoot: (candidate) => candidate,
+    startBackend: async (root) => ({ root, endpoint: `http://127.0.0.1:1/${root}`, sessions: new Map() }),
+    stopBackend: async () => {}
+  });
+  const first = await pool.ensure("project-a");
+  const second = await pool.ensure("project-b");
+  first.sessions.set("client-1", { sessionId: "s-a1" });
+  second.sessions.set("client-1", { sessionId: "s-b1" });
+  first.sessions.set("client-2", { sessionId: "s-a2" });
+
+  const released = pool.releaseClient("client-1");
+  assert.deepEqual(released.map((item) => item.sessionId).sort(), ["s-a1", "s-b1"]);
+  assert.equal(first.sessions.has("client-1"), false);
+  assert.equal(second.sessions.has("client-1"), false);
+  assert.equal(first.sessions.get("client-2").sessionId, "s-a2", "another client's session is kept");
+  assert.deepEqual(pool.releaseClient("client-1"), [], "releasing twice is a no-op");
+});
