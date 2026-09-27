@@ -171,3 +171,38 @@ test("treats an empty plugin-list response as an unavailable inspection", () => 
   assert.equal(result.status, "unavailable");
   assert.match(result.warning, /empty output/i);
 });
+
+test("a same-version cache whose files differ from the local source is refreshed", async () => {
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-plugin-drift-"));
+  try {
+    const codexHome = path.join(root, "codex");
+    const source = path.join(root, "agents", "plugins", "sources", "agentchef-workflows");
+    const cache = path.join(codexHome, "plugins", "cache", "agentchef", "agentchef-workflows", expectedVersion);
+    for (const directory of [path.join(source, "scripts"), path.join(cache, "scripts")]) fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(source, "scripts", "hygiene.mjs"), "fixed\n");
+    fs.writeFileSync(path.join(cache, "scripts", "hygiene.mjs"), "old\n");
+    const plugin = { ...installedPlugin(expectedVersion), marketplaceName: "agentchef", source: { source: "local", path: source } };
+    const runCodex = (calls) => (args) => {
+      calls.push(args.join(" "));
+      if (args[1] === "add") fs.copyFileSync(path.join(source, "scripts", "hygiene.mjs"), path.join(cache, "scripts", "hygiene.mjs"));
+      return args[1] === "list" ? listResult([plugin]) : { status: 0, stdout: "{}", stderr: "" };
+    };
+
+    const previewCalls = [];
+    const preview = refreshInstalledPlugin({ expectedVersion, codexHome, runCodex: runCodex(previewCalls) });
+    assert.equal(preview.status, "content-drift", "the same version alone must not count as current");
+    assert.equal(preview.driftFiles, 1);
+    assert.ok(!previewCalls.some((call) => call.startsWith("plugin add")), "a preview never refreshes");
+
+    const applyCalls = [];
+    const applied = refreshInstalledPlugin({ expectedVersion, codexHome, apply: true, runCodex: runCodex(applyCalls) });
+    assert.equal(applied.status, "refreshed");
+    assert.ok(applyCalls.some((call) => call.startsWith("plugin add")));
+    assert.equal(fs.readFileSync(path.join(cache, "scripts", "hygiene.mjs"), "utf8"), "fixed\n");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
