@@ -710,7 +710,8 @@ function validatePortabilityContracts() {
     "temp",
     "tmp"
   ]);
-  const ignoredRelativeFiles = new Set(["docs/.agent-notifications"]);
+  // Machine-local agent state, as in validate-repo.mjs.
+  const ignoredRelativeFiles = new Set(["docs/.agent-notifications", ".claude/settings.local.json"]);
   const textExtensions = new Set([
     ".json",
     ".js",

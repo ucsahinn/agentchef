@@ -211,7 +211,9 @@ const ignoredDirs = new Set([
   ".git", ".serena", ".agentspace", "node_modules", "dist", "build", "coverage", ".next", "tmp", "temp",
   "agent-results"
 ]);
-const ignoredRelativeFiles = new Set(["docs/.agent-notifications"]);
+// Machine-local agent state: AgentSpace notifications and Claude Code's
+// per-user permission grants (.claude/settings.json stays checked).
+const ignoredRelativeFiles = new Set(["docs/.agent-notifications", ".claude/settings.local.json"]);
 const textExtensions = new Set([
   ".css",
   ".gitignore",

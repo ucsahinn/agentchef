@@ -29,6 +29,8 @@ codex-manual.md
 codex-manual.outline.md
 .agentspace/
 docs/.agent-notifications
+# Claude Code writes per-user permission grants here; never share them.
+.claude/settings.local.json
 docs/agent-results/
 
 # Build and dependency output
