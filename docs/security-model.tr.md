@@ -319,7 +319,8 @@ yalnizca tek managed plugin hedefiyle sinirli kalir.
 yoksa normal repo-local CLI loglari yine yazilir. Managed-file install plan ve
 installer dry-run yolunu kullanir; curated global skill kurulumlarini ve
 opsiyonel global Git guard'lari disarida birakir. Apply
-modu tracked veya staged degisiklikleri durdurur, ilgisiz untracked dosyalari
+modu `main` dalinda olmayan bir kopyayi reddeder (aksi halde feature dali ya da
+detached HEAD kaydirilirdi), tracked veya staged degisiklikleri durdurur, ilgisiz untracked dosyalari
 korur ve sonra `git pull --ff-only` calistirir. Yeni commit cekilirse güncel
 ağaçtan installer dry-run çalıştırıp fresh preview basar; aynı onaylı oturumda lokal
 validation, managed yenileme ve kurulu runtime doğrulamasıyla devam eder. İkinci

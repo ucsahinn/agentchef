@@ -2100,6 +2100,19 @@ async function runUpdate(interaction = {}) {
     console.log(`${ICONS.warn} ${localText(`Cannot inspect current Git HEAD: ${beforeHead.message}`, `Gecerli Git HEAD incelenemedi: ${beforeHead.message}`)}`);
     return { ok: false };
   }
+  // The update fetches origin main and fast-forwards whatever is checked out:
+  // on another branch that would silently move that branch to main, and on a
+  // detached HEAD it would move HEAD. Only update the branch it fetches.
+  const checkedOutBranch = spawnSync("git", ["branch", "--show-current"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30000, windowsHide: true });
+  const branchName = checkedOutBranch.status === 0 ? String(checkedOutBranch.stdout || "").trim() : null;
+  if (branchName !== "main") {
+    const where = branchName === null ? localText("an uninspectable branch", "incelenemeyen bir dal") : branchName || "detached HEAD";
+    console.log(`${ICONS.warn} ${localText(
+      `Update apply fast-forwards main from origin/main, but this checkout is on ${where}. Nothing was changed. Run git switch main, then update again.`,
+      `Update apply main dalını origin/main'den ileri sarar, ama bu kopya ${where} üzerinde. Hiçbir şey değişmedi. git switch main çalıştırıp güncellemeyi tekrarlayın.`
+    )}`);
+    return { ok: false };
+  }
   const beforeVersion = currentPackageVersion();
   printProgress(10, localText("Checking available version", "Uygun sürüm kontrol ediliyor"));
   const fetchArgs = process.platform === "win32"

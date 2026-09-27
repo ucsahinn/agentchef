@@ -328,8 +328,9 @@ single managed plugin target after backup.
 repo-local CLI logs are still written unless `--no-log` is supplied. It uses
 the managed-file install plan and installer dry-run path, excluding curated
 global skill installs and optional global Git guards.
-`npm run chef -- --update --apply` first blocks tracked or staged Git worktree
-changes while preserving unrelated untracked files, then
+`npm run chef -- --update --apply` first refuses a clone that is not on `main`
+(a feature branch or detached HEAD would otherwise be moved), blocks tracked or
+staged Git worktree changes while preserving unrelated untracked files, then
 runs `git pull --ff-only`. If new commits are pulled, it prints a fresh preview
 by running the installer dry-run from the updated tree, continues local validation and the managed
 refresh in the same approved session, and verifies installed-runtime parity; a
