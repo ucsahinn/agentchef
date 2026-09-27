@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Check skills, not only roles, in the Claude plugin cache. The verifier
+  compared only `agents/`, so a same-version change to a skill left Claude
+  sessions on the stale copy while the check stayed clean. It now compares
+  every file under `agents/` and `skills/` (what Claude loads) and ignores the
+  Codex-only `scripts/`; the check also moved to `scripts/lib/claude-plugin-cache.mjs`
+  and has its first test.
+
 - Refresh the Codex plugin cache when its files change, not only its version.
   Codex keys the cache by version, and the refresher re-added the plugin only
   on a version change, so every same-version fix since 1.0.0 (including the
