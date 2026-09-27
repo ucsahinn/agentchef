@@ -401,6 +401,24 @@ test("cleanup rejects a receipt whose claimed owner identity no longer matches i
   assert.equal(results[0].stopped, false);
 });
 
+test("Serena backends the pool manager started are owned by it, never orphans", async () => {
+  // The Serena pool manager is detached on purpose and reclaims its own
+  // backends after an idle TTL. With no Codex or Claude ancestor, its backend
+  // used to be a cleanup candidate that --cleanup-stale --apply would kill.
+  const { analyzeProcessSnapshot } = await import(hygieneModuleUrl);
+  const snapshot = [
+    proc(500, 1, "node.exe", "\"C:\\Program Files\\nodejs\\node.exe\" D:\\tools\\codex-home\\serena-pool.mjs manager"),
+    proc(510, 500, "uvx.exe", "uvx --from git+https://github.com/oraios/serena.git@22c135a serena start-mcp-server --transport streamable-http --host 127.0.0.1 --port 50192"),
+    proc(511, 510, "python.exe", "python -m serena start-mcp-server --transport streamable-http"),
+    // A Serena server with no live owner at all is still a candidate.
+    proc(600, 999, "uvx.exe", "uvx --from git+https://github.com/oraios/serena.git@22c135a serena start-mcp-server --context ide"),
+    proc(601, 600, "python.exe", "python -m serena start-mcp-server --context ide")
+  ];
+  const report = analyzeProcessSnapshot(snapshot, { now, orphanGraceMs: 60_000 });
+  assert.ok(!report.cleanupCandidates.some((item) => item.rootPid === 510), "a pool-owned backend may never be selected");
+  assert.deepEqual(report.cleanupCandidates.map((item) => item.rootPid), [600], "only the unowned Serena tree is a candidate");
+});
+
 test("MCP servers a live Claude Code session started are active, never orphans", async () => {
   // AgentChef installs for Claude Code too. A Claude session parents MCP
   // servers exactly like a Codex session, and with no Codex ancestor those trees

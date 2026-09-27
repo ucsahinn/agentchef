@@ -98,5 +98,10 @@ Resmî kaynaklar:
   sunucuları aktiftir ve asla temizlik adayı olmaz. Öncesinde bu ağaçların
   Codex üst süreci olmadığı için yetim olarak raporlanıyor ve elle temizlik,
   açık her Claude Code oturumunun MCP sunucularını sonlandırıyordu.
+- AgentChef Serena havuz yöneticisi başlattığı backend'lerin sahibidir. Bilerek
+  ayrık çalışır ve onları boşta kalma süresi dolunca kendisi durdurur; bu yüzden
+  üst süreci `serena-pool.mjs manager` olan bir backend asla temizlik adayı
+  olmaz. Öncesinde çalışan bir havuz Serena backend'i (burada 22 süreç, yaklaşık
+  1 GB) yetim olarak listeleniyordu.
 - Oturum sonu hook'u hâlâ yalnızca Codex plugin manifestinde yayınlanır. Claude
   Code oturum bitince kendi MCP alt süreçlerini kendisi durdurur.

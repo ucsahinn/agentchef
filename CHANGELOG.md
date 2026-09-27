@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Stop listing the shared Serena pool as orphaned. The pool manager is detached
+  on purpose and reclaims its own backends, but the process audit only knew
+  Codex and Claude Code sessions as owners, so a live pooled backend (22
+  processes, about 1 GB on this machine) was a cleanup candidate that
+  `--processes --cleanup-stale --apply` would have killed under every session
+  using it. The audit now treats `serena-pool.mjs manager` as an owner; the
+  live audit went from 1 candidate to 0.
+
 - Keep the pooled Serena backend read-only even for a direct connection. The
   bridge exposes only read tools, but each backend listens on a loopback port
   without the pool token. Measured on the pinned build: a local process could

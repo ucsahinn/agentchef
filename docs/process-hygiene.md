@@ -105,5 +105,10 @@ Official references:
   are active and are never cleanup candidates. Before this, those trees had no
   Codex ancestor, were reported as orphans, and a manual cleanup would have
   terminated the MCP servers of every open Claude Code session.
+- The AgentChef Serena pool manager owns the backends it starts. It is
+  detached on purpose and stops them itself after an idle TTL, so a backend
+  whose ancestor is `serena-pool.mjs manager` is never a cleanup candidate.
+  Before this, a live pooled Serena backend (22 processes, about 1 GB here)
+  was listed as an orphan.
 - The session-end hook still ships only in the Codex plugin manifest. Claude
   Code stops its own MCP children when a session ends.
