@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import {
@@ -2379,8 +2379,7 @@ function completeAppliedAction(applied, expectSkills = false, context = {}) {
 }
 
 function detectHarnessCli(name) {
-  const command = platformCommand(name, process.platform === "win32" ? "windows" : "unix");
-  const probe = spawnSync(command, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 15000, shell: false });
+  const probe = spawnHarnessCli(name, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 15000 });
   return !probe.error && probe.status === 0;
 }
 

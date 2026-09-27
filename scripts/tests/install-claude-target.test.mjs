@@ -216,3 +216,89 @@ test("a managed directory that is no longer in the catalog is reported as retire
   assert.equal(fs.readFileSync(path.join(copy, "SKILL.md"), "utf8"), "hand copy of the retired skill\n", "removal never touches the retired copy");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+// A stand-in `claude` on an isolated PATH: a .cmd shim on Windows, as npm
+// installs it, and an executable script elsewhere. FAKE_CLAUDE_MODE picks what
+// the plugin commands return; every call is logged.
+function fakeClaude(home) {
+  const bin = path.join(home, "fake-bin");
+  fs.mkdirSync(bin, { recursive: true });
+  const script = path.join(bin, "fake-claude.cjs");
+  fs.writeFileSync(script, [
+    "const fs = require('node:fs');",
+    "const args = process.argv.slice(2);",
+    "fs.appendFileSync(process.env.FAKE_CLAUDE_LOG, JSON.stringify(args) + String.fromCharCode(10));",
+    "if (args[0] === '--version') { console.log('9.9.9 (Claude Code)'); process.exit(0); }",
+    "const mode = process.env.FAKE_CLAUDE_MODE || 'ok';",
+    "if (mode === 'notfound') { console.error('Plugin not found in installed plugins'); process.exit(1); }",
+    "if (mode === 'fail') { console.error('permission denied'); process.exit(1); }",
+    "process.exit(0);",
+    ""
+  ].join("\n"));
+  if (process.platform === "win32") {
+    fs.writeFileSync(path.join(bin, "claude.cmd"), `@"${process.execPath}" "%~dp0fake-claude.cjs" %*\r\n`);
+  } else {
+    fs.writeFileSync(path.join(bin, "claude"), `#!/bin/sh\nexec "${process.execPath}" "$(dirname "$0")/fake-claude.cjs" "$@"\n`, { mode: 0o755 });
+  }
+  return { bin, log: path.join(home, "fake-claude.log") };
+}
+
+function runWithCli(fixtureState, args, { bin = null, mode = "ok", log }) {
+  const systemDirs = process.platform === "win32" ? [path.join(process.env.SystemRoot || "C:\Windows", "System32")] : ["/usr/bin", "/bin"];
+  const env = {
+    ...fixtureEnv,
+    PATH: [...(bin ? [bin] : []), ...systemDirs].join(path.delimiter),
+    FAKE_CLAUDE_MODE: mode,
+    FAKE_CLAUDE_LOG: log
+  };
+  delete env.Path;
+  const result = spawnSync(process.execPath, [
+    helper,
+    "--claude-home", fixtureState.claudeHome,
+    "--agents-home", fixtureState.agentsHome,
+    "--home", fixtureState.home,
+    "--platform", platform,
+    "--json",
+    ...args
+  ], { cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(60_000), env });
+  return { status: result.status, report: result.stdout ? JSON.parse(result.stdout) : null, stderr: result.stderr };
+}
+
+test("an npm-installed claude (a .cmd shim on Windows) is found for plugin registration", () => {
+  const state = fixture();
+  const cli = fakeClaude(state.home);
+  const applied = runWithCli(state, ["--apply"], { bin: cli.bin, log: cli.log });
+  assert.equal(applied.status, 0, applied.stderr);
+  const register = applied.report.outcome.results.find((result) => result.id === "claude-plugin-register");
+  assert.equal(register.status, "registered", JSON.stringify(register));
+  const calls = fs.readFileSync(cli.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  assert.deepEqual(calls.map((argv) => argv.slice(0, 2).join(" ")), ["--version", "plugin marketplace", "plugin install"]);
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("removal fails and keeps its receipt while the plugin may still be registered", () => {
+  const state = fixture();
+  const cli = fakeClaude(state.home);
+  const receiptPath = path.join(state.claudeHome, "agentchef", "install-receipt.json");
+  assert.equal(runWithCli(state, ["--apply"], { bin: cli.bin, log: cli.log }).status, 0);
+
+  // The unregister command fails for a real reason.
+  const failed = runWithCli(state, ["--remove", "--apply"], { bin: cli.bin, mode: "fail", log: cli.log });
+  assert.equal(failed.status, 1, "a removal that left the plugin registered must not exit 0");
+  assert.equal(failed.report.outcome.incomplete, true);
+  assert.ok(fs.existsSync(receiptPath), "the receipt stays so a rerun retries the unregister step");
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, "rules", "agentchef-working-agreement.md")), "owned files were still removed");
+
+  // No CLI at all, but the receipt records a registration.
+  const noCli = runWithCli(state, ["--remove", "--apply"], { bin: null, log: cli.log });
+  assert.equal(noCli.status, 1);
+  assert.ok(fs.existsSync(receiptPath));
+
+  // Claude Code reports an already-removed plugin as "not found": that finishes it.
+  const finished = runWithCli(state, ["--remove", "--apply"], { bin: cli.bin, mode: "notfound", log: cli.log });
+  assert.equal(finished.status, 0, finished.stderr);
+  assert.ok(finished.report.outcome.results.some((result) => result.status === "already-absent"));
+  assert.ok(!fs.existsSync(receiptPath));
+  assert.deepEqual(readJson(path.join(state.claudeHome, "settings.json")), state.settings, "the user's settings are back after the retries");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

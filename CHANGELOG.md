@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Find an npm-installed `codex` or `claude` on Windows. Node's spawn ignores
+  `PATHEXT` and refuses `.cmd` shims, and `platformCommand` only recognized
+  `win32` while the installers pass `windows`, so plugin registration, plugin
+  removal during `--remove`, identity migration's plugin step, and interactive
+  target detection all spawned the bare name: it worked only when a native
+  `.exe` happened to be on `PATH`, and otherwise the step was skipped as
+  "CLI not available". A shared `spawnHarnessCli` now resolves the CLI the way
+  a shell does (first `PATH` directory with `.exe` or `.cmd`) and runs a shim
+  through `cmd.exe`. Proven on this machine by hiding the native binaries:
+  bare `codex` gave ENOENT, `codex.cmd` gave EINVAL.
+
+- Fail a Claude removal that left the plugin registered. When the unregister
+  commands failed, or the CLI was missing although the receipt recorded a
+  registration, `--remove` still deleted its receipt and exited 0, so the
+  plugin stayed registered with nothing left to retry from. It now keeps the
+  receipt, exits 1, and prints the commands to run; a rerun finishes the job.
+  Claude Code's "not found" for an entry that is already gone counts as done.
+  Found by a read-only GPT-6-Luna review of the removal path.
+
 - Stop failing local validation on Claude Code's own per-user settings file.
   Claude Code writes permission grants to `.claude/settings.local.json` in any
   project where you approve a command, and this repository ships a `CLAUDE.md`

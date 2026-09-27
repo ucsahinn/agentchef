@@ -21,7 +21,7 @@ import { createOperationJournal } from "./lib/operation-journal.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { inspectDirectSkillTarget, markerFileName, writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
 import { KNOWN_LEGACY_FILE_SHA256, inspectGlobalGitGuards } from "./lib/global-git-guards.mjs";
 import { inspectSkillLink, createSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
@@ -493,8 +493,8 @@ export function applyIdentityMigration(options, plan) {
           record(step.id, "skipped", { reason: "--skip-plugin-register", commands: step.commands });
           continue;
         }
-        const command = platformCommand(step.kind === "codex-plugin-cli" ? "codex" : "claude", options.platform);
-        const probe = spawnSync(command, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000, shell: false });
+        const command = step.kind === "codex-plugin-cli" ? "codex" : "claude";
+        const probe = spawnHarnessCli(command, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
         if (probe.error || probe.status !== 0) {
           record(step.id, "skipped", { reason: `${step.kind === "codex-plugin-cli" ? "codex" : "claude"} CLI not available; run the listed commands later`, commands: step.commands });
           continue;
@@ -503,7 +503,7 @@ export function applyIdentityMigration(options, plan) {
         const outcomes = [];
         for (const line of step.commands) {
           const argv = line.split(" ").slice(1);
-          const run = spawnSync(command, argv, { encoding: "utf8", windowsHide: true, timeout: 120000, shell: false, env });
+          const run = spawnHarnessCli(command, argv, { encoding: "utf8", windowsHide: true, timeout: 120000, env }, options.platform);
           outcomes.push({ command: line, status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 300) });
         }
         record(step.id, outcomes.every((outcome) => outcome.status === 0) ? "done" : "attention", { outcomes });

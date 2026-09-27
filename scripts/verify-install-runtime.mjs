@@ -13,7 +13,7 @@ import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receip
 import { inspectSkillLink } from "./lib/skill-links.mjs";
 import { managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import {
   inspectPinnedSkillTarget,
   inspectSkillTree
@@ -228,11 +228,7 @@ function listFilesRecursive(directory, { rejectLinks = false } = {}) {
 }
 
 function run(command, commandArgs, extra = {}) {
-  const executable = process.platform === "win32" && command.endsWith(".cmd") ? "cmd.exe" : command;
-  const args = process.platform === "win32" && command.endsWith(".cmd")
-    ? ["/d", "/s", "/c", command, ...commandArgs]
-    : commandArgs;
-  return spawnSync(executable, args, {
+  const spawnOptions = {
     cwd: extra.cwd || root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -241,11 +237,14 @@ function run(command, commandArgs, extra = {}) {
     maxBuffer: 64 * 1024 * 1024,
     windowsHide: true,
     env: extra.env || process.env
-  });
+  };
+  // Harness CLIs may be a native .exe or an npm .cmd shim on Windows.
+  if (["codex", "claude"].includes(command)) return spawnHarnessCli(command, commandArgs, spawnOptions);
+  return spawnSync(command, commandArgs, spawnOptions);
 }
 
 function codexCommand() {
-  return platformCommand("codex");
+  return "codex";
 }
 
 function runProbe(name, command, commandArgs, extra = {}) {
@@ -1040,7 +1039,7 @@ function inspectClaudeRuntime(failures, warnings) {
     if (changed.length > 0) warnings.push(`${changed.length} AgentChef entr${changed.length === 1 ? "y was" : "ies were"} changed by the user in ${redact(mergeReceipt.target)}; they are kept as user content.`);
     return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
   });
-  const claude = platformCommand("claude", process.platform === "win32" ? "windows" : "unix");
+  const claude = "claude";
   // Claude has its own switch: skipping the Codex CLI must not silently skip
   // every live Claude check along with it.
   const version = options.skipClaudeCli ? null : runProbe("claude --version", claude, ["--version"], { timeout: options.probeTimeoutMs });

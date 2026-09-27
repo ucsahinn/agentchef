@@ -20,7 +20,7 @@ import { createOperationJournal } from "./lib/operation-journal.mjs";
 import { managedMarkerNames } from "./lib/identity.mjs";
 import { pinnedSkillProvenanceFileName, pinnedSkillSchemaVersion } from "./lib/skill-provenance.mjs";
 import { PLUGIN_ID } from "./refresh-installed-plugin.mjs";
-import { platformCommand } from "./lib/platform-command.mjs";
+import { spawnHarnessCli } from "./lib/platform-command.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
@@ -248,13 +248,12 @@ export function applyCodexRemoval(options, plan) {
         continue;
       }
       if (item.kind === "plugin-cache") {
-        const codex = platformCommand("codex", options.platform);
-        const probe = spawnSync(codex, ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000, shell: false });
+        const probe = spawnHarnessCli("codex", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
         if (probe.error || probe.status !== 0) {
           results.push({ id: item.id, status: "skipped", reason: `codex CLI not available; run: codex plugin remove ${item.pluginId}` });
           continue;
         }
-        const run = spawnSync(codex, ["plugin", "remove", item.pluginId], { encoding: "utf8", windowsHide: true, timeout: 120000, shell: false, env: { ...process.env, CODEX_HOME: codexHome } });
+        const run = spawnHarnessCli("codex", ["plugin", "remove", item.pluginId], { encoding: "utf8", windowsHide: true, timeout: 120000, env: { ...process.env, CODEX_HOME: codexHome } }, options.platform);
         results.push({ id: item.id, status: run.status === 0 ? "cli-removed" : "attention", output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
         continue;
       }
