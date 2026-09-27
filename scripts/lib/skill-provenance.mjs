@@ -44,7 +44,9 @@ export function hashSkillTree(directory) {
   while (pending.length > 0) {
     const current = pending.pop();
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      if (sourceMarkerNames.includes(entry.name)) continue;
+      // Only the generated provenance marker at the skill root is excluded; a
+      // same-named file deeper in a pinned skill is its content and is hashed.
+      if (current === directory && sourceMarkerNames.includes(entry.name)) continue;
       const absolute = path.join(current, entry.name);
       const stat = fs.lstatSync(absolute);
       if (stat.isSymbolicLink()) {

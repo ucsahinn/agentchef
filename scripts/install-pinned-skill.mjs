@@ -122,9 +122,22 @@ function sourceReceiptMatches(checkoutPath) {
     ) {
       return false;
     }
-    return run("git", ["rev-parse", "HEAD"], "Cached pinned commit verification", {
+    if (run("git", ["rev-parse", "HEAD"], "Cached pinned commit verification", {
       cwd: checkoutPath
-    }).toLowerCase() === options.commit;
+    }).toLowerCase() !== options.commit) {
+      return false;
+    }
+    // HEAD alone does not prove the files: an edited or added file in the
+    // cached checkout would be hashed and installed as if it were pinned. Any
+    // change other than our own receipt discards the cache and refetches.
+    const changes = run("git", ["status", "--porcelain", "--untracked-files=all", "--ignored"], "Cached pinned checkout cleanliness", {
+      cwd: checkoutPath
+    });
+    return changes
+      .split(/\r?\n/)
+      .map((line) => line.slice(3).trim())
+      .filter(Boolean)
+      .every((changed) => changed === PINNED_SOURCE_RECEIPT);
   } catch {
     return false;
   }

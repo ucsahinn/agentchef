@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Close three integrity gaps in pinned third-party skills, found by a
+  read-only GPT-6-Luna supply-chain review:
+  - A cached checkout was trusted when its `HEAD` matched the pin, without
+    checking its files, so an edited or added file in the cache was hashed and
+    installed as if it were pinned content. A cache with any change other than
+    its own receipt is now discarded and the commit refetched.
+  - The tree hash skipped a file named like the provenance marker at every
+    depth, so a nested `.agentchef-source.json` in a pinned skill escaped both
+    install and drift checks. Only the generated marker at the skill root is
+    excluded now; the fifteen installed pinned skills still verify.
+  - Restoring the previous version (after a failed activation, or through the
+    rollback receipt) copied the backup straight into the active path without
+    checking it: a changed backup was restored as is, and a copy failure left a
+    partial tree. The backup is now checked against its manifest, copied to a
+    staging directory, and swapped in with a rename; a restore that fails keeps
+    the original error first.
+
 - Keep Claude Code's local state out of external-review snapshots. The packer
   excluded `.codex`, `.agents`, and `.serena` but not `.claude`, so a tracked
   `.claude/settings.local.json` (per-user permission grants with machine
