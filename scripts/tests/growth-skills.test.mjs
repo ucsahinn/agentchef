@@ -513,6 +513,94 @@ test("pinned installer reuses a verified immutable source checkout across invoca
   }
 });
 
+test("pinned installer discards a cached checkout whose files changed and refetches the commit", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-cache-drift-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const tracePath = path.join(tempRoot, "git-trace.log");
+    const first = runPinnedInstaller({ tempRoot, ...fixture, agentsHome, codexHome, tracePath, extraArgs: ["--verify-only"] });
+    assert.equal(first.status, 0, first.stderr || first.stdout);
+
+    // Tamper with the cached checkout: an edited tracked file and an added one.
+    const cacheRoot = path.join(codexHome, "cache", "pinned-skill-sources");
+    const [cacheKey] = fs.readdirSync(cacheRoot);
+    const cachedSkill = path.join(cacheRoot, cacheKey, "skills", "example-skill");
+    fs.appendFileSync(path.join(cachedSkill, "SKILL.md"), "\ninjected instruction\n");
+    fs.writeFileSync(path.join(cachedSkill, "extra.md"), "not in the pinned commit\n");
+
+    const second = runPinnedInstaller({ tempRoot, ...fixture, agentsHome, codexHome, tracePath });
+    assert.equal(second.status, 0, second.stderr || second.stdout);
+    const fetches = fs.readFileSync(tracePath, "utf8").match(/\bfetch\b/g) || [];
+    assert.equal(fetches.length, 2, "a changed cache must be refetched, not trusted");
+    const installed = path.join(agentsHome, "skills", "example-skill");
+    assert.equal(fs.readFileSync(path.join(installed, "SKILL.md"), "utf8").includes("injected instruction"), false);
+    assert.equal(fs.existsSync(path.join(installed, "extra.md")), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("a nested file named like the provenance marker is part of the skill hash", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-nested-marker-"));
+  try {
+    const skill = path.join(tempRoot, "skill");
+    fs.mkdirSync(path.join(skill, "nested"), { recursive: true });
+    fs.writeFileSync(path.join(skill, "SKILL.md"), "---\nname: skill\ndescription: d\n---\n");
+    fs.writeFileSync(path.join(skill, "nested", ".agentchef-source.json"), "{\"a\":1}\n");
+    const before = hashSkillTree(skill);
+    fs.writeFileSync(path.join(skill, "nested", ".agentchef-source.json"), "{\"a\":2}\n");
+    assert.notEqual(hashSkillTree(skill), before, "a nested same-named file must not escape the hash");
+    // The generated marker at the root stays excluded.
+    const withRootMarker = hashSkillTree(skill);
+    fs.writeFileSync(path.join(skill, ".agentchef-source.json"), "{\"generated\":true}\n");
+    assert.equal(hashSkillTree(skill), withRootMarker);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("pinned skill compensation refuses a backup that changed after it was taken", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-tampered-backup-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const agentsHome = path.join(tempRoot, "agents");
+    const codexHome = path.join(tempRoot, "codex");
+    const target = path.join(agentsHome, "skills", "example-skill");
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, "SKILL.md"), "---\nname: example-skill\ndescription: Previous managed version.\n---\n", "utf8");
+    fs.writeFileSync(path.join(target, "previous.txt"), "restore this\n", "utf8");
+    writePinnedSkillProvenance(target, {
+      package: "owner/repository",
+      commit: "a".repeat(40),
+      skill: "example-skill",
+      cliVersion: "1.5.19",
+      sourceTreeSha256: hashSkillTree(target)
+    });
+    const installed = runPinnedInstaller({ tempRoot, ...fixture, agentsHome, codexHome, extraArgs: ["--json"] });
+    assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+    const receipt = JSON.parse(installed.stdout);
+    const backupFile = path.join(path.dirname(receipt.compensation.receiptPath), "agents", "skills", "example-skill", "previous.txt");
+    fs.writeFileSync(backupFile, "tampered\n", "utf8");
+    const installedSkill = fs.readFileSync(path.join(target, "SKILL.md"), "utf8");
+
+    const compensated = spawnSync(process.execPath, [pinnedInstaller, "--rollback-receipt", receipt.compensation.receiptPath, "--json"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30000,
+      windowsHide: true,
+      env: { ...process.env, AGENTS_HOME: agentsHome, CODEX_HOME: codexHome }
+    });
+    assert.notEqual(compensated.status, 0, "a tampered backup must not be restored");
+    assert.match(`${compensated.stdout}${compensated.stderr}`, /backup changed since it was taken/);
+    assert.equal(fs.readFileSync(path.join(target, "SKILL.md"), "utf8"), installedSkill, "the active skill is left as installed");
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("pinned installer emits a one-time receipt that safely compensates an unchanged install", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-compensation-"));
   try {

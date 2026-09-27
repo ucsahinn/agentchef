@@ -85,6 +85,64 @@ function createPinnedSkillBackup(target, backupRoot, skill, expected, managedRoo
   return backupTarget;
 }
 
+function listBackupFiles(backupRoot, backupTarget) {
+  const files = new Map();
+  const pending = [backupTarget];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolute = path.join(current, entry.name);
+      const stat = fs.lstatSync(absolute);
+      if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) {
+        throw new Error(`Pinned skill backup contains a linked or unsupported entry: ${absolute}`);
+      }
+      if (stat.isDirectory()) pending.push(absolute);
+      else files.set(path.relative(backupRoot, absolute).replaceAll(path.sep, "/"), absolute);
+    }
+  }
+  return files;
+}
+
+// Restores a pinned skill backup without ever leaving a partial tree at the
+// active path: the backup is checked against the manifest written when it was
+// taken, copied to a sibling staging directory, and only then swapped in.
+function restorePinnedSkillBackup({ backupRoot, backupTarget, target, skill, managedRoots }) {
+  assertManagedTargetPath(backupTarget, managedRoots);
+  assertManagedTargetPath(target, managedRoots);
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(backupRoot, BACKUP_MANIFEST_NAME), "utf8"));
+  } catch {
+    throw new Error(`Pinned skill backup manifest is missing or unreadable: ${skill}.`);
+  }
+  const prefix = `agents/skills/${skill}/`;
+  const recorded = new Map((manifest.entries || [])
+    .filter((entry) => typeof entry.backupRelativePath === "string" && entry.backupRelativePath.startsWith(prefix))
+    .map((entry) => [entry.backupRelativePath, entry]));
+  const actual = listBackupFiles(backupRoot, backupTarget);
+  const unchanged = actual.size === recorded.size
+    && [...actual].every(([relative, absolute]) => {
+      const entry = recorded.get(relative);
+      return entry && fs.statSync(absolute).size === entry.size && hashFile(absolute) === entry.sha256;
+    });
+  if (!unchanged) {
+    throw new Error(`Refusing to restore pinned skill ${skill}: its backup changed since it was taken.`);
+  }
+
+  const targetParent = path.dirname(target);
+  fs.mkdirSync(targetParent, { recursive: true });
+  const restoreStaging = fs.mkdtempSync(path.join(targetParent, `.agentchef-restore-${skill}-`));
+  try {
+    assertManagedTargetPath(restoreStaging, managedRoots);
+    fs.cpSync(backupTarget, restoreStaging, { recursive: true, errorOnExist: false, force: true, dereference: false });
+    removeRealDirectory(target, managedRoots);
+    fs.renameSync(restoreStaging, target);
+  } catch (error) {
+    if (fs.existsSync(restoreStaging)) removeRealDirectory(restoreStaging, managedRoots);
+    throw error;
+  }
+}
+
 function writeRollbackReceipt({ target, backupRoot, backedUp, expected, managedRoots }) {
   assertManagedTargetPath(backupRoot, managedRoots);
   fs.mkdirSync(backupRoot, { recursive: true });
@@ -153,12 +211,7 @@ export function compensatePinnedSkillInstall({ receiptPath, managedRoots }) {
     if (!fs.existsSync(backupTarget)) {
       throw new Error(`Pinned skill compensation backup is missing: ${receipt.expected.skill}.`);
     }
-    removeRealDirectory(receipt.target, managedRoots);
-    fs.cpSync(backupTarget, receipt.target, {
-      recursive: true,
-      errorOnExist: true,
-      dereference: false
-    });
+    restorePinnedSkillBackup({ backupRoot, backupTarget, target: receipt.target, skill: receipt.expected.skill, managedRoots });
   } else {
     removeRealDirectory(receipt.target, managedRoots);
   }
@@ -266,13 +319,12 @@ export function activatePinnedSkill({
     if (fs.existsSync(staging)) removeRealDirectory(staging, managedRoots);
     if (activated && fs.existsSync(target)) removeRealDirectory(target, managedRoots);
     if (backedUp) {
-      assertManagedTargetPath(backupTarget, managedRoots);
-      assertManagedTargetPath(target, managedRoots);
-      fs.cpSync(backupTarget, target, {
-        recursive: true,
-        errorOnExist: true,
-        dereference: false
-      });
+      try {
+        restorePinnedSkillBackup({ backupRoot, backupTarget, target, skill: expected.skill, managedRoots });
+      } catch (restoreError) {
+        // Keep the original failure first; the backup stays in place for a manual restore.
+        error.message = `${error.message} Restoring the previous version also failed: ${restoreError.message}`;
+      }
     } else if (fs.existsSync(backupRoot)) {
       removeRealDirectory(backupRoot, managedRoots);
     }
