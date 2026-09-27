@@ -102,8 +102,16 @@ function isClaudeProcess(processEntry) {
 // Either agent owns the MCP servers it starts. Ownership is what decides
 // whether a tree is active, so it must know about both targets AgentChef
 // installs for; otherwise one agent's live servers look orphaned to the other.
+// AgentChef's Serena pool manager is detached on purpose and reclaims the
+// backends it started after an idle TTL, so it owns them like a session does.
+const SERENA_POOL_MANAGER_PATTERN = /serena-pool\.mjs["']?\s+manager\b/i;
+
+function isSerenaPoolManager(processEntry) {
+  return SERENA_POOL_MANAGER_PATTERN.test(String(processEntry?.commandLine || ""));
+}
+
 function isSessionOwnerProcess(processEntry) {
-  return isCodexProcess(processEntry) || isClaudeProcess(processEntry);
+  return isCodexProcess(processEntry) || isClaudeProcess(processEntry) || isSerenaPoolManager(processEntry);
 }
 
 function isControlProcess(processEntry) {
@@ -377,7 +385,7 @@ export function analyzeProcessSnapshot(processes, options = {}) {
     instances,
     cleanupCandidates,
     safety: [
-      "Active MCP trees with a live Codex or Claude Code ancestor are never cleanup candidates.",
+      "Active MCP trees with a live Codex or Claude Code ancestor, or started by the AgentChef Serena pool manager, are never cleanup candidates.",
       "Unowned MCP trees stay in a grace period before they can be selected.",
       "Unrelated Node, Python, browser, product, and development-server processes are excluded.",
       "Cleanup requires explicit --apply, except for a separately trusted SessionEnd ownership snapshot."
