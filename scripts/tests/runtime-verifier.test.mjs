@@ -9,6 +9,7 @@ import { resolveInstallContract } from "../lib/install-contract.mjs";
 import { writeDirectSkillMarker } from "../manage-direct-skill-target.mjs";
 import { writeMarketplaceEntry } from "../upsert-marketplace-entry.mjs";
 import { scaledTimeout } from "../lib/test-timeouts.mjs";
+import { inspectClaudePluginCache } from "../lib/claude-plugin-cache.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 let baselineFixtureRoot = null;
@@ -337,5 +338,33 @@ test("runtime verifier rejects a linked Serena pool launcher", (context) => {
     assert.match(report.failures.join("\n"), /serena-pool\.mjs/i);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("the Claude plugin cache check covers skills as well as roles, and ignores the Codex-only scripts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-claude-cache-"));
+  try {
+    const agentsHome = path.join(root, "agents");
+    const claudeHome = path.join(root, "claude");
+    const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
+    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0");
+    const write = (base, relative, text) => {
+      fs.mkdirSync(path.dirname(path.join(base, relative)), { recursive: true });
+      fs.writeFileSync(path.join(base, relative), text);
+    };
+    write(source, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.0.0" }));
+    for (const base of [source, cache]) {
+      write(base, "agents/code-mapper.md", "role\n");
+      write(base, "skills/seo/SKILL.md", "skill\n");
+    }
+    write(source, "scripts/codex-process-hygiene.mjs", "new\n");
+    write(cache, "scripts/codex-process-hygiene.mjs", "old\n");
+    assert.deepEqual(inspectClaudePluginCache(claudeHome, agentsHome).stale, [], "a Codex-only script is not something Claude loads");
+
+    write(cache, "skills/seo/SKILL.md", "stale skill\n");
+    const stale = inspectClaudePluginCache(claudeHome, agentsHome).stale;
+    assert.deepEqual(stale, [{ version: "1.0.0", differing: 1, total: 2 }], "a stale skill is drift even when every role matches");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
