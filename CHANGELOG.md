@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Release a Serena bridge's sessions when it disconnects. Each bridge client
+  got a Serena session per project backend, kept in the manager until that
+  backend went idle, so a continuously used project accumulated one session per
+  client ever started. A closing bridge now asks the manager to drop its
+  sessions (and ends them inside Serena, best effort); another client's
+  sessions are untouched. Found by a read-only GPT-6-Luna review.
+
 - Check skills, not only roles, in the Claude plugin cache. The verifier
   compared only `agents/`, so a same-version change to a skill left Claude
   sessions on the stale copy while the check stayed clean. It now compares

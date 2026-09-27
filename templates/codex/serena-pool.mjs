@@ -146,11 +146,25 @@ export function createSerenaPool({
     return false;
   }
 
+  // A bridge that disconnects releases its per-backend Serena sessions; before,
+  // they stayed in memory as long as the project backend stayed busy.
+  function releaseClient(clientId) {
+    const released = [];
+    for (const entry of entries.values()) {
+      const session = entry.backend?.sessions?.get(clientId);
+      if (!session) continue;
+      entry.backend.sessions.delete(clientId);
+      if (session.sessionId) released.push({ endpoint: entry.backend.endpoint, sessionId: session.sessionId });
+    }
+    return released;
+  }
+
   return {
     ensure,
     reclaimIdle,
     discard,
     close,
+    releaseClient,
     snapshot: () => [...entries.values()].map(({ key, root, startedAt, lastUsedAt, backend }) => ({ key, root, startedAt, lastUsedAt, pid: backend?.pid ?? null }))
   };
 }
@@ -282,7 +296,12 @@ async function runBridge() {
     buffer = lines.pop() || "";
     for (const line of lines) void handleBridgeMessage(line, { token, clientId });
   });
-  process.stdin.on("end", () => process.exit(0));
+  process.stdin.on("end", () => {
+    // Release this client's Serena sessions; never delay the exit for long.
+    requestJson({ pathName: "/release-client", method: "POST", token, timeoutMs: 1000, body: { clientId } })
+      .catch(() => {})
+      .finally(() => process.exit(0));
+  });
 }
 
 async function handleBridgeMessage(line, { token, clientId }) {
@@ -392,6 +411,18 @@ function postMcp(endpoint, payload, sessionId) {
   });
 }
 
+function deleteMcpSession(endpoint, sessionId) {
+  const target = new URL(endpoint);
+  return new Promise((resolve) => {
+    const request = http.request({ hostname: target.hostname, port: target.port, path: target.pathname, method: "DELETE", timeout: 1500, headers: {
+      "mcp-protocol-version": PROTOCOL_VERSION, "mcp-session-id": sessionId
+    } }, (response) => { response.resume(); response.on("end", resolve); });
+    request.once("timeout", () => request.destroy());
+    request.once("error", () => resolve());
+    request.end();
+  });
+}
+
 export async function waitForSession(backend, clientId) {
   const existing = backend.sessions.get(clientId);
   if (existing?.sessionId) return existing.sessionId;
@@ -490,6 +521,18 @@ async function runManager() {
     if (request.method === "POST" && request.url === "/shutdown") {
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true }));
       void shutdown(server);
+      return;
+    }
+    if (request.method === "POST" && request.url === "/release-client") {
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      let clientId = null;
+      try { clientId = JSON.parse(Buffer.concat(chunks).toString("utf8")).clientId; } catch { /* rejected below */ }
+      if (typeof clientId !== "string") { response.writeHead(400).end(JSON.stringify({ error: "Invalid release request." })); return; }
+      const released = pool.releaseClient(clientId);
+      // Best effort: also end the MCP session inside Serena.
+      for (const { endpoint, sessionId } of released) void deleteMcpSession(endpoint, sessionId);
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, released: released.length }));
       return;
     }
     if (request.method !== "POST" || request.url !== "/call-tool") { response.writeHead(404).end(JSON.stringify({ error: "Not found." })); return; }
