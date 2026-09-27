@@ -488,7 +488,9 @@ function Acquire-OperationLock {
         Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
       }
     }
-    throw "Another AgentChef operation is already in progress for a managed Codex home; refusing concurrent install."
+    # Name the lock and the recovery: a run killed with Ctrl+C leaves it behind.
+    $lockReason = $_.Exception.Message
+    throw "Another AgentChef operation is already in progress for a managed Codex home; refusing concurrent install. Lock: $lockPath. If no AgentChef install, repair, migration, or removal is running, a previous run was interrupted: remove that directory and retry. ($lockReason)"
   }
   $Script:OperationLockPaths = @($acquired)
 }

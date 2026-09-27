@@ -217,6 +217,35 @@ test("a managed directory that is no longer in the catalog is reported as retire
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
+test("a failed install rolls ~/.claude.json back along with the files under the Claude home", () => {
+  const state = fixture();
+  const claudeJsonPath = path.join(state.home, ".claude.json");
+  const settingsPath = path.join(state.claudeHome, "settings.json");
+  const before = { claudeJson: fs.readFileSync(claudeJsonPath, "utf8"), settings: fs.readFileSync(settingsPath, "utf8") };
+  // Fail after the settings and MCP merges have written both files.
+  const result = spawnSync(process.execPath, [
+    helper,
+    "--claude-home", state.claudeHome,
+    "--agents-home", state.agentsHome,
+    "--home", state.home,
+    "--platform", platform,
+    "--skip-plugin-register",
+    "--apply"
+  ], {
+    cwd: root,
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: scaledTimeout(60_000),
+    env: { ...fixtureEnv, AGENTCHEF_TEST_MODE: "1", AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-skill-links" }
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr + result.stdout, /Injected Claude install failure before claude-skill-links/);
+  assert.doesNotMatch(result.stderr + result.stdout, /Rollback could not restore/);
+  assert.equal(fs.readFileSync(claudeJsonPath, "utf8"), before.claudeJson, "~/.claude.json is restored");
+  assert.equal(fs.readFileSync(settingsPath, "utf8"), before.settings, "settings.json is restored");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
 // A stand-in `claude` on an isolated PATH: a .cmd shim on Windows, as npm
 // installs it, and an executable script elsewhere. FAKE_CLAUDE_MODE picks what
 // the plugin commands return; every call is logged.

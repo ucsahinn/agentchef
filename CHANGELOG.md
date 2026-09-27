@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Make the Node write flows actually roll back when they fail. The Claude
+  install and removal, `--migrate-identity`, and Codex `--remove` marked their
+  journal "failed" and then asked for a rollback, but rollback accepted only an
+  in-progress journal, so it exited with "Operation journal is already failed"
+  and changed nothing; the flows discarded that output, so a half-applied run
+  looked rolled back. Rollback now accepts a failed journal, and a shared
+  `rollbackAfterFailure` appends anything it could not restore to the original
+  error. The Claude flows also allow `~/.claude.json` as an exact rollback
+  target: it lives outside both managed roots, so it was refused even once the
+  rollback ran. Found while verifying a GPT-6-Luna review of journal recovery;
+  a new test injects a failure after the settings and MCP merges and checks
+  both files come back byte for byte.
+
+- Explain a lock left by an interrupted run. Any existing lock directory was
+  reported as "Another operation is already in progress" with no owner and no
+  way out. The message now names the operation, pid, and start time, says
+  whether that process is still running, and how to recover; the lock is still
+  never removed automatically.
+
 - Stop auto-allowing Claude Code commands that can run code or write files.
   The Claude permissions were translated one to one from the Codex rules, but
   Codex runs them inside its OS sandbox and Claude Code does not, and an

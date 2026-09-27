@@ -176,6 +176,25 @@ npm run chef -- --repair
 Refusing to write is deliberate: a repair that cannot verify the catalogs
 should not rewrite managed files.
 
+## "Another Operation Is Already In Progress" After An Interrupted Run
+
+Every write flow takes a lock directory (`.agentchef-operation.lock`) in each
+home it changes. A run killed with Ctrl+C or a closed window can leave it
+behind. The message names the holder and says whether that process is still
+running:
+
+```text
+Another operation is already in progress for <home>\.agentchef-operation.lock:
+claude-install (pid 12345, started ...), but no process with that pid is
+running on this machine, so the lock is probably left over from an interrupted
+run.
+```
+
+If it says the process is still running, wait. Otherwise, make sure no AgentChef
+install, repair, migration, or removal is running, remove the named directory,
+and retry. AgentChef never removes a lock by itself: a pid can be reused, and
+the owner may be another machine sharing the home.
+
 ## Windows Sandbox
 
 Current Codex Windows modes include native elevated sandbox, native unelevated

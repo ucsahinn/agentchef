@@ -117,3 +117,26 @@ test("operation lock set inspection canonicalizes duplicate roots and fails clos
     assert.equal(existsSync(secondLockPath), true);
   });
 });
+
+test("a lock left by an interrupted run says so and is never removed automatically", () => {
+  withTemporaryRoot((root) => {
+    const lockPath = join(root, ".agentchef-operation.lock");
+    mkdirSync(lockPath);
+    // A pid far above anything the OS hands out stands in for a dead owner.
+    writeFileSync(join(lockPath, "owner.json"), `${JSON.stringify({ pid: 2147483000, operation: "claude-install", startedAt: "2026-09-27T10:00:00.000Z", id: "dead" })}\n`);
+    assert.throws(
+      () => acquireOperationLock({ root, operation: "repair" }),
+      (error) => error.code === "OPERATION_LOCKED"
+        && /claude-install \(pid 2147483000/.test(error.message)
+        && /no process with that pid is running/.test(error.message)
+        && /remove that directory/.test(error.message)
+    );
+    assert.ok(existsSync(lockPath), "the stale lock is left for the user to remove");
+
+    // The live owner case names the running process instead.
+    rmSync(lockPath, { force: true, recursive: true });
+    const live = acquireOperationLock({ root, operation: "update" });
+    assert.throws(() => acquireOperationLock({ root, operation: "repair" }), /update \(pid \d+.*is still running/);
+    live.release();
+  });
+});

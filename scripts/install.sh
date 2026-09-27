@@ -539,7 +539,7 @@ acquire_operation_lock() {
     lock_dir="$root/.agentchef-operation.lock"
     if ! mkdir "$lock_dir" 2>/dev/null; then
       release_operation_locks
-      echo "Another AgentChef operation is already in progress for $root; refusing concurrent install." >&2
+      echo "Another AgentChef operation is already in progress for $root; refusing concurrent install. Lock: $lock_dir. If no AgentChef install, repair, migration, or removal is running, a previous run was interrupted: remove that directory and retry." >&2
       exit 1
     fi
     OPERATION_LOCK_DIRS+=("$lock_dir")

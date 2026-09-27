@@ -96,6 +96,29 @@ export function releaseOperationLock(lock) {
   return true;
 }
 
+function processIsRunning(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+// A lock left by an interrupted run blocked every later run with no hint.
+// It is never removed automatically (a PID can be reused, and the owner may be
+// on another machine); the message says who holds it and how to recover.
+function describeHeldLock(lockPath) {
+  const owner = readOwner(lockPath);
+  if (!owner || typeof owner.pid !== "number") {
+    return `Another operation holds ${lockPath}, but its owner record is missing or unreadable, which usually means an interrupted run. If no AgentChef install, repair, migration, or removal is running, remove that directory and retry.`;
+  }
+  const holder = `${owner.operation || "an operation"} (pid ${owner.pid}, started ${owner.startedAt || "at an unknown time"})`;
+  return processIsRunning(owner.pid)
+    ? `Another operation is already in progress for ${lockPath}: ${holder} is still running. Wait for it to finish.`
+    : `Another operation is already in progress for ${lockPath}: ${holder}, but no process with that pid is running on this machine, so the lock is probably left over from an interrupted run. If no AgentChef install, repair, migration, or removal is running, remove that directory and retry.`;
+}
+
 export function acquireOperationLock({ root, operation }) {
   const resolvedRoot = canonicalizeRoot(root, "root");
   const validatedOperation = requireText(operation, "operation");
@@ -117,7 +140,7 @@ export function acquireOperationLock({ root, operation }) {
     mkdirSync(lockPath);
   } catch (error) {
     if (error?.code === "EEXIST") {
-      const lockError = new Error(`Another operation is already in progress for ${lockPath}.`);
+      const lockError = new Error(describeHeldLock(lockPath));
       lockError.code = "OPERATION_LOCKED";
       throw lockError;
     }

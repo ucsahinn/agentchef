@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -92,6 +93,17 @@ function readInProgressJournal(backupRoot) {
   return { journalPath, journal };
 }
 
+function readJournalForRollback(backupRoot) {
+  const journalPath = existingJournalPath(backupRoot);
+  if (!fs.existsSync(journalPath)) throw new Error(`Operation journal is missing: ${journalPath}`);
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+  if (!["in-progress", "failed"].includes(journal.state)) {
+    throw new Error(`Operation journal is ${journal.state}; only an in-progress or failed operation can be rolled back: ${journalPath}`);
+  }
+  journal.mutations ||= [];
+  return { journalPath, journal };
+}
+
 function assertBackupWithinRoot(backupRoot, backup) {
   const resolvedBackup = backup && backup !== "-" ? path.resolve(backup) : null;
   if (resolvedBackup && resolvedBackup !== backupRoot && !resolvedBackup.startsWith(`${backupRoot}${path.sep}`)) {
@@ -125,6 +137,19 @@ function assertReadyToComplete(journal) {
   if (journal.mutations.some((mutation) => mutation.phase === "prepared")) {
     throw new Error("Operation journal cannot complete with prepared mutations.");
   }
+}
+
+// Rolls back a flow that failed after marking its journal "failed". Paths the
+// rollback could not restore are appended to the original error: before, the
+// callers discarded this output, so a rollback that did nothing looked clean.
+// allowedTargets may name directories or exact files (such as ~/.claude.json).
+export function rollbackAfterFailure({ backupRoot, allowedTargets, error }) {
+  const rollback = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "rollback", backupRoot, "-", ...allowedTargets], { encoding: "utf8", windowsHide: true });
+  if (rollback.status !== 0 && error) {
+    const detail = String(rollback.stderr || rollback.stdout || "").trim();
+    error.message = `${error.message} Rollback could not restore everything: ${detail || `exit ${rollback.status}`}`;
+  }
+  return rollback.status === 0;
 }
 
 export function createOperationJournal({ backupRoot, operation }) {
@@ -192,7 +217,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (command === "start") {
       createOperationJournal({ backupRoot: resolvedBackupRoot, operation: value });
     } else {
-      const { journalPath, journal } = readInProgressJournal(resolvedBackupRoot);
+      // A flow that throws marks its journal "failed" before asking for a
+      // rollback, so rollback must accept that state; every other command
+      // still needs an in-progress journal.
+      const { journalPath, journal } = command === "rollback"
+        ? readJournalForRollback(resolvedBackupRoot)
+        : readInProgressJournal(resolvedBackupRoot);
       if (command === "finish") {
         if (!["complete", "failed"].includes(value)) throw new Error("Operation journal finish state must be complete or failed.");
         if (value === "complete") assertReadyToComplete(journal);
