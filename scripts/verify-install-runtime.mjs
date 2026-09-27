@@ -14,6 +14,7 @@ import { inspectSkillLink } from "./lib/skill-links.mjs";
 import { managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
+import { cacheContentDrift } from "./refresh-installed-plugin.mjs";
 import {
   inspectPinnedSkillTarget,
   inspectSkillTree
@@ -812,6 +813,13 @@ function inspectPluginRuntime(failures, warnings) {
     if (entry.installed === true && entry.version !== expectedVersion) {
       failures.push(
         `Installed AgentChef plugin version drifted: expected ${expectedVersion}, got ${entry.version || "unknown"}.`
+      );
+    }
+    // The cache is keyed by version, so a same-version change never reached it.
+    const cacheDrift = entry.installed === true && entry.version === expectedVersion ? cacheContentDrift(entry, options.codexHome) : [];
+    if (cacheDrift.length > 0) {
+      warnings.push(
+        `The Codex plugin cache for ${expectedVersion} differs from the plugin source in ${cacheDrift.length} file(s), so sessions run stale code. Refresh it: node scripts/refresh-installed-plugin.mjs --apply`
       );
     }
     return {

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Refresh the Codex plugin cache when its files change, not only its version.
+  Codex keys the cache by version, and the refresher re-added the plugin only
+  on a version change, so every same-version fix since 1.0.0 (including the
+  process-hygiene owner fixes) never reached the copy Codex runs; the verifier
+  reported it clean. Measured here: the cached hygiene script hashed
+  `3305755d...` against the source's `a630a051...`, and re-adding the plugin at
+  the same version replaced it. The refresher now compares the cached files
+  with the local plugin source and re-adds on drift, and the verifier warns
+  with the refresh command. The Claude plugin cache check from 1.0.x already
+  compared its agent files.
+
 - Stop listing the shared Serena pool as orphaned. The pool manager is detached
   on purpose and reclaims its own backends, but the process audit only knew
   Codex and Claude Code sessions as owners, so a live pooled backend (22

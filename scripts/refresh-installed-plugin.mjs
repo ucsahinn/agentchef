@@ -165,12 +165,26 @@ export function refreshInstalledPlugin({
       expectedVersion
     };
   }
-  if (plugin.version === expectedVersion) {
+  // Codex keys its cache by version, so a same-version change to the plugin
+  // (a fixed script, an updated role file) never reached the copy sessions
+  // run. Compare the cached files with the local source and re-add on drift.
+  const drift = plugin.version === expectedVersion ? cacheContentDrift(plugin, codexHome) : [];
+  if (plugin.version === expectedVersion && drift.length === 0) {
     return {
       inspected: true,
       status: "current",
       currentVersion: plugin.version,
       expectedVersion,
+      enabled: plugin.enabled === true
+    };
+  }
+  if (plugin.version === expectedVersion && !apply) {
+    return {
+      inspected: true,
+      status: "content-drift",
+      currentVersion: plugin.version,
+      expectedVersion,
+      driftFiles: drift.length,
       enabled: plugin.enabled === true
     };
   }
@@ -224,6 +238,18 @@ export function refreshInstalledPlugin({
     };
   }
 
+  const remainingDrift = cacheContentDrift(refreshedPlugin, codexHome);
+  if (remainingDrift.length > 0) {
+    return {
+      inspected: true,
+      status: "refresh-uncertain",
+      externalMutationApplied: true,
+      previousVersion: plugin.version || null,
+      expectedVersion,
+      warning: `Codex plugin refresh completed but ${remainingDrift.length} cached file(s) still differ from the plugin source.`
+    };
+  }
+
   return {
     inspected: true,
     status: "refreshed",
@@ -232,6 +258,30 @@ export function refreshInstalledPlugin({
     expectedVersion,
     enabled: refreshedPlugin.enabled === true
   };
+}
+
+// Files of a local plugin source that are missing or different in the
+// versioned Codex cache. Returns [] when either side cannot be located, so a
+// remote or unusual install is treated as before (version comparison only).
+export function cacheContentDrift(plugin, codexHome) {
+  const sourceRoot = plugin?.source?.source === "local" && typeof plugin.source.path === "string" ? plugin.source.path : null;
+  if (!sourceRoot || !plugin.marketplaceName || !plugin.name || !plugin.version) return [];
+  const cacheRoot = path.join(codexHome, "plugins", "cache", plugin.marketplaceName, plugin.name, plugin.version);
+  if (!fs.existsSync(sourceRoot) || !fs.existsSync(cacheRoot)) return [];
+  const drift = [];
+  const walk = (relative) => {
+    for (const entry of fs.readdirSync(path.join(sourceRoot, relative), { withFileTypes: true })) {
+      const child = path.join(relative, entry.name);
+      if (entry.isDirectory()) walk(child);
+      else if (entry.isFile()) {
+        let cached = null;
+        try { cached = fs.readFileSync(path.join(cacheRoot, child)); } catch { /* missing */ }
+        if (!cached || !cached.equals(fs.readFileSync(path.join(sourceRoot, child)))) drift.push(child.split(path.sep).join("/"));
+      }
+    }
+  };
+  walk("");
+  return drift;
 }
 
 function printHelp() {
