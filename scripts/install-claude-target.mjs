@@ -21,7 +21,7 @@ import {
 } from "./lib/cli-error-contract.mjs";
 import { assertManagedTargetPath, isPathInside } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
-import { createOperationJournal } from "./lib/operation-journal.mjs";
+import { createOperationJournal, rollbackAfterFailure } from "./lib/operation-journal.mjs";
 import {
   createReceipt,
   fileSha256,
@@ -363,6 +363,9 @@ export function applyClaudeInstall(options, plan) {
   const results = [];
   try {
     for (const action of plan.actions) {
+      if (process.env.AGENTCHEF_TEST_MODE === "1" && process.env.AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION === action.id) {
+        throw new Error(`Injected Claude install failure before ${action.id}`);
+      }
       if (action.kind === "copy-file") {
         if (action.state === "identical") {
           // Still owned: the rewritten install receipt must keep listing it.
@@ -499,7 +502,8 @@ export function applyClaudeInstall(options, plan) {
     } catch {
       // The journal may already be closed; rollback below still works from disk.
     }
-    spawnSync(process.execPath, [path.join(repoRoot, "scripts", "lib", "operation-journal.mjs"), "rollback", backupRoot, "-", claudeHome, agentsHome], { stdio: "ignore", windowsHide: true });
+    // ~/.claude.json lives outside both roots; allow it as an exact file.
+    rollbackAfterFailure({ backupRoot, allowedTargets: [claudeHome, agentsHome, options.claudeJson], error });
     throw error;
   } finally {
     lockSet.release();
@@ -633,7 +637,8 @@ export function applyClaudeRemoval(options, plan) {
     } catch {
       // rollback below reads the journal from disk
     }
-    spawnSync(process.execPath, [path.join(repoRoot, "scripts", "lib", "operation-journal.mjs"), "rollback", backupRoot, "-", claudeHome, agentsHome], { stdio: "ignore", windowsHide: true });
+    // ~/.claude.json lives outside both roots; allow it as an exact file.
+    rollbackAfterFailure({ backupRoot, allowedTargets: [claudeHome, agentsHome, options.claudeJson], error });
     throw error;
   } finally {
     lockSet.release();

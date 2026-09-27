@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { createOperationJournal } from "../lib/operation-journal.mjs";
+import { createOperationJournal, rollbackAfterFailure } from "../lib/operation-journal.mjs";
 
 test("operation journal durably records a completed backup before mutation", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-operation-journal-"));
@@ -197,3 +197,34 @@ function writeTreeFile(root, relative, text) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, text, "utf8");
 }
+
+test("a journal marked failed can still be rolled back, and a complete one cannot", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-operation-journal-failed-"));
+  try {
+    const target = path.join(root, "home", "settings.json");
+    const backup = path.join(root, "backup", "settings.json");
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.writeFileSync(target, "original\n", "utf8");
+    fs.copyFileSync(target, backup);
+    const journal = createOperationJournal({ backupRoot: root, operation: "claude-install" });
+    journal.recordBackup(backup);
+    journal.prepareMutation({ target, backup });
+    fs.writeFileSync(target, "half-applied\n", "utf8");
+    journal.markApplied(target);
+    // Every Node write flow marks the journal failed before asking for rollback.
+    journal.finish("failed");
+
+    const rolledBack = rollbackAfterFailure({ backupRoot: root, allowedTargets: [path.join(root, "home")], error: new Error("boom") });
+    assert.equal(rolledBack, true);
+    assert.equal(fs.readFileSync(target, "utf8"), "original\n");
+
+    const done = createOperationJournal({ backupRoot: path.join(root, "second"), operation: "claude-install" });
+    done.finish();
+    const error = new Error("later failure");
+    assert.equal(rollbackAfterFailure({ backupRoot: path.join(root, "second"), allowedTargets: [path.join(root, "home")], error }), false);
+    assert.match(error.message, /only an in-progress or failed operation can be rolled back/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

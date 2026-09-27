@@ -16,7 +16,7 @@ import { CliUsageError, emitCliError, requireCliValue } from "./lib/cli-error-co
 import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
-import { createOperationJournal } from "./lib/operation-journal.mjs";
+import { createOperationJournal, rollbackAfterFailure } from "./lib/operation-journal.mjs";
 import { managedMarkerNames } from "./lib/identity.mjs";
 import { pinnedSkillProvenanceFileName, pinnedSkillSchemaVersion } from "./lib/skill-provenance.mjs";
 import { PLUGIN_ID } from "./refresh-installed-plugin.mjs";
@@ -268,7 +268,7 @@ export function applyCodexRemoval(options, plan) {
     } catch {
       // rollback below reads the journal from disk
     }
-    spawnSync(process.execPath, [path.join(repoRoot, "scripts", "lib", "operation-journal.mjs"), "rollback", backupRoot, "-", codexHome, agentsHome], { stdio: "ignore", windowsHide: true });
+    rollbackAfterFailure({ backupRoot, allowedTargets: [codexHome, agentsHome], error });
     throw error;
   } finally {
     lockSet.release();

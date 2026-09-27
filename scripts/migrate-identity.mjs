@@ -17,7 +17,7 @@ import { CliUsageError, emitCliError, requireCliValue } from "./lib/cli-error-co
 import { acceptsSchema, identity, isLegacySchema, legacyProductName, modernSchema } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
-import { createOperationJournal } from "./lib/operation-journal.mjs";
+import { createOperationJournal, rollbackAfterFailure } from "./lib/operation-journal.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { inspectDirectSkillTarget, markerFileName, writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
@@ -518,7 +518,7 @@ export function applyIdentityMigration(options, plan) {
     } catch {
       // rollback below reads the journal from disk
     }
-    spawnSync(process.execPath, [path.join(repoRoot, "scripts", "lib", "operation-journal.mjs"), "rollback", backupRoot, "-", ...homeRoots], { stdio: "ignore", windowsHide: true });
+    rollbackAfterFailure({ backupRoot, allowedTargets: homeRoots, error });
     throw error;
   } finally {
     lockSet.release();

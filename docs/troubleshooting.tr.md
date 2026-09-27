@@ -176,6 +176,25 @@ npm run chef -- --repair
 Yazmayı reddetmesi bilinçlidir: katalogları doğrulayamayan bir onarım, yönetilen
 dosyaları yeniden yazmamalıdır.
 
+## Yarıda Kalan Bir Koşudan Sonra "Another Operation Is Already In Progress"
+
+Her yazma akışı, değiştirdiği her home'da bir kilit dizini
+(`.agentchef-operation.lock`) alır. Ctrl+C ile durdurulan ya da penceresi
+kapatılan bir koşu bu dizini geride bırakabilir. Mesaj kilidi kimin tuttuğunu ve
+o sürecin hâlâ çalışıp çalışmadığını söyler:
+
+```text
+Another operation is already in progress for <home>\.agentchef-operation.lock:
+claude-install (pid 12345, started ...), but no process with that pid is
+running on this machine, so the lock is probably left over from an interrupted
+run.
+```
+
+Süreç hâlâ çalışıyor diyorsa bekle. Aksi halde hiçbir AgentChef kurulum, onarım,
+göç ya da kaldırma işleminin çalışmadığından emin ol, adı geçen dizini sil ve
+yeniden dene. AgentChef kilidi hiçbir zaman kendiliğinden silmez: bir pid yeniden
+kullanılabilir ve kilidin sahibi home'u paylaşan başka bir makine olabilir.
+
 ## Windows Sandbox
 
 Güncel Codex Windows modları native elevated sandbox, native unelevated sandbox
