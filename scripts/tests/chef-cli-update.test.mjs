@@ -41,3 +41,12 @@ test("source advance records a durable recovery receipt before managed refresh c
   assert.match(source, /recordUpdateRecoveryFailure\(recoveryReceipt, completed, "managed refresh or runtime verification"\)/);
   assert.match(source, /const resumableReceipt = findRecoverableUpdateReceipt\(beforeHead\.value, beforeVersion, dirty\)/);
 });
+
+test("update apply refuses a checkout that is not on main before contacting the remote", () => {
+  const guard = source.indexOf('if (branchName !== "main") {');
+  const fetch = source.indexOf('runLoggedCommand("update-fetch"');
+  const merge = source.indexOf('runLoggedCommand("update-merge"');
+  assert.ok(guard >= 0, "the branch guard must be present");
+  assert.ok(guard < fetch && fetch < merge, "the guard must run before the fetch and the fast-forward");
+  assert.match(source, /spawnSync\("git", \["branch", "--show-current"\]/);
+});

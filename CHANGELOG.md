@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Refuse `--update --apply` unless the clone is on `main`. The update fetches
+  `origin main` and fast-forwards whatever is checked out, so on a feature
+  branch behind main it silently moved that branch to main, and on a detached
+  HEAD it moved HEAD. It now stops before contacting the remote, changes
+  nothing, and says to run `git switch main`. Proven in a scratch clone on a
+  feature branch and on a detached HEAD. Found by a read-only GPT-6-Luna review
+  of the update path.
+
 - Find an npm-installed `codex` or `claude` on Windows. Node's spawn ignores
   `PATHEXT` and refuses `.cmd` shims, and `platformCommand` only recognized
   `win32` while the installers pass `windows`, so plugin registration, plugin
