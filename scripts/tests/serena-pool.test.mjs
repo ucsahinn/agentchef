@@ -239,3 +239,24 @@ test("stdio bridge exposes the safe tool surface without starting Serena on MCP 
     await managerRequest(port, token, "/shutdown");
   }
 });
+
+test("the pooled Serena backend starts in a read-only mode that removes every writing tool", () => {
+  const source = fs.readFileSync(fileURLToPath(moduleUrl), "utf8");
+  const list = (name) => {
+    const start = source.indexOf(`const ${name} = [`);
+    const end = source.indexOf("];", start);
+    return [...source.slice(start, end).matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
+  };
+  const exposed = list("TOOL_NAMES");
+  const excluded = list("WRITE_CAPABLE_TOOLS");
+  // Measured on the pinned build: a direct loopback client reached these.
+  for (const name of ["replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "rename_symbol", "safe_delete_symbol", "write_memory", "delete_memory", "rename_memory", "edit_memory", "switch_modes"]) {
+    assert.ok(excluded.includes(name), `${name} must be excluded`);
+  }
+  assert.deepEqual(exposed.filter((name) => excluded.includes(name)), [], "an exposed read tool must never be excluded");
+  assert.match(source, /"--context", "codex", "--add-mode", readOnlyModePath\(\)/);
+  // A manager started by an older file must be replaced, or this never applies.
+  assert.match(source, /JSON\.stringify\(\{ ok: true, profile: MANAGER_PROFILE \}\)/);
+  assert.match(source, /if \(health\?\.profile === MANAGER_PROFILE\) return;/);
+  assert.ok(source.indexOf('pathName: "/shutdown"') > source.indexOf("async function ensureManager"), "a stale manager is shut down before a new one starts");
+});

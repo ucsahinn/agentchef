@@ -52,6 +52,13 @@ Bu starter'ın kuralları:
 - OpenAI Docs ve lazy Serena semantic bridge varsayılan olarak açıktır.
   Context7 ek bir Node süreci başlatabildiği ve ilk çalışmada network
   gerektirebildiği için opt-in bir kütüphane dokümantasyonu yardımcısıdır.
+- Serena köprüsü yöneticisini ve pinli Serena alt süreçlerini `127.0.0.1`'e
+  bağlar ve ajana yalnızca incelenmiş okuma/gezinme araçlarını açar. Alt süreç
+  kendi loopback portunda pool token'ı olmadan dinlediği için, AgentChef onu
+  yazma araçlarının (kod düzenleme, sembol yeniden adlandırma/silme, hafıza
+  yazma) ve `switch_modes`'un hiç etkin olmadığı salt-okunur bir modla başlatır;
+  doğrudan porta bağlanan yerel bir süreç de yalnızca okuyabilir. Yabancı bir
+  `Origin` ile gelen istek Serena tarafından reddedilir.
 - Playwright ve Chrome DevTools lokal browser verification icindir; varsayilan
   olarak yalniz evidence/navigation tool'lari allowlist edilir. Interaction,
   evaluation, upload ve request-detail tool'lari prompt-gated veya disabled

@@ -19,13 +19,55 @@ const TOOL_NAMES = [
   "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"
 ];
 
+// The bridge exposes only TOOL_NAMES, but the backend listens on a loopback
+// port without the pool token, so any local process could call Serena's
+// editing and memory-writing tools directly (measured: 23 tools, 9 of them
+// writing). The backend is started with this mode so those tools do not exist
+// at all; switch_modes is excluded so the mode cannot be lifted.
+const WRITE_CAPABLE_TOOLS = [
+  "create_text_file", "replace_content", "replace_lines", "delete_lines", "insert_at_line",
+  "replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "rename_symbol", "safe_delete_symbol",
+  "write_memory", "edit_memory", "delete_memory", "rename_memory",
+  "execute_shell_command", "switch_modes", "remove_project", "onboarding"
+];
+const READ_ONLY_MODE_VERSION = "read-only-mode-v1";
+// A manager outlives the file it was started from; the bridge replaces one
+// that reports a different launch profile, or an update would never apply.
+const MANAGER_PROFILE = `${SERENA_SOURCE}:${READ_ONLY_MODE_VERSION}`;
+
+function readOnlyModeYaml() {
+  return [
+    "description: AgentChef Serena pool - read-only; a direct loopback client stays read-only too",
+    "prompt: |",
+    "  Read-only analysis mode. Do not modify files or memories.",
+    "excluded_tools:",
+    ...WRITE_CAPABLE_TOOLS.map((name) => `  - ${name}`),
+    "included_optional_tools: []",
+    ""
+  ].join("\n");
+}
+
+function readOnlyModePath() {
+  const target = path.join(stateDirectory(), "agentchef-read-only-mode.yml");
+  const content = readOnlyModeYaml();
+  let current = null;
+  try { current = fs.readFileSync(target, "utf8"); } catch { /* absent */ }
+  if (current !== content) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    const temporary = `${target}.${process.pid}.tmp`;
+    fs.writeFileSync(temporary, content, "utf8");
+    fs.renameSync(temporary, target);
+  }
+  return target;
+}
+
 function defaultProjectRoot(candidate) {
   return fs.realpathSync.native(path.resolve(candidate));
 }
 
 function keyForProject(root) {
   const normalized = process.platform === "win32" ? root.toLowerCase() : root;
-  return crypto.createHash("sha256").update(`${process.platform}\0${normalized}\0${SERENA_SOURCE}\0streamable-http`).digest("hex");
+  return crypto.createHash("sha256").update(`${process.platform}\0${normalized}\0${SERENA_SOURCE}\0streamable-http\0${READ_ONLY_MODE_VERSION}`).digest("hex");
 }
 
 export function createSerenaPool({
@@ -181,10 +223,23 @@ function requestJson({ pathName, method = "GET", body, token, timeoutMs = 1500 }
 }
 
 async function ensureManager(token) {
+  let health = null;
   try {
-    await requestJson({ pathName: "/health", token, timeoutMs: 350 });
-    return;
+    health = await requestJson({ pathName: "/health", token, timeoutMs: 350 });
   } catch { /* start the singleton below */ }
+  if (health?.profile === MANAGER_PROFILE) return;
+  if (health) {
+    // An older manager: stop it (it stops the backends it started) and wait
+    // until its port is free before starting the current one.
+    try { await requestJson({ pathName: "/shutdown", method: "POST", token, timeoutMs: 1500 }); } catch { /* already gone */ }
+    const stopDeadline = Date.now() + 10000;
+    while (Date.now() < stopDeadline) {
+      try {
+        await requestJson({ pathName: "/health", token, timeoutMs: 300 });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch { break; }
+    }
+  }
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "manager"], {
     cwd: codexHome(), detached: true, stdio: "ignore", windowsHide: true, env: process.env
   });
@@ -282,7 +337,7 @@ async function launchSerena(root) {
   const child = spawn("uvx", [
     "--from", `git+https://github.com/oraios/serena.git@${SERENA_SOURCE}`,
     "serena", "start-mcp-server", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", String(port),
-    "--context", "codex", "--project", root, "--open-web-dashboard", "False"
+    "--context", "codex", "--add-mode", readOnlyModePath(), "--project", root, "--open-web-dashboard", "False"
   ], {
     cwd: root,
     detached: process.platform !== "win32",
@@ -431,7 +486,7 @@ async function runManager() {
     lastRequestAt = Date.now();
     const unauthorized = request.headers.authorization !== `Bearer ${token}`;
     if (unauthorized) { response.writeHead(401).end(JSON.stringify({ error: "Unauthorized." })); return; }
-    if (request.method === "GET" && request.url === "/health") { response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true })); return; }
+    if (request.method === "GET" && request.url === "/health") { response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, profile: MANAGER_PROFILE })); return; }
     if (request.method === "POST" && request.url === "/shutdown") {
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true }));
       void shutdown(server);

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Keep the pooled Serena backend read-only even for a direct connection. The
+  bridge exposes only read tools, but each backend listens on a loopback port
+  without the pool token. Measured on the pinned build: a local process could
+  call 23 tools directly, including `replace_symbol_body`, `rename_symbol`,
+  `safe_delete_symbol`, and `write_memory` ("Memory agentchef_probe written.").
+  Backends now start with a read-only mode in which every writing tool and
+  `switch_modes` is inactive ("Tool 'write_memory' is not active"). A foreign
+  `Origin` was already rejected (HTTP 403).
+
+- Replace a Serena pool manager started by an older file. The manager outlives
+  the script it was started from and the bridge only checked that it answered,
+  so an updated `serena-pool.mjs` never took effect until the manager died. The
+  manager now reports a launch profile and the bridge shuts down a mismatched
+  one before starting the current one; measured replacing a live old manager.
+
 - Make the Node write flows actually roll back when they fail. The Claude
   install and removal, `--migrate-identity`, and Codex `--remove` marked their
   journal "failed" and then asked for a rollback, but rollback accepted only an

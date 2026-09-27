@@ -220,6 +220,11 @@ stdio bridge is lightweight and uses a local bearer token held only under the
 user's Codex home. The bridge binds its manager and pinned Serena children to
 `127.0.0.1`, exposes only the reviewed read/navigation allowlist, starts a
 backend only after an allowlisted tool call, serializes calls per project, and
+starts every backend in a read-only mode: a backend listens on its own loopback
+port without the pool token, so its editing, symbol rename/delete,
+memory-writing, and `switch_modes` tools are not active at all, and a local
+process that connects to the port directly can only read. Serena itself rejects
+a request with a foreign `Origin`. The bridge also
 reclaims only children it started after an idle TTL. It does not expose a LAN
 listener, persist request content, or allow a project to select another
 client's backend.
