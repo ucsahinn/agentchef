@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Stop failing local validation on Claude Code's own per-user settings file.
+  Claude Code writes permission grants to `.claude/settings.local.json` in any
+  project where you approve a command, and this repository ships a `CLAUDE.md`
+  for Claude Code sessions, so `validate-repo`, `security-audit`, and
+  `validate-installer-alignment` failed for every contributor working that way.
+  The repository also did not ignore the file, so it could be committed by
+  accident on a machine without a global rule. It is now ignored and skipped
+  like AgentSpace's `docs/.agent-notifications`; `.claude/settings.json` is
+  still checked.
+
 - Say when `codex doctor` timed out, and how to allow more time. The runtime
   verifier reported "spawnSync cmd.exe ETIMEDOUT", which reads like a broken
   CLI. On this machine `codex doctor --json` took between 11 and 64 seconds
