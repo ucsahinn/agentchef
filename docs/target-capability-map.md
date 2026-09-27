@@ -44,6 +44,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | `[projects."path"].trust_level` | folder trust prompt and `.claude/settings.local.json` | **not mapped** by the installer |
 | `[features]`, `[memories]`, `[apps]` | no counterpart | **not mapped** |
 | `[mcp_servers.X.tools.Y]` approval tables | `mcp__X__Y` rules in `permissions` | mapped where the server is installed |
+| An `allow` prefix rule runs inside the Codex OS sandbox | Claude Code has no OS sandbox by default, and an explicit `allow` rule also skips its own read-only flag analysis | **narrowed**: Claude-only `ask` rules guard `rg --pre`, `git diff/log/show --output` and `--ext-diff`, and `gitleaks --report-path`; `node --check` and `git ls-remote` are `ask` on Claude |
 | Hook trust: Codex reviews the full hook source before enabling it | Claude runs plugin hooks as soon as the plugin is enabled | **security difference**: AgentChef publishes no hook to Claude Code in this release |
 
 ## Ownership model differences

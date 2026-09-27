@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Stop auto-allowing Claude Code commands that can run code or write files.
+  The Claude permissions were translated one to one from the Codex rules, but
+  Codex runs them inside its OS sandbox and Claude Code does not, and an
+  explicit allow rule also skips Claude Code's own read-only flag analysis.
+  Measured on Claude Code 2.1.282 with harmless marker files:
+  `node --check --require ./x.js` ran `x.js`, `git log --output=f` wrote `f`,
+  and `rg --pre` passed the permission layer; `git ls-remote --upload-pack`
+  runs a local command. Claude-only `ask` rules now guard `rg --pre`,
+  `git diff/log/show --output` and `--ext-diff`, and `gitleaks --report-path`
+  (ask outranks allow, so the plain read-only forms still run), and
+  `node --check` and `git ls-remote` move to `ask`. Codex rules are unchanged.
+  A GPT-6-Luna review also flagged `ForEach-Object`/`Where-Object` scriptblocks
+  and `Get-Content`/`Select-String`; the same measurement showed Claude Code
+  already blocks scriptblocks itself, and its built-in `cat`/`head` read the
+  same files without a prompt, so those rules are unchanged.
+
 - Close three integrity gaps in pinned third-party skills, found by a
   read-only GPT-6-Luna supply-chain review:
   - A cached checkout was trusted when its `HEAD` matched the pin, without
