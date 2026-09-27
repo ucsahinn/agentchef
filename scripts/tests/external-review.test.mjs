@@ -633,6 +633,26 @@ test("Docker registry credentials are excluded by path and detected in content",
   );
 });
 
+test("Claude Code's local state is excluded like the Codex and agent state directories", () => {
+  const claudeFixture = fixture();
+  const claudeDir = path.join(claudeFixture.repo, ".claude");
+  fs.mkdirSync(claudeDir);
+  // Per-user permission grants with machine paths, force-added by mistake.
+  fs.writeFileSync(path.join(claudeDir, "settings.local.json"), `${JSON.stringify({ permissions: { allow: ["Read(//d/projects/private/**)"] } }, null, 2)}\n`, "utf8");
+  fs.writeFileSync(path.join(claudeFixture.repo, "CLAUDE.local.md"), "personal notes\n", "utf8");
+  git(claudeFixture.repo, ["add", "-f", ".claude/settings.local.json", "CLAUDE.local.md"]);
+
+  const plan = buildPackPlan({ target: claudeFixture.repo, out: claudeFixture.out });
+  for (const excludedPath of [".claude/settings.local.json", "CLAUDE.local.md"]) {
+    assert.equal(plan.manifest.files.some((file) => file.path === excludedPath), false, excludedPath);
+    assert.equal(
+      plan.manifest.excluded.some((file) => file.path === excludedPath && file.reason === "sensitive-path"),
+      true,
+      excludedPath
+    );
+  }
+});
+
 test("output inside target is rejected", () => {
   const { repo } = fixture();
   assert.throws(() => buildPackPlan({ target: repo, out: path.join(repo, "review") }), /outside the target/);
