@@ -188,8 +188,10 @@ function isSensitivePath(relativePath) {
     parts.some((part) => [
       ".git",
       ".codex",
+      ".claude",
       ".agents",
       ".serena",
+      ".agentspace",
       ".ssh",
       ".aws",
       ".gnupg",
@@ -208,6 +210,8 @@ function isSensitivePath(relativePath) {
     "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"
   ].includes(normalized)) return false;
   if ([".npmrc", ".pypirc", ".netrc", ".git-credentials"].includes(base)) return true;
+  // Claude Code's personal, per-machine instruction file.
+  if (base === "claude.local.md") return true;
   if (/^\.env(?:\.|$)/.test(base) && !/\.(?:example|sample|template)$/.test(base)) return true;
   if (/(?:^|[-_.])(?:credential|credentials|secret|secrets|cookie|cookies|session|sessions|auth-state)(?:[-_.]|$)/.test(base)) return true;
   return /\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log|har)$/i.test(base);

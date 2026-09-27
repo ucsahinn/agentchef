@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Keep Claude Code's local state out of external-review snapshots. The packer
+  excluded `.codex`, `.agents`, and `.serena` but not `.claude`, so a tracked
+  `.claude/settings.local.json` (per-user permission grants with machine
+  paths) or `CLAUDE.local.md` went into the bundle a user uploads to an
+  external model, and GPT Pro exports copy the same manifest. `.claude`,
+  `.agentspace`, and `CLAUDE.local.md` are now sensitive paths. Found by a
+  read-only GPT-6-Luna review of snapshot secret safety; the new test fails
+  without the fix.
+
 - Refuse `--update --apply` unless the clone is on `main`. The update fetches
   `origin main` and fast-forwards whatever is checked out, so on a feature
   branch behind main it silently moved that branch to main, and on a detached
