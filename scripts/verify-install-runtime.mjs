@@ -961,7 +961,7 @@ function inspectGitGuards(failures) {
 function inspectShadowedClaudeMcp(warnings) {
   let document;
   try {
-    document = JSON.parse(readText(options.claudeJson).replace(/^﻿/, ""));
+    document = JSON.parse(readText(options.claudeJson).replace(/^\uFEFF/, ""));
   } catch {
     return [];
   }
