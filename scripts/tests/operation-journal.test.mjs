@@ -228,3 +228,27 @@ test("a journal marked failed can still be rolled back, and a complete one canno
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("rolling back a removed skill link recreates the link, not a copy", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-operation-journal-link-"));
+  try {
+    const managed = path.join(root, "agents", "skills", "seo");
+    const link = path.join(root, "claude", "skills", "seo");
+    fs.mkdirSync(managed, { recursive: true });
+    fs.writeFileSync(path.join(managed, "SKILL.md"), "managed\n");
+    fs.mkdirSync(path.dirname(link), { recursive: true });
+    fs.symlinkSync(managed, link, process.platform === "win32" ? "junction" : "dir");
+    const journal = createOperationJournal({ backupRoot: path.join(root, "backup"), operation: "claude-remove" });
+    journal.prepareMutation({ target: link, backup: null, link: true });
+    fs.unlinkSync(link);
+    journal.markApplied(link);
+    journal.finish("failed");
+
+    assert.equal(rollbackAfterFailure({ backupRoot: path.join(root, "backup"), allowedTargets: [path.join(root, "claude"), path.join(root, "agents")], error: new Error("boom") }), true);
+    assert.ok(fs.lstatSync(link).isSymbolicLink(), "the link is back as a link");
+    assert.equal(fs.readFileSync(path.join(link, "SKILL.md"), "utf8"), "managed\n");
+    assert.equal(fs.readdirSync(managed).length, 1, "the managed tree was not copied or changed");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
