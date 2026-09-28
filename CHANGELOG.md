@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Replace the Serena pool manager whenever its code changes. The launch
+  profile only covered the Serena pin and the read-only mode, so a change to the
+  manager itself (such as the new session release endpoint) left an older
+  manager running until it happened to exit. The profile now also carries a
+  hash of the pool script; measured: changing the script moved the profile from
+  `...:592a98e1...` to `...:71c1f0f3...` and the next bridge replaced the
+  manager.
+
 - Recreate a removed skill link when a Claude removal rolls back. A link has no
   file backup, so the rollback left it deleted even though the journal had
   recorded where it pointed. It is now recreated as a link to the same managed

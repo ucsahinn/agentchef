@@ -33,7 +33,9 @@ const WRITE_CAPABLE_TOOLS = [
 const READ_ONLY_MODE_VERSION = "read-only-mode-v1";
 // A manager outlives the file it was started from; the bridge replaces one
 // that reports a different launch profile, or an update would never apply.
-const MANAGER_PROFILE = `${SERENA_SOURCE}:${READ_ONLY_MODE_VERSION}`;
+// It includes this file's own content: a change to the manager's code (a new
+// endpoint, a fix) must also replace a manager started from the older file.
+const MANAGER_PROFILE = `${SERENA_SOURCE}:${READ_ONLY_MODE_VERSION}:${crypto.createHash("sha256").update(fs.readFileSync(fileURLToPath(import.meta.url))).digest("hex").slice(0, 16)}`;
 
 function readOnlyModeYaml() {
   return [

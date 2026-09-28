@@ -258,6 +258,8 @@ test("the pooled Serena backend starts in a read-only mode that removes every wr
   // A manager started by an older file must be replaced, or this never applies.
   assert.match(source, /JSON\.stringify\(\{ ok: true, profile: MANAGER_PROFILE \}\)/);
   assert.match(source, /if \(health\?\.profile === MANAGER_PROFILE\) return;/);
+  // A code-only change to the manager must also change the profile.
+  assert.match(source, /const MANAGER_PROFILE = `[^`]*createHash\("sha256"\)\.update\(fs\.readFileSync\(fileURLToPath\(import\.meta\.url\)\)\)/);
   assert.ok(source.indexOf('pathName: "/shutdown"') > source.indexOf("async function ensureManager"), "a stale manager is shut down before a new one starts");
 });
 
