@@ -15,10 +15,15 @@ kadar kapalı kalır.
 
 Claude Code hedefinde AgentChef, `.claude.json` içindeki kullanıcı kapsamlı
 `mcpServers` alanına yalnızca `context7` ve lazy `serena` bridge'ini ekler,
-ikisini de makbuza yazar ve zaten tanımladığın sunuculara dokunmaz. Codex'e
-özgü `openaiDeveloperDocs` girdisi oraya eklenmez; kataloğun diğer sunucuları
-`claude mcp add` biçimleriyle [hedef yetenek haritasında](target-capability-map.tr.md)
-belgelidir.
+ikisini de makbuza yazar ve zaten tanımladığın sunuculara dokunmaz: zaten bir
+`context7` ya da `serena` girdin varsa seninki geçerli kalır ve
+`verify-install-runtime --target claude` bunu söyler. Codex'e özgü
+`openaiDeveloperDocs` girdisi oraya eklenmez. Kataloğun diğer sunucularını
+[catalog/mcp-servers.json](../catalog/mcp-servers.json) içindeki komut ve
+argümanlarla `claude mcp add --scope user` kullanarak kendin ekle. GitHub'ın
+uzak MCP ucu OAuth dinamik istemci kaydını desteklemez; bu yüzden onun için
+`claude mcp add`, `/mcp` girişi yerine kişisel erişim token'ı başlığı ister
+(ölçüldü: "Incompatible auth server").
 
 > **Config'de görünmesi çalıştığı anlamına gelmez.** Bir MCP template'te yer
 > aldığı hâlde launcher, ilk açılışta paket indirme, browser, hesap onayı veya

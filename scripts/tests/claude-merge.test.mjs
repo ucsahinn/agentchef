@@ -218,3 +218,18 @@ test("an update retires only the permission rules this install added and no long
   assert.deepEqual(stillWanted.next.permissions.allow, ["Bash(npx -y demo-mcp@1.0.0 *)"]);
   assert.equal(stillWanted.retired.length, 0);
 });
+
+test("the claude CLI is pointed at a Claude home only when it is really relocated", async () => {
+  const { claudeCliEnv } = await import("../lib/targets/claude.mjs");
+  const home = process.platform === "win32" ? "D:\tools\home" : "/opt/agentchef-home";
+  const defaultHome = `${home}${process.platform === "win32" ? "\\" : "/"}.claude`;
+  // Forcing CLAUDE_CONFIG_DIR to the default home makes Claude Code read
+  // ~/.claude/.claude.json instead of ~/.claude.json.
+  const plain = claudeCliEnv(defaultHome, { env: { PATH: "x" }, home });
+  assert.equal("CLAUDE_CONFIG_DIR" in plain, false);
+  assert.equal(plain.PATH, "x");
+  const relocated = claudeCliEnv(`${home}${process.platform === "win32" ? "\\" : "/"}other-claude`, { env: { PATH: "x" }, home });
+  assert.ok(relocated.CLAUDE_CONFIG_DIR.endsWith("other-claude"));
+  const explicit = claudeCliEnv(defaultHome, { env: { PATH: "x", CLAUDE_CONFIG_DIR: defaultHome }, home });
+  assert.equal(explicit.CLAUDE_CONFIG_DIR, defaultHome, "a user-set variable is kept");
+});

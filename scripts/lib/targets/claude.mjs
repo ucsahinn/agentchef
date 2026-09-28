@@ -33,3 +33,17 @@ export function resolveClaudeHomes({ env = process.env, home, claudeHome, claude
     relocated
   };
 }
+
+// Environment for running the claude CLI against a Claude home. Setting
+// CLAUDE_CONFIG_DIR to the default ~/.claude is not neutral: Claude Code then
+// reads and writes ~/.claude/.claude.json instead of ~/.claude.json, so a probe
+// saw none of the user's MCP servers and left a stray state file behind. The
+// variable is set only when the home is really relocated.
+export function claudeCliEnv(claudeHome, { env = process.env, home } = {}) {
+  const defaultHome = path.join(home, ".claude");
+  if (!env.CLAUDE_CONFIG_DIR && samePath(claudeHome, defaultHome)) {
+    const { CLAUDE_CONFIG_DIR: _unset, ...rest } = env;
+    return rest;
+  }
+  return { ...env, CLAUDE_CONFIG_DIR: claudeHome };
+}

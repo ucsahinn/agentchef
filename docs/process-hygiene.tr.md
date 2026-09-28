@@ -54,7 +54,7 @@ Planı ancak inceledikten sonra uygula:
 npm run chef -- --processes --cleanup-stale --apply --no-log
 ```
 
-Yalnız aktif Codex sahibi olmayan, bekleme süresi dolmuş lokal MCP ağaçları aday
+Yalnız canlı sahibi (Codex ya da Claude Code oturumu, veya Serena havuz yöneticisi) olmayan, bekleme süresi dolmuş lokal MCP ağaçları aday
 olur. Aktif Codex ağaçları ve ilgisiz runtime'lar dışarıda kalır. Temizlik,
 yakaladığı ağacı durdurmadan önce süreç kimliğini ve oluşturulma zamanını yeniden
 doğrular; PID yeniden kullanılmışsa işlem güvenli biçimde durur.

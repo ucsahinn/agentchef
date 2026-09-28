@@ -61,7 +61,7 @@ Execute that plan only after review:
 npm run chef -- --processes --cleanup-stale --apply --no-log
 ```
 
-Only old local MCP trees with no active Codex owner are candidates. Active
+Only old local MCP trees with no live owner (a Codex or Claude Code session, or the Serena pool manager) are candidates. Active
 Codex trees and unrelated runtimes are excluded. Cleanup rechecks process
 identity and creation time before stopping the captured tree, so PID reuse fails
 closed.

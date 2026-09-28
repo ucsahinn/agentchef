@@ -176,6 +176,15 @@ npm run chef -- --repair
 Refusing to write is deliberate: a repair that cannot verify the catalogs
 should not rewrite managed files.
 
+## `codex doctor` Is Slow Or Times Out
+
+`codex doctor` integrity-checks every session rollout under `CODEX_HOME`, so
+it slows down as session history grows. On one machine with 767 rollout files
+(14 GB) it took 137 seconds, almost all of it in the `state.paths` check. The
+verifier and status now allow 300 seconds and say why when they run out.
+Raise the budget with `--doctor-timeout-ms`, or archive old Codex sessions to
+make it fast again; AgentChef never deletes session history itself.
+
 ## "Another Operation Is Already In Progress" After An Interrupted Run
 
 Every write flow takes a lock directory (`.agentchef-operation.lock`) in each
