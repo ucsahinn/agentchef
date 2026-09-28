@@ -176,6 +176,16 @@ npm run chef -- --repair
 Yazmayı reddetmesi bilinçlidir: katalogları doğrulayamayan bir onarım, yönetilen
 dosyaları yeniden yazmamalıdır.
 
+## `codex doctor` Yavaş Ya Da Zaman Aşımına Uğruyor
+
+`codex doctor`, `CODEX_HOME` altındaki her oturum rollout dosyasının
+bütünlüğünü kontrol eder; bu yüzden oturum geçmişi büyüdükçe yavaşlar. 767
+rollout dosyası (14 GB) olan bir makinede 137 saniye sürdü ve neredeyse tamamı
+`state.paths` kontrolündeydi. Doğrulayıcı ve status artık 300 saniye tanıyor
+ve süre dolarsa nedenini söylüyor. Bütçeyi `--doctor-timeout-ms` ile artır ya
+da eski Codex oturumlarını arşivleyerek yeniden hızlandır; AgentChef oturum
+geçmişini asla kendisi silmez.
+
 ## Yarıda Kalan Bir Koşudan Sonra "Another Operation Is Already In Progress"
 
 Her yazma akışı, değiştirdiği her home'da bir kilit dizini

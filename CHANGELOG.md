@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Fixes from running every CLI command, MCP server, and skill on a live
+  install:
+  - The verifier ran `claude mcp list` and `claude plugin validate` with
+    `CLAUDE_CONFIG_DIR` forced to `~/.claude`, which makes Claude Code read
+    `~/.claude/.claude.json` instead of `~/.claude.json`: the probe saw none of
+    the 19 configured MCP servers and left a stray state file behind. The
+    variable is now set only for a relocated home (also in
+    `--migrate-identity`), and the MCP probe gets a 90 s budget because it
+    health-checks every server.
+  - AgentChef never overwrites a user's MCP entry, so a user-defined `context7`
+    or `serena` silently replaced AgentChef's while the receipts read
+    "current". The verifier now warns which defaults are shadowed; for serena
+    that means a per-session Serena instead of the shared read-only pool.
+  - `codex doctor` integrity-checks every session rollout; it took 137 s on a
+    machine with 767 rollouts (14 GB). The verifier's 12 s and status's 120 s
+    budgets made `chef --doctor` fail and status warn on a working CLI. Both
+    now allow 300 s and name the cause; `--doctor` no longer prints
+    "matches target: undefined" when doctor did not report it.
+  - `chef --backups` rebuilt the restore allowlist for every file of every
+    archive: 110 s for 131 backups, 9.6 s now, identical output.
+  - Docs claimed other catalog servers were documented with `claude mcp add`
+    commands that did not exist; they now say how to add them and that
+    GitHub's remote MCP needs a token header (no dynamic client registration).
+  - `--cleanup-stale` help and the process-hygiene docs still named only a
+    Codex owner.
+
 - Replace the Serena pool manager whenever its code changes. The launch
   profile only covered the Serena pin and the read-only mode, so a change to the
   manager itself (such as the new session release endpoint) left an older

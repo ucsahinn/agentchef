@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { findProblemRules } from "./lib/approval-rules.mjs";
 import { resolveInstallContract } from "./lib/install-contract.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
-import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
+import { claudeCliEnv, resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { claudeInstallReceiptName, claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion } from "./install-claude-target.mjs";
 import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receipt.mjs";
 import { inspectSkillLink } from "./lib/skill-links.mjs";
@@ -15,6 +15,7 @@ import { managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { cacheContentDrift } from "./refresh-installed-plugin.mjs";
+import { buildClaudeMcpEntry, claudeDefaultServers } from "./lib/claude-mcp-merge.mjs";
 import { inspectClaudePluginCache } from "./lib/claude-plugin-cache.mjs";
 import {
   inspectPinnedSkillTarget,
@@ -49,7 +50,9 @@ const options = {
   requireLiveRuntime: false,
   ambientDoctor: false,
   probeTimeoutMs: 30000,
-  doctorTimeoutMs: 12000,
+  // codex doctor integrity-checks every session rollout file; measured 137 s
+  // on a machine with 767 rollouts (14 GB), so a short budget failed there.
+  doctorTimeoutMs: 300000,
   mcpTimeoutMs: 15000,
   codexHome: process.env.CODEX_HOME || path.join(os.homedir(), ".codex"),
   agentsHome: process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"),
@@ -125,7 +128,7 @@ Options:
   --offline               Skip all live Codex CLI/runtime probes
   --no-mcp-probe          Run doctor probes but skip codex mcp list
   --probe-timeout-ms <n>  Default timeout for non-live helper probes (default: 30000)
-  --doctor-timeout-ms <n> Per-doctor timeout (default: 12000)
+  --doctor-timeout-ms <n> Per-doctor timeout (default: 300000; codex doctor scans all session history)
   --mcp-timeout-ms <n>    MCP list timeout (default: 15000)
   --require-live-runtime  Treat unavailable/timed-out live probes as failures
   --ambient-doctor         Also inspect the ambient CODEX_HOME; off by default to keep verification bounded
@@ -264,7 +267,7 @@ function runProbe(name, command, commandArgs, extra = {}) {
 // reads like a broken CLI.
 function doctorProbeError(error) {
   return error?.code === "ETIMEDOUT"
-    ? `timed out after ${options.doctorTimeoutMs} ms; if codex doctor is just slow on this machine, raise --doctor-timeout-ms`
+    ? `timed out after ${options.doctorTimeoutMs} ms. codex doctor scans every session rollout under CODEX_HOME, so it slows down as session history grows; raise --doctor-timeout-ms or archive old sessions`
     : error.message;
 }
 
@@ -955,6 +958,34 @@ function inspectGitGuards(failures) {
 // Claude Code serves a plugin from its own cache copy. That copy is refreshed
 // by version, so a content change without a version bump leaves sessions
 // loading stale definitions while every managed file still verifies clean.
+function inspectShadowedClaudeMcp(warnings) {
+  let document;
+  try {
+    document = JSON.parse(readText(options.claudeJson).replace(/^\uFEFF/, ""));
+  } catch {
+    return [];
+  }
+  const recordedPointers = new Set();
+  const receiptPath = path.join(options.claudeHome, "agentchef", "receipts", "claude-mcp-merge-receipt.json");
+  const mcpReceipt = fs.existsSync(receiptPath) ? readReceipt(receiptPath) : null;
+  for (const entry of mcpReceipt?.entries || []) if (entry.pointer) recordedPointers.add(entry.pointer);
+  const catalog = readJson("catalog/mcp-servers.json");
+  const shadowed = [];
+  for (const name of claudeDefaultServers) {
+    const current = document?.mcpServers?.[name];
+    if (!current || recordedPointers.has(`/mcpServers/${name}`)) continue;
+    const server = (catalog.servers || []).find((entry) => entry.name === name);
+    if (!server) continue;
+    const desired = buildClaudeMcpEntry(server, { platform: process.platform === "win32" ? "windows" : "unix", claudeHome: options.claudeHome });
+    if (JSON.stringify(current) === JSON.stringify(desired)) continue;
+    shadowed.push(name);
+  }
+  if (shadowed.length > 0) {
+    warnings.push(`Claude MCP ${shadowed.join(", ")}: your own definition in ${redact(options.claudeJson)} is used instead of AgentChef's (AgentChef never overwrites a user entry). For serena this means each Claude session starts its own Serena rather than the shared read-only pool.`);
+  }
+  return shadowed;
+}
+
 function inspectClaudeRuntime(failures, warnings) {
   const claudeHome = options.claudeHome;
   const receiptPath = path.join(claudeHome, "agentchef", claudeInstallReceiptName);
@@ -1003,6 +1034,10 @@ function inspectClaudeRuntime(failures, warnings) {
     if (changed.length > 0) warnings.push(`${changed.length} AgentChef entr${changed.length === 1 ? "y was" : "ies were"} changed by the user in ${redact(mergeReceipt.target)}; they are kept as user content.`);
     return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
   });
+  // AgentChef never overwrites an MCP entry the user defined, so a user entry
+  // with the same name as an AgentChef default silently wins. Say so: the
+  // receipts stay "current" while the AgentChef default is not in effect.
+  const mcpShadowed = inspectShadowedClaudeMcp(warnings);
   const claude = "claude";
   // Claude has its own switch: skipping the Codex CLI must not silently skip
   // every live Claude check along with it.
@@ -1018,11 +1053,13 @@ function inspectClaudeRuntime(failures, warnings) {
       );
     }
     const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
-    const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
+    const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: claudeCliEnv(claudeHome, { home: os.homedir() }) });
     cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
     if (cli.pluginValidate !== "ok") (options.requireLiveRuntime ? failures : warnings).push(`claude plugin validate --strict reported problems for ${redact(pluginSource)}.`);
     if (!options.noMcpProbe) {
-      const mcp = runProbe("claude mcp list", claude, ["mcp", "list"], { timeout: options.mcpTimeoutMs, env: { ...process.env, CLAUDE_CONFIG_DIR: claudeHome } });
+      // claude mcp list starts and health-checks every configured server (19
+      // here, several through cold npx), so it needs more than the codex budget.
+      const mcp = runProbe("claude mcp list", claude, ["mcp", "list"], { timeout: Math.max(options.mcpTimeoutMs, 90000), env: claudeCliEnv(claudeHome, { home: os.homedir() }) });
       cli.mcpList = mcp.error ? "error" : mcp.status === 0 ? "ok" : "fail";
       const listed = String(mcp.stdout || "");
       cli.mcpServers = ["context7", "serena"].filter((name) => new RegExp(`^\\s*${name}\\b`, "m").test(listed));
@@ -1031,7 +1068,7 @@ function inspectClaudeRuntime(failures, warnings) {
   } else if (!options.skipClaudeCli) {
     (options.requireLiveRuntime ? failures : warnings).push("claude CLI is not available on PATH; Claude Code runtime evidence is file-based only.");
   }
-  return { inspected: true, installed: true, claudeHome: redact(claudeHome), files, links, receipts, cli };
+  return { inspected: true, installed: true, claudeHome: redact(claudeHome), files, links, receipts, cli, mcpShadowed };
 }
 
 const failures = [];
@@ -1078,7 +1115,7 @@ if (options.json) {
   }
   if (report.runtime.inspected) {
     console.log(`Codex doctor home under test: ${report.runtime.activeCodexHome || "unknown"}`);
-    console.log(`Installed CODEX_HOME matches target: ${report.runtime.activeHomeMatchesInstall}`);
+    console.log(`Installed CODEX_HOME matches target: ${report.runtime.activeHomeMatchesInstall ?? "not reported (codex doctor did not return it)"}`);
     if (report.runtime.ambient?.inspected && report.runtime.ambient.activeHomeMatchesInstall === false) {
       console.log(`Ambient Codex home: ${report.runtime.ambient.activeCodexHome || "unknown"}`);
     }

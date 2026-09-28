@@ -18,10 +18,15 @@ deliberately need them.
 
 On the Claude Code target, AgentChef adds only `context7` and the lazy
 `serena` bridge to the user-scope `mcpServers` of `.claude.json`, records both
-in a receipt, and leaves any server you already defined untouched. The
-Codex-specific `openaiDeveloperDocs` entry is not added there; every other
-catalog server stays documented with its `claude mcp add` form in the
-[target capability map](target-capability-map.md).
+in a receipt, and leaves any server you already defined untouched: if you
+already have a `context7` or `serena` entry, yours stays in effect and
+`verify-install-runtime --target claude` says so. The Codex-specific
+`openaiDeveloperDocs` entry is not added there. Add any other catalog server
+yourself with `claude mcp add --scope user`, using the command and args from
+[catalog/mcp-servers.json](../catalog/mcp-servers.json). GitHub's remote MCP
+endpoint does not support OAuth dynamic client registration, so
+`claude mcp add` for it needs a personal access token header instead of
+`/mcp` login (measured: "Incompatible auth server").
 
 > **Configured is not the same as live.** A server can exist in the template
 > and still need a launcher, first-run package download, browser, authorization,

@@ -1007,16 +1007,20 @@ function summarizeCodexDoctor() {
   const doctorEnv = { ...process.env, CODEX_HOME: options.codexHome };
 
   function inspectOnce() {
+    // codex doctor scans every session rollout; 137 s was measured on a machine
+    // with 14 GB of session history, so 120 s reported a working CLI as broken.
     const result = run(codexCommand(), ["doctor", "--json"], {
       env: doctorEnv,
-      timeout: 120000
+      timeout: 300000
     });
     if (result.error) {
       return {
         inspected: false,
         status: "attention",
         failures: [],
-        warnings: [`codex doctor --json could not run: ${result.error.message}`]
+        warnings: [result.error.code === "ETIMEDOUT"
+          ? "codex doctor --json timed out after 300 s. It scans every session rollout under CODEX_HOME, so it slows down as session history grows; archive old sessions to speed it up."
+          : `codex doctor --json could not run: ${result.error.message}`]
       };
     }
 

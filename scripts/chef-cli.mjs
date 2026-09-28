@@ -1158,7 +1158,7 @@ Seçenekler:
   --delete       --backup ID için silme preview'i; arşivi silmek için --apply ekle
   --verbose-plan Preview ekranlarında tam install dry-run kanıtını basar
   --details      Özet ekranlarda tam tablo ve kanıt ayrıntılarını gösterir
-  --cleanup-stale Süresi dolmuş, aktif Codex sahibi olmayan yerel MCP ağaçlarını önizler
+  --cleanup-stale Süresi dolmuş, aktif Codex/Claude Code oturumu ya da Serena havuzu sahibi olmayan yerel MCP ağaçlarını önizler
   --apply        Update, install, reset, repair, remove, seçili skill install veya açık stale-process temizliği için write action izni verir
   --target T     --install/--preview/--reset/--remove/--migrate-identity için kurulum hedefi: codex (varsayılan), claude veya both
   --help         Bu yardımı gösterir
@@ -1214,7 +1214,7 @@ Options:
   --delete       Preview deletion for --backup ID; add --apply to remove the archive
   --verbose-plan Print the full install dry-run evidence for preview screens
   --details      Show full tables and evidence on summary screens
-  --cleanup-stale Preview expired local MCP trees that have no active Codex owner
+  --cleanup-stale Preview expired local MCP trees with no live Codex or Claude Code session or Serena pool owner
   --apply        Allow write actions for update, install, reset, repair, remove, selected skill install, or explicit stale-process cleanup
   --target T     Install target for --install/--preview/--reset/--remove/--migrate-identity: codex (default), claude, or both
   --help         Show this help
@@ -2830,7 +2830,20 @@ function listCanonicalTreeFiles(sourceRoot) {
   return files.sort();
 }
 
+// The allowlist walks the plugin tree and reads the catalogs. It was rebuilt
+// for every file of every archive, so listing 131 backups took ~110 s; it
+// only depends on the repository and the two homes, so it is built once.
+let restoreAllowlistCache = null;
+
 function managedRestoreAllowlist() {
+  const cacheKey = `${codexHome()}\0${agentsHome()}`;
+  if (restoreAllowlistCache?.key === cacheKey) return restoreAllowlistCache.mappings;
+  const mappings = buildManagedRestoreAllowlist();
+  restoreAllowlistCache = { key: cacheKey, mappings };
+  return mappings;
+}
+
+function buildManagedRestoreAllowlist() {
   const mappings = new Map();
   const add = (archiveRelative, target) => {
     mappings.set(archiveRelative.replaceAll("\\", "/"), target);

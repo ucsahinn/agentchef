@@ -90,7 +90,7 @@ test("runtime verifier help documents its effective timeout defaults", () => {
   const result = run(process.execPath, ["scripts/verify-install-runtime.mjs", "--help"]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /--probe-timeout-ms <n>\s+Default timeout for non-live helper probes \(default: 30000\)/);
-  assert.match(result.stdout, /--doctor-timeout-ms <n>\s+Per-doctor timeout \(default: 12000\)/);
+  assert.match(result.stdout, /--doctor-timeout-ms <n>\s+Per-doctor timeout \(default: 300000;/);
   assert.match(result.stdout, /--mcp-timeout-ms <n>\s+MCP list timeout \(default: 15000\)/);
 });
 

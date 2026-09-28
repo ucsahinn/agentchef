@@ -19,7 +19,7 @@ import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
 import { createOperationJournal, rollbackAfterFailure } from "./lib/operation-journal.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
-import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
+import { claudeCliEnv, resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { inspectDirectSkillTarget, markerFileName, writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
@@ -499,7 +499,7 @@ export function applyIdentityMigration(options, plan) {
           record(step.id, "skipped", { reason: `${step.kind === "codex-plugin-cli" ? "codex" : "claude"} CLI not available; run the listed commands later`, commands: step.commands });
           continue;
         }
-        const env = step.kind === "codex-plugin-cli" ? { ...process.env, CODEX_HOME: codexHome } : { ...process.env, CLAUDE_CONFIG_DIR: claudeHome };
+        const env = step.kind === "codex-plugin-cli" ? { ...process.env, CODEX_HOME: codexHome } : claudeCliEnv(claudeHome, { home });
         const outcomes = [];
         for (const line of step.commands) {
           const argv = line.split(" ").slice(1);
