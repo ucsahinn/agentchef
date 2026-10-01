@@ -42,7 +42,7 @@ incelendi. Yeni bir göç adımı yok; `-Update` hepsini alır.
 - Kataloglar: MCP pinleri, her sunucunun araç listesi yoklandıktan sonra
   yenilendi. `codebase-memory` bilerek 0.8.1'de kalır.
 
-Her düzeltme nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde.
+Her düzeltme, nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde listelenir.
 
 ### Ürün Sınırı
 
