@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Grant Serena to read-only roles by tool name. `mcp__serena` grants every tool of
+  the active Serena entry; the AgentChef pool serves only read tools, but a
+  user's own Serena entry (which AgentChef never replaces) also serves its
+  editing and memory-writing tools, and `code-mapper` reported having
+  `replace_symbol_body` and `write_memory` on a live machine. Roles now get
+  `mcp__serena__<tool>` for the pool's read allowlist only.
 - Close the remaining low-severity findings from the 1.2.0 audit:
   - `codex-status` treated a `codex doctor --json` that printed nothing as
     zero checks, all passing. It now reports that the checks could not be

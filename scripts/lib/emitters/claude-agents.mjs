@@ -10,6 +10,22 @@ const readOnlyTools = ["Read", "Grep", "Glob"];
 const writeTools = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"];
 const webTools = ["WebSearch", "WebFetch"];
 
+// `mcp__serena` grants every tool of whichever Serena entry is active. The
+// AgentChef pool only serves read tools, but a user's own Serena entry (which
+// AgentChef never replaces) also serves its editing and memory-writing tools,
+// so a read-only role was handed them (seen live). Serena is granted by tool
+// name, limited to the pool's own read allowlist.
+const serenaReadTools = (() => {
+  const source = fs.readFileSync(new URL("../../../templates/codex/serena-pool.mjs", import.meta.url), "utf8");
+  const match = /const TOOL_NAMES = \[([\s\S]*?)\];/.exec(source);
+  if (!match) throw new Error("serena-pool.mjs TOOL_NAMES not found");
+  return JSON.parse(`[${match[1]}]`);
+})();
+
+function mcpGrants(server) {
+  return server === "serena" ? serenaReadTools.map((tool) => `mcp__serena__${tool}`) : [`mcp__${server}`];
+}
+
 function parseRoleToml(text) {
   const values = {};
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -50,7 +66,7 @@ function yamlString(value) {
 function toolsFor(agent) {
   const base = agent.sandboxMode === "workspace-write" ? writeTools : readOnlyTools;
   const withWeb = agent.webSearch ? [...base, ...webTools] : base;
-  const tools = [...withWeb, ...(agent.claudeMcp || []).map((server) => `mcp__${server}`)];
+  const tools = [...withWeb, ...(agent.claudeMcp || []).flatMap(mcpGrants)];
   const disallowed = agent.sandboxMode === "workspace-write"
     ? ["NotebookEdit"]
     : ["Write", "Edit", "NotebookEdit", "Bash"];
