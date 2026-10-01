@@ -712,6 +712,48 @@ function parseTextCommand(command, commandArgs, label, extra = {}) {
   };
 }
 
+// `codex --strict-config --version` exits 0 without reading config.toml
+// (measured on 0.158.0 with an invented table), so "strict config ok" proved
+// nothing. `codex exec --strict-config` does load it; with a provider that
+// does not exist it stops at "provider not found" once the config is valid.
+// It runs against a copy in a temporary home, so status writes nothing to the
+// real Codex home (exec opens its state and log databases).
+const STRICT_PROBE_PROVIDER = "agentchef-status-probe";
+function probeStrictConfig(codexHomePath, label, env) {
+  const configPath = path.join(codexHomePath, "config.toml");
+  // No config.toml is not a strict-config failure: Codex runs on defaults.
+  if (!fs.existsSync(configPath)) {
+    return { inspected: false, status: "ok", label, exitCode: null, note: "no config.toml; Codex uses its defaults", outputPreview: null };
+  }
+  const probeHome = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-strict-probe-"));
+  try {
+    fs.copyFileSync(configPath, path.join(probeHome, "config.toml"));
+    const agentsDir = path.join(codexHomePath, "agents");
+    if (fs.existsSync(agentsDir)) fs.cpSync(agentsDir, path.join(probeHome, "agents"), { recursive: true });
+    progress(`running ${label} (timeout 60s)`);
+    const result = run(codexCommand(), ["exec", "--strict-config", "--ephemeral", "--skip-git-repo-check", "-c", `model_provider=${STRICT_PROBE_PROVIDER}`, "noop"], {
+      timeout: 60000,
+      env: { ...env, CODEX_HOME: probeHome }
+    });
+    const output = redact([result.stdout, result.stderr].filter(Boolean).join("\n").trim());
+    if (result.error) {
+      return { inspected: false, status: "attention", label, exitCode: null, summary: `${label} could not run: ${result.error.message}`, outputPreview: null };
+    }
+    const loaded = output.includes(`Model provider \`${STRICT_PROBE_PROVIDER}\` not found`);
+    const firstError = output.split(/\r?\n/).find((line) => /error|unknown|invalid/i.test(line));
+    return {
+      inspected: true,
+      status: loaded ? "ok" : "attention",
+      label,
+      exitCode: result.status,
+      ...(loaded ? {} : { summary: `${label}: config.toml does not load under --strict-config${firstError ? `: ${firstError.trim()}` : ""}` }),
+      outputPreview: output.split(/\r?\n/).filter(Boolean).slice(0, 6)
+    };
+  } finally {
+    try { fs.rmSync(probeHome, { recursive: true, force: true }); } catch { /* left for the OS temp cleaner */ }
+  }
+}
+
 function mcpEntriesFromParsed(parsed) {
   if (Array.isArray(parsed)) return parsed;
   if (Array.isArray(parsed?.servers)) return parsed.servers;
@@ -777,7 +819,7 @@ function inspectCodexCliRuntime() {
   }
 
   function inspectWithEnv(env, labelPrefix) {
-    const version = parseTextCommand(codexCommand(), ["--strict-config", "--version"], `${labelPrefix} codex --strict-config --version`, { env });
+    const version = probeStrictConfig(env.CODEX_HOME || path.join(os.homedir(), ".codex"), `${labelPrefix} codex exec --strict-config`, env);
     const login = parseTextCommand(codexCommand(), ["login", "status"], `${labelPrefix} codex login status`, { env });
     const mcp = parseJsonCommand(codexCommand(), ["mcp", "list", "--json"], `${labelPrefix} codex mcp list --json`, { env });
     const mcpEntries = mcpEntriesFromParsed(mcp.parsed);

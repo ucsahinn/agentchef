@@ -42,7 +42,7 @@ function writeFakeCodexCommand() {
     const commandPath = path.join(fixtureDir, "fake-codex.cmd");
     fs.writeFileSync(commandPath, [
       "@echo off",
-      "if \"%1\"==\"--strict-config\" echo codex-cli 0.140.0 C:\\\\Users\\\\codex-status-private\\\\AppData && exit /b 0",
+      "if \"%1\"==\"exec\" echo Error: Model provider `agentchef-status-probe` not found codex-cli 0.140.0 C:\\\\Users\\\\codex-status-private\\\\AppData && exit /b 1",
       "if \"%1\"==\"login\" echo logged in from C:\\\\Users\\\\codex-status-private\\\\auth && exit /b 0",
       "if \"%1\"==\"mcp\" echo [{\"name\":\"fakeMcp\"}] && exit /b 0",
       "echo unexpected fake codex args %*",
@@ -55,7 +55,7 @@ function writeFakeCodexCommand() {
   const commandPath = path.join(fixtureDir, "fake-codex.sh");
   fs.writeFileSync(commandPath, [
     "#!/bin/sh",
-    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.140.0 C:\\\\Users\\\\codex-status-private\\\\AppData\\n'; exit 0; fi",
+    "if [ \"$1\" = \"exec\" ]; then printf 'Error: Model provider `agentchef-status-probe` not found codex-cli 0.140.0 C:\\\\Users\\\\codex-status-private\\\\AppData\\n'; exit 1; fi",
     "if [ \"$1\" = \"login\" ]; then printf 'logged in from C:\\\\Users\\\\codex-status-private\\\\auth\\n'; exit 0; fi",
     "if [ \"$1\" = \"mcp\" ]; then printf '[{\"name\":\"fakeMcp\"}]\\n'; exit 0; fi",
     "printf 'unexpected fake codex args %s\\n' \"$*\"",
@@ -81,7 +81,7 @@ function writeAmbientDriftCodexCommand() {
     const commandPath = path.join(fixtureDir, "ambient-drift-codex.cmd");
     fs.writeFileSync(commandPath, [
       "@echo off",
-      "if \"%1\"==\"--strict-config\" echo codex-cli 0.142.0 && exit /b 0",
+      "if \"%1\"==\"exec\" echo Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0 && exit /b 1",
       "if \"%1\"==\"login\" echo Logged in && exit /b 0",
       `if "%1"=="mcp" if "%CODEX_HOME%"=="" type "${ambientServersPath}" && exit /b 0`,
       `if "%1"=="mcp" type "${expectedServersPath}" && exit /b 0`,
@@ -95,7 +95,7 @@ function writeAmbientDriftCodexCommand() {
   const commandPath = path.join(fixtureDir, "ambient-drift-codex.sh");
   fs.writeFileSync(commandPath, [
     "#!/bin/sh",
-    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.142.0\\n'; exit 0; fi",
+    "if [ \"$1\" = \"exec\" ]; then printf 'Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0\\n'; exit 1; fi",
     "if [ \"$1\" = \"login\" ]; then printf 'Logged in\\n'; exit 0; fi",
     `if [ "$1" = "mcp" ] && [ -z "$CODEX_HOME" ]; then cat '${ambientServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
     `if [ "$1" = "mcp" ]; then cat '${expectedServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
@@ -128,7 +128,7 @@ function writeAmbientMcpStateDriftCodexCommand() {
     const commandPath = path.join(fixtureDir, "ambient-state-drift-codex.cmd");
     fs.writeFileSync(commandPath, [
       "@echo off",
-      "if \"%1\"==\"--strict-config\" echo codex-cli 0.142.0 && exit /b 0",
+      "if \"%1\"==\"exec\" echo Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0 && exit /b 1",
       "if \"%1\"==\"login\" echo Logged in && exit /b 0",
       `if "%1"=="mcp" if "%CODEX_HOME%"=="" type "${ambientServersPath}" && exit /b 0`,
       `if "%1"=="mcp" type "${targetServersPath}" && exit /b 0`,
@@ -142,7 +142,7 @@ function writeAmbientMcpStateDriftCodexCommand() {
   const commandPath = path.join(fixtureDir, "ambient-state-drift-codex.sh");
   fs.writeFileSync(commandPath, [
     "#!/bin/sh",
-    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.142.0\\n'; exit 0; fi",
+    "if [ \"$1\" = \"exec\" ]; then printf 'Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0\\n'; exit 1; fi",
     "if [ \"$1\" = \"login\" ]; then printf 'Logged in\\n'; exit 0; fi",
     `if [ "$1" = "mcp" ] && [ -z "$CODEX_HOME" ]; then cat '${ambientServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
     `if [ "$1" = "mcp" ]; then cat '${targetServersPath.replaceAll("'", "'\\''")}'; exit 0; fi`,
@@ -169,7 +169,7 @@ function writeNonzeroDoctorCodexCommand() {
     const commandPath = path.join(fixtureDir, "nonzero-doctor-codex.cmd");
     fs.writeFileSync(commandPath, [
       "@echo off",
-      "if \"%1\"==\"--strict-config\" echo codex-cli 0.142.0 && exit /b 0",
+      "if \"%1\"==\"exec\" echo Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0 && exit /b 1",
       "if \"%1\"==\"login\" echo Logged in && exit /b 0",
       "if \"%1\"==\"mcp\" echo [{\"name\":\"fakeMcp\",\"enabled\":true}] && exit /b 0",
       `if "%1"=="doctor" echo ${doctorJson} && exit /b 9`,
@@ -183,7 +183,7 @@ function writeNonzeroDoctorCodexCommand() {
   const commandPath = path.join(fixtureDir, "nonzero-doctor-codex.sh");
   fs.writeFileSync(commandPath, [
     "#!/bin/sh",
-    "if [ \"$1\" = \"--strict-config\" ]; then printf 'codex-cli 0.142.0\\n'; exit 0; fi",
+    "if [ \"$1\" = \"exec\" ]; then printf 'Error: Model provider `agentchef-status-probe` not found codex-cli 0.142.0\\n'; exit 1; fi",
     "if [ \"$1\" = \"login\" ]; then printf 'Logged in\\n'; exit 0; fi",
     "if [ \"$1\" = \"mcp\" ]; then printf '[{\"name\":\"fakeMcp\",\"enabled\":true}]\\n'; exit 0; fi",
     `if [ "$1" = "doctor" ]; then printf '%s\\n' '${doctorJson.replaceAll("'", "'\\''")}'; exit 9; fi`,
