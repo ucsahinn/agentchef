@@ -19,13 +19,43 @@ existing 0.5.74 installation:
   `CODEX_CHEF_BRAIN_HOME` are removed.
 - On-disk identity is unchanged: the plugin id, ownership markers, backup
   folder names, and schema strings still use the `codex-chef` prefix, so no
-  migration step is needed for 0.6.0. The identity rename is scheduled for
+  migration step is needed for 0.6.0. The identity rename shipped in
   1.0.0 with a dedicated, preview-first migration command.
 - The German, Spanish, French, and Brazilian Portuguese README summaries were
   removed; English and Turkish documentation remain at full parity.
 
 The regular update flow below applies; the preview will show the renamed
 `AGENTS.md` text and the removed Brain skill step.
+
+## Upgrading From 0.6.0 To 0.9.0
+
+0.9.0 adds Claude Code as a second install target. For an existing Codex
+install nothing changes by default: the update flow below keeps managing
+`~/.codex` and `~/.agents` exactly as before, and on-disk identity still uses
+the `codex-chef` prefix. New in 0.9.0:
+
+- `--target codex|claude|both` on the installers, `npm run chef -- --install`,
+  `--preview`, `--reset`, and the new `--remove`. Interactive installs
+  detect the `codex` and `claude` CLIs and ask which targets to manage.
+- The Claude Code surface is installed by one transaction helper
+  (`scripts/install-claude-target.mjs`); see
+  [Claude Code surfaces](claude-surfaces.md).
+- `npm run chef -- --remove --target <t>` is a preview-first removal that
+  deletes only AgentChef-owned files, links, marketplace entries, and
+  receipt-recorded settings; user content, Git guards, and backups stay.
+  The generated MCP profiles (full, multi-session, offline) also stay. The
+  cached pinned-skill checkouts under `CODEX_HOME/cache/pinned-skill-sources`
+  that carry AgentChef's receipt are removed without a backup, because a
+  reinstall downloads them again from the pinned commit. A plugin marketplace
+  file left holding nothing but AgentChef's own empty skeleton is removed with
+  the entry. `CODEX_HOME/serena-pool` keeps the local pool token, which both
+  harnesses share; delete it once no session is open. While a `config.toml`
+  merged into your own settings stays, the Serena bridge and agent role files
+  it points at stay as `kept-referenced`, so Codex keeps starting cleanly.
+  Remove the `[mcp_servers.serena]` and `[agents.*]` tables, then run the
+  removal again to delete them.
+- `npm run verify:install:runtime -- --target claude` and
+  `npm run codex:status -- --target both` verify the Claude side.
 
 ## Upgrading From 0.9.0 To 1.0.0
 
@@ -77,35 +107,21 @@ The skill-link step now links only skills that are still in
 `catalog/skills.json`; a managed directory that left the catalog is reported as
 `retired` and left alone.
 
-## Upgrading From 0.6.0 To 0.9.0
+## Upgrading From 1.x To 1.2.0
 
-0.9.0 adds Claude Code as a second install target. For an existing Codex
-install nothing changes by default: the update flow below keeps managing
-`~/.codex` and `~/.agents` exactly as before, and on-disk identity still uses
-the `codex-chef` prefix. New in 0.9.0:
+No migration step is needed. Run the guided update; it refreshes every target
+that is installed (the Codex target, the Claude Code target, or both) and moves
+Claude Code to the new plugin version:
 
-- `--target codex|claude|both` on the installers, `npm run chef -- --install`,
-  `--preview`, `--reset`, and the new `--remove`. Interactive installs
-  detect the `codex` and `claude` CLIs and ask which targets to manage.
-- The Claude Code surface is installed by one transaction helper
-  (`scripts/install-claude-target.mjs`); see
-  [Claude Code surfaces](claude-surfaces.md).
-- `npm run chef -- --remove --target <t>` is a preview-first removal that
-  deletes only AgentChef-owned files, links, marketplace entries, and
-  receipt-recorded settings; user content, Git guards, and backups stay.
-  The generated MCP profiles (full, multi-session, offline) also stay. The
-  cached pinned-skill checkouts under `CODEX_HOME/cache/pinned-skill-sources`
-  that carry AgentChef's receipt are removed without a backup, because a
-  reinstall downloads them again from the pinned commit. A plugin marketplace
-  file left holding nothing but AgentChef's own empty skeleton is removed with
-  the entry. `CODEX_HOME/serena-pool` keeps the local pool token, which both
-  harnesses share; delete it once no session is open. While a `config.toml`
-  merged into your own settings stays, the Serena bridge and agent role files
-  it points at stay as `kept-referenced`, so Codex keeps starting cleanly.
-  Remove the `[mcp_servers.serena]` and `[agents.*]` tables, then run the
-  removal again to delete them.
-- `npm run verify:install:runtime -- --target claude` and
-  `npm run codex:status -- --target both` verify the Claude side.
+```powershell
+npm run chef -- --update            # preview
+npm run chef -- --update --apply    # apply after review
+```
+
+Pass `--target codex|claude|both` to choose explicitly. After the update the
+Serena backend is fetched once more for the new pin (v1.7.0), so the first
+semantic call takes longer. See the [release notes](release-notes.md) for what
+changed.
 
 ## Safe Upgrade Flow
 

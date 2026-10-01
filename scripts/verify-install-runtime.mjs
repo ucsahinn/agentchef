@@ -955,6 +955,24 @@ function inspectGitGuards(failures) {
 // the claude CLI are the evidence. Missing CLI is a warning unless
 // --require-live-runtime is set; a broken managed file or a receipt entry that
 // disappeared is a failure.
+// project_ref is what narrows the Supabase connector to one project; enabling
+// it without one grants every project in the account, and the template only
+// says so in a comment.
+function inspectSupabaseScope(failures) {
+  let config;
+  try { config = readText(path.join(options.codexHome, "config.toml")); } catch { return { inspected: false }; }
+  const start = config.search(/^\[mcp_servers\.supabase\]\s*$/m);
+  if (start < 0) return { inspected: true, configured: false };
+  const rest = config.slice(start).split(/\r?\n/);
+  const block = [rest[0], ...rest.slice(1).filter((_, index, lines) => !lines.slice(0, index + 1).some((line) => /^\[/.test(line)))].join("\n");
+  const enabled = /^\s*enabled\s*=\s*true\b/m.test(block);
+  const url = (/^\s*url\s*=\s*"([^"]*)"/m.exec(block) || [])[1] || "";
+  const scoped = /[?&]project_ref=[^&]+/.test(url);
+  if (enabled && !scoped) failures.push("The Supabase MCP connector is enabled without a project_ref, so it can reach every project in the account; add project_ref=<project> to its url or set enabled = false.");
+  if (enabled && !/[?&]read_only=true\b/.test(url)) failures.push("The Supabase MCP connector is enabled without read_only=true.");
+  return { inspected: true, configured: true, enabled, scoped };
+}
+
 // Claude Code serves a plugin from its own cache copy. That copy is refreshed
 // by version, so a content change without a version bump leaves sessions
 // loading stale definitions while every managed file still verifies clean.
@@ -1077,7 +1095,14 @@ function inspectClaudeRuntime(failures, warnings) {
       if (cli.mcpList !== "ok") (options.requireLiveRuntime ? failures : warnings).push("claude mcp list did not succeed with the installed Claude home.");
     }
   } else if (!options.skipClaudeCli) {
-    (options.requireLiveRuntime ? failures : warnings).push("claude CLI is not available on PATH; Claude Code runtime evidence is file-based only.");
+    // A probe that timed out or exited non-zero is not a missing CLI; saying
+    // "not on PATH" sent people to reinstall a CLI that was there.
+    const reason = version?.error?.code === "ETIMEDOUT"
+      ? "claude --version timed out"
+      : version?.error?.code === "ENOENT" || !version
+        ? "claude CLI is not available on PATH"
+        : `claude --version did not succeed (${version.error ? version.error.message : `exit ${version.status}`})`;
+    (options.requireLiveRuntime ? failures : warnings).push(`${reason}; Claude Code runtime evidence is file-based only.`);
   }
   return { inspected: true, installed: true, claudeHome: redact(claudeHome), files, links, receipts, cli, mcpShadowed };
 }
@@ -1093,6 +1118,7 @@ const report = {
   installed: options.verifyCodex ? inspectInstalledFiles(failures) : { inspected: false, codexHome: redact(options.codexHome), agentsHome: redact(options.agentsHome), agents: { installed: 0, expected: 0 }, mcp: { installed: 0, expected: 0 } },
   managedFiles: options.verifyCodex ? inspectManagedFileDrift(failures, warnings) : { inspected: false, matched: 0, expected: 0 },
   configDrift: options.verifyCodex ? inspectConfigDrift(failures) : { inspected: false },
+  supabaseScope: options.verifyCodex ? inspectSupabaseScope(failures) : { inspected: false },
   runtime: options.verifyCodex ? inspectCodexRuntime(failures, warnings) : { inspected: false },
   plugin: options.verifyCodex ? inspectPluginRuntime(failures, warnings) : { inspected: false },
   skills: options.verifyCodex ? inspectSkills(failures, warnings) : { inspected: false, installed: 0, missing: [] },

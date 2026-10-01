@@ -30,6 +30,15 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 
 This does not change the machine or user execution policy permanently.
 
+The same policy blocks `npm` itself in PowerShell: under the Windows default
+(`Restricted`), `npm run chef` stops with "npm.ps1 cannot be loaded because
+running scripts is disabled". Either set the process-local policy above, or
+call the `.cmd` shim, which the policy does not cover:
+
+```powershell
+npm.cmd run chef -- --install
+```
+
 ## Bash, WSL, Or Git Bash
 
 The Bash installer needs a real Bash environment:

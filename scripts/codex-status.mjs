@@ -1076,9 +1076,19 @@ function summarizeCodexDoctor() {
       };
     }
 
+    // Empty output parsed as {} counted as zero checks, all passing: a doctor
+    // that printed nothing read as healthy.
+    if (!String(result.stdout || "").trim()) {
+      return {
+        inspected: false,
+        status: "attention",
+        failures: [],
+        warnings: [`codex doctor --json printed no report (exit ${result.status}); its checks could not be read.`]
+      };
+    }
     let parsed;
     try {
-      parsed = JSON.parse(result.stdout || "{}");
+      parsed = JSON.parse(result.stdout);
     } catch (error) {
       return {
         inspected: false,

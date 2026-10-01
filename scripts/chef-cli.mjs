@@ -4893,9 +4893,12 @@ function processAuditPayload() {
 
 function runProcesses() {
   const payload = processAuditPayload();
+  // When only the name-count fallback could run there is no cleanup plan, so
+  // an approved --cleanup-stale --apply did nothing; it must not end "ready".
+  const cleanupBlocked = Boolean(options.cleanupStale && options.apply && payload.detailAvailable === false);
   if (options.json) {
     console.log(JSON.stringify(payload, null, 2));
-    return { ok: !payload.cleanupResults?.some((item) => !item.ok) };
+    return { ok: !cleanupBlocked && !payload.cleanupResults?.some((item) => !item.ok) };
   }
 
   printSurfaceHeader(
@@ -4958,7 +4961,13 @@ function runProcesses() {
   console.log("");
   console.log(styleHeading(localText("Safety notes", "Güvenlik notları")));
   for (const item of payload.safety) console.log(`- ${item}`);
-  return { ok: !payload.cleanupResults?.some((item) => !item.ok) };
+  if (cleanupBlocked) {
+    console.log(`${ICONS.warn} ${localText(
+      "Cleanup did not run: the detailed process audit was unavailable, so there is no safe cleanup plan.",
+      "Temizlik çalışmadı: ayrıntılı süreç denetimi kullanılamadığı için güvenli bir temizlik planı yok."
+    )}`);
+  }
+  return { ok: !cleanupBlocked && !payload.cleanupResults?.some((item) => !item.ok) };
 }
 
 function runDiagnostics() {

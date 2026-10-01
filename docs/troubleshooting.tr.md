@@ -29,6 +29,15 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 
 Bu komut makine veya kullanıcı execution policy'sini kalıcı değiştirmez.
 
+Aynı policy PowerShell'de `npm`'in kendisini de engeller: Windows varsayılanında
+(`Restricted`) `npm run chef`, "npm.ps1 cannot be loaded because running scripts
+is disabled" hatasıyla durur. Ya yukarıdaki süreç içi policy'yi ayarla ya da
+policy'nin kapsamadığı `.cmd` sarmalayıcısını çağır:
+
+```powershell
+npm.cmd run chef -- --install
+```
+
 ## Bash, WSL Veya Git Bash
 
 Bash installer gerçek Bash ortamı ister:

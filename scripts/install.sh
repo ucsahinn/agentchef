@@ -1190,11 +1190,13 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
 fi
 
 section "Capability board"
-node - "$REPO_ROOT" <<'NODE'
+node - "$REPO_ROOT" "$INSTALL_CODEX" "$INSTALL_CLAUDE" <<'NODE'
 const fs = require("fs");
 const path = require("path");
 
 const root = process.argv[2];
+const installCodex = process.argv[3] === "1";
+const installClaude = process.argv[4] === "1";
 const readJson = (relativePath) =>
   JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
 const agentCatalog = readJson("catalog/agents.json");
@@ -1227,8 +1229,10 @@ const routingProfiles = routingCatalog.profiles.map((profile) => profile.id);
 
 for (const [label, names] of [
   ["Agents ready", agents],
-  ["MCP ready by default", readyMcps],
-  ["MCP opt-in / disabled by default", optInMcps],
+  // The Codex lines describe config.toml; the Claude target adds its own
+  // defaults to .claude.json (kept in step with claudeDefaultServers).
+  ...(installCodex ? [["MCP ready by default", readyMcps], ["MCP opt-in / disabled by default", optInMcps]] : []),
+  ...(installClaude ? [["Claude Code MCP added by default", ["context7", "serena"]]] : []),
   ["MCP setup notes", mcpSetupNotes],
   ["Local plugin skills", pluginSkills],
   ["Reviewed global skills", reviewedSkills],

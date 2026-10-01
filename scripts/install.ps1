@@ -1180,8 +1180,15 @@ try {
   $ReviewedSkills = @($SkillCatalog.skills | Where-Object { $_.install -eq $true } | ForEach-Object { $_.name })
   $RoutingProfiles = @($RoutingCatalog.profiles | ForEach-Object { $_.id })
   Write-NameList -Label "Agents ready" -Names $AgentNames -Color "White"
-  Write-NameList -Label "MCP ready by default" -Names $McpReady -Color "White"
-  Write-NameList -Label "MCP opt-in / disabled by default" -Names $McpOptIn -Color "DarkYellow"
+  # The Codex lines describe config.toml; the Claude target adds its own
+  # defaults to .claude.json (kept in step with claudeDefaultServers).
+  if ($InstallCodex) {
+    Write-NameList -Label "MCP ready by default" -Names $McpReady -Color "White"
+    Write-NameList -Label "MCP opt-in / disabled by default" -Names $McpOptIn -Color "DarkYellow"
+  }
+  if ($InstallClaude) {
+    Write-NameList -Label "Claude Code MCP added by default" -Names @("context7", "serena") -Color "White"
+  }
   Write-NameList -Label "MCP setup notes" -Names $McpSetupNotes -Color "DarkYellow"
   Write-NameList -Label "Local plugin skills" -Names $PluginSkills -Color "White"
   Write-NameList -Label "Reviewed global skills" -Names $ReviewedSkills -Color "White"

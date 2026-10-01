@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+- Close the remaining low-severity findings from the 1.2.0 audit:
+  - `codex-status` treated a `codex doctor --json` that printed nothing as
+    zero checks, all passing. It now reports that the checks could not be
+    read.
+  - The verifier said "claude CLI is not available on PATH" when `claude
+    --version` timed out or failed. It now names what happened.
+  - `--processes --cleanup-stale --apply` ended "ready" when only the
+    name-count fallback audit could run, although nothing was cleaned. It
+    now fails and says why.
+  - The verifier fails when the Supabase connector is enabled without a
+    `project_ref` (account-wide scope) or without `read_only=true`. The
+    template only asked for them in a comment.
+  - The installer's capability board listed the Codex MCP defaults for a
+    Claude-only install. It now shows the Codex lines only for the Codex
+    target and adds what the Claude target installs (`context7`, `serena`).
+  - The upgrade guide is in release order, has a 1.x → 1.2.0 section, and no
+    longer calls the 1.0.0 rename "scheduled".
+  - The troubleshooting guide and both READMEs say that under the Windows
+    default execution policy `npm` itself is blocked in PowerShell
+    ("npm.ps1 cannot be loaded", measured) and that `npm.cmd` works.
+
 ## 1.2.0 - 2026-10-01
 
 - Update the Claude Code plugin on an AgentChef upgrade. Applying 1.1.0 live

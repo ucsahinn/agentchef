@@ -20,12 +20,43 @@ değişenler:
 - Diskteki kimlik değişmedi: plugin id'si, sahiplik işaretçileri, yedek klasörü
   adları ve şema stringleri hâlâ `codex-chef` önekini kullanır; 0.6.0 için göç
   adımı gerekmez. Kimlik yeniden adlandırması, önce-ön-izle mantıklı özel bir
-  göç komutuyla 1.0.0'a planlandı.
+  göç komutuyla 1.0.0'da yayınlandı.
 - Almanca, İspanyolca, Fransızca ve Brezilya Portekizcesi README özetleri
   kaldırıldı; İngilizce ve Türkçe dokümantasyon tam paritede sürüyor.
 
 Aşağıdaki normal güncelleme akışı geçerlidir; ön izleme, yeniden adlandırılmış
 `AGENTS.md` metnini ve kaldırılan Brain skill adımını gösterir.
+
+## 0.6.0'dan 0.9.0'a Geçiş
+
+0.9.0, ikinci kurulum hedefi olarak Claude Code'u ekler. Mevcut bir Codex
+kurulumu için varsayılan olarak hiçbir şey değişmez: aşağıdaki güncelleme
+akışı `~/.codex` ve `~/.agents` dizinlerini eskisi gibi yönetmeye devam eder
+ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler:
+
+- Installer'larda, `npm run chef -- --install`, `--preview`, `--reset` ve
+  yeni `--remove` komutunda `--target codex|claude|both`. Etkileşimli
+  kurulum `codex` ve `claude` CLI'larını algılar ve hangi hedeflerin
+  yönetileceğini sorar.
+- Claude Code yüzeyi tek bir transaction yardımcısıyla kurulur
+  (`scripts/install-claude-target.mjs`); bkz.
+  [Claude Code yüzeyleri](claude-surfaces.tr.md).
+- `npm run chef -- --remove --target <t>`, yalnızca AgentChef'e ait dosyaları,
+  bağlantıları, marketplace girdilerini ve makbuza kayıtlı ayarları silen
+  önce-ön-izle bir kaldırmadır; kullanıcı içeriği, Git guard'ları ve yedekler
+  kalır. Üretilen MCP profilleri (full, multi-session, offline) de kalır.
+  `CODEX_HOME/cache/pinned-skill-sources` altında AgentChef makbuzu taşıyan
+  pinli skill önbellekleri yedeksiz silinir; yeniden kurulum onları pinli
+  commit'ten tekrar indirir. Girdi silindikten sonra yalnızca AgentChef'in boş
+  iskeleti kalan plugin marketplace dosyası da kaldırılır.
+  `CODEX_HOME/serena-pool` iki ortamın paylaştığı yerel havuz token'ını tutar;
+  açık oturum kalmadığında silebilirsiniz. Kendi ayarlarınıza birleştirilmiş
+  bir `config.toml` kaldığı sürece, onun işaret ettiği Serena köprüsü ve ajan
+  rol dosyaları `kept-referenced` olarak kalır; böylece Codex temiz açılmaya
+  devam eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldırıp
+  kaldırma işlemini yeniden çalıştırırsanız bu dosyalar da silinir.
+- `npm run verify:install:runtime -- --target claude` ve
+  `npm run codex:status -- --target both` Claude tarafını doğrular.
 
 ## 0.9.0'dan 1.0.0'a Geçiş
 
@@ -78,36 +109,20 @@ kendin sil. Skill bağlantı adımı artık yalnızca hâlâ `catalog/skills.jso
 içinde olan skill'leri bağlar; katalogdan çıkmış yönetilen bir dizin `retired`
 olarak raporlanır ve dokunulmaz.
 
-## 0.6.0'dan 0.9.0'a Geçiş
+## 1.x'ten 1.2.0'a Geçiş
 
-0.9.0, ikinci kurulum hedefi olarak Claude Code'u ekler. Mevcut bir Codex
-kurulumu için varsayılan olarak hiçbir şey değişmez: aşağıdaki güncelleme
-akışı `~/.codex` ve `~/.agents` dizinlerini eskisi gibi yönetmeye devam eder
-ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler:
+Göç adımı gerekmez. Rehberli güncellemeyi çalıştır; kurulu her hedefi (Codex
+hedefi, Claude Code hedefi ya da ikisi) yeniler ve Claude Code'u yeni plugin
+sürümüne taşır:
 
-- Installer'larda, `npm run chef -- --install`, `--preview`, `--reset` ve
-  yeni `--remove` komutunda `--target codex|claude|both`. Etkileşimli
-  kurulum `codex` ve `claude` CLI'larını algılar ve hangi hedeflerin
-  yönetileceğini sorar.
-- Claude Code yüzeyi tek bir transaction yardımcısıyla kurulur
-  (`scripts/install-claude-target.mjs`); bkz.
-  [Claude Code yüzeyleri](claude-surfaces.tr.md).
-- `npm run chef -- --remove --target <t>`, yalnızca AgentChef'e ait dosyaları,
-  bağlantıları, marketplace girdilerini ve makbuza kayıtlı ayarları silen
-  önce-ön-izle bir kaldırmadır; kullanıcı içeriği, Git guard'ları ve yedekler
-  kalır. Üretilen MCP profilleri (full, multi-session, offline) de kalır.
-  `CODEX_HOME/cache/pinned-skill-sources` altında AgentChef makbuzu taşıyan
-  pinli skill önbellekleri yedeksiz silinir; yeniden kurulum onları pinli
-  commit'ten tekrar indirir. Girdi silindikten sonra yalnızca AgentChef'in boş
-  iskeleti kalan plugin marketplace dosyası da kaldırılır.
-  `CODEX_HOME/serena-pool` iki ortamın paylaştığı yerel havuz token'ını tutar;
-  açık oturum kalmadığında silebilirsiniz. Kendi ayarlarınıza birleştirilmiş
-  bir `config.toml` kaldığı sürece, onun işaret ettiği Serena köprüsü ve ajan
-  rol dosyaları `kept-referenced` olarak kalır; böylece Codex temiz açılmaya
-  devam eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldırıp
-  kaldırma işlemini yeniden çalıştırırsanız bu dosyalar da silinir.
-- `npm run verify:install:runtime -- --target claude` ve
-  `npm run codex:status -- --target both` Claude tarafını doğrular.
+```powershell
+npm run chef -- --update            # ön izleme
+npm run chef -- --update --apply    # incelemeden sonra uygula
+```
+
+Açıkça seçmek için `--target codex|claude|both` ver. Güncellemeden sonra Serena
+backend'i yeni pin (v1.7.0) için bir kez daha indirilir; bu yüzden ilk semantic
+çağrı daha uzun sürer. Nelerin değiştiği [sürüm notlarında](release-notes.tr.md).
 
 ## Güvenli Upgrade Akışı
 
