@@ -397,3 +397,27 @@ test("the Claude plugin cache check reports a registered version older than the 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("status calls an empty home not installed, and fails a broken Claude target instead of attention", () => {
+  // missing/mismatched are file lists in the verifier report; Number(list) was
+  // NaN, so an empty home read as drift and was sent to repair. And a missing
+  // Claude receipt under --target claude printed "fail" but exited 0.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-status-states-"));
+  try {
+    const homes = ["--codex-home", path.join(home, ".codex"), "--agents-home", path.join(home, ".agents"), "--claude-home", path.join(home, ".claude")];
+    const status = (extra) => spawnSync(process.execPath, [path.join(root, "scripts", "codex-status.mjs"), "--json", "--skip-codex-cli", "--skip-codex-doctor-checks", ...homes, ...extra], {
+      cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(240_000), env: { ...process.env, CLAUDE_CONFIG_DIR: undefined }
+    });
+    const codex = status([]);
+    assert.equal(JSON.parse(codex.stdout).runtimeInstallState, "not_installed", codex.stderr);
+
+    const claude = status(["--target", "claude", "--skip-claude-cli"]);
+    const report = JSON.parse(claude.stdout);
+    assert.equal(report.runtimeInstallState, "skipped", "a Claude-only check does not inspect Codex");
+    assert.equal(report.claudeTarget.status, "fail");
+    assert.equal(report.status, "fail");
+    assert.notEqual(claude.status, 0, "a broken Claude target fails the run");
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});

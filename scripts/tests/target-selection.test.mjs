@@ -131,3 +131,19 @@ test("target selection is case-insensitive, matching PowerShell's ValidateSet", 
   assert.deepEqual([...parseTargetSelection("Both")].sort(), [...targetIds].sort());
   assert.throws(() => parseTargetSelection("Bogus"), /Unknown install target: bogus/);
 });
+
+test("the chef CLI accepts --target for status and update, and still refuses it elsewhere", async () => {
+  // A Claude Code install had no update or status path through the CLI: both
+  // actions rejected --target and only ever handled Codex.
+  const { spawnSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const chef = (...args) => spawnSync(process.execPath, [path.join(root, "scripts", "chef-cli.mjs"), ...args, "--no-log", "--plain"], { cwd: root, encoding: "utf8", windowsHide: true, timeout: 240_000 });
+  const refused = /--target can only be used with/;
+  const status = chef("--status", "--target", "claude", "--repo-only");
+  assert.doesNotMatch(`${status.stdout}${status.stderr}`, refused);
+  assert.equal(status.status, 0, status.stdout + status.stderr);
+  const routing = chef("--routing", "--target", "claude");
+  assert.match(`${routing.stdout}${routing.stderr}`, refused);
+  assert.notEqual(routing.status, 0);
+});

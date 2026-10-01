@@ -1260,4 +1260,6 @@ if (options.json) {
   if (report.backupRoot) console.log(`Backup: ${report.backupRoot}`);
 }
 
-if (status === "fail") process.exit(1);
+// process.exit() right after printing cuts a large report off on a Linux
+// pipe, where stdout writes are asynchronous; the exit code lets Node flush.
+if (status === "fail") process.exitCode = 1;

@@ -1298,10 +1298,10 @@ if (!exists(cliPath)) {
   if (cli.includes('runBash("reset-apply", "scripts/install.sh", ["--all", "--force", "--interactive"')) {
     fail(`${cliPath} Refresh setup must not open a second nested Bash confirmation flow after CLI APPLY`);
   }
-  if (!cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Update", "-PlainOutput"]')) {
+  if (!cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Update", "-PlainOutput"')) {
     fail(`${cliPath} Windows update-install must use -Update so user-owned config survives managed refresh`);
   }
-  if (!cli.includes('runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"]')) {
+  if (!cli.includes('runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"')) {
     fail(`${cliPath} Bash update-install must use --update so user-owned config survives managed refresh`);
   }
   if (cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Force"')) {
