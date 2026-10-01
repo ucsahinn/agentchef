@@ -130,7 +130,8 @@ npm run chef -- --install
 ```
 
 The first command is a preview. It shows what AgentChef would manage without
-writing to your agent home.
+writing to your agent home. If PowerShell says `npm.ps1 cannot be loaded`,
+type `npm.cmd` instead of `npm` ([details](docs/troubleshooting.md)).
 
 When the preview looks right:
 

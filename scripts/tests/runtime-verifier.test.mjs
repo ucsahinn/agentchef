@@ -451,3 +451,23 @@ test("--redact-paths also redacts the paths inside error messages", () => {
     fs.rmSync(base, { recursive: true, force: true });
   }
 });
+
+test("an enabled Supabase connector without a project_ref fails verification", () => {
+  // project_ref is what narrows the connector to one project; the template
+  // only asks for it in a comment.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-supabase-scope-"));
+  try {
+    const verify = (enabled, query) => {
+      fs.writeFileSync(path.join(home, "config.toml"), `[mcp_servers.supabase]\nenabled = ${enabled}\nurl = "https://mcp.supabase.com/mcp?${query}"\n\n[mcp_servers.other]\nenabled = true\n`);
+      const result = spawnSync(process.execPath, [path.join(root, "scripts", "verify-install-runtime.mjs"), "--codex-home", home, "--agents-home", home, "--skip-codex-cli", "--json"], {
+        cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(120_000)
+      });
+      return JSON.parse(result.stdout).failures.filter((failure) => failure.includes("Supabase"));
+    };
+    assert.equal(verify(true, "read_only=true&features=database").length, 1, "account-wide scope is a failure");
+    assert.equal(verify(true, "read_only=true&project_ref=abc").length, 0, "a project-scoped connector passes");
+    assert.equal(verify(false, "read_only=true").length, 0, "a disabled connector is not checked");
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
