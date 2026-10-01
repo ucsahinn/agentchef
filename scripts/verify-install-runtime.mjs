@@ -1104,6 +1104,25 @@ const report = {
 
 report.status = failures.length > 0 ? "fail" : warnings.length > 0 ? "attention" : "ok";
 
+// Error messages carry absolute paths (a refused managed path, a spawn error
+// with the resolved codex.exe), and they were pushed unredacted, so
+// --redact-paths still printed home paths. Every string in the report is
+// redacted once, here, before anything is printed.
+if (options.redactPaths) {
+  const redactDeep = (value) => {
+    if (typeof value === "string") return redact(value);
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) value[index] = redactDeep(value[index]);
+      return value;
+    }
+    if (value && typeof value === "object") {
+      for (const key of Object.keys(value)) value[key] = redactDeep(value[key]);
+    }
+    return value;
+  };
+  redactDeep(report);
+}
+
 if (options.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
