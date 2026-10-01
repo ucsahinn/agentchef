@@ -2,6 +2,51 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.2.0 - 2026-10-01
+
+AgentChef 1.2.0 closes a four-agent audit of the install, status, removal,
+and MCP surfaces. Each finding was measured or checked in code before it was
+fixed. Update with `npm run chef -- --update --apply`, which now refreshes
+every installed target.
+
+### What Changed
+
+- Security: Serena is pinned to v1.7.0 for GHSA-pp25-4cg4-qcr9, a template
+  injection that ran code when a project was activated. On Windows, the
+  Serena pool, the pre-commit hook, and the pinned-skill installer no longer
+  run an executable committed to the project folder in place of the real
+  one. Claude permissions ask before any `npx` launch. The Serena bridge no
+  longer exposes `activate_project`. `--no-backup` only creates missing
+  files.
+- Serena bridge: every tool call is answered with the client's own id. Before
+  this, any call after the first could wait out the 180 s timeout. Different
+  Codex and Claude copies of the pool no longer stop each other's backends.
+- Status and checks:
+  - `--status`, `--doctor`, and the check after `--apply` are no longer
+    cut off at 180 s, and they verify the target that was installed.
+  - "strict config ok" now really loads `config.toml`.
+  - An empty home reads as not installed.
+  - A broken Claude target fails the run.
+  - `--redact-paths` also covers paths inside error messages.
+  - JSON reports are no longer cut short on Linux pipes.
+- Claude Code: `--update` and `--status` take `--target`, and `--update`
+  refreshes whatever is installed. An upgrade moves Claude Code to the new
+  plugin version. `code-mapper` gets Serena, and `frontend-verifier` gets
+  the browser servers you add.
+- Windows: a CLI installed under a folder with a space is found, and a native
+  `codex.exe` works in status.
+- Removal keeps the Serena bridge and role files that a kept `config.toml`
+  still points at, so Codex keeps starting cleanly.
+
+The [CHANGELOG](../CHANGELOG.md) lists every fix with its cause.
+
+### Product Boundary
+
+Unchanged: AgentChef changes only what it can prove it owns. `-Update`
+writes the managed `config.toml` tables back to the template, with a backup,
+so security approvals reach you. User entries that shadow a managed one are
+reported, not replaced.
+
 ## v1.1.0 - 2026-10-01
 
 AgentChef 1.1.0 rolls up a self-review round run against a real install.

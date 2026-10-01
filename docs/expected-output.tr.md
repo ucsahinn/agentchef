@@ -11,7 +11,7 @@ Discovery ciktisi no-write ve okunabilir kalir:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.1.0
+Package: agentchef@1.2.0
 Platform: windows
 Targets: codex
 
@@ -28,7 +28,7 @@ sayılır:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.1.0
+Package: agentchef@1.2.0
 Platform: windows
 Targets: codex, claude
 

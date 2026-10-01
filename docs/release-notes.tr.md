@@ -2,6 +2,52 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.2.0 - 2026-10-01
+
+AgentChef 1.2.0, kurulum, durum, kaldırma ve MCP yüzeylerinin dört ajanlı
+denetimini kapatır. Her bulgu düzeltilmeden önce ölçüldü ya da kodda kontrol
+edildi. Güncellemek için `npm run chef -- --update --apply` kullan; artık kurulu
+her hedefi yeniler.
+
+### Neler Değişti?
+
+- Güvenlik: Serena, GHSA-pp25-4cg4-qcr9 için v1.7.0'a pinlendi; bu açık proje
+  etkinleştirilirken kod çalıştıran bir şablon enjeksiyonuydu. Windows'ta
+  Serena havuzu, pre-commit hook'u ve pinli skill kurucusu artık proje
+  klasörüne commit edilmiş bir çalıştırılabilir dosyayı gerçeğinin yerine
+  çalıştırmaz. Claude izinleri her `npx` başlatmasından önce sorar. Serena
+  köprüsü artık `activate_project` sunmaz. `--no-backup` yalnızca eksik
+  dosyaları oluşturur.
+- Serena köprüsü: her araç çağrısı istemcinin kendi id'siyle yanıtlanır.
+  Önceden ilkinden sonraki her çağrı 180 sn'lik zaman aşımını bekleyebiliyordu.
+  Codex ve Claude'daki farklı havuz kopyaları artık birbirinin backend'lerini
+  durdurmaz.
+- Durum ve kontroller:
+  - `--status`, `--doctor` ve `--apply` sonrası kontrol artık 180 sn'de
+    kesilmez ve kurulan hedefi doğrular.
+  - "strict config ok" artık `config.toml`'u gerçekten yükler.
+  - Boş bir home "kurulu değil" görünür.
+  - Bozuk bir Claude hedefi çalışmayı başarısız yapar.
+  - `--redact-paths` hata mesajlarındaki yolları da kapsar.
+  - JSON raporları Linux pipe'larında artık yarıda kesilmez.
+- Claude Code: `--update` ve `--status`, `--target` alır ve `--update` kurulu
+  olanı yeniler. Yükseltme, Claude Code'u yeni plugin sürümüne taşır.
+  `code-mapper` Serena'yı, `frontend-verifier` ise senin eklediğin tarayıcı
+  sunucularını alır.
+- Windows: boşluklu bir klasöre kurulmuş CLI bulunur ve yerel `codex.exe`
+  status'ta çalışır.
+- Kaldırma, kalan bir `config.toml`'un hâlâ işaret ettiği Serena köprüsünü ve
+  rol dosyalarını korur; böylece Codex temiz açılmaya devam eder.
+
+Her düzeltme, nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde listelenir.
+
+### Ürün Sınırı
+
+Değişmedi: AgentChef yalnızca sahipliğini kanıtlayabildiği şeyi değiştirir.
+`-Update` yönetilen `config.toml` tablolarını yedek alarak şablona geri yazar;
+böylece güvenlik onayları sana ulaşır. Yönetilen bir girdiyi gölgeleyen
+kullanıcı girdileri raporlanır, değiştirilmez.
+
 ## v1.1.0 - 2026-10-01
 
 AgentChef 1.1.0, gerçek bir kuruluma karşı yürütülen öz-denetim turunu
