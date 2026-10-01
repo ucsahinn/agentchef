@@ -126,6 +126,15 @@
   `agents/` in a temporary home, so status still writes nothing to the real
   Codex home.
 
+- Give two Claude specialists the MCP servers their own instructions use.
+  `code-mapper` is told to escalate to semantic navigation but had no Serena
+  grant. `frontend-verifier` is told to use Playwright or browser MCP tools
+  but had neither, and a subagent `tools:` list filters out every MCP server
+  it does not name, even after you add the server. It now has `mcp__serena`
+  and `mcp__playwright`/`mcp__chrome-devtools` respectively. The surface
+  validator allows the two local, account-free browser servers from the
+  catalog and still rejects account, path, and local-state servers.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and
