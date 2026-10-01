@@ -58,6 +58,32 @@
   This dates back to 0.5.x. A test now sends id 7 through a stand-in
   manager, and a real bridge → manager → Serena 1.7.0 run returned
   `find_symbol` as id 3 in 14 s.
+- Fixes to what the CLI reports, from a review of the status and verify
+  code:
+  - `--status`, `--doctor`, and the check after every `--apply` ran under the
+    wrapper's 180 s default. Their children take longer on a real home (codex
+    doctor alone has 300 s), so the check was killed while still working and
+    reported as failed. They now get 10–15 minutes, and the wrapper's output
+    buffer is 64 MiB.
+  - The check after an install verified the Codex target only. A Claude-only
+    install came out red, and the Claude half of `--target both` went
+    unchecked. It now verifies the installed target.
+  - `--doctor` always expected the optional Git guards, so a default install
+    failed its Full checkup. It now expects them only when a hook or
+    `core.hooksPath` is present.
+  - `--update` and `--status` accept `--target`. Without it, `--update`
+    refreshes whatever is installed, using the Claude install receipt and the
+    Codex pool file. Before, it only ever updated Codex, so a Claude Code
+    install could not be updated from the CLI.
+  - `codex-status`:
+    - An empty home is reported as not installed. It used to be reported as
+      drift, with repair suggested, because `Number()` of a file list is
+      `NaN`.
+    - A broken Claude target fails the run.
+    - `--target claude` skips the Codex runtime, CLI, and doctor checks.
+  - The skills screen treats a managed skill with extra local files as valid,
+    as the verifier does, so `--install` is no longer blocked. A
+    non-interactive `--skills` run exits 1 when managed skills are missing.
 
 ## 1.1.0 - 2026-10-01
 

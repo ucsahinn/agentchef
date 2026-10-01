@@ -103,6 +103,13 @@ try {
 }
 options.claudeHome = resolveClaudeHomes({ env: process.env, home: os.homedir(), claudeHome: options.claudeHome }).claudeHome;
 options.inspectClaude = statusTargets.has("claude");
+// A Claude-only home has no Codex install, CLI, or doctor to check; checking
+// them anyway turned every Claude-only status red with Codex drift messages.
+options.inspectCodex = statusTargets.has("codex");
+if (!options.inspectCodex) {
+  options.skipCodexCli = true;
+  options.skipCodexDoctorChecks = true;
+}
 
 function printHelp() {
   console.log(`Usage: node scripts/codex-status.mjs [options]
@@ -1168,8 +1175,8 @@ const repoDoctor = runNodeScript(
   "repo:doctor"
 );
 
-const runtime = options.skipRuntime
-  ? { inspected: false, status: "skipped", report: null, failures: [], note: "Skipped by --skip-runtime." }
+const runtime = options.skipRuntime || !options.inspectCodex
+  ? { inspected: false, status: "skipped", report: null, failures: [], note: options.skipRuntime ? "Skipped by --skip-runtime." : "The Codex target was not selected (--target claude)." }
   : runNodeScript(
       "scripts/verify-install-runtime.mjs",
       [
@@ -1260,12 +1267,15 @@ const gitRepository = inspectGitRepository();
 const logSummary = inspectLogSummary(skipGlobalMetadata);
 
 function classifyRuntimeInstallState(runtimeReport) {
-  if (!runtimeReport) return options.skipRuntime ? "skipped" : "unknown";
+  if (!runtimeReport) return options.skipRuntime || !options.inspectCodex ? "skipped" : "unknown";
   const managed = runtimeReport.managedFiles || {};
   const expected = Number(managed.expected || 0);
   const matched = Number(managed.matched || 0);
-  const missing = Number(managed.missing || 0);
-  const mismatched = Number(managed.mismatched || 0);
+  // The verifier reports these as lists of files; Number() of a list is NaN,
+  // so an empty home never classified as not_installed and was sent to repair.
+  const count = (value) => (Array.isArray(value) ? value.length : Number(value || 0));
+  const missing = count(managed.missing);
+  const mismatched = count(managed.mismatched);
   if (expected > 0 && matched === 0 && missing >= Math.max(1, expected - mismatched)) return "not_installed";
   if (expected > 0 && matched < expected) return "drift";
   return runtimeReport.status === "ok" ? "installed" : "attention";
@@ -1276,9 +1286,16 @@ const runtimeFailures = runtimeInstallState === "not_installed"
   ? ["runtime: AgentChef is not installed at the target Codex home; run `npm run chef -- --preview --no-log` before install or `npm run chef -- --install --apply` when ready."]
   : runtime.failures.map((failure) => `runtime: ${failure}`);
 
+// A broken Claude target (missing receipt, failed checks) is a failure, not
+// attention: `--target claude` used to print "Claude Code target: fail" under
+// "Overall: attention" and exit 0.
+const claudeFailures = claudeTarget.inspected && claudeTarget.status === "fail"
+  ? (claudeTarget.failures.length > 0 ? claudeTarget.failures : ["the Claude Code target check failed"]).map((failure) => `claude: ${failure}`)
+  : [];
 const failures = [
   ...repoDoctor.failures.map((failure) => `repo: ${failure}`),
-  ...runtimeFailures
+  ...runtimeFailures,
+  ...claudeFailures
 ];
 const warnings = [
   ...(runtime.report?.warnings || []),

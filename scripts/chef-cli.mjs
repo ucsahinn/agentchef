@@ -6,6 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
+import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import {
@@ -274,10 +275,10 @@ if (options.apply && options.action === "processes" && !options.cleanupStale) {
     "--processes --apply ayrıca --cleanup-stale ister."
   );
 }
-if (options.target && !["install", "preview", "reset", "remove", "migrate-identity"].includes(options.action || "")) {
+if (options.target && !["install", "preview", "reset", "remove", "migrate-identity", "update", "status"].includes(options.action || "")) {
   cliError(
-    "--target can only be used with --install, --preview, --reset, --remove, or --migrate-identity.",
-    "--target yalnızca --install, --preview, --reset, --remove veya --migrate-identity ile kullanılabilir."
+    "--target can only be used with --install, --preview, --reset, --remove, --migrate-identity, --update, or --status.",
+    "--target yalnızca --install, --preview, --reset, --remove, --migrate-identity, --update veya --status ile kullanılabilir."
   );
 }
 if (options.action === "remove" && !options.target) {
@@ -1138,7 +1139,7 @@ Kullanım:
 Komut kısayolları:
   Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
   Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
-  Kurulum hedefi: --install/--preview/--reset/--remove ile --target codex|claude|both (varsayılan codex; etkileşimli kurulum algılayıp onay ister)
+  Kurulum hedefi: --install/--preview/--reset/--remove/--update/--status ile --target codex|claude|both (varsayılan codex; --update kurulu hedefi algılar; etkileşimli kurulum algılayıp onay ister)
   Süreç temizliği: --processes --cleanup-stale [--apply]; --apply olmadan yalnız önizleme
   Yedekler: --backups [--backup ID] [--restore|--delete --apply]
   Yönlendirme profili: --routing --profile starter-health
@@ -1160,7 +1161,7 @@ Seçenekler:
   --details      Özet ekranlarda tam tablo ve kanıt ayrıntılarını gösterir
   --cleanup-stale Süresi dolmuş, aktif Codex/Claude Code oturumu ya da Serena havuzu sahibi olmayan yerel MCP ağaçlarını önizler
   --apply        Update, install, reset, repair, remove, seçili skill install veya açık stale-process temizliği için write action izni verir
-  --target T     --install/--preview/--reset/--remove/--migrate-identity için kurulum hedefi: codex (varsayılan), claude veya both
+  --target T     --install/--preview/--reset/--remove/--migrate-identity/--update/--status için kurulum hedefi: codex (varsayılan), claude veya both
   --help         Bu yardımı gösterir
 
 Ekranlar:
@@ -1188,7 +1189,7 @@ Usage:
 Reference actions:
   Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
   Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
-  Install target: --target codex|claude|both with --install/--preview/--reset/--remove (default codex; interactive installs detect and confirm)
+  Install target: --target codex|claude|both with --install/--preview/--reset/--remove/--update/--status (default codex; --update detects the installed target; interactive installs detect and confirm)
   Process cleanup: --processes --cleanup-stale [--apply]; preview-only without --apply
   Backups: --backups [--backup ID] [--restore|--delete --apply]
   Routing: --routing --profile starter-health
@@ -1216,7 +1217,7 @@ Options:
   --details      Show full tables and evidence on summary screens
   --cleanup-stale Preview expired local MCP trees with no live Codex or Claude Code session or Serena pool owner
   --apply        Allow write actions for update, install, reset, repair, remove, selected skill install, or explicit stale-process cleanup
-  --target T     Install target for --install/--preview/--reset/--remove/--migrate-identity: codex (default), claude, or both
+  --target T     Install target for --install/--preview/--reset/--remove/--migrate-identity/--update/--status: codex (default), claude, or both
   --help         Show this help
 
 Details:
@@ -1302,6 +1303,8 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: extra.timeout || 180000,
+    // Node's 1 MiB default is too small for a --json --details report.
+    maxBuffer: 64 * 1024 * 1024,
     windowsHide: true,
     env: {
       ...process.env,
@@ -1551,6 +1554,34 @@ function toggleLanguage() {
   return { ok: true };
 }
 
+// The wrapper's 180 s default is shorter than what these children may take on
+// a real home: the verifier gives codex doctor 300 s on its own (measured at
+// 137 s here), so status, doctor, and every post-apply check were killed and
+// reported as failed while the child was still working.
+const CHILD_VERIFY_TIMEOUT_MS = 600000;
+const CHILD_STATUS_TIMEOUT_MS = 900000;
+
+// Git guards are optional and off by default; expecting them on a home that
+// never installed them made the Full checkup fail on a healthy install.
+function gitGuardExpectation() {
+  const hookFile = path.join(os.homedir(), ".githooks", "pre-commit");
+  const hooksPath = spawnSync("git", ["config", "--global", "--get", "core.hooksPath"], { encoding: "utf8", windowsHide: true });
+  const configured = String(hooksPath.stdout || "").trim();
+  return fs.existsSync(hookFile) || configured ? ["--expect-git-guards"] : [];
+}
+
+function installedTargets() {
+  const claudeHome = resolveClaudeHomes({ env: process.env, home: os.homedir() }).claudeHome;
+  const claude = fs.existsSync(path.join(claudeHome, "agentchef", "install-receipt.json"));
+  // serena-pool.mjs is written into CODEX_HOME by the Codex target only.
+  const codex = fs.existsSync(path.join(codexHome(), "serena-pool.mjs"));
+  return claude && codex ? "both" : claude ? "claude" : "codex";
+}
+
+function updateTarget() {
+  return options.target || installedTargets();
+}
+
 function runStatus(overrides = {}) {
   const repoOnly = Boolean(overrides.repoOnly || options.repoOnly);
   return runNode(repoOnly ? "status-repo-only" : "status", "scripts/codex-status.mjs", [
@@ -1559,8 +1590,10 @@ function runStatus(overrides = {}) {
     options.lang,
     ...(repoOnly ? ["--skip-runtime", "--skip-codex-doctor-checks", "--skip-codex-cli"] : []),
     ...(options.details ? ["--details"] : []),
-    ...(options.json ? ["--json"] : [])
+    ...(options.json ? ["--json"] : []),
+    ...(options.target && options.target !== "codex" ? ["--target", options.target] : [])
   ], {
+    timeout: CHILD_STATUS_TIMEOUT_MS,
     waitNote: repoOnly
       ? localText(
           "Collecting local repo checks only; installed runtime, global skill roots, Codex logs, and Codex CLI probes are skipped.",
@@ -1586,10 +1619,11 @@ function runDoctor() {
     const runtime = runNode("runtime", "scripts/verify-install-runtime.mjs", [
       "--redact-paths",
       "--expect-skills",
-      "--expect-git-guards",
+      ...gitGuardExpectation(),
       "--require-live-runtime",
       "--json"
     ], {
+      timeout: CHILD_VERIFY_TIMEOUT_MS,
       quiet: true,
       captureOnly: true,
       waitNote: "Verifying installed AgentChef runtime; this can take 30-60 seconds."
@@ -1650,9 +1684,10 @@ function runDoctor() {
   return runNode("runtime", "scripts/verify-install-runtime.mjs", [
     "--redact-paths",
     "--expect-skills",
-    "--expect-git-guards",
+    ...gitGuardExpectation(),
     "--require-live-runtime"
   ], {
+    timeout: CHILD_VERIFY_TIMEOUT_MS,
     waitNote: "Verifying installed AgentChef runtime; this can take 30-60 seconds."
   });
 }
@@ -2163,9 +2198,9 @@ async function runUpdate(interaction = {}) {
     let applied;
     if (resumableReceipt) advanceUpdateRecoveryReceipt(resumableReceipt, "managed-refresh-started", { sourceHead: beforeHead.value });
     if (process.platform === "win32") {
-      applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput"], { quiet: !options.details });
+      applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
     } else {
-      applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"], { quiet: !options.details });
+      applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
     }
     const completed = completeAppliedAction(applied, false, {
       kind: "update",
@@ -2250,9 +2285,9 @@ async function runUpdate(interaction = {}) {
   printProgress(80, localText("Refreshing managed files", "Managed dosyalar yenileniyor"));
   advanceUpdateRecoveryReceipt(recoveryReceipt, "managed-refresh-started", { sourceHead: afterHead.value });
   if (process.platform === "win32") {
-    applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput"], { quiet: !options.details });
+    applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
   } else {
-    applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"], { quiet: !options.details });
+    applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
   }
   if (applied.ok) printProgress(90, localText("Verifying installed runtime", "Kurulu runtime doğrulanıyor"));
   const completed = completeAppliedAction(applied, false, {
@@ -2287,10 +2322,14 @@ function runPostApplyVerification(expectSkills = false, extra = {}) {
       ICONS.run
     );
   }
+  // The verifier checks the target that was installed: without it a Claude-
+  // only install was checked as a Codex install (red), and the Claude half of
+  // --target both was never checked (green).
   return runNode("post-apply-verify", "scripts/verify-install-runtime.mjs", [
     "--redact-paths",
-    ...(expectSkills ? ["--expect-skills"] : [])
-  ], { quiet: extra.quiet });
+    ...(expectSkills ? ["--expect-skills"] : []),
+    ...(extra.target && extra.target !== "codex" ? ["--target", extra.target] : [])
+  ], { quiet: extra.quiet, timeout: CHILD_VERIFY_TIMEOUT_MS });
 }
 
 function outputValue(output, label) {
@@ -2415,7 +2454,7 @@ function runRemovalVerification(removeClaude, removeCodex) {
 function completeAppliedAction(applied, expectSkills = false, context = {}) {
   const quiet = context.quiet ?? !options.details;
   const verification = applied.ok
-    ? (typeof context.verify === "function" ? context.verify() : runPostApplyVerification(expectSkills, { quiet }))
+    ? (typeof context.verify === "function" ? context.verify() : runPostApplyVerification(expectSkills, { quiet, target: context.target }))
     : null;
   const operation = buildOperationResult(applied, verification, context);
   const result = {
@@ -2535,6 +2574,7 @@ async function runInstall(interaction = {}) {
   }
   return completeAppliedAction(applied, true, {
     kind: "install",
+    target,
     beforeVersion: currentPackageVersion(),
     afterVersion: currentPackageVersion()
   });
@@ -2568,6 +2608,7 @@ async function runMigrateIdentity(interaction = {}) {
   const applied = runNode("migrate-identity-apply", "scripts/migrate-identity.mjs", ["--apply", "--target", target, "--redact-paths"]);
   return completeAppliedAction(applied, true, {
     kind: "migrate-identity",
+    target,
     beforeVersion: currentPackageVersion(),
     afterVersion: currentPackageVersion()
   });
@@ -2645,6 +2686,7 @@ async function runReset(interaction = {}) {
   }
   return completeAppliedAction(applied, true, {
     kind: "reset",
+    target: options.target,
     beforeVersion: currentPackageVersion(),
     afterVersion: currentPackageVersion()
   });
@@ -3975,8 +4017,10 @@ function inspectCuratedSkillStatus(managedSkills, skillsCliVersion = "") {
               skill: skill.skill,
               cliVersion: skillsCliVersion
             });
+        // A managed skill with extra local files is still valid, as the
+        // runtime verifier says; calling it invalid blocked --install.
         const valid = skill.directInstall === true
-          ? inspection.status === "managed"
+          ? ["managed", "managed-with-extras"].includes(inspection.status)
           : inspection.valid === true;
         state = valid ? "ready" : "invalid";
         reason = valid ? "verified" : inspection.reason || inspection.status || "invalid";
@@ -4141,7 +4185,10 @@ async function runSkills(interaction = {}) {
     printWrapped(`${stripAnsi(ICONS.info)} ${localText("Skills activate only when named or clearly matched to the task.", "Skill'ler yalnız adı söylendiğinde veya görevle açıkça eşleştiğinde etkinleşir.")}`);
     printWrapped(`${stripAnsi(ICONS.info)} ${localText(`${profileCount} routing profiles are available. Use --details for the full catalog.`, `${profileCount} routing profili var. Tam katalog için --details kullanın.`)}`);
     const verification = runNode("skills", "scripts/verify-skill-sources.mjs", [], { quiet: true });
-    if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
+    if (!verification.ok) return verification;
+    if (!process.stdin.isTTY && !interaction.question) {
+      return installation.missing === 0 && installation.invalid === 0 ? verification : { ...verification, ok: false, status: 1 };
+    }
     if (installation.missing === 0 && installation.invalid === 0) {
       console.log(`${ICONS.ok} ${localText(
         "All AgentChef-managed skills are installed and ready.",
@@ -4242,7 +4289,12 @@ async function runSkills(interaction = {}) {
   for (const line of String(verification.output || "").split(/\r?\n/).filter((entry) => entry.trim())) {
     printWrapped(line);
   }
-  if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
+  if (!verification.ok) return verification;
+  // Without a terminal there is nothing to prompt, but missing or invalid
+  // managed skills still fail the run instead of exiting 0.
+  if (!process.stdin.isTTY && !interaction.question) {
+    return installation.missing === 0 && installation.invalid === 0 ? verification : { ...verification, ok: false, status: 1 };
+  }
   if (installation.missing === 0 && installation.invalid === 0) {
     console.log(`${ICONS.ok} ${localText(
       "All AgentChef-managed skills are installed and ready.",
