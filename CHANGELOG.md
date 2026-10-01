@@ -87,7 +87,9 @@
     and `plan-install` set their exit code instead of calling
     `process.exit()` right after printing. On a Linux pipe, stdout writes are
     asynchronous, so a large `--json` report was cut off mid-document. Found
-    by CI: status read the verifier report as unparseable (`unknown`).
+    by CI: status read the verifier report as unparseable (`unknown`), and
+    `chef --doctor --json` stopped at the 64 KiB pipe buffer; chef now exits
+    only after stdout drains.
 
 ## 1.1.0 - 2026-10-01
 

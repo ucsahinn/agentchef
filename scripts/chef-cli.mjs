@@ -5261,7 +5261,12 @@ try {
     printHelp();
   } else if (options.action) {
     const result = await runAction(options.action);
-    if (result?.ok === false && !result.skipped) process.exit(1);
+    // Exit only after stdout drains: on a Linux pipe an immediate exit cut a
+    // --json report off at the 64 KiB pipe buffer (seen in CI for --doctor).
+    if (result?.ok === false && !result.skipped) {
+      process.exitCode = 1;
+      process.stdout.write("", () => process.exit(1));
+    }
   } else if (!process.stdin.isTTY && process.env.AGENTCHEF_TEST_MENU !== "1") {
     printHelp();
   } else {
