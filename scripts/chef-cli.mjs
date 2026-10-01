@@ -4185,10 +4185,7 @@ async function runSkills(interaction = {}) {
     printWrapped(`${stripAnsi(ICONS.info)} ${localText("Skills activate only when named or clearly matched to the task.", "Skill'ler yalnız adı söylendiğinde veya görevle açıkça eşleştiğinde etkinleşir.")}`);
     printWrapped(`${stripAnsi(ICONS.info)} ${localText(`${profileCount} routing profiles are available. Use --details for the full catalog.`, `${profileCount} routing profili var. Tam katalog için --details kullanın.`)}`);
     const verification = runNode("skills", "scripts/verify-skill-sources.mjs", [], { quiet: true });
-    if (!verification.ok) return verification;
-    if (!process.stdin.isTTY && !interaction.question) {
-      return installation.missing === 0 && installation.invalid === 0 ? verification : { ...verification, ok: false, status: 1 };
-    }
+    if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
     if (installation.missing === 0 && installation.invalid === 0) {
       console.log(`${ICONS.ok} ${localText(
         "All AgentChef-managed skills are installed and ready.",
@@ -4289,12 +4286,7 @@ async function runSkills(interaction = {}) {
   for (const line of String(verification.output || "").split(/\r?\n/).filter((entry) => entry.trim())) {
     printWrapped(line);
   }
-  if (!verification.ok) return verification;
-  // Without a terminal there is nothing to prompt, but missing or invalid
-  // managed skills still fail the run instead of exiting 0.
-  if (!process.stdin.isTTY && !interaction.question) {
-    return installation.missing === 0 && installation.invalid === 0 ? verification : { ...verification, ok: false, status: 1 };
-  }
+  if (!verification.ok || (!process.stdin.isTTY && !interaction.question)) return verification;
   if (installation.missing === 0 && installation.invalid === 0) {
     console.log(`${ICONS.ok} ${localText(
       "All AgentChef-managed skills are installed and ready.",

@@ -1526,4 +1526,6 @@ if (options.json) {
   if (options.output) console.log(`${localText("Report", "Rapor")}: ${redact(path.resolve(root, options.output))}`);
 }
 
-if (status === "fail") process.exit(1);
+// process.exit() would cut off a large --json report on a Linux pipe, where
+// writes are asynchronous; setting the code lets Node flush stdout first.
+if (status === "fail") process.exitCode = 1;

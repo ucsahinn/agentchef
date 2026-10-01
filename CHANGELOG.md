@@ -82,8 +82,10 @@
     - A broken Claude target fails the run.
     - `--target claude` skips the Codex runtime, CLI, and doctor checks.
   - The skills screen treats a managed skill with extra local files as valid,
-    as the verifier does, so `--install` is no longer blocked. A
-    non-interactive `--skills` run exits 1 when managed skills are missing.
+    as the verifier does, so `--install` is no longer blocked.
+  - `codex-status` sets its exit code instead of calling `process.exit()`
+    right after printing. On a Linux pipe that cut a large `--json` report
+    off mid-document.
 
 ## 1.1.0 - 2026-10-01
 
