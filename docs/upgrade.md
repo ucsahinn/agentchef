@@ -99,7 +99,11 @@ the `codex-chef` prefix. New in 0.9.0:
   reinstall downloads them again from the pinned commit. A plugin marketplace
   file left holding nothing but AgentChef's own empty skeleton is removed with
   the entry. `CODEX_HOME/serena-pool` keeps the local pool token, which both
-  harnesses share; delete it once no session is open.
+  harnesses share; delete it once no session is open. While a `config.toml`
+  merged into your own settings stays, the Serena bridge and agent role files
+  it points at stay as `kept-referenced`, so Codex keeps starting cleanly.
+  Remove the `[mcp_servers.serena]` and `[agents.*]` tables, then run the
+  removal again to delete them.
 - `npm run verify:install:runtime -- --target claude` and
   `npm run codex:status -- --target both` verify the Claude side.
 
