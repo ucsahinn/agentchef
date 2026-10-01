@@ -1052,6 +1052,11 @@ function inspectClaudeRuntime(failures, warnings) {
         `the Claude plugin cache copy ${entry.version} differs from the managed source in ${entry.differing} of ${entry.total} agent and skill files, so sessions load stale definitions; refresh it with: claude plugin uninstall agentchef-workflows@agentchef && claude plugin install agentchef-workflows@agentchef --scope user`
       );
     }
+    if (cache.versionMismatch) {
+      warnings.push(
+        `Claude Code still loads AgentChef plugin ${cache.versionMismatch.registered}, but the managed source is ${cache.versionMismatch.expected}; update it with: claude plugin marketplace update agentchef && claude plugin update agentchef-workflows@agentchef, then restart Claude Code`
+      );
+    }
     const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
     const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: claudeCliEnv(claudeHome, { home: os.homedir() }) });
     cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
