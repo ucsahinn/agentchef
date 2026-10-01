@@ -93,6 +93,13 @@ the `codex-chef` prefix. New in 0.9.0:
 - `npm run chef -- --remove --target <t>` is a preview-first removal that
   deletes only AgentChef-owned files, links, marketplace entries, and
   receipt-recorded settings; user content, Git guards, and backups stay.
+  The generated MCP profiles (full, multi-session, offline) also stay. The
+  cached pinned-skill checkouts under `CODEX_HOME/cache/pinned-skill-sources`
+  that carry AgentChef's receipt are removed without a backup, because a
+  reinstall downloads them again from the pinned commit. A plugin marketplace
+  file left holding nothing but AgentChef's own empty skeleton is removed with
+  the entry. `CODEX_HOME/serena-pool` keeps the local pool token, which both
+  harnesses share; delete it once no session is open.
 - `npm run verify:install:runtime -- --target claude` and
   `npm run codex:status -- --target both` verify the Claude side.
 

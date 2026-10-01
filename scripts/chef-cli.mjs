@@ -2304,7 +2304,8 @@ function operationLabel(kind) {
     update: localText("Update AgentChef", "AgentChef'i güncelle"),
     install: localText("Full install", "Tam kurulum"),
     reset: localText("Force refresh", "Zorunlu yenileme"),
-    repair: localText("Repair setup", "Kurulumu onar")
+    repair: localText("Repair setup", "Kurulumu onar"),
+    remove: localText("Remove AgentChef", "AgentChef'i kaldır")
   };
   return labels[kind] || localText("Managed operation", "Yönetilen işlem");
 }
@@ -2371,14 +2372,51 @@ function printOperationReceipt(result) {
   if (operation.verificationLogPath) printSurfaceNote(localText("Verification log", "Doğrulama logu"), toPosix(path.relative(root, operation.verificationLogPath)));
   console.log("");
   console.log(`${paint(options.plain ? "->" : "→", "bold", ok ? "brightCyan" : "brightYellow")} ${styleHeading(localText("Next step", "Sonraki adım"))}`);
-  console.log(ok
+  console.log(ok && operation.kind === "remove"
+    ? localText("Restart Codex and Claude Code so open sessions stop loading AgentChef. Backups stay in place.", "Açık oturumlar AgentChef'i yüklemeyi bıraksın diye Codex ve Claude Code'u yeniden başlat. Yedekler yerinde kalır.")
+    : ok
     ? localText("Restart Codex to load refreshed managed files, then use System status if you want a fresh live-session check.", "Yenilenen yönetilen dosyaları yüklemek için Codex'i yeniden başlat; ardından yeni bir canlı oturum kontrolü için Sistem durumu'nu kullan.")
     : localText("Nothing is claimed ready. Inspect the failed command and its log before retrying or choosing Repair setup.", "Hiçbir şey hazır sayılmadı. Yeniden denemeden veya Kurulumu onar'ı seçmeden önce başarısız komutu ve logunu incele."));
 }
 
+// Evidence for a removal: rerun both removal plans and require that nothing
+// AgentChef owns is still removable.
+function runRemovalVerification(removeClaude, removeCodex) {
+  const started = Date.now();
+  const leftovers = [];
+  const runJson = (script, args) => {
+    const result = spawnSync(process.execPath, [path.join(root, "scripts", script), ...args], { cwd: root, encoding: "utf8", windowsHide: true, timeout: 300000, maxBuffer: 64 * 1024 * 1024 });
+    // A planner that fails still prints its error contract as JSON on
+    // stdout, so the exit status must be checked before the document counts.
+    if (result.status !== 0) return null;
+    try { return JSON.parse(result.stdout || ""); } catch { return null; }
+  };
+  if (removeClaude) {
+    const claude = runJson("install-claude-target.mjs", ["--remove", "--dry-run", "--json"]);
+    if (!claude || typeof claude.plan?.present !== "boolean") leftovers.push("the Claude removal plan could not be read");
+    else if (claude.plan?.present) leftovers.push("the Claude install receipt is still present (a step was incomplete; rerun the removal)");
+  }
+  if (removeCodex) {
+    const codex = runJson("remove-install.mjs", ["--json"]);
+    const removable = new Set(["remove", "remove-owned", "remove-entry", "cli-remove", "remove-cache"]);
+    if (!codex || !Array.isArray(codex.items)) leftovers.push("the Codex removal plan could not be read");
+    else for (const item of codex.items) if (removable.has(item.decision)) leftovers.push(`Codex item still removable: ${item.id}`);
+  }
+  const ok = leftovers.length === 0;
+  const output = [
+    `Status: ${ok ? "removed" : "incomplete"}`,
+    `Managed files: ${ok ? "no AgentChef-owned entries left" : `${leftovers.length} left`}`,
+    ...leftovers.map((line) => `Failure: ${line}`)
+  ].join("\n");
+  if (!options.json) for (const line of leftovers) console.log(`${ICONS.warn} ${line}`);
+  return { ok, output, elapsedMs: Date.now() - started, logPath: null };
+}
+
 function completeAppliedAction(applied, expectSkills = false, context = {}) {
   const quiet = context.quiet ?? !options.details;
-  const verification = applied.ok ? runPostApplyVerification(expectSkills, { quiet }) : null;
+  const verification = applied.ok
+    ? (typeof context.verify === "function" ? context.verify() : runPostApplyVerification(expectSkills, { quiet }))
+    : null;
   const operation = buildOperationResult(applied, verification, context);
   const result = {
     ...(verification || applied),
@@ -2566,6 +2604,9 @@ async function runRemove(interaction = {}) {
   if (applied.ok && removeCodex) applied = runNode("remove-codex", "scripts/remove-install.mjs", ["--apply", "--redact-paths"]);
   return completeAppliedAction(applied, true, {
     kind: "remove",
+    // The install verifier expects everything present, so it reported every
+    // successful removal as a failure. Verify the removal instead.
+    verify: () => runRemovalVerification(removeClaude, removeCodex),
     beforeVersion: currentPackageVersion(),
     afterVersion: currentPackageVersion()
   });

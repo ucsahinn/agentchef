@@ -274,6 +274,16 @@ Installers upsert only the `agentchef-workflows` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing
 marketplace file is invalid, unreadable, or not a JSON object.
 
+Removal (`--remove`) deletes only what AgentChef can prove it owns: files
+byte-identical to the template, directories carrying an ownership marker,
+receipt-recorded entries, and the marketplace entry. It backs each one up
+first. A file reached through a linked subfolder is never deleted, and every
+path is checked again right before its delete. The pinned-skill download cache
+(`CODEX_HOME/cache/pinned-skill-sources`) is deleted without a backup, because
+a reinstall fetches it again. Only a directory named by the key its own receipt
+yields is deleted, re-checked for a swapped-in link just before. A marketplace
+file is deleted only when AgentChef's empty skeleton is all that remains.
+
 The managed installer synchronizes all ten canonical local workflow
 directories to `AGENTS_HOME/skills/<name>`, so direct invocation does not
 depend on plugin installation. A durable per-skill ownership marker

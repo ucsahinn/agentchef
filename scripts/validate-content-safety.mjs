@@ -98,6 +98,14 @@ for (const file of walk(root).filter(isTextFile)) {
   }
   for (const [index, char] of [...text].entries()) {
     const codePoint = char.codePointAt(0);
+    // A raw control character is almost always an escape that a shell or
+    // heredoc turned into a byte (for example a regex `\b` written as U+0008,
+    // which then never matches); tab, newline, and carriage return are text.
+    if ((codePoint < 0x20 && ![0x09, 0x0a, 0x0d].includes(codePoint)) || codePoint === 0x7f) {
+      const location = locationForIndex(text, index);
+      failures.push(`${rel}:${location.line}:${location.column} contains control character U+${codePoint.toString(16).toUpperCase().padStart(4, "0")}; write it as an escape sequence`);
+      continue;
+    }
     if (!dangerousCodePoints.has(codePoint)) continue;
     if (codePoint === 0xfeff && index === 0) continue;
     const location = locationForIndex(text, index);

@@ -173,8 +173,14 @@ test("legacy markers are still recognized as managed before any migration", () =
 
 test("identity migration previews, converts, and is idempotent for both targets", () => {
   const state = legacyFixture({ withClaude: true });
+  // The legacy plugin is installed here (its versioned cache exists), which is
+  // what makes the Codex plugin CLI swap necessary.
+  const legacyCachedPlugin = path.join(state.codexHome, "plugins", "cache", identity.legacyMarketplaceName, identity.legacyPluginName, "0.9.0", ".codex-plugin");
+  fs.mkdirSync(legacyCachedPlugin, { recursive: true });
+  fs.writeFileSync(path.join(legacyCachedPlugin, "plugin.json"), "{}\n");
   const plan = run(state, ["--dry-run", "--target", "both"]);
   const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
+  assert.equal(decision("codex-plugin-cache"), "cli");
   assert.equal(decision("operator-skill-folder"), "rename");
   assert.equal(decision(`direct-skill-marker:${identity.operatorSkill}`), "rewrite");
   assert.equal(decision("direct-skill-marker:fetch"), "rewrite");
@@ -233,7 +239,10 @@ test("identity migration previews, converts, and is idempotent for both targets"
 
   const again = run(state, ["--apply", "--target", "both"]);
   const secondStatuses = again.outcome.results.map((result) => result.status);
-  assert.ok(secondStatuses.every((status) => ["current", "absent", "skipped", "no-marker"].includes(status)), JSON.stringify(again.outcome.results));
+  // "foreign": the plugin CLI swap is skipped here, so the legacy cache still
+  // holds the installed plugin and is kept.
+  assert.ok(secondStatuses.every((status) => ["current", "absent", "skipped", "no-marker", "foreign"].includes(status)), JSON.stringify(again.outcome.results));
+  assert.ok(fs.existsSync(path.join(legacyCachedPlugin, "plugin.json")), "a cache that still holds the plugin is never deleted");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
@@ -248,6 +257,7 @@ test("the Codex config keeps every foreign entry while AgentChef's own banners a
   const planned = preview.steps.find((step) => step.id === "codex-config");
   assert.equal(planned.decision, "rewrite");
   assert.equal(planned.occurrences, 3, "the two banners and one plugin-id key");
+  assert.equal(preview.steps.find((step) => step.id === "codex-plugin-cache").decision, "absent", "an emptied legacy cache tree is not an installed plugin");
   assert.equal(fs.readFileSync(configPath, "utf8"), before, "a preview writes nothing");
 
   run(state, ["--apply"]);
@@ -298,4 +308,14 @@ test("a hook-state table already written under the new plugin id makes the legac
   assert.ok(planned.text.includes('[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]'), "another product is untouched");
   assert.ok(planned.text.includes('trusted_hash = "sha256:kitchen"'));
   assert.equal(planCodexConfigRewrite(planned.text).changed, false, "idempotent");
+});
+
+test("a home without the legacy plugin installed gets no plugin CLI swap", () => {
+  // Running `codex plugin add` here installed a plugin the user never had and
+  // rewrote config.toml; the Claude uninstall of a missing plugin failed the run.
+  const state = legacyFixture({ withClaude: true });
+  const plan = run(state, ["--dry-run", "--target", "both"]);
+  const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
+  assert.equal(decision("codex-plugin-cache"), "absent");
+  assert.equal(decision("claude-plugin-cache"), "absent");
 });

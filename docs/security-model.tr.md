@@ -275,6 +275,17 @@ Installer'lar yalniz `agentchef-workflows` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.
 
+Kaldırma (`--remove`) yalnızca AgentChef'in sahipliğini kanıtlayabildiği şeyleri
+siler: şablonla bayt-bayt aynı dosyalar, sahiplik işaretçisi taşıyan dizinler,
+makbuza kayıtlı girdiler ve marketplace girdisi; her birini önce yedekler.
+Bağlantılı bir alt klasör üzerinden ulaşılan dosya asla silinmez; her yol silmeden
+hemen önce yeniden denetlenir. Pinli skill indirme önbelleği
+(`CODEX_HOME/cache/pinned-skill-sources`) yedeksiz silinir, çünkü yeniden kurulum
+onu tekrar indirir; yalnızca kendi makbuzundan türetilen anahtarla adlandırılmış
+dizinler silinir ve araya sokulmuş bir bağlantıya karşı hemen önce yeniden
+denetlenir. Marketplace dosyası yalnızca geriye AgentChef'in boş iskeleti
+kaldığında silinir.
+
 Yonetilen installer on canonical lokal workflow dizininin tamamını
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder; böylece direct invocation
 plugin kurulumuna bağlı kalmaz. Skill başına kalıcı ownership marker,
