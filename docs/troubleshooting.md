@@ -182,7 +182,8 @@ should not rewrite managed files.
 it slows down as session history grows. On one machine with 767 rollout files
 (14 GB) it took 137 seconds, almost all of it in the `state.paths` check. The
 verifier and status now allow 300 seconds and say why when they run out.
-Raise the budget with `--doctor-timeout-ms`, or archive old Codex sessions to
+Raise the verifier's budget with `npm run verify:install:runtime -- --doctor-timeout-ms <ms>`
+(only the verifier takes it), or archive old Codex sessions to
 make it fast again; AgentChef never deletes session history itself.
 
 ## "Another Operation Is Already In Progress" After An Interrupted Run

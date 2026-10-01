@@ -447,7 +447,7 @@ state into a distributable default.
 Existing files are copied into:
 
 ```text
-~/.codex/backups/agentchef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS-<pid>/
 ```
 
 New backups also include `.agentchef-backup.json`, a small manifest with the
@@ -631,6 +631,34 @@ personal plugin marketplace keeps unrelated
 entries and receives only the AgentChef entry upsert after backup. When managed
 drift exists, `-Repair` / `--repair` is the safer first step before force
 synchronization.
+
+## Removing AgentChef
+
+```powershell
+npm run chef -- --remove --target both          # preview: what is removed and kept
+npm run chef -- --remove --target both --apply  # remove, with backups first
+```
+
+Removal deletes only what AgentChef can prove it owns: files still identical
+to its templates, folders with its ownership marker, receipt-recorded settings
+and MCP entries, its marketplace entry, the plugin registration, and its
+pinned-skill download cache. Everything is backed up first, except the
+download cache, which a reinstall fetches again.
+
+What stays, by design:
+
+- A `config.toml` merged into your own settings keeps its AgentChef tables.
+  While it does, the Serena bridge and the agent role files it points at stay
+  too (`kept-referenced`), so Codex keeps starting cleanly. Remove the
+  `[mcp_servers.serena]` and `[agents.*]` tables, or restore a backup, then run
+  the removal again.
+- The generated MCP profiles (`full`, `multi-session`, `offline`).
+- `CODEX_HOME/serena-pool`, the pool token both targets share.
+- Optional Git guards. Restore them with the receipt printed at install time.
+- Every backup archive.
+
+Restart Codex and Claude Code afterwards so open sessions stop loading
+AgentChef.
 
 ## Rollback
 

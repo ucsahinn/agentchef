@@ -442,7 +442,7 @@ donusmez.
 Mevcut dosyalar şu klasöre kopyalanır:
 
 ```text
-~/.codex/backups/agentchef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS-<pid>/
 ```
 
 Yeni backup'lar ayrica `.agentchef-backup.json` manifest'i tasir. Bu kucuk
@@ -625,6 +625,35 @@ senkronlar; ilgisiz ek dosyalar kalır. Kisisel
 plugin marketplace ilgisiz kayitlari korur ve sadece AgentChef kaydini backup
 sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force
 senkronizasyonundan daha guvenli ilk adımdır.
+
+## AgentChef'i Kaldırma
+
+```powershell
+npm run chef -- --remove --target both          # ön izleme: ne silinir, ne kalır
+npm run chef -- --remove --target both --apply  # önce yedekleyerek kaldır
+```
+
+Kaldırma yalnızca AgentChef'in sahipliğini kanıtlayabildiği şeyleri siler.
+Bunlar: hâlâ şablonlarıyla aynı olan dosyalar, sahiplik işaretçisi taşıyan
+klasörler, makbuza kayıtlı ayarlar ve MCP girdileri, marketplace girdisi,
+plugin kaydı ve pinli skill indirme önbelleği. Her şey önce yedeklenir. Tek
+istisna indirme önbelleğidir; onu yeniden kurulum tekrar indirir.
+
+Bilerek kalanlar:
+
+- Kendi ayarlarına birleştirilmiş bir `config.toml` AgentChef tablolarını
+  korur. Bu dosya kaldığı sürece işaret ettiği Serena köprüsü ve ajan rol
+  dosyaları da kalır (`kept-referenced`). Böylece Codex temiz açılmaya devam
+  eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldır ya da bir
+  yedeği geri yükle, sonra kaldırmayı yeniden çalıştır.
+- Üretilen MCP profilleri (`full`, `multi-session`, `offline`).
+- `CODEX_HOME/serena-pool`, yani iki hedefin paylaştığı havuz token'ı.
+- İsteğe bağlı Git guard'ları. Bunları kurulumda yazdırılan makbuzla geri
+  yükle.
+- Bütün yedek arşivleri.
+
+Sonrasında Codex ve Claude Code'u yeniden başlat; açık oturumlar AgentChef'i
+yüklemeyi bıraksın.
 
 ## Geri Dönüş
 

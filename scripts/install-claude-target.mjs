@@ -727,9 +727,11 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/install-claude-target.mjs [--dry-run|--apply] [options]
+  console.log(`Usage: node scripts/install-claude-target.mjs [--dry-run|--apply] [--remove] [options]
 
 Options:
+  --remove                    Plan (or with --apply, run) the receipt-scoped
+                              removal of everything this target installed
   --claude-home <path>        Override CLAUDE_CONFIG_DIR (default ~/.claude)
   --claude-json <path>        Override the user-scope .claude.json location
   --refresh-managed           Update MCP entries whose value still matches this
