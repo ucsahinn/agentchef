@@ -13,7 +13,10 @@ export const KNOWN_LEGACY_FILE_SHA256 = Object.freeze({
   "pre-commit-hook": Object.freeze([
     "22a2234a6d26f2c9a41e66e5c0102ab6e08374f7f14724f477fcef87a8a3e97b",
     // 1.0.0 hook: scanned the whole history with `gitleaks detect` on every commit.
-    "d7d0af11c07cd01baa29b7fe00f10ceb1af4d20bfeee63fbe66001948f349731"
+    "d7d0af11c07cd01baa29b7fe00f10ceb1af4d20bfeee63fbe66001948f349731",
+    // 1.1.0 hook: on Windows it could run a `git.exe` or `gitleaks.exe`
+    // committed to the repository being committed to.
+    "7c59892ebdce4191742ad062899f273621160b80080ac955d293952a23018105"
   ])
 });
 export const RECEIPT_VERSION = 2;

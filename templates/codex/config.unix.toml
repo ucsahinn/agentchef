@@ -281,12 +281,9 @@ enabled = true
 command = "sh"
 args = ["-lc", "exec node \"${CODEX_HOME:-$HOME/.codex}/serena-pool.mjs\" bridge"]
 default_tools_approval_mode = "prompt"
-enabled_tools = ["activate_project", "get_current_config", "initial_instructions", "list_memories", "read_memory", "search_for_pattern", "find_symbol", "find_declaration", "find_implementations", "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"]
+enabled_tools = ["get_current_config", "initial_instructions", "list_memories", "read_memory", "search_for_pattern", "find_symbol", "find_declaration", "find_implementations", "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"]
 startup_timeout_sec = 10
 tool_timeout_sec = 180
-
-[mcp_servers.serena.tools.activate_project]
-approval_mode = "approve"
 
 [mcp_servers.serena.tools.get_current_config]
 approval_mode = "approve"

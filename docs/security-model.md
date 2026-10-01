@@ -284,6 +284,15 @@ a reinstall fetches it again. Only a directory named by the key its own receipt
 yields is deleted, re-checked for a swapped-in link just before. A marketplace
 file is deleted only when AgentChef's empty skeleton is all that remains.
 
+On Windows, a process that runs a bare command name (`uvx`, `git`,
+`gitleaks`) from a project folder can pick up an executable committed to that
+folder before the one on PATH. Only the spawning process's own environment
+turns that lookup off. The Serena pool, the global pre-commit hook, and the
+pinned-skill installer set `NoDefaultCurrentDirectoryInExePath` for
+themselves, and the installer also drops inherited Git location variables
+(`GIT_DIR`, `GIT_WORK_TREE`, …). `--no-backup` only creates missing files;
+a rollback never deletes a replaced file that has no backup.
+
 The managed installer synchronizes all ten canonical local workflow
 directories to `AGENTS_HOME/skills/<name>`, so direct invocation does not
 depend on plugin installation. A durable per-skill ownership marker

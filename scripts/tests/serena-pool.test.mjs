@@ -229,7 +229,7 @@ test("stdio bridge exposes the safe tool surface without starting Serena on MCP 
     await waitFor(() => replies.length === 2);
     assert.equal(replies[0].result.serverInfo.name, "serena-project-pool");
     assert.deepEqual(replies[1].result.tools.map((tool) => tool.name), [
-      "activate_project", "get_current_config", "initial_instructions", "list_memories", "read_memory",
+      "get_current_config", "initial_instructions", "list_memories", "read_memory",
       "search_for_pattern", "find_symbol", "find_declaration", "find_implementations",
       "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"
     ]);
@@ -282,4 +282,18 @@ test("a disconnecting bridge releases its Serena sessions on every backend and o
   assert.equal(second.sessions.has("client-1"), false);
   assert.equal(first.sessions.get("client-2").sessionId, "s-a2", "another client's session is kept");
   assert.deepEqual(pool.releaseClient("client-1"), [], "releasing twice is a no-op");
+});
+
+test("processes that run a bare command from a project folder turn off the Windows working-directory lookup", () => {
+  // Measured: without the variable in the spawning process, Windows ran a
+  // uvx.exe / git.exe placed in the child's working directory instead of the
+  // one on PATH; setting it only in the child's env did not help.
+  const repo = fileURLToPath(new URL("../../", import.meta.url));
+  for (const relative of ["templates/codex/serena-pool.mjs", "templates/git/pre-commit", "scripts/install-pinned-skill.mjs"]) {
+    const source = fs.readFileSync(path.join(repo, relative), "utf8");
+    assert.match(source, /if \(process\.platform === "win32"\) process\.env\.NoDefaultCurrentDirectoryInExePath = "1";/, relative);
+  }
+  const pool = fs.readFileSync(path.join(repo, "templates/codex/serena-pool.mjs"), "utf8");
+  assert.ok(pool.indexOf("NoDefaultCurrentDirectoryInExePath") < pool.indexOf('spawn("uvx"'), "set before the backend is spawned");
+  assert.ok(!/"activate_project"/.test(pool.slice(pool.indexOf("const TOOL_NAMES"), pool.indexOf("];", pool.indexOf("const TOOL_NAMES")))), "the bridge does not expose activate_project");
 });

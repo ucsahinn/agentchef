@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 const { spawnSync } = require("node:child_process");
 
+// Git runs this hook from the repository being committed to. Windows would
+// otherwise find a `git.exe` or `gitleaks.exe` committed to that repository
+// before the real one on PATH; only the spawning process's own environment
+// turns that lookup off.
+if (process.platform === "win32") process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
     encoding: "utf8",

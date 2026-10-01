@@ -286,6 +286,16 @@ dizinler silinir ve araya sokulmuş bir bağlantıya karşı hemen önce yeniden
 denetlenir. Marketplace dosyası yalnızca geriye AgentChef'in boş iskeleti
 kaldığında silinir.
 
+Windows'ta bir proje klasöründen yalın bir komut adı (`uvx`, `git`,
+`gitleaks`) çalıştıran süreç, PATH'teki yerine o klasöre commit edilmiş bir
+çalıştırılabilir dosyayı bulabilir. Bu aramayı yalnızca başlatan sürecin kendi
+ortamı kapatır. Serena havuzu, global pre-commit hook'u ve pinli skill
+kurucusu `NoDefaultCurrentDirectoryInExePath` değişkenini kendileri için
+ayarlar. Kurucu, devralınan Git konum değişkenlerini (`GIT_DIR`,
+`GIT_WORK_TREE`, …) de atar. `--no-backup` yalnızca eksik dosyaları
+oluşturur. Geri alma, yedeği olmayan ve üzerine yazılmış bir dosyayı asla
+silmez.
+
 Yonetilen installer on canonical lokal workflow dizininin tamamını
 `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder; böylece direct invocation
 plugin kurulumuna bağlı kalmaz. Skill başına kalıcı ownership marker,

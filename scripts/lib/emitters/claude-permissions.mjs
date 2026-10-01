@@ -56,13 +56,26 @@ const claudeOptionGuards = [
   { when: "Bash(git diff *)", ask: ["Bash(git diff *--output*)", "Bash(git diff *--ext-diff*)"] },
   { when: "Bash(git log *)", ask: ["Bash(git log *--output*)", "Bash(git log *--ext-diff*)"] },
   { when: "Bash(git show *)", ask: ["Bash(git show *--output*)", "Bash(git show *--ext-diff*)"] },
-  { when: "Bash(gitleaks detect --redact --no-banner --verbose *)", ask: ["Bash(gitleaks *--report-path*)", "Bash(gitleaks * -r *)"] },
-  { when: "Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", ask: ["Bash(gitleaks *--report-path*)", "Bash(gitleaks * -r *)"] }
+  // -r also takes its value attached (-r=/path, -r/path); --log-opts passes
+  // --output through to the inner git log.
+  { when: "Bash(gitleaks detect --redact --no-banner --verbose *)", ask: ["Bash(gitleaks *--report-path*)", "Bash(gitleaks * -r *)", "Bash(gitleaks * -r=*)", "Bash(gitleaks * -r/*)", "Bash(gitleaks *--log-opts*)"] },
+  { when: "Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", ask: ["Bash(gitleaks *--report-path*)", "Bash(gitleaks * -r *)", "Bash(gitleaks * -r=*)", "Bash(gitleaks * -r/*)", "Bash(gitleaks *--log-opts*)"] },
+  // A later flag wins: --no-ignore-scripts runs the package's prepack and
+  // prepare scripts, --no-dry-run with --pack-destination writes anywhere.
+  { when: "Bash(npm pack --dry-run --json --ignore-scripts *)", ask: ["Bash(npm pack *--no-ignore-scripts*)", "Bash(npm pack *ignore-scripts=*)", "Bash(npm pack *--no-dry-run*)", "Bash(npm pack *dry-run=*)", "Bash(npm pack *--pack-destination*)"] },
+  // gh config get prints a token stored in plain text (insecure storage).
+  { when: "Bash(gh config get *)", ask: ["Bash(gh config get *token*)"] }
 ];
 const claudeDemotedToAsk = [
   "Bash(node --check *)", // --require/-r/--import/--loader/--env-file load and run code
   "Bash(git ls-remote *)" // --upload-pack/-u run a local command
 ];
+// `npx -y <pkg>@<version>` prefers a matching package in the project's own
+// node_modules, so a repository can supply the code it runs, and the trailing
+// argument wildcard lets server options that launch a binary or write a file
+// through. Claude Code starts MCP servers from .claude.json itself and never
+// needs these launches as Bash commands; every npx launch asks.
+const claudeDemotedPrefixes = ["Bash(npx ", "Bash(npx.cmd ", "Bash(cmd.exe /c npx "];
 
 export function emitClaudePermissions(rulesText) {
   const allow = new Set();
@@ -81,6 +94,9 @@ export function emitClaudePermissions(rulesText) {
   }
   for (const rule of claudeDemotedToAsk) {
     if (allow.has(rule)) ask.add(rule);
+  }
+  for (const rule of allow) {
+    if (claudeDemotedPrefixes.some((prefix) => rule.startsWith(prefix))) ask.add(rule);
   }
   // A rule that appears in both sets keeps the stricter decision.
   for (const rule of ask) allow.delete(rule);
