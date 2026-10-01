@@ -42,13 +42,29 @@ node scripts/install-claude-target.mjs                 # plan only
 node scripts/install-claude-target.mjs --apply         # install
 node scripts/install-claude-target.mjs --json --redact-paths
 .\scripts\install.ps1 -Target both -WhatIf              # both targets, preview
-./scripts/install.sh --target claude --dry-run          # Claude only, preview
+./scripts/install.sh --target=claude --dry-run          # Claude only, preview
 ```
 
 Interactive installs detect `codex` and `claude` on `PATH` and ask which
 targets to manage. Non-interactive installs manage the Codex target unless
 `--target claude` or `--target both` is passed; the Claude target is never
 selected implicitly.
+
+### Updating
+
+`npm run chef -- --update --apply` refreshes the targets that are installed:
+the Claude target when its install receipt exists, the Codex target when its
+managed files do. Pass `--target codex|claude|both` to choose explicitly. The
+direct form is `.\scripts\install.ps1 -Update -Target both` (Windows) or
+`./scripts/install.sh --update --target=both`. An update also moves Claude
+Code to the new plugin version. On 1.1.0 itself, `claude plugin install` left
+the plugin on its old version; run this once if `claude plugin list` still
+shows the previous one:
+
+```text
+claude plugin marketplace update agentchef
+claude plugin update agentchef-workflows@agentchef
+```
 
 ## Verification
 

@@ -29,8 +29,9 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 - İsteğe bağlı: daha güçlü secret taraması için Gitleaks.
 - Windows için isteğe bağlı: en iyi native sandbox deneyimi için `winget` ve
   güncel Windows 11.
-- Varsayilan Serena semantic-code MCP acik kalacaksa `uvx`. `uvx` yoksa
-  Serena'yi disable et veya status panosunda setup notu gormeyi bekle.
+- Pinli Serena backend'i için `uvx`. Kurulan köprünün kendisi Node tabanlıdır ve
+  `uvx` olmadan başlar; `uvx` yalnızca semantic navigation gerçekten istendiğinde
+  gerekir.
 
 ## Hedef Seçimi
 
@@ -96,11 +97,16 @@ uretilir; sadece bundled lokal server'larin `enabled` durumunu degistirir.
 Bu, profil katmaninda Sequential Thinking, Serena veya launcher ayrintilarinin
 kaybolmasini onler.
 
-Varsayilan acik MCP'lerin de launcher onkosullari vardir. Node/npx tabanli
-MCP'ler, Node pinned package'lari indirebildiginde baslar. Serena semantic code
-navigation icin default aciktir ama `uvx` ve pinned git source ister. Fresh
-machine'de bu launcher yoksa `/mcp` icinde live gorunmesini beklemeden once
-`uvx` kur veya `mcp_servers.serena.enabled = false` yap.
+Varsayılan açık MCP'lerin de başlatıcı ön koşulları vardır. Node/npx tabanlı
+MCP'ler, Node pinli paketleri indirebildiğinde başlar. Serena, `config.toml`
+yanına kurulan yerel köprü `serena-pool.mjs` üzerinden varsayılan olarak açıktır.
+Codex açılışında Serena veya dil sunucusu başlatmaz. İzin listesindeki ilk
+semantic araç çağrısında o kanonik proje için pinli, yalnızca loopback'e bağlı
+tek bir backend başlatır; aynı projedeki oturumlar onu paylaşır, ayrı
+worktree'ler yalıtılmış kalır. Köprü yalnızca sahibine açık yerel bir token ve
+Codex home altında yalıtılmış bir UV önbelleği kullanır; proje kaynağına veya
+config'e asla yazmaz. `uvx` yoksa yalnızca o ilk semantic çağrı başarısız olur;
+`uvx` kur veya Serena'yı kapat.
 
 Ön izleme doğruysa kur:
 
@@ -436,7 +442,7 @@ donusmez.
 Mevcut dosyalar şu klasöre kopyalanır:
 
 ```text
-~/.codex/backups/agentchef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS-<pid>/
 ```
 
 Yeni backup'lar ayrica `.agentchef-backup.json` manifest'i tasir. Bu kucuk
@@ -619,6 +625,35 @@ senkronlar; ilgisiz ek dosyalar kalır. Kisisel
 plugin marketplace ilgisiz kayitlari korur ve sadece AgentChef kaydini backup
 sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force
 senkronizasyonundan daha guvenli ilk adımdır.
+
+## AgentChef'i Kaldırma
+
+```powershell
+npm run chef -- --remove --target both          # ön izleme: ne silinir, ne kalır
+npm run chef -- --remove --target both --apply  # önce yedekleyerek kaldır
+```
+
+Kaldırma yalnızca AgentChef'in sahipliğini kanıtlayabildiği şeyleri siler.
+Bunlar: hâlâ şablonlarıyla aynı olan dosyalar, sahiplik işaretçisi taşıyan
+klasörler, makbuza kayıtlı ayarlar ve MCP girdileri, marketplace girdisi,
+plugin kaydı ve pinli skill indirme önbelleği. Her şey önce yedeklenir. Tek
+istisna indirme önbelleğidir; onu yeniden kurulum tekrar indirir.
+
+Bilerek kalanlar:
+
+- Kendi ayarlarına birleştirilmiş bir `config.toml` AgentChef tablolarını
+  korur. Bu dosya kaldığı sürece işaret ettiği Serena köprüsü ve ajan rol
+  dosyaları da kalır (`kept-referenced`). Böylece Codex temiz açılmaya devam
+  eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldır ya da bir
+  yedeği geri yükle, sonra kaldırmayı yeniden çalıştır.
+- Üretilen MCP profilleri (`full`, `multi-session`, `offline`).
+- `CODEX_HOME/serena-pool`, yani iki hedefin paylaştığı havuz token'ı.
+- İsteğe bağlı Git guard'ları. Bunları kurulumda yazdırılan makbuzla geri
+  yükle.
+- Bütün yedek arşivleri.
+
+Sonrasında Codex ve Claude Code'u yeniden başlat; açık oturumlar AgentChef'i
+yüklemeyi bıraksın.
 
 ## Geri Dönüş
 

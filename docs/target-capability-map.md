@@ -17,7 +17,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | Global working agreement | `~/.codex/AGENTS.md` (backup, then replace unless present) | `~/.claude/rules/agentchef-working-agreement.md` (user-level rule; the user's own `~/.claude/CLAUDE.md` is never edited) | mapped, same source text |
 | Repository-local precedence | repo `AGENTS.md` overrides global | project `CLAUDE.md` and `.claude/rules/` load after user rules | mapped |
 | Settings | `~/.codex/config.toml` (merge missing managed tables) | `~/.claude/settings.json` (additive merge of `permissions`, recorded in a sidecar receipt; `hooks`, `env`, and `deny` lists are never touched) | partial: different ownership model |
-| MCP tools inside a specialist | every declared server, subject to the role's approval rules | a subagent `tools:` list is an allowlist, so a role reaches only the `mcp__<server>` entries it declares; roles whose instructions depend on Context7 or the Serena bridge declare them, and nothing else is granted | mapped, narrower on Claude by design |
+| MCP tools inside a specialist | every declared server, subject to the role's approval rules | a subagent `tools:` list is an allowlist, so a role reaches only the `mcp__<server>` entries it declares; roles whose instructions depend on Context7 declare it, and nothing else is granted (no role declares the Serena bridge yet) | mapped, narrower on Claude by design |
 | MCP servers | `[mcp_servers.*]` tables in `config.toml` | user-scope `mcpServers` in `.claude.json` (additive merge, receipt) | mapped for `context7` and the Serena bridge unless you already defined a server with the same name (your entry is kept and the verifier warns); add other catalog servers yourself with `claude mcp add --scope user`, using the command and args from `catalog/mcp-servers.json` |
 | Runtime MCP profiles (`full`, `multi-session`, `offline`, `token-safe`, ...) | generated `*.config.toml` profiles | no profile concept | **not mapped** |
 | Specialist agents | `~/.codex/agents/*.toml` (32 role files) | plugin subagents `agentchef:<role>` under `plugins/agentchef-workflows/agents/*.md`; `~/.claude/agents/` untouched | mapped, namespaced |
@@ -43,7 +43,7 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | `sandbox_workspace_write.network_access` | no counterpart in AgentChef-managed settings | **not mapped** |
 | `[projects."path"].trust_level` | folder trust prompt and `.claude/settings.local.json` | **not mapped** by the installer |
 | `[features]`, `[memories]`, `[apps]` | no counterpart | **not mapped** |
-| `[mcp_servers.X.tools.Y]` approval tables | `mcp__X__Y` rules in `permissions` | mapped where the server is installed |
+| `[mcp_servers.X.tools.Y]` approval tables | none generated: Claude Code asks before each MCP tool call | not mapped; add `mcp__X__Y` rules to `permissions` yourself to pre-approve a tool |
 | An `allow` prefix rule runs inside the Codex OS sandbox | Claude Code has no OS sandbox by default, and an explicit `allow` rule also skips its own read-only flag analysis | **narrowed**: Claude-only `ask` rules guard `rg --pre`, `git diff/log/show --output` and `--ext-diff`, and `gitleaks --report-path`; `node --check` and `git ls-remote` are `ask` on Claude |
 | Hook trust: Codex reviews the full hook source before enabling it | Claude runs plugin hooks as soon as the plugin is enabled | **security difference**: AgentChef publishes no hook to Claude Code in this release |
 

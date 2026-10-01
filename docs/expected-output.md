@@ -107,7 +107,7 @@ What if: Performing the operation ...
   - Skipped skill installation because -WhatIf is active
 
 [*] Capability board
-  - Agents ready (21):
+  - Agents ready (32):
     code_mapper, docs_researcher, ...
   - MCP ready by default (2):
     openaiDeveloperDocs, serena
@@ -115,11 +115,11 @@ What if: Performing the operation ...
     context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
-  - Local plugin skills (9):
-    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+  - Local plugin skills (10):
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
-  - Enterprise routing profiles (14):
+  - Enterprise routing profiles (18):
     repo-map-before-change, current-docs-research, ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 
@@ -163,7 +163,7 @@ Continue with this plan? [Y/n]:
   [ok] installed: ...
 
 [chef] Capability board
-  - Agents ready (21):
+  - Agents ready (32):
     code_mapper, docs_researcher, ...
   - MCP ready by default (2):
     openaiDeveloperDocs, serena
@@ -171,11 +171,11 @@ Continue with this plan? [Y/n]:
     context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
-  - Local plugin skills (9):
-    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+  - Local plugin skills (10):
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
-  - Enterprise routing profiles (14):
+  - Enterprise routing profiles (18):
     repo-map-before-change, current-docs-research, ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 
@@ -205,7 +205,7 @@ Agents home: ...
 Managed files: <current>/<expected> current, <planned> planned, <applied> applied
 Config: current
 Marketplace: planned
-Skills: <installed> unique installed (<managed-expected> managed expected, <missing> missing, <other> non-curated, <duplicates> duplicate names)
+Skills: <installed> unique installed (<curated-expected> curated expected, <missing> missing, <other> non-curated, <duplicates> duplicate names)
 Action: planned copy-file .../.codex/rules/default.rules
 Action: planned update-marketplace-entry .../.agents/plugins/marketplace.json
 Warning: <other> non-curated global skill(s) are installed; repair reports them but does not delete user skills.
@@ -223,7 +223,7 @@ current managed-file inventory vary by machine and release.
 AgentChef status
 Overall: attention
 Repo Git: attention - git status --short reports changed lines.
-MCP: 16/16 cataloged configured, 0 missing, <user-added> user-added; 3 catalog defaults enabled/13 disabled; live not probed
+MCP: 16/16 cataloged configured, 0 missing, <user-added> user-added; 2 enabled/14 disabled; live not probed
 Codex CLI: ok (strict config ok, login ok, MCP ok)
 Installed runtime: attention/current (...)
 Skills: <installed> total across global roots (<managed> AgentChef managed, <missing> missing, <other> other/user-installed)
@@ -252,7 +252,7 @@ them. Tracked or staged edits remain `attention`.
 Would install file from ...
 
 [*] Capability board
-  - Agents ready (21):
+  - Agents ready (32):
     code_mapper, docs_researcher, ...
   - MCP ready by default (2):
     openaiDeveloperDocs, serena
@@ -260,11 +260,11 @@ Would install file from ...
     context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
-  - Local plugin skills (9):
-    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+  - Local plugin skills (10):
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
-  - Enterprise routing profiles (14):
+  - Enterprise routing profiles (18):
     repo-map-before-change, current-docs-research, ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 
@@ -284,7 +284,7 @@ Would install file from ...
   - installed: ...
 
 [*] Capability board
-  - Agents ready (21):
+  - Agents ready (32):
     code_mapper, docs_researcher, ...
   - MCP ready by default (2):
     openaiDeveloperDocs, serena
@@ -292,11 +292,11 @@ Would install file from ...
     context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
   - MCP setup notes (14):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
-  - Local plugin skills (9):
-    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, offline-diagram-triplet, seo
+  - Local plugin skills (10):
+    adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
   - Reviewed global skills (15):
     dependency-upgrade, gh-fix-ci, ...
-  - Enterprise routing profiles (14):
+  - Enterprise routing profiles (18):
     repo-map-before-change, current-docs-research, ...
   - Account, database, production, broad filesystem, and broad/destructive graph-indexing connectors stay disabled until explicitly enabled.
 

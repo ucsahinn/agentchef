@@ -55,13 +55,19 @@ açık tutup diğer altı lokal stdio sunucuyu kapatır; agent, skill, uzak Open
 app yüzeylerini korur. Profil ana config üzerine katmanlandığı için kapatmak
 sunucu tanımını silmez.
 
+`codex --profile offline` profilini yalnızca Chef'in yönettiği tüm MCP
+taşıyıcılarını bilerek kapatmak istediğinde kullan. Bu, azaltılmış bir
+varsayılan değil, isteğe bağlı bir yedek profildir: ajanları, skill'leri, shell
+izinlerini, browser izinlerini veya web arama ağını değiştirmez.
+
 Bir MCP'nin açık olması browser etkileşimi, memory write, indexleme veya sembol
 düzenleme gibi bütün araçlarının sessizce onaylandığı anlamına gelmez.
 Template'ler incelenmiş okuma araçlarını sınırlar; daha geniş işlemleri onaya
 bırakır veya kapalı tutar.
 
-Makinede `uvx` yoksa Serena açılmaz. Bu yerel bir ön koşuldur; kurulumun geri
-kalanını gevşetmek yerine ihtiyacın olduğunda ön koşulu ayrıca kurabilir ya da
+Makinede `uvx` yoksa köprü yine başlar ve yalnızca ilk Serena aracı çağrısını
+kullanılamaz olarak bildirir. Bu yerel bir ön koşuldur; kurulumun geri kalanını
+gevşetmek yerine ihtiyacın olduğunda ön koşulu ayrıca kurabilir ya da
 Serena'yı o zamana kadar kapatabilirsin.
 
 ## İhtiyacın Olana Kadar Kapalı Kalanlar
