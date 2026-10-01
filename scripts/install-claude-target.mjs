@@ -349,6 +349,21 @@ export function applyClaudeInstall(options, plan) {
     throw new Error(`Refusing to touch foreign skill paths under ${claudeHome}: ${foreignLinks.map((link) => link.name).join(", ")}`);
   }
 
+  // --no-backup is creation-only: with no backup, a failure later in the run
+  // would roll an existing settings.json or .claude.json back by deleting it.
+  // The shell installers enforce this in their preflight; a direct call
+  // (`npm run install:claude -- --apply --no-backup`) did not.
+  if (options.noBackup) {
+    const replaced = plan.actions.filter((action) => {
+      if (action.kind === "copy-file" || action.kind === "write-claude-marketplace") return action.state !== "identical" && fs.existsSync(action.destination);
+      if (action.kind === "json-merge") return action.plan.changed && fs.existsSync(action.destination);
+      return false;
+    });
+    if (replaced.length > 0) {
+      throw new Error(`--no-backup only creates missing files; refusing to replace existing targets without a backup: ${replaced.map((action) => action.destination).join(", ")}`);
+    }
+  }
+
   const packageJson = readJson("package.json");
   const product = { name: packageJson.name, version: packageJson.version };
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;

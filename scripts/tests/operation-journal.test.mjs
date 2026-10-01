@@ -252,3 +252,28 @@ test("rolling back a removed skill link recreates the link, not a copy", () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("journal rollback never deletes a replaced file that has no backup", () => {
+  // A write made without a backup (--no-backup) cannot be undone; deleting the
+  // file on rollback would remove the only copy of the user's data.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-operation-journal-no-backup-"));
+  const journalScript = path.resolve("scripts/lib/operation-journal.mjs");
+  const home = path.join(root, "claude-home");
+  const backupRoot = path.join(home, "backups", "operation");
+  const target = path.join(home, "settings.json");
+  const run = (...args) => spawnSync(process.execPath, [journalScript, ...args], { encoding: "utf8" });
+  try {
+    fs.mkdirSync(home, { recursive: true });
+    fs.writeFileSync(target, "user settings\n", "utf8");
+    assert.equal(run("start", backupRoot, "install").status, 0);
+    assert.equal(run("prepare", backupRoot, target, "-").status, 0);
+    fs.writeFileSync(target, "merged settings\n", "utf8");
+    assert.equal(run("applied", backupRoot, target).status, 0);
+    const rollback = run("rollback", backupRoot, "-", home);
+    assert.notEqual(rollback.status, 0, "the rollback reports the target it could not restore");
+    assert.match(`${rollback.stdout}${rollback.stderr}`, /no backup/);
+    assert.equal(fs.readFileSync(target, "utf8"), "merged settings\n", "the file is kept, not deleted");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

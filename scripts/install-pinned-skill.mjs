@@ -143,12 +143,23 @@ function sourceReceiptMatches(checkoutPath) {
   }
 }
 
+// Git location variables inherited from the caller (a dotfiles setup, or this
+// installer started from inside a hook) would point `git init`, `fetch`, and
+// `checkout` at the user's own repository instead of the temporary checkout.
+const GIT_LOCATION_VARIABLES = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE"];
+const inheritedEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => !GIT_LOCATION_VARIABLES.includes(key.toUpperCase())));
+// git runs with the fetched checkout as its working directory; on Windows a
+// `git.exe` inside it would run instead of the real one unless this process
+// turns the working-directory lookup off.
+if (process.platform === "win32") process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
 function run(command, args, label, extra = {}) {
   const result = spawnSync(command, args, {
     cwd: extra.cwd || checkout || process.cwd(),
     encoding: "utf8",
     env: {
-      ...process.env,
+      ...inheritedEnvironment,
+      ...(process.platform === "win32" ? { NoDefaultCurrentDirectoryInExePath: "1" } : {}),
       CI: process.env.CI || "1",
       FORCE_COLOR: process.env.FORCE_COLOR || "0",
       GIT_CONFIG_COUNT: process.env.GIT_CONFIG_COUNT || "1",

@@ -331,3 +331,18 @@ test("removal fails and keeps its receipt while the plugin may still be register
   assert.deepEqual(readJson(path.join(state.claudeHome, "settings.json")), state.settings, "the user's settings are back after the retries");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("--no-backup refuses to replace an existing settings.json or .claude.json", () => {
+  // Creation-only: without a backup a later failure would roll the user's
+  // files back by deleting them.
+  const state = fixture();
+  const result = spawnSync(process.execPath, [
+    helper, "--claude-home", state.claudeHome, "--agents-home", state.agentsHome, "--home", state.home,
+    "--platform", platform, "--skip-plugin-register", "--json", "--apply", "--no-backup"
+  ], { cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(60_000), env: fixtureEnv });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}${result.stderr}`, /--no-backup only creates missing files/);
+  assert.deepEqual(readJson(path.join(state.claudeHome, "settings.json")), state.settings, "nothing was written");
+  assert.deepEqual(readJson(path.join(state.home, ".claude.json")), state.claudeJson);
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

@@ -11,6 +11,34 @@
   `claude plugin marketplace update` and `claude plugin update` whenever
   Claude Code records a version other than the package version. The verifier
   compares the registered version with the source and names the fix.
+- Security hardening from an audit of the install, repair, and MCP surfaces:
+  - On Windows a process that spawns a bare command from a project folder
+    ran an executable committed to that folder before the one on PATH
+    (measured with a stand-in `uvx.exe` and `git.exe`). Setting
+    `NoDefaultCurrentDirectoryInExePath` only in the child's env does not
+    help. The Serena pool, which starts `uvx` from the project root, the
+    global pre-commit hook, which runs `git` and `gitleaks` from the
+    repository, and the pinned-skill installer now set it for themselves.
+    Claude Code already sets it, and Codex does not search the working
+    directory.
+  - The pinned-skill installer drops inherited `GIT_DIR`, `GIT_WORK_TREE`,
+    and the other Git location variables, which would have pointed its
+    `git init`/`fetch`/`checkout` at the caller's own repository.
+  - The Serena bridge no longer exposes `activate_project`. It accepted any
+    path, was auto-approved, and created `.serena/project.yml` there; the
+    pool already starts each backend on its project.
+  - `install-claude-target.mjs --no-backup` is creation-only, as its help
+    said. A direct call replaced an existing `settings.json` or
+    `.claude.json` without a backup, and a later failure then rolled it back
+    by deleting it. The journal rollback also never deletes a replaced file
+    that has no backup.
+  - Claude permissions no longer auto-allow any `npx` launch, because `npx`
+    prefers a matching package in the project's `node_modules`. They also
+    ask for the gitleaks `-r=`/`--log-opts` forms, for `npm pack` flags that
+    run scripts or write elsewhere, and for `gh config get … token`. An
+    update retires the dropped allow rules through their receipt.
+  - The previous pre-commit hook hash stays in the ownership list, so an
+    installed copy is still refreshed by `--install-git-guards`.
 
 ## 1.1.0 - 2026-10-01
 

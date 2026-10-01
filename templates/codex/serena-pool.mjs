@@ -10,11 +10,18 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 
+// Windows looks for a bare command such as `uvx` in the working directory
+// before PATH unless the SPAWNING process has this variable set; setting it
+// only in a child's env does not help (measured). The backend starts with the
+// project folder as its working directory, so a `uvx.exe` committed to a repo
+// would otherwise run on the first semantic call.
+if (process.platform === "win32") process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
 const SERENA_SOURCE = "22c135a881aaf17485e54ef0ccaedeaf51a202c0";
 const PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_IDLE_TTL_MS = 15 * 60 * 1000;
 const TOOL_NAMES = [
-  "activate_project", "get_current_config", "initial_instructions", "list_memories", "read_memory",
+  "get_current_config", "initial_instructions", "list_memories", "read_memory",
   "search_for_pattern", "find_symbol", "find_declaration", "find_implementations",
   "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"
 ];

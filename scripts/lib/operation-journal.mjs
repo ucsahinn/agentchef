@@ -315,6 +315,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             unresolved.push(`preserved changed target: ${target}`);
             continue;
           }
+          // A file that existed before the change and has no backup cannot be
+          // restored; deleting it would remove the only copy left.
+          if (!mutation.backup && !mutation.link && current.kind !== "absent" && mutation.before && mutation.before.kind !== "absent") {
+            unresolved.push(`kept a replaced target that has no backup: ${target}`);
+            continue;
+          }
           // A link is removed as a link so the managed tree it points at is never touched.
           if (current.kind === "link") fs.unlinkSync(target);
           else fs.rmSync(target, { recursive: true, force: true });

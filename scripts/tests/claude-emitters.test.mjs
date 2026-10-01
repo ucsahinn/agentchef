@@ -88,6 +88,20 @@ test("allow rules that can run code or write files carry an ask guard, or are as
     assert.equal(permissions.allow.includes(demoted), false, `${demoted} must not be auto-allowed`);
     assert.ok(permissions.ask.includes(demoted));
   }
+  // npx prefers a matching package in the project's node_modules, so a
+  // repository can supply the code a launch runs.
+  assert.deepEqual(permissions.allow.filter((rule) => /\bnpx(\.cmd)? /.test(rule)), [], "no npx launch is auto-allowed");
+  assert.ok(permissions.ask.includes("Bash(npx.cmd skills list *)"));
+  for (const [allowed, guard] of [
+    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks * -r=*)"],
+    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks *--log-opts*)"],
+    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--no-ignore-scripts*)"],
+    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--pack-destination*)"],
+    ["Bash(gh config get *)", "Bash(gh config get *token*)"]
+  ]) {
+    assert.ok(permissions.allow.includes(allowed), `${allowed} stays usable`);
+    assert.ok(permissions.ask.includes(guard), `${guard} must outrank ${allowed}`);
+  }
 });
 
 test("the Claude plugin manifest mirrors the Codex manifest version and lists every agent file", () => {
