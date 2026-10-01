@@ -135,6 +135,13 @@
   validator allows the two local, account-free browser servers from the
   catalog and still rejects account, path, and local-state servers.
 
+- Redact the paths inside the verifier's error messages. With
+  `--redact-paths`, failures and warnings that quote an absolute path (a
+  refused managed path, a spawn error naming the resolved `codex.exe`) were
+  still printed in full; one report on a linked home held 394 home-path hits.
+  Every string in the report is now redacted before it is printed, so status
+  and `chef --status`, which embed it, are covered too.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and

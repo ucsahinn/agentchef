@@ -422,3 +422,32 @@ test("status calls an empty home not installed, and fails a broken Claude target
     fs.rmSync(home, { recursive: true, force: true });
   }
 });
+
+test("--redact-paths also redacts the paths inside error messages", () => {
+  // A linked managed root makes every managed-path check fail with a message
+  // holding the absolute path; those messages were pushed unredacted
+  // (measured: 394 home-path hits in one --json --redact-paths report).
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-redact-errors-"));
+  try {
+    const real = path.join(base, "real");
+    const linked = path.join(base, "link");
+    fs.mkdirSync(real);
+    fs.symlinkSync(real, linked, process.platform === "win32" ? "junction" : "dir");
+    const result = spawnSync(process.execPath, [path.join(root, "scripts", "verify-install-runtime.mjs"), "--codex-home", linked, "--agents-home", real, "--skip-codex-cli", "--json", "--redact-paths"], {
+      cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(120_000)
+    });
+    const report = JSON.parse(result.stdout);
+    assert.ok(report.failures.some((failure) => failure.includes("Refusing to follow an unsafe managed path")), "the linked root is refused");
+    const serialized = JSON.stringify(report);
+    // The serialized report escapes backslashes, so the JSON form of each path
+    // is what can appear in it.
+    // Redaction covers the home and repo paths; the temporary base only when it
+    // lives under the home (Windows), not /tmp (Linux, macOS).
+    const insideHome = base.startsWith(os.homedir());
+    for (const form of [os.homedir(), os.homedir().split(path.sep).join("/"), ...(insideHome ? [base] : [])].map((value) => JSON.stringify(value).slice(1, -1))) {
+      assert.equal(serialized.includes(form), false, `no ${form} in a redacted report`);
+    }
+  } finally {
+    fs.rmSync(base, { recursive: true, force: true });
+  }
+});
