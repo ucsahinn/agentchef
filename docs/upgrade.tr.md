@@ -101,7 +101,11 @@ ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler
   commit'ten tekrar indirir. Girdi silindikten sonra yalnızca AgentChef'in boş
   iskeleti kalan plugin marketplace dosyası da kaldırılır.
   `CODEX_HOME/serena-pool` iki ortamın paylaştığı yerel havuz token'ını tutar;
-  açık oturum kalmadığında silebilirsiniz.
+  açık oturum kalmadığında silebilirsiniz. Kendi ayarlarınıza birleştirilmiş
+  bir `config.toml` kaldığı sürece, onun işaret ettiği Serena köprüsü ve ajan
+  rol dosyaları `kept-referenced` olarak kalır; böylece Codex temiz açılmaya
+  devam eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldırıp
+  kaldırma işlemini yeniden çalıştırırsanız bu dosyalar da silinir.
 - `npm run verify:install:runtime -- --target claude` ve
   `npm run codex:status -- --target both` Claude tarafını doğrular.
 

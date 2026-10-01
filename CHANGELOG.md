@@ -91,6 +91,14 @@
     `chef --doctor --json` stopped at the 64 KiB pipe buffer; chef now exits
     only after stdout drains.
 
+- Keep the files a kept `config.toml` still points at when removing the Codex
+  target. A config merged into your own settings stays after removal and
+  still references the Serena bridge and the agent role files. Removing
+  those left Codex warning "Ignoring malformed agent role definition ...
+  must point to an existing file" for every role on each session (measured)
+  and starting a Serena entry whose bridge was gone. Such files now stay as
+  `kept-referenced`; once you drop the tables, a second removal deletes them.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and
