@@ -17,7 +17,9 @@ import { spawn, spawnSync } from "node:child_process";
 // would otherwise run on the first semantic call.
 if (process.platform === "win32") process.env.NoDefaultCurrentDirectoryInExePath = "1";
 
-const SERENA_SOURCE = "22c135a881aaf17485e54ef0ccaedeaf51a202c0";
+// v1.7.0: fixes GHSA-pp25-4cg4-qcr9 (template injection in a project's mode
+// config -> code execution on project activation), which affects <= 1.6.1.
+const SERENA_SOURCE = "949a27ef1e5fda1a6e7b561e777bcece345c6ffd";
 const PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_IDLE_TTL_MS = 15 * 60 * 1000;
 const TOOL_NAMES = [
@@ -34,10 +36,11 @@ const TOOL_NAMES = [
 const WRITE_CAPABLE_TOOLS = [
   "create_text_file", "replace_content", "replace_lines", "delete_lines", "insert_at_line",
   "replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "rename_symbol", "safe_delete_symbol",
+  "replace_in_files",
   "write_memory", "edit_memory", "delete_memory", "rename_memory",
   "execute_shell_command", "switch_modes", "remove_project", "onboarding"
 ];
-const READ_ONLY_MODE_VERSION = "read-only-mode-v1";
+const READ_ONLY_MODE_VERSION = "read-only-mode-v2";
 // A manager outlives the file it was started from; the bridge replaces one
 // that reports a different launch profile, or an update would never apply.
 // It includes this file's own content: a change to the manager's code (a new
@@ -343,7 +346,11 @@ async function handleBridgeMessage(line, { token, clientId }) {
       timeoutMs: 185000,
       body: { clientId, projectRoot: process.cwd(), toolName, arguments: message.params?.arguments || {} }
     });
-    if (message.id !== undefined) writeStdio({ jsonrpc: "2.0", id: message.id, ...(result.response || { error: { code: -32603, message: "Serena pool returned no tool response." } }) });
+    // The client's id goes last: the backend's response carries the id of the
+    // pool's own request to Serena, and spreading it after the client's id
+    // answered every call with that id, so a client waited out the timeout
+    // for any call whose id was not 2.
+    if (message.id !== undefined) writeStdio({ ...(result.response || { error: { code: -32603, message: "Serena pool returned no tool response." } }), jsonrpc: "2.0", id: message.id });
   } catch (error) {
     if (message.id !== undefined) writeStdio({ jsonrpc: "2.0", id: message.id, error: { code: -32603, message: "Serena pool request failed.", data: { reason: error.message } } });
   }
@@ -365,7 +372,7 @@ async function launchSerena(root) {
   const child = spawn("uvx", [
     "--from", `git+https://github.com/oraios/serena.git@${SERENA_SOURCE}`,
     "serena", "start-mcp-server", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", String(port),
-    "--context", "codex", "--add-mode", readOnlyModePath(), "--project", root, "--open-web-dashboard", "False"
+    "--context", "codex", "--add-mode", readOnlyModePath(), "--project", root, "--enable-web-dashboard", "False", "--open-web-dashboard", "False"
   ], {
     cwd: root,
     detached: process.platform !== "win32",

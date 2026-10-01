@@ -96,7 +96,7 @@
       "toolApprovals": {"get_current_config":"approve", "initial_instructions":"approve", "list_memories":"approve", "read_memory":"approve", "search_for_pattern":"approve", "find_symbol":"approve", "find_declaration":"approve", "find_implementations":"approve", "find_referencing_symbols":"approve", "get_symbols_overview":"approve", "get_diagnostics_for_file":"approve"},
       "risk": "medium",
       "sourceUrl": "https://github.com/oraios/serena",
-      "sourceRef": "22c135a881aaf17485e54ef0ccaedeaf51a202c0",
+      "sourceRef": "949a27ef1e5fda1a6e7b561e777bcece345c6ffd",
       "defaultReason": "Semantic navigation remains available without eagerly creating one Serena/LSP tree per Codex client; only read/navigation tools are allowlisted.",
       "notes": "Project-keyed lazy Serena pool. Same project reuses one backend; separate worktrees receive isolated backends when used."
     },

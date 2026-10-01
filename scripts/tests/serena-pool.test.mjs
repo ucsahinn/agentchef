@@ -240,6 +240,60 @@ test("stdio bridge exposes the safe tool surface without starting Serena on MCP 
   }
 });
 
+test("a tool call is answered with the client's own request id", async () => {
+  // The backend's response carries the id of the pool's request to Serena
+  // (always 2); spreading it over the client's id answered every call as id 2,
+  // so a client waited out the tool timeout for any other id.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-call-id-"));
+  const port = 49_000 + Math.floor(Math.random() * 1_000);
+  const source = fs.readFileSync(fileURLToPath(moduleUrl), "utf8");
+  const constant = (name) => {
+    const start = source.indexOf(`const ${name} = "`) + `const ${name} = "`.length;
+    return source.slice(start, source.indexOf('"', start));
+  };
+  const crypto = await import("node:crypto");
+  const profile = `${constant("SERENA_SOURCE")}:${constant("READ_ONLY_MODE_VERSION")}:${crypto.createHash("sha256").update(fs.readFileSync(fileURLToPath(moduleUrl))).digest("hex").slice(0, 16)}`;
+  const fakeManager = http.createServer((request, response) => {
+    let body = "";
+    request.on("data", (chunk) => { body += chunk; });
+    request.on("end", () => {
+      response.writeHead(200, { "content-type": "application/json" });
+      if (request.url === "/health") response.end(JSON.stringify({ ok: true, profile }));
+      else if (request.url === "/call-tool") response.end(JSON.stringify({ response: { jsonrpc: "2.0", id: 2, result: { content: [{ type: "text", text: `called ${JSON.parse(body).toolName}` }] } } }));
+      else response.end(JSON.stringify({ ok: true }));
+    });
+  });
+  await new Promise((resolve) => fakeManager.listen(port, "127.0.0.1", resolve));
+  const bridge = spawn(process.execPath, [fileURLToPath(moduleUrl), "bridge"], {
+    cwd: home,
+    env: { ...process.env, CODEX_HOME: home, AGENTCHEF_SERENA_POOL_PORT: String(port) },
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+  const replies = [];
+  let buffer = "";
+  bridge.stdout.setEncoding("utf8");
+  bridge.stdout.on("data", (chunk) => {
+    buffer += chunk;
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) if (line.trim()) replies.push(JSON.parse(line));
+  });
+  try {
+    bridge.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} })}\n`);
+    bridge.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "find_symbol", arguments: { name_path_pattern: "x" } } })}\n`);
+    await waitFor(() => replies.some((reply) => reply.result?.content));
+    const call = replies.find((reply) => reply.result?.content);
+    assert.equal(call.id, 7, "the reply carries the id the client sent");
+    assert.equal(call.result.content[0].text, "called find_symbol");
+  } finally {
+    const exited = new Promise((resolve) => bridge.once("exit", resolve));
+    bridge.stdin.end();
+    await exited;
+    await new Promise((resolve) => fakeManager.close(resolve));
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
 test("the pooled Serena backend starts in a read-only mode that removes every writing tool", () => {
   const source = fs.readFileSync(fileURLToPath(moduleUrl), "utf8");
   const list = (name) => {
