@@ -2,6 +2,55 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.1.0 - 2026-10-01
+
+AgentChef 1.1.0, gerçek bir kuruluma karşı yürütülen öz-denetim turunu
+toplar. Her CLI komutu, MCP sunucusu ve paketli skill canlı bir makinede
+çalıştırıldı. Ardından gerçek `codex` ve `claude` CLI'larıyla scratch
+home'larda tam bir kur, göç ve kaldır döngüsü koşuldu. Bulgular doğrulanıp
+düzeltildi, sonra bağımsız kod inceleme ve güvenlik ajanlarınca yeniden
+incelendi. Yeni bir göç adımı yok; `-Update` hepsini alır.
+
+### Neler Değişti?
+
+- Kaldırma: `--remove` her iki kaldırma planı yeniden çalıştırılarak
+  doğrulanır. AgentChef'in pinli skill indirme önbelleğini ve boş
+  marketplace iskeletini de kaldırır. Bağlantılı bir alt klasör üzerinden
+  ulaşılan dosyayı asla silmez; her yol silmeden hemen önce yeniden
+  denetlenir.
+- Claude Code: izin kuralları artık kod çalıştırabilen veya dosya yazabilen
+  komutlara otomatik izin vermez. Güncelleme, daha önce yazdığı bir kuralı
+  emekliye ayırabilir veya bir MCP girdisini yenileyebilir; bunu aynı makbuz
+  kanıtıyla yapar. Uzman ajanlar kendi talimatlarının kullandığı MCP
+  sunucularına erişir. Doğrulayıcı önbellekteki plugin kopyasını (roller ve
+  skill'ler) kaynakla karşılaştırır. Kendi `serena` veya `context7`
+  girdiniz AgentChef'inkini gölgeliyorsa uyarır.
+- Serena havuzu: ortak yönetici kodu değişince değiştirilir, salt-okunur
+  kalır, bağlantısı kopan köprünün oturumlarını bırakır ve artık yetim
+  sayılmaz.
+- Güvenlik: Node yazma akışları hata olunca gerçekten geri alınır. Pinli
+  üçüncü taraf skill'ler üç ek bütünlük açığına karşı denetlenir. Claude
+  Code'un yerel durumu inceleme anlık görüntülerine girmez.
+  `--update --apply`, `main` dışındaki bir klonu reddeder.
+  `validate-content-safety` ham kontrol karakterlerini reddeder.
+- Windows: yedekler Node ile kopyalanır; böylece uzun bir `CODEX_HOME`,
+  PowerShell 5.1 altında `-Update`'i artık bozmaz. npm ile kurulmuş `codex`
+  veya `claude` da bulunur.
+- Tanı: `codex doctor` beş dakikaya kadar süre alır ve doğrulayıcı zaman
+  aşımını adıyla söyler. `--backups` çok daha hızlıdır. Süreç hijyeni canlı
+  Claude Code oturumlarını MCP sahibi olarak tanır.
+- Kataloglar: MCP pinleri, her sunucunun araç listesi yoklandıktan sonra
+  yenilendi. `codebase-memory` bilerek 0.8.1'de kalır.
+
+Her düzeltme nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde.
+
+### Ürün Sınırı
+
+Değişmedi: AgentChef yalnızca sahipliğini kanıtlayabildiği şeyi siler veya
+yeniden yazar. Yönetilen bir girdiyi gölgeleyen kullanıcı girdileri
+raporlanır, değiştirilmez. Üretilen MCP profilleri ve ortak Serena havuz
+token'ı kaldırmadan sonra kalır.
+
 ## v1.0.0 - 2026-09-18
 
 AgentChef 1.0.0 yeniden adlandırmayı tamamlar: installer'ın yazdığı her şey

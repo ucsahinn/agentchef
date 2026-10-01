@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and
   `claude` CLIs in scratch homes:

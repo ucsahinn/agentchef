@@ -2,6 +2,51 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.1.0 - 2026-10-01
+
+AgentChef 1.1.0 rolls up a self-review round run against a real install.
+Every CLI command, MCP server, and bundled skill was run on a live machine,
+then a full install, migrate, and remove cycle ran in scratch homes with the
+real `codex` and `claude` CLIs. The findings were verified and fixed, then
+reviewed again by independent code-review and security agents. There is no
+new migration step; `-Update` picks it all up.
+
+### What Changed
+
+- Removal: `--remove` is verified by rerunning both removal plans. It also
+  removes AgentChef's pinned-skill download cache and an empty marketplace
+  skeleton. It never deletes a file reached through a linked subfolder, and
+  every path is re-checked right before its delete.
+- Claude Code: permission rules no longer auto-allow commands that can run
+  code or write files. An update can retire a rule or refresh an MCP entry it
+  wrote earlier, under the same receipt proof. Specialist agents get the MCP
+  servers their own instructions use. The verifier compares the cached plugin
+  copy, roles and skills alike, with the source, and warns when your own
+  `serena` or `context7` entry shadows AgentChef's.
+- Serena pool: the shared manager is replaced when its code changes, it stays
+  read-only, it releases a disconnecting bridge's sessions, and it is no
+  longer reported as an orphan.
+- Safety: Node write flows really roll back on failure. A pinned third-party
+  skill is checked for three more integrity gaps. Claude Code's local state
+  stays out of review snapshots. `--update --apply` refuses a clone that is
+  not on `main`. `validate-content-safety` rejects raw control characters.
+- Windows: backups copy through Node, so a long `CODEX_HOME` no longer breaks
+  `-Update` under PowerShell 5.1, and an npm-installed `codex` or `claude` is
+  found.
+- Diagnostics: `codex doctor` gets up to five minutes, and the verifier names
+  a timeout. `--backups` is much faster. Process hygiene recognizes live
+  Claude Code sessions as MCP owners.
+- Catalogs: MCP pins were refreshed after probing each server's tool list.
+  `codebase-memory` stays at 0.8.1 on purpose.
+
+The [CHANGELOG](../CHANGELOG.md) lists every fix with its cause.
+
+### Product Boundary
+
+Unchanged: AgentChef deletes or rewrites only what it can prove it owns. User
+entries that shadow a managed one are reported, not replaced. Generated MCP
+profiles and the shared Serena pool token stay after removal.
+
 ## v1.0.0 - 2026-09-18
 
 AgentChef 1.0.0 completes the rename: everything the installer writes now
