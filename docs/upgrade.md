@@ -175,8 +175,11 @@ or `--force`.
 By default, overwritten managed files are backed up under:
 
 ```text
-~/.codex/backups/codex-chef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS-<pid>/
 ```
+
+Archives made before 1.0.0 start with `codex-chef-`. The Claude Code target
+backs up the files it changes under `~/.claude/agentchef/backups/agentchef-*`.
 
 Do not use `-NoBackup` or `--no-backup` unless you already have another backup.
 

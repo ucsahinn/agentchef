@@ -42,13 +42,29 @@ node scripts/install-claude-target.mjs                 # yalnız plan
 node scripts/install-claude-target.mjs --apply         # kurulum
 node scripts/install-claude-target.mjs --json --redact-paths
 .\scripts\install.ps1 -Target both -WhatIf              # iki hedef, ön izleme
-./scripts/install.sh --target claude --dry-run          # yalnız Claude, ön izleme
+./scripts/install.sh --target=claude --dry-run          # yalnız Claude, ön izleme
 ```
 
 İnteraktif kurulumlar `PATH` üzerinde `codex` ve `claude` komutlarını algılar
 ve hangi hedeflerin yönetileceğini sorar. İnteraktif olmayan kurulumlar,
 `--target claude` veya `--target both` verilmedikçe Codex hedefini yönetir;
 Claude hedefi asla örtük olarak seçilmez.
+
+### Güncelleme
+
+`npm run chef -- --update --apply` kurulu hedefleri yeniler. Kurulum makbuzu
+varsa Claude hedefini, yönetilen dosyaları varsa Codex hedefini yeniler. Açıkça
+seçmek için `--target codex|claude|both` ver. Doğrudan biçimi
+`.\scripts\install.ps1 -Update -Target both` (Windows) veya
+`./scripts/install.sh --update --target=both` olur. Güncelleme Claude Code'u
+yeni plugin sürümüne de taşır. 1.1.0'ın kendisinde `claude plugin install`
+plugin'i eski sürümünde bırakıyordu; `claude plugin list` hâlâ önceki sürümü
+gösteriyorsa bunu bir kez çalıştır:
+
+```text
+claude plugin marketplace update agentchef
+claude plugin update agentchef-workflows@agentchef
+```
 
 ## Doğrulama
 

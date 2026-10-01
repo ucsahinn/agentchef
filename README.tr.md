@@ -50,7 +50,7 @@ lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 | --- | --- |
 | [🤖 11 koordinatör + 21 uzmanı gör](docs/agents.tr.md) | Koordinasyon rolleri, uzman worker'lar ve delegasyonun ne zaman gerçekten faydalı olduğunu. |
 | [🧩 Skill kataloğunu aç](docs/skills.tr.md) | On bundled workflow'u, full install ile gelen on beş incelenmiş skill'i ve varsayılan yolu kalabalıklaştırmayan opsiyonları. |
-| [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | Dengeli üç sunuculu varsayılanı, opsiyonel lokal yetenekleri, sekiz kontrollü connector'ı ve süreç/erişim sınırlarını. |
+| [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | İki sunuculu Codex varsayılanını (Claude Code'da ek olarak Context7), opsiyonel lokal yetenekleri, sekiz kontrollü connector'ı ve süreç/erişim sınırlarını. |
 | [📜 Kurulan çalışma sözleşmesini oku](templates/codex/AGENTS.md) | `~/.codex/AGENTS.md` olarak kurulan kullanıcı-geneli varsayılanlar; repo-içi `AGENTS.md` yine daha yüksek önceliklidir. |
 | [🛡️ Güvenlik modelini oku](docs/security-model.tr.md) | Ön izleme, yedekleme, onay kapıları, secret sınırları ve AgentChef'in bilerek kendi başına yapmadığı işlemleri. |
 
@@ -92,15 +92,19 @@ kullanılabilir.
 ### MCP'ler: canlı araç ve context, fakat sınırları görünür
 
 MCP; ajanı dokümantasyona, browser'a, semantic code navigation'a, memory'ye
-ve lokal codebase graph okumalarına bağlar. Dengeli ana config uzak
-`openaiDeveloperDocs` ile lokal `context7` ve `serena` sunucularını açar; diğer
-beş lokal stdio sunucusu (`sequential-thinking`, `playwright`,
-`chrome-devtools`, `memory` ve `codebase-memory`) tanımlı ama kapalı kalır.
+ve lokal codebase graph okumalarına bağlar. Codex'te dengeli ana config uzak
+`openaiDeveloperDocs` sunucusunu ve hafif bir Serena köprüsünü açar. Köprü
+oturum açılışında Serena/LSP başlatmaz: aynı kanonik proje tek bir tembel
+backend'i paylaşır, ayrı bir worktree ise yalnızca semantic navigation
+gerçekten kullanıldığında kendi backend'ini alır. Diğer altı lokal stdio
+sunucusu (`context7`, `sequential-thinking`, `playwright`, `chrome-devtools`,
+`memory` ve `codebase-memory`) tanımlı ama kapalı kalır.
 Böylece her eşzamanlı oturum aynı Node/Python yardımcı ağaçlarını baştan
 kurmaz. Yetenek ağırlıklı tek ana oturumda `full`, düşük süreç maliyetli
 ikincil oturumlarda `multi-session` profilini kullanabilirsin. Hesap, database,
 production ve geniş filesystem connector'ları sen bilerek açana kadar kapalı
-kalır.
+kalır. Claude Code hedefi `~/.claude.json` içine `context7` ve aynı Serena
+köprüsünü ekler; bu adlardan birinde zaten bir girdin varsa ona dokunmaz.
 
 [Tüm MCP'leri, önkoşulları ve erişim sınırlarını gör →](docs/mcp-catalog.tr.md)
 

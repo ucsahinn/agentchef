@@ -171,8 +171,11 @@ istiyorsan preview'i inceledikten sonra aynı installer'ı `-Force` veya
 Varsayılan olarak overwrite edilen yönetilen dosyalar şuraya yedeklenir:
 
 ```text
-~/.codex/backups/codex-chef-YYYYMMDD-HHMMSS/
+~/.codex/backups/agentchef-YYYYMMDD-HHMMSS-<pid>/
 ```
+
+1.0.0'dan önce alınan arşivler `codex-chef-` ile başlar. Claude Code hedefi
+değiştirdiği dosyaları `~/.claude/agentchef/backups/agentchef-*` altına yedekler.
 
 Başka backup'ın yoksa `-NoBackup` veya `--no-backup` kullanma.
 
