@@ -117,6 +117,15 @@
   and starting a Serena entry whose bridge was gone. Such files now stay as
   `kept-referenced`; once you drop the tables, a second removal deletes them.
 
+- Make "strict config ok" in `codex-status` a real check. The probe was
+  `codex --strict-config --version`, which exits 0 without reading
+  `config.toml` (measured on 0.158.0 with an invented table), so it could
+  never fail. Status now runs `codex exec --strict-config` with a provider
+  that does not exist: a valid config stops at "provider not found", and an
+  invalid one is reported. The probe runs on a copy of `config.toml` and
+  `agents/` in a temporary home, so status still writes nothing to the real
+  Codex home.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and
