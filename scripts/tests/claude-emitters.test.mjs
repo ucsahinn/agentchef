@@ -28,6 +28,15 @@ test("every catalog role becomes a namespaced Claude subagent without permission
   const expected = catalog.agents.length + (catalog.coordinators || []).length;
   assert.equal(agents.size, expected);
   assert.equal(expected, 32);
+  // A bare mcp__serena grants a user's own Serena entry's write tools too.
+  for (const [fileName, text] of agents) {
+    const toolsLine = text.split("\n").find((line) => line.startsWith("tools:")) || "";
+    assert.ok(!/\bmcp__serena(,|$)/.test(toolsLine), `${fileName} grants Serena by tool name only`);
+    for (const writeTool of ["replace_symbol_body", "write_memory", "rename_symbol", "replace_content", "activate_project"]) {
+      assert.ok(!toolsLine.includes(`mcp__serena__${writeTool}`), `${fileName} must not grant ${writeTool}`);
+    }
+  }
+  assert.ok(agents.get("code-mapper.md").includes("mcp__serena__find_symbol"), "code-mapper keeps semantic navigation");
   const coordinatorNames = new Set((catalog.coordinators || []).map((coordinator) => coordinator.name.replace(/_/g, "-")));
   for (const [fileName, text] of agents) {
     assert.match(fileName, /^[a-z0-9-]+\.md$/, "kebab-case file names");
