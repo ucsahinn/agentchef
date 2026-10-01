@@ -195,14 +195,23 @@ const collisionPhrases = [
   const catalogued = new Set((readJson("catalog/mcp-servers.json").servers || []).map((server) => server.name));
   // Kept in step with claudeDefaultServers in lib/claude-mcp-merge.mjs.
   const installedForClaude = new Set(["context7", "serena"]);
+  // Local, account-free browser servers a user adds to Claude Code from the
+  // catalog. A role whose instructions say to use them needs the grant, or the
+  // allowlist filters them out even after the user adds them; until then the
+  // entry grants nothing. Account, path, and local-state servers stay out.
+  const userAddableForClaude = new Set(
+    (readJson("catalog/mcp-servers.json").servers || [])
+      .filter((server) => server.setupKind === "tooling" && server.transport === "stdio" && ["playwright", "chrome-devtools"].includes(server.name))
+      .map((server) => server.name)
+  );
   for (const agent of agents.agents || []) {
     for (const server of agent.claudeMcp || []) {
       if (!catalogued.has(server)) {
         fail(agent.name + ' is granted MCP server "' + server + '", which catalog/mcp-servers.json does not define');
         continue;
       }
-      if (!installedForClaude.has(server)) {
-        fail(agent.name + ' is granted MCP server "' + server + '", which AgentChef does not install for the Claude target, so the grant would never resolve');
+      if (!installedForClaude.has(server) && !userAddableForClaude.has(server)) {
+        fail(agent.name + ' is granted MCP server "' + server + '", which AgentChef neither installs for the Claude target nor lists as a local browser server a user adds, so the grant would never resolve');
       }
     }
   }
