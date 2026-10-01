@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -82,7 +83,9 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.equal(statuses["plugin-marketplace"], "entry-removed");
   assert.equal(statuses["curated-skills:systematic-debugging"], "removed");
   assert.equal(statuses["curated-skills:webapp-testing"], "foreign");
-  assert.equal(statuses["installed-plugin-cache-refresh"], "skipped", "no codex CLI on PATH in this test");
+  assert.equal(statuses["installed-plugin-cache-refresh"], "absent", "the plugin was never added to Codex");
+  fs.mkdirSync(path.join(state.codexHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0"), { recursive: true });
+  assert.equal(run(state, ["--dry-run"]).items.find((item) => item.id === "installed-plugin-cache-refresh")?.decision, "absent", "an emptied cache tree left by `codex plugin remove` is not an installed plugin");
   assert.ok(!fs.existsSync(path.join(state.codexHome, "AGENTS.md")));
   assert.ok(fs.existsSync(path.join(state.codexHome, "rules", "default.rules")), "user-changed file kept");
   assert.equal(fs.readFileSync(path.join(state.codexHome, "config.toml"), "utf8"), "# user config\nmodel = \"x\"\n");
@@ -132,4 +135,74 @@ test("Codex removal removes both marker spellings from a partially migrated dire
   assert.ok(!fs.existsSync(path.join(direct, ".agentchef-managed.json")));
   assert.ok(!fs.existsSync(path.join(direct, ".codex-chef-managed.json")), "no stale marker is left behind");
   fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("Codex removal asks the Codex CLI only for an installed plugin and drops AgentChef's own source cache", () => {
+  const state = fixture();
+  fs.appendFileSync(path.join(state.codexHome, "config.toml"), '\n[plugins."agentchef-workflows@agentchef"]\nenabled = true\n');
+  const marketplacePath = path.join(state.agentsHome, "plugins", "marketplace.json");
+  fs.writeFileSync(marketplacePath, `${JSON.stringify({ name: "agentchef", plugins: [{ name: "agentchef-workflows" }] }, null, 2)}\n`);
+  const cacheRoot = path.join(state.codexHome, "cache", "pinned-skill-sources");
+  // Named the way install-pinned-skill names them: sha256 of package@commit:depth.
+  const cacheKey = (source) => crypto.createHash("sha256").update(`${source.package}@${source.commit}:${source.fullDepth ? "full" : "shallow"}`).digest("hex");
+  const ownedSource = { package: "obra/superpowers", commit: "a".repeat(40), fullDepth: false };
+  const legacySource = { package: "obra/superpowers", commit: "b".repeat(40), fullDepth: true };
+  const owned = path.join(cacheRoot, cacheKey(ownedSource));
+  const legacy = path.join(cacheRoot, cacheKey(legacySource));
+  const foreign = path.join(cacheRoot, "c".repeat(64));
+  const misnamed = path.join(cacheRoot, "d".repeat(64));
+  fs.mkdirSync(path.join(owned, "skills"), { recursive: true });
+  fs.writeFileSync(path.join(owned, "skills", "SKILL.md"), "pinned\n");
+  fs.writeFileSync(path.join(owned, ".agentchef-pinned-source.json"), `${JSON.stringify({ schemaVersion: "agentchef.pinned-skill-source.v1", ...ownedSource })}\n`);
+  fs.mkdirSync(legacy, { recursive: true });
+  fs.writeFileSync(path.join(legacy, ".codex-chef-pinned-source.json"), `${JSON.stringify({ schemaVersion: "codex-chef.pinned-skill-source.v1", ...legacySource })}\n`);
+  fs.mkdirSync(foreign, { recursive: true });
+  fs.writeFileSync(path.join(foreign, "notes.txt"), "mine\n");
+  fs.mkdirSync(misnamed, { recursive: true });
+  fs.writeFileSync(path.join(misnamed, ".agentchef-pinned-source.json"), `${JSON.stringify({ schemaVersion: "agentchef.pinned-skill-source.v1", ...ownedSource })}\n`);
+  fs.writeFileSync(path.join(misnamed, "work.txt"), "kept\n");
+  const id = (directory) => `pinned-source-cache:${path.basename(directory).slice(0, 12)}`;
+
+  const plan = run(state, ["--dry-run"]);
+  const decision = (key) => plan.items.find((item) => item.id === key)?.decision;
+  assert.equal(decision("installed-plugin-cache-refresh"), "cli-remove");
+  assert.equal(decision(id(owned)), "remove-cache");
+  assert.equal(decision(id(legacy)), "remove-cache", "a pre-1.0 receipt is AgentChef's too");
+  assert.equal(decision(id(foreign)), "foreign");
+  assert.equal(decision(id(misnamed)), "foreign", "a receipt copied into a directory it does not name proves nothing");
+  assert.ok(fs.existsSync(owned), "dry run removes nothing");
+
+  const applied = run(state, ["--apply"]);
+  const statuses = Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]));
+  assert.equal(statuses["installed-plugin-cache-refresh"], "skipped", "no codex CLI on PATH in this test");
+  assert.equal(statuses[id(owned)], "removed-cache");
+  assert.equal(fs.readFileSync(path.join(misnamed, "work.txt"), "utf8"), "kept\n");
+  assert.equal(statuses["plugin-marketplace"], "removed", "a marketplace holding only AgentChef's entry goes with it");
+  assert.ok(!fs.existsSync(marketplacePath));
+  assert.ok(!fs.existsSync(owned) && !fs.existsSync(legacy));
+  assert.equal(fs.readFileSync(path.join(foreign, "notes.txt"), "utf8"), "mine\n", "a directory without the receipt is kept");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("Codex removal never deletes a template-identical file reached through a linked subfolder", () => {
+  // A developer links a skill's references folder to a repo checkout for live
+  // editing; those files are byte-identical to the template by construction.
+  const state = fixture();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-remove-outside-"));
+  const sourceReferences = path.join(root, "plugins", "agentchef-workflows", "skills", "context-budget-planner", "references");
+  fs.cpSync(sourceReferences, outside, { recursive: true });
+  const linked = path.join(state.directSkill, "references");
+  fs.symlinkSync(outside, linked, process.platform === "win32" ? "junction" : "dir");
+  const sentinel = fs.readdirSync(outside)[0];
+
+  const plan = run(state, ["--dry-run"]);
+  const item = plan.items.find((entry) => entry.id === "context-budget-planner-direct-skill");
+  const throughLink = item.files.filter((file) => file.relative.startsWith(`references${path.sep}`));
+  assert.ok(throughLink.length > 0);
+  assert.ok(throughLink.every((file) => file.decision === "foreign"), JSON.stringify(throughLink));
+
+  run(state, ["--apply"]);
+  assert.ok(fs.existsSync(path.join(outside, sentinel)), "the linked-to file is untouched");
+  fs.rmSync(state.home, { recursive: true, force: true });
+  fs.rmSync(outside, { recursive: true, force: true });
 });

@@ -95,7 +95,13 @@ ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler
 - `npm run chef -- --remove --target <t>`, yalnızca AgentChef'e ait dosyaları,
   bağlantıları, marketplace girdilerini ve makbuza kayıtlı ayarları silen
   önce-ön-izle bir kaldırmadır; kullanıcı içeriği, Git guard'ları ve yedekler
-  kalır.
+  kalır. Üretilen MCP profilleri (full, multi-session, offline) de kalır.
+  `CODEX_HOME/cache/pinned-skill-sources` altında AgentChef makbuzu taşıyan
+  pinli skill önbellekleri yedeksiz silinir; yeniden kurulum onları pinli
+  commit'ten tekrar indirir. Girdi silindikten sonra yalnızca AgentChef'in boş
+  iskeleti kalan plugin marketplace dosyası da kaldırılır.
+  `CODEX_HOME/serena-pool` iki ortamın paylaştığı yerel havuz token'ını tutar;
+  açık oturum kalmadığında silebilirsiniz.
 - `npm run verify:install:runtime -- --target claude` ve
   `npm run codex:status -- --target both` Claude tarafını doğrular.
 

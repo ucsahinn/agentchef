@@ -720,7 +720,12 @@ function Backup-Target {
   Invoke-Change -Target $destination -Action "Back up $Path" -ScriptBlock {
     Assert-ManagedWriteTarget $Path
     Assert-ManagedWriteTarget $destination
-    Copy-Item -LiteralPath $Path -Destination $destination -Recurse -Force
+    # The backup layout adds ~131 characters under CODEX_HOME, past the
+    # 260-character limit Windows PowerShell 5.1 still enforces, so a long
+    # CODEX_HOME made every -Update fail. Node copies long paths. Links are
+    # followed, as Copy-Item did, so the backup is a snapshot of the content.
+    & node -e "require('fs').cpSync(process.argv[1], process.argv[2], { recursive: true, force: true, dereference: true })" $Path $destination
+    if ($LASTEXITCODE -ne 0) { throw "Could not back up $Path before replacing it." }
   } | Out-Null
   if (-not $WhatIfPreference) {
     & node $OperationJournalScript record $BackupRoot $destination

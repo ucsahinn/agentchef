@@ -228,7 +228,16 @@ export function planIdentityMigration(options) {
       const legacyName = marketplace.name === identity.legacyMarketplaceName;
       note("marketplace", "rewrite-marketplace", marketplacePath, hasLegacyEntry || legacyName ? "rewrite" : "current", { legacyEntry: hasLegacyEntry, legacyName });
     }
-    note("codex-plugin-cache", "codex-plugin-cli", codexHome, "cli", {
+    // Only a Codex that has the legacy plugin installed needs the CLI swap.
+    // Running it on a current or plugin-free home installed a plugin the user
+    // never had and rewrote config.toml.
+    const configText = (() => { try { return fs.readFileSync(path.join(codexHome, "config.toml"), "utf8"); } catch { return ""; } })();
+    // `codex plugin remove` leaves an emptied directory tree behind, so only a
+    // cache that still holds files counts as an installed plugin.
+    const legacyCacheRoot = path.join(codexHome, "plugins", "cache", identity.legacyMarketplaceName);
+    const legacyCodexPlugin = configText.includes(`[plugins."${identity.legacyPluginId}"]`)
+      || (isRealDirectory(legacyCacheRoot) && listFilesRecursive(legacyCacheRoot) > 0);
+    note("codex-plugin-cache", "codex-plugin-cli", codexHome, legacyCodexPlugin ? "cli" : "absent", {
       commands: [
         `codex plugin remove ${identity.legacyPluginId}`,
         `codex plugin add ${identity.pluginId}`
@@ -255,7 +264,8 @@ export function planIdentityMigration(options) {
     const legacyCacheStat = lstatOrNull(legacyCache);
     if (legacyCacheStat?.isDirectory() && !legacyCacheStat.isSymbolicLink()) {
       const files = listFilesRecursive(legacyCache);
-      note("codex-legacy-plugin-cache", "remove-empty-directory", legacyCache, files === 0 ? "remove-legacy" : "foreign", { files });
+      // A cache the plugin swap is about to empty is decided again after it.
+      note("codex-legacy-plugin-cache", "remove-empty-directory", legacyCache, files === 0 || legacyCodexPlugin ? "remove-legacy" : "foreign", { files });
     } else {
       note("codex-legacy-plugin-cache", "remove-empty-directory", legacyCache, "absent");
     }
@@ -291,7 +301,10 @@ export function planIdentityMigration(options) {
     const claudeMarketplacePath = path.join(agentsHome, "plugins", ".claude-plugin", "marketplace.json");
     const claudeMarketplace = readJson(claudeMarketplacePath);
     note("claude-marketplace", "rewrite-marketplace", claudeMarketplacePath, !claudeMarketplace ? "absent" : (claudeMarketplace.plugins || []).some((plugin) => plugin?.name === identity.legacyPluginName) ? "rewrite" : "current");
-    note("claude-plugin-cache", "claude-plugin-cli", claudeHome, "cli", {
+    // Same for Claude: swap only a plugin registered under the legacy name.
+    const installedPlugins = (() => { try { return fs.readFileSync(path.join(claudeHome, "plugins", "installed_plugins.json"), "utf8"); } catch { return ""; } })();
+    const legacyClaudePlugin = installedPlugins.includes(`"${identity.legacyPluginName}@${identity.marketplaceName}"`);
+    note("claude-plugin-cache", "claude-plugin-cli", claudeHome, legacyClaudePlugin ? "cli" : "absent", {
       commands: [
         `claude plugin uninstall ${identity.legacyPluginName}@${identity.marketplaceName}`,
         `claude plugin install ${identity.pluginId} --scope user`
@@ -384,6 +397,16 @@ export function applyIdentityMigration(options, plan) {
         continue;
       }
       if (step.kind === "remove-empty-directory") {
+        // Counted again here: the plugin CLI step before this one empties it,
+        // or removes it altogether.
+        if (!lstatOrNull(step.target)) {
+          record(step.id, "absent");
+          continue;
+        }
+        if (listFilesRecursive(step.target) > 0) {
+          record(step.id, "foreign", { reason: "still holds files" });
+          continue;
+        }
         const backup = backupInto(backupRoot, homeRoots, step.target);
         if (backup) journal.recordBackup(backup);
         journal.prepareMutation({ target: step.target, backup });
@@ -504,7 +527,13 @@ export function applyIdentityMigration(options, plan) {
         for (const line of step.commands) {
           const argv = line.split(" ").slice(1);
           const run = spawnHarnessCli(command, argv, { encoding: "utf8", windowsHide: true, timeout: 120000, env }, options.platform);
-          outcomes.push({ command: line, status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 300) });
+          const output = `${run.stdout || ""}${run.stderr || ""}`.trim();
+          // Removing an entry that is already gone is done, not a failure; only
+          // a "not found" that names this plugin counts, so a missing
+          // marketplace or any other error stays a failure.
+          const pluginName = (argv[argv.length - 1] || "").split("@")[0];
+          const alreadyGone = run.status !== 0 && /\b(remove|uninstall)\b/.test(line) && /\bnot found\b/i.test(output) && Boolean(pluginName) && output.includes(pluginName);
+          outcomes.push({ command: line, status: alreadyGone ? 0 : run.status, output: output.slice(0, 300) });
         }
         record(step.id, outcomes.every((outcome) => outcome.status === 0) ? "done" : "attention", { outcomes });
       }

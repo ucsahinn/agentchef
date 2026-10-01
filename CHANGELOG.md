@@ -2,6 +2,71 @@
 
 ## Unreleased
 
+- Fixes from a full install → migrate → remove cycle with the real `codex` and
+  `claude` CLIs in scratch homes:
+  - `-Update` failed when `CODEX_HOME` was long: the backup layout adds ~131
+    characters and Windows PowerShell 5.1 still enforces 260 (measured: 264).
+    Backups are now copied by Node, which handles long paths.
+  - A successful `--remove --apply` was reported as a failure, because it was
+    checked with the install verifier ("0/334 current"). It is now verified by
+    rerunning both removal plans, labelled "Remove AgentChef", and its next
+    step no longer says to reload refreshed files.
+  - `--migrate-identity --apply` on a current home ran the plugin swap anyway:
+    it installed a Codex plugin the user never had, rewrote `config.toml`, and
+    exited 1 on the Claude uninstall of a plugin that was not there. The swap
+    now runs only when the legacy plugin is really installed, and "not found"
+    on removal counts as done.
+  - Codex removal decided on `config.toml` before `codex plugin remove`
+    rewrote it, so a config that returned to AgentChef's bytes was left
+    behind. The plugin removal now runs first and file decisions are taken at
+    apply time; the removal note says which config is removed and which kept.
+  - Removal always planned `codex plugin remove`, even for a plugin never
+    added to Codex, so its own verification then failed. It now runs only when
+    `config.toml` has the plugin table or the plugin cache exists.
+  - Removal left AgentChef's pinned-skill source cache behind (5,900 files in
+    the scratch cycle). Directories carrying AgentChef's source receipt
+    (current or pre-1.0 name) are now removed, without a backup because a
+    reinstall fetches them again; anything else there is kept. A
+    `marketplace.json` left as AgentChef's empty skeleton is removed too
+    (backed up); the removal notes now name the shared Serena pool token
+    that stays.
+  - From an independent review of the fixes above:
+    - Removal verification read a planner's error output (which is also JSON)
+      as an empty, clean plan. It now requires exit 0 and the expected plan
+      shape.
+    - An emptied plugin cache tree left by `codex plugin remove` counted as an
+      installed plugin, in removal and in `--migrate-identity`. The migration
+      would have re-added a plugin on every later run. Only a cache that
+      still holds files counts now, and the legacy cache is judged again
+      after the plugin swap.
+    - The "already removed" match in `--migrate-identity` held raw U+0008
+      bytes where `\b` was meant, so it never matched. It now also requires
+      the message to name the plugin being removed.
+      `validate-content-safety` now rejects raw control characters.
+    - A pinned-source cache delete that failed midway rolled back the whole
+      removal. The receipt now goes last, and a failure is reported per
+      entry.
+    - The Node backup copy follows links like `Copy-Item` did, so a backup
+      is a snapshot and needs no symlink privilege.
+  - From a security audit of every deletion path:
+    - Codex removal deleted a template-identical file even when it was reached
+      through a linked subfolder, for example a skill's `references` folder
+      linked to a repo checkout for live editing. The file was deleted in the
+      checkout (after a backup). Such files are now foreign, and every
+      delete re-checks its path.
+    - A pinned-source cache entry swapped for a junction between planning
+      and deleting would have had its target's contents deleted without a
+      backup. The entry is re-checked right before the delete, which is now
+      one `rmSync` that does not follow links. A cache directory also has to
+      be named by the key derived from its receipt, and the receipt must be a
+      regular file.
+    - A Claude merge-receipt path taken from the install receipt is now
+      confined to `CLAUDE_CONFIG_DIR/agentchef/receipts` before deletion.
+    - `--migrate-identity` no longer aborts when `codex plugin remove` has
+      already deleted the legacy cache directory.
+    - Pruning empty folders is bounded by a path separator, not a string
+      prefix.
+
 - Fixes from running every CLI command, MCP server, and skill on a live
   install:
   - The verifier ran `claude mcp list` and `claude plugin validate` with

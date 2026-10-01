@@ -567,6 +567,9 @@ export function applyClaudeRemoval(options, plan) {
       journal.prepareMutation({ target: entry.target, backup });
       writeFileAtomic(entry.target, Buffer.from(`${JSON.stringify(entry.removal.next, null, 2)}\n`, "utf8"));
       journal.markApplied(entry.target);
+      // The receipt path comes from the install receipt, so it must stay inside
+      // AgentChef's own receipts folder before it is deleted.
+      assertManagedTargetPath(entry.receiptPath, [path.join(claudeHome, "agentchef", "receipts")]);
       journal.prepareMutation({ target: entry.receiptPath, backup: null });
       fs.rmSync(entry.receiptPath, { force: true });
       journal.markApplied(entry.receiptPath);

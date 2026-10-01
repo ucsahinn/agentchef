@@ -71,7 +71,12 @@ function directoryPlan(sourceRoot, destination, { requireMarker }) {
   if (requireMarker && presentMarkers.length === 0) return { decision: "foreign", files: [] };
   const files = listRegularFiles(sourceRoot).map((relative) => {
     const target = path.join(destination, relative);
-    const decision = fileDecision(target, fs.readFileSync(path.join(sourceRoot, relative)));
+    // A file reached through a linked subfolder lives outside the managed
+    // directory (for example a skill folder linked to a repo checkout for live
+    // editing) and is never AgentChef's to delete.
+    let insideDestination = true;
+    try { assertManagedTargetPath(target, [destination]); } catch { insideDestination = false; }
+    const decision = insideDestination ? fileDecision(target, fs.readFileSync(path.join(sourceRoot, relative))) : "foreign";
     return { relative, target, decision };
   });
   for (const marker of presentMarkers) files.push({ relative: marker, target: path.join(destination, marker), decision: "remove" });
@@ -95,7 +100,7 @@ export function planCodexRemoval(options) {
   for (const action of contract.operations) {
     if (action.kind === "copy-file") {
       const sourceBuffer = fs.readFileSync(path.join(repoRoot, action.source));
-      items.push({ id: action.id, kind: "file", target: action.destination, decision: fileDecision(action.destination, sourceBuffer) });
+      items.push({ id: action.id, kind: "file", target: action.destination, source: action.source, decision: fileDecision(action.destination, sourceBuffer) });
       continue;
     }
     if (action.kind === "generate-mcp-profile") {
@@ -124,7 +129,16 @@ export function planCodexRemoval(options) {
       continue;
     }
     if (action.kind === "refresh-plugin-cache") {
-      items.push({ id: action.id, kind: "plugin-cache", target: action.destination, decision: "cli-remove", pluginId: action.pluginId });
+      // Only an installed plugin needs `codex plugin remove`; a plugin that
+      // was never added has no config table and no versioned cache.
+      const [pluginName, marketplaceName] = String(action.pluginId || "").split("@");
+      let configText = "";
+      try { configText = fs.readFileSync(path.join(codexHome, "config.toml"), "utf8"); } catch { /* no config */ }
+      // `codex plugin remove` can leave an emptied directory tree, which is
+      // not an installed plugin.
+      const installed = configText.includes(`[plugins."${action.pluginId}"]`)
+        || Boolean(pluginName && marketplaceName && listRegularFiles(path.join(codexHome, "plugins", "cache", marketplaceName, pluginName)).length > 0);
+      items.push({ id: action.id, kind: "plugin-cache", target: action.destination, decision: installed ? "cli-remove" : "absent", pluginId: action.pluginId });
       continue;
     }
     if (action.kind === "skill-install") {
@@ -144,9 +158,38 @@ export function planCodexRemoval(options) {
     }
     if (action.kind === "git-config" || action.kind === "chmod") continue;
   }
+  // Current and pre-1.0 receipt names of AgentChef's pinned source cache.
+  const PINNED_SOURCE_RECEIPTS = [
+    [".agentchef-pinned-source.json", "agentchef.pinned-skill-source.v1"],
+    [".codex-chef-pinned-source.json", "codex-chef.pinned-skill-source.v1"]
+  ];
+  // Pinned third-party skill checkouts AgentChef cached under CODEX_HOME. Each
+  // carries AgentChef's source receipt, a regular file, and is named by the
+  // key install-pinned-skill derives from that receipt's package and commit;
+  // anything else is not touched.
+  const sourceCacheRoot = path.join(codexHome, "cache", "pinned-skill-sources");
+  let cacheEntries = [];
+  try { cacheEntries = fs.readdirSync(sourceCacheRoot, { withFileTypes: true }); } catch { /* no cache */ }
+  for (const entry of cacheEntries) {
+    if (!entry.isDirectory()) continue;
+    const target = path.join(sourceCacheRoot, entry.name);
+    const owned = PINNED_SOURCE_RECEIPTS.some(([file, schema]) => {
+      const receiptPath = path.join(target, file);
+      if (!lstatOrNull(receiptPath)?.isFile()) return false;
+      try {
+        const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
+        if (receipt.schemaVersion !== schema) return false;
+        const key = crypto.createHash("sha256").update(`${receipt.package}@${receipt.commit}:${receipt.fullDepth ? "full" : "shallow"}`).digest("hex");
+        return key === entry.name;
+      } catch { return false; }
+    });
+    items.push({ id: `pinned-source-cache:${entry.name.slice(0, 12)}`, kind: "source-cache", target, decision: owned ? "remove-cache" : "foreign" });
+  }
   const gitGuardNote = "Global Git guards are not removed here; restore them with the receipt printed at install time: node scripts/manage-global-git-guards.mjs restore --home <home> --receipt <receipt> --json";
-  const configNote = "config.toml keeps its merged AgentChef blocks and generated MCP profiles stay in place; restore a backup or edit them by hand.";
-  return { items, notes: [configNote, gitGuardNote] };
+  const configNote = "A config.toml that is exactly AgentChef's template is removed; one merged into your own settings keeps its AgentChef blocks, and the generated MCP profiles (full, multi-session, offline) stay in place. Restore a backup or edit them by hand.";
+  const cacheNote = "Cached pinned-skill checkouts under CODEX_HOME/cache/pinned-skill-sources are removed without a backup: they are downloads that a reinstall fetches again from the pinned commit.";
+  const poolNote = "CODEX_HOME/serena-pool keeps the local Serena pool token: the Codex and Claude bridges share it and a running pool still holds it. Delete the folder once no Codex or Claude Code session is open.";
+  return { items, notes: [configNote, cacheNote, poolNote, gitGuardNote] };
 }
 
 function redact(value, options) {
@@ -171,7 +214,7 @@ function backupInto(backupRoot, roots, target) {
 
 function removeEmptyParents(directory, stopAt) {
   let current = directory;
-  while (current !== stopAt && current.startsWith(stopAt) && fs.existsSync(current) && fs.readdirSync(current).length === 0) {
+  while (current !== stopAt && current.startsWith(`${stopAt}${path.sep}`) && fs.existsSync(current) && fs.readdirSync(current).length === 0) {
     fs.rmdirSync(current);
     current = path.dirname(current);
   }
@@ -181,7 +224,7 @@ export function applyCodexRemoval(options, plan) {
   const { codexHome, agentsHome } = options;
   const roots = [codexHome, agentsHome];
   for (const item of plan.items) {
-    if (["file", "directory", "marketplace", "curated-skill"].includes(item.kind)) assertManagedTargetPath(item.target, roots);
+    if (["file", "directory", "marketplace", "curated-skill", "source-cache"].includes(item.kind)) assertManagedTargetPath(item.target, roots);
   }
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;
   const backupRoot = path.join(codexHome, "backups", `agentchef-remove-${stamp}`);
@@ -190,17 +233,32 @@ export function applyCodexRemoval(options, plan) {
   const journal = createOperationJournal({ backupRoot, operation: "remove" });
   const results = [];
   const removeFile = (target) => {
+    // Checked per file at apply time too; a link swapped in since planning
+    // stops the whole removal, which then rolls back.
+    assertManagedTargetPath(target, roots);
     const backup = backupInto(backupRoot, roots, target);
     if (backup) journal.recordBackup(backup);
     journal.prepareMutation({ target, backup });
     fs.rmSync(target, { force: true });
     journal.markApplied(target);
   };
+  // The Codex plugin removal goes first: `codex plugin remove` rewrites
+  // config.toml, so a config that only differed by the plugin table returns to
+  // AgentChef's bytes and is removed below instead of being left behind. File
+  // decisions are taken again at apply time for the same reason; a file the
+  // user really changed still fails the byte comparison and is kept.
+  const orderedItems = [
+    ...plan.items.filter((item) => item.kind === "plugin-cache"),
+    ...plan.items.filter((item) => item.kind !== "plugin-cache")
+  ];
   try {
-    for (const item of plan.items) {
+    for (const item of orderedItems) {
       if (item.kind === "file") {
-        if (item.decision !== "remove") {
-          results.push({ id: item.id, status: item.decision });
+        const decision = item.source
+          ? fileDecision(item.target, fs.readFileSync(path.join(repoRoot, item.source)))
+          : item.decision;
+        if (decision !== "remove") {
+          results.push({ id: item.id, status: decision });
           continue;
         }
         removeFile(item.target);
@@ -242,12 +300,44 @@ export function applyCodexRemoval(options, plan) {
         const backup = backupInto(backupRoot, roots, item.target);
         journal.recordBackup(backup);
         journal.prepareMutation({ target: item.target, backup });
-        fs.writeFileSync(item.target, `${JSON.stringify(document, null, 2)}\n`);
+        // A marketplace left exactly as AgentChef creates it, with no plugin of
+        // anyone else in it, goes with the entry; any other content keeps it.
+        const onlyOurs = document.name === "agentchef" && document.plugins.length === 0
+          && Object.keys(document).every((key) => key === "name" || key === "plugins");
+        if (onlyOurs) fs.rmSync(item.target, { force: true });
+        else fs.writeFileSync(item.target, `${JSON.stringify(document, null, 2)}\n`);
         journal.markApplied(item.target);
-        results.push({ id: item.id, status: "entry-removed" });
+        results.push({ id: item.id, status: onlyOurs ? "removed" : "entry-removed" });
+        continue;
+      }
+      if (item.kind === "source-cache") {
+        if (item.decision !== "remove-cache") {
+          results.push({ id: item.id, status: item.decision });
+          continue;
+        }
+        // Checked again right before the delete: an entry swapped for a link
+        // since planning is refused. One rmSync call then deletes the tree
+        // without following any link in it, the root included. A delete that
+        // fails midway (a locked pack file) is reported, not rolled back.
+        const current = lstatOrNull(item.target);
+        if (!current || current.isSymbolicLink() || !current.isDirectory()) {
+          results.push({ id: item.id, status: current ? "foreign" : "absent" });
+          continue;
+        }
+        try {
+          assertManagedTargetPath(item.target, [codexHome]);
+          fs.rmSync(item.target, { recursive: true, force: true });
+          results.push({ id: item.id, status: "removed-cache" });
+        } catch (error) {
+          results.push({ id: item.id, status: "attention", reason: `could not remove ${item.target}: ${error.code || error.message}; delete it by hand` });
+        }
         continue;
       }
       if (item.kind === "plugin-cache") {
+        if (item.decision !== "cli-remove") {
+          results.push({ id: item.id, status: item.decision });
+          continue;
+        }
         const probe = spawnHarnessCli("codex", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
         if (probe.error || probe.status !== 0) {
           results.push({ id: item.id, status: "skipped", reason: `codex CLI not available; run: codex plugin remove ${item.pluginId}` });
