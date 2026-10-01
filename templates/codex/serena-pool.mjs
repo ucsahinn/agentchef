@@ -189,8 +189,15 @@ function stateDirectory() {
   return path.join(codexHome(), "serena-pool");
 }
 
-function poolPort() {
-  const parsed = Number.parseInt(process.env.AGENTCHEF_SERENA_POOL_PORT || process.env.CODEX_CHEF_SERENA_POOL_PORT || "44787", 10);
+// The Codex and Claude targets each install a copy of this file. With one
+// fixed port, two different copies (one target updated, the other not) kept
+// replacing each other's manager, and every replacement stopped the other
+// side's Serena backends. The default port is derived from the manager
+// profile: identical copies share one manager, different ones run side by
+// side until the copies match again. An explicit port still wins.
+export function poolPort() {
+  const derived = 44787 + (Number.parseInt(crypto.createHash("sha256").update(MANAGER_PROFILE).digest("hex").slice(0, 8), 16) % 200);
+  const parsed = Number.parseInt(process.env.AGENTCHEF_SERENA_POOL_PORT || process.env.CODEX_CHEF_SERENA_POOL_PORT || String(derived), 10);
   if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 65535) throw new Error("AGENTCHEF_SERENA_POOL_PORT must be an integer from 1024 to 65535.");
   return parsed;
 }

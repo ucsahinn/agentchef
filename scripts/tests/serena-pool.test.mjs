@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const moduleUrl = new URL("../../templates/codex/serena-pool.mjs", import.meta.url);
 
@@ -350,4 +350,34 @@ test("processes that run a bare command from a project folder turn off the Windo
   const pool = fs.readFileSync(path.join(repo, "templates/codex/serena-pool.mjs"), "utf8");
   assert.ok(pool.indexOf("NoDefaultCurrentDirectoryInExePath") < pool.indexOf('spawn("uvx"'), "set before the backend is spawned");
   assert.ok(!/"activate_project"/.test(pool.slice(pool.indexOf("const TOOL_NAMES"), pool.indexOf("];", pool.indexOf("const TOOL_NAMES")))), "the bridge does not expose activate_project");
+});
+
+test("identical pool copies share one manager port and different copies get their own", async () => {
+  // With one fixed port the Codex and Claude copies of different versions kept
+  // replacing each other's manager, stopping the other side's backends.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-port-"));
+  const source = fs.readFileSync(fileURLToPath(moduleUrl), "utf8");
+  const copy = (name, text) => {
+    const target = path.join(dir, name);
+    fs.writeFileSync(target, text);
+    return target;
+  };
+  const env = { ...process.env };
+  delete env.AGENTCHEF_SERENA_POOL_PORT;
+  delete env.CODEX_CHEF_SERENA_POOL_PORT;
+  const portOf = (file) => {
+    const run = spawnSync(process.execPath, ["--input-type=module", "-e", `import(${JSON.stringify(pathToFileURL(file).href)}).then((m) => console.log(m.poolPort()))`], { encoding: "utf8", env });
+    assert.equal(run.status, 0, run.stderr);
+    return Number(run.stdout.trim());
+  };
+  try {
+    const codexCopy = portOf(copy("codex-copy.mjs", source));
+    const claudeCopy = portOf(copy("claude-copy.mjs", source));
+    const olderCopy = portOf(copy("older-copy.mjs", `${source}\n// an older release\n`));
+    assert.equal(codexCopy, claudeCopy, "identical copies share one manager");
+    assert.notEqual(codexCopy, olderCopy, "a different copy gets its own port");
+    for (const port of [codexCopy, olderCopy]) assert.ok(port >= 44787 && port < 44987);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

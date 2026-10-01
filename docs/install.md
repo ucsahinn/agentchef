@@ -162,7 +162,12 @@ files through the backup-backed update mode. The broad `npm run check` suite rem
 gate; Update does not make routine users wait for installer-smoke scenarios.
 Update synchronizes source-owned files after backup and preserves unrelated
 extras in managed directories. It also synchronizes managed config tables and
-preserves user-owned `config.toml` settings. It does not install curated global skills
+preserves user-owned `config.toml` settings. Managed tables (`features`,
+`shell_environment_policy`, `memories`, `windows`, `sandbox_workspace_write`,
+`agents.*`, `mcp_servers.*`) are AgentChef's: an update writes them back to the
+template, so security approvals and new pins always reach you. An edit you made
+inside one of them is replaced; the backup taken first keeps it, so put lasting
+changes in a table of your own or in a profile. It does not install curated global skills
 or optional global Git guards; use `--install --apply` or `--skills --apply`
 when you want those explicit surfaces. An already-installed namespaced AgentChef
 plugin is refreshed and version-verified after its managed source is

@@ -157,7 +157,13 @@ Apply modunda clean worktree ister ve `git pull --ff-only` calistirir. Pull repo
 kurulu ortam doğrulamasıyla devam eder; ikinci çalıştırma gerekmez. Geniş `npm run check` paketi CI/release kapısı olarak kalır; Update rutin kullanıcıları installer-smoke senaryoları için bekletmez. Repo zaten guncelse managed dosyalari backup alan installer uzerinden yeniler.
 Update, yedek aldıktan sonra yalnızca kaynakta yönetilen dosyaları senkronlar ve
 yönetilen dizinlerdeki ilgisiz ek dosyaları korur. Managed config tablolarini
-senkronlar ve kullaniciya ait `config.toml` ayarlarini korur. curated global skill veya
+senkronlar ve kullaniciya ait `config.toml` ayarlarini korur. Yönetilen tablolar
+(`features`, `shell_environment_policy`, `memories`, `windows`,
+`sandbox_workspace_write`, `agents.*`, `mcp_servers.*`) AgentChef'indir. Güncelleme
+onları şablona geri yazar; böylece güvenlik onayları ve yeni pinler sana her
+zaman ulaşır. Bunların içinde yaptığın bir düzenleme değiştirilir; önce alınan
+yedek onu saklar. Kalıcı değişiklikleri kendi tablolarına ya da bir profile koy.
+curated global skill veya
 opsiyonel global Git guard kurmaz; bunlar icin
 `--install --apply` veya `--skills --apply` yuzeylerini acikca kullan. Daha
 once kurulmus namespaced AgentChef plugin'i managed kaynak senkronundan sonra

@@ -142,6 +142,17 @@
   Every string in the report is now redacted before it is printed, so status
   and `chef --status`, which embed it, are covered too.
 
+- Keep different Serena pool copies from stopping each other. The Codex and
+  Claude targets each install a copy of the pool. With one fixed port, two
+  different copies (one target updated, the other not) kept replacing each
+  other's manager, and each replacement stopped the other side's backends.
+  The default port is now derived from the manager profile: identical copies
+  share one manager, and different ones run side by side until they match.
+  `AGENTCHEF_SERENA_POOL_PORT` still wins.
+- Say in the install guide that `-Update` writes the managed `config.toml`
+  tables back to the template (by design, so security approvals and pins
+  arrive), and that an edit inside one of them survives only in the backup.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and
