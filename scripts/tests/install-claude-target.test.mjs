@@ -249,8 +249,8 @@ test("a failed install rolls ~/.claude.json back along with the files under the 
 // A stand-in `claude` on an isolated PATH: a .cmd shim on Windows, as npm
 // installs it, and an executable script elsewhere. FAKE_CLAUDE_MODE picks what
 // the plugin commands return; every call is logged.
-function fakeClaude(home) {
-  const bin = path.join(home, "fake-bin");
+function fakeClaude(home, binName = "fake-bin") {
+  const bin = path.join(home, binName);
   fs.mkdirSync(bin, { recursive: true });
   const script = path.join(bin, "fake-claude.cjs");
   fs.writeFileSync(script, [
@@ -302,6 +302,21 @@ test("an npm-installed claude (a .cmd shim on Windows) is found for plugin regis
   assert.equal(register.status, "registered", JSON.stringify(register));
   const calls = fs.readFileSync(cli.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
   assert.deepEqual(calls.map((argv) => argv.slice(0, 2).join(" ")), ["--version", "plugin marketplace", "plugin install"]);
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a claude.cmd shim in a folder with a space is still found and gets its arguments intact", () => {
+  // cmd.exe /s /c cut a quoted shim path at its first space, so a shim under
+  // a folder with a space (a profile whose user name has one) hid the CLI.
+  const state = fixture();
+  const cli = fakeClaude(state.home, "fake bin with space");
+  const applied = runWithCli(state, ["--apply"], { bin: cli.bin, log: cli.log });
+  assert.equal(applied.status, 0, applied.stderr);
+  const register = applied.report.outcome.results.find((result) => result.id === "claude-plugin-register");
+  assert.equal(register.status, "registered", JSON.stringify(register));
+  const calls = fs.readFileSync(cli.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  const marketplaceAdd = calls.find((argv) => argv[0] === "plugin" && argv[1] === "marketplace");
+  assert.equal(marketplaceAdd[3], path.join(state.agentsHome, "plugins"), "the path argument arrives as one argument");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 

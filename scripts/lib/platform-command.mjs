@@ -24,7 +24,7 @@ function pathEntries(env) {
 }
 
 // The first PATH directory holding name.exe or name.cmd wins, as in a shell.
-function resolveWindowsCli(name, env) {
+export function resolveWindowsCli(name, env = process.env) {
   for (const directory of pathEntries(env)) {
     for (const extension of [".exe", ".cmd"]) {
       const candidate = path.join(directory, `${name}${extension}`);
@@ -43,13 +43,29 @@ function resolveWindowsCli(name, env) {
 // cannot be spawned directly at all (EINVAL): an npm-installed CLI looked
 // missing and every plugin step was skipped. Resolve it the way a shell would
 // and run a .cmd shim through cmd.exe.
+// cmd.exe /s /c strips the first and last quote of the whole command line, so
+// a quoted shim path with a space ("D:\tools\node global\claude.cmd") was cut
+// at the space and the CLI looked missing (measured). Build the line verbatim
+// and wrap it in one extra pair of quotes for /s to strip. cmd expands %VAR%
+// even inside quotes, so such arguments are refused rather than passed on.
+export function cmdShimInvocation(shimPath, args) {
+  const quote = (value) => {
+    const text = String(value);
+    if (/["%\r\n]/.test(text)) throw new Error(`Refusing to pass a quote, percent sign, or newline through cmd.exe: ${text}`);
+    return text === "" || /[\s&|<>^(),;=]/.test(text) ? `"${text}"` : text;
+  };
+  const line = [shimPath, ...args].map(quote).join(" ");
+  return { command: process.env.ComSpec || "cmd.exe", args: ["/d", "/s", "/c", `"${line}"`], options: { windowsVerbatimArguments: true } };
+}
+
 export function spawnHarnessCli(name, args, spawnOptions = {}, platform = process.platform) {
   const options = { ...spawnOptions, shell: false };
   if (!isWindowsPlatform(platform)) return spawnSync(name, args, options);
   const resolved = resolveWindowsCli(name, options.env || process.env);
   if (!resolved) return spawnSync(name, args, options);
   if (resolved.toLowerCase().endsWith(".cmd")) {
-    return spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", resolved, ...args], options);
+    const invocation = cmdShimInvocation(resolved, args);
+    return spawnSync(invocation.command, invocation.args, { ...options, ...invocation.options });
   }
   return spawnSync(resolved, args, options);
 }

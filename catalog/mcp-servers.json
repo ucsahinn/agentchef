@@ -76,7 +76,7 @@
       "setupHint": "Requires npm/npx network access and starts an isolated Chrome/DevTools bridge; no credential is required.",
       "approval": "prompt",
       "enabledTools": ["list_pages", "select_page", "take_snapshot", "take_screenshot", "list_console_messages", "get_console_message", "list_network_requests", "wait_for", "resize_page", "navigate_page", "close_page"],
-      "toolApprovals": {"list_pages":"approve", "select_page":"approve", "take_snapshot":"approve", "take_screenshot":"approve", "list_console_messages":"approve", "get_console_message":"approve", "list_network_requests":"prompt", "wait_for":"approve", "resize_page":"approve", "navigate_page":"prompt", "close_page":"prompt"},
+      "toolApprovals": {"list_pages":"approve", "select_page":"approve", "take_snapshot":"prompt", "take_screenshot":"prompt", "list_console_messages":"approve", "get_console_message":"approve", "list_network_requests":"prompt", "wait_for":"approve", "resize_page":"approve", "navigate_page":"prompt", "close_page":"prompt"},
       "risk": "medium",
       "sourceUrl": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
       "defaultReason": "Configured but disabled in the balanced base to avoid a second per-session browser bridge; the full profile re-enables its isolated, redacted inspection surface.",

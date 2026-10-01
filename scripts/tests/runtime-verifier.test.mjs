@@ -9,7 +9,7 @@ import { resolveInstallContract } from "../lib/install-contract.mjs";
 import { writeDirectSkillMarker } from "../manage-direct-skill-target.mjs";
 import { writeMarketplaceEntry } from "../upsert-marketplace-entry.mjs";
 import { scaledTimeout } from "../lib/test-timeouts.mjs";
-import { inspectClaudePluginCache } from "../lib/claude-plugin-cache.mjs";
+import { inspectClaudePluginCache, readRegisteredClaudePluginVersion } from "../lib/claude-plugin-cache.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 let baselineFixtureRoot = null;
@@ -386,6 +386,7 @@ test("the Claude plugin cache check reports a registered version older than the 
     for (const base of [source, cache]) write(base, "agents/code-mapper.md", "role\n");
     const registry = (version) => write(claudeHome, "plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins: { "agentchef-workflows@agentchef": [{ scope: "user", version }] } }));
 
+    assert.equal(readRegisteredClaudePluginVersion(claudeHome), null, "an unregistered plugin reads as null, which the verifier reports");
     registry("1.0.0");
     const before = inspectClaudePluginCache(claudeHome, agentsHome);
     assert.deepEqual(before.stale, [], "the files themselves match");

@@ -90,6 +90,24 @@
     by CI: status read the verifier report as unparseable (`unknown`), and
     `chef --doctor --json` stopped at the 64 KiB pipe buffer; chef now exits
     only after stdout drains.
+- More hardening from the same audits:
+  - A `.cmd` shim in a folder with a space did not run. cmd.exe `/s /c`
+    strips the outer quotes of the line, so a shim path with a space (a
+    profile folder whose user name has one, or `D:\tools\node global\claude.cmd`)
+    was cut at the space and the CLI looked missing (measured). The command line is now
+    built verbatim. An argument holding `"`, `%`, or a newline is refused
+    rather than handed to cmd.exe.
+  - `codex-status` resolves `codex` from PATH like a shell. A native
+    `codex.exe` with no `codex.cmd` shim failed every status probe.
+  - `install.sh` fails when merging the config blocks fails. Before, it
+    went on and printed "completed".
+  - The verifier warns when the AgentChef plugin is not registered in Claude
+    Code at all. This happens when the claude CLI was missing at install
+    time.
+  - Chrome DevTools `take_snapshot` and `take_screenshot` now prompt.
+    Their `filePath` accepts an absolute path, so an auto-approved call
+    could write a file anywhere. Playwright saves only into its own output
+    directory and stays auto-approved.
 
 - Keep the files a kept `config.toml` still points at when removing the Codex
   target. A config merged into your own settings stays after removal and
