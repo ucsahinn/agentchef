@@ -441,7 +441,10 @@ test("--redact-paths also redacts the paths inside error messages", () => {
     const serialized = JSON.stringify(report);
     // The serialized report escapes backslashes, so the JSON form of each path
     // is what can appear in it.
-    for (const form of [os.homedir(), os.homedir().split(path.sep).join("/"), base].map((value) => JSON.stringify(value).slice(1, -1))) {
+    // Redaction covers the home and repo paths; the temporary base only when it
+    // lives under the home (Windows), not /tmp (Linux, macOS).
+    const insideHome = base.startsWith(os.homedir());
+    for (const form of [os.homedir(), os.homedir().split(path.sep).join("/"), ...(insideHome ? [base] : [])].map((value) => JSON.stringify(value).slice(1, -1))) {
       assert.equal(serialized.includes(form), false, `no ${form} in a redacted report`);
     }
   } finally {
