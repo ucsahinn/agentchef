@@ -245,7 +245,8 @@ if (!fs.existsSync(path.join(root, serenaPoolScript))) {
   fail(`${serenaPoolScript} must exist for the managed Serena bridge.`);
 } else {
   const poolSource = read(serenaPoolScript);
-  if (!poolSource.includes("22c135a881aaf17485e54ef0ccaedeaf51a202c0")) {
+  const serenaPin = (catalog.servers || []).find((entry) => entry.name === "serena")?.sourceRef;
+  if (!serenaPin || !poolSource.includes(`const SERENA_SOURCE = "${serenaPin}";`)) {
     fail(`${serenaPoolScript} must keep the Serena source pinned to the catalog commit.`);
   }
   if (!poolSource.includes('host: "127.0.0.1"')) {

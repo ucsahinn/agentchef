@@ -39,6 +39,25 @@
     update retires the dropped allow rules through their receipt.
   - The previous pre-commit hook hash stays in the ownership list, so an
     installed copy is still refreshed by `--install-git-guards`.
+- Pin Serena to v1.7.0 (`949a27e`). The previous pin (1.5.4.dev0) is
+  affected by GHSA-pp25-4cg4-qcr9: template injection through a project's
+  mode config runs code when the project is activated, and the pool activates
+  every project it serves. The pin was probed before it was accepted:
+  - v1.7.0 adds a writing tool, `replace_in_files`. It is now in the
+    read-only mode, so on the pooled backend it answers "not active" and
+    leaves the file unchanged, like `write_memory` and `rename_symbol`.
+    Without the mode, all three changed the probe project.
+  - Every allowlisted read tool still exists.
+  - The web dashboard server is now turned off, not only kept from opening.
+  - `validate-mcp-config` checks the pool against the catalog's `sourceRef`
+    instead of a commit hard-coded in the validator.
+- Answer each Serena bridge tool call with the client's own request id. The
+  backend's response, which carries the pool's own request id (always 2),
+  was spread over the client's id. A client therefore got every answer as
+  id 2 and waited out the 180 s tool timeout for any call with another id.
+  This dates back to 0.5.x. A test now sends id 7 through a stand-in
+  manager, and a real bridge → manager → Serena 1.7.0 run returned
+  `find_symbol` as id 3 in 14 s.
 
 ## 1.1.0 - 2026-10-01
 
