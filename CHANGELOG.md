@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 - 2026-10-01
 
 - Update the Claude Code plugin on an AgentChef upgrade. Applying 1.1.0 live
   left Claude Code on plugin 1.0.0 while Codex moved to 1.1.0:
