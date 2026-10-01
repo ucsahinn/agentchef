@@ -782,6 +782,11 @@ install_codex_config() {
       else
         action "merged config" "$destination"
       fi
+    else
+      # A failed merge used to fall through and the install still printed
+      # "completed"; it now fails, and the exit trap rolls the run back.
+      echo "Failed to merge AgentChef config blocks into $destination" >&2
+      exit 1
     fi
     return
   fi

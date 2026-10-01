@@ -16,7 +16,7 @@ import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { cacheContentDrift } from "./refresh-installed-plugin.mjs";
 import { buildClaudeMcpEntry, claudeDefaultServers } from "./lib/claude-mcp-merge.mjs";
-import { inspectClaudePluginCache } from "./lib/claude-plugin-cache.mjs";
+import { inspectClaudePluginCache, readRegisteredClaudePluginVersion } from "./lib/claude-plugin-cache.mjs";
 import {
   inspectPinnedSkillTarget,
   inspectSkillTree
@@ -1056,6 +1056,12 @@ function inspectClaudeRuntime(failures, warnings) {
       warnings.push(
         `Claude Code still loads AgentChef plugin ${cache.versionMismatch.registered}, but the managed source is ${cache.versionMismatch.expected}; update it with: claude plugin marketplace update agentchef && claude plugin update agentchef-workflows@agentchef, then restart Claude Code`
       );
+    }
+    // An install made while the claude CLI was missing skips registration;
+    // installing Claude Code later left a verified-looking target with no
+    // AgentChef agents or skills in any session.
+    if (!readRegisteredClaudePluginVersion(claudeHome)) {
+      warnings.push("The AgentChef plugin is not registered in Claude Code, so sessions load none of its agents or skills; register it with: claude plugin marketplace add <AGENTS_HOME>/plugins && claude plugin install agentchef-workflows@agentchef --scope user");
     }
     const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
     const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: claudeCliEnv(claudeHome, { home: os.homedir() }) });

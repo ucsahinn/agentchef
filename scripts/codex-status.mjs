@@ -12,6 +12,7 @@ import {
 } from "./lib/cli-error-contract.mjs";
 import { parseTargetSelection } from "./lib/targets/index.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
+import { cmdShimInvocation, resolveWindowsCli } from "./lib/platform-command.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -299,11 +300,9 @@ function translateNextAction(message) {
 }
 
 function run(command, commandArgs, extra = {}) {
-  const executable = process.platform === "win32" && command.endsWith(".cmd") ? "cmd.exe" : command;
-  const argsForSpawn = process.platform === "win32" && command.endsWith(".cmd")
-    ? ["/d", "/s", "/c", command, ...commandArgs]
-    : commandArgs;
-  return spawnSync(executable, argsForSpawn, {
+  const shim = process.platform === "win32" && command.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(command, commandArgs) : null;
+  return spawnSync(shim ? shim.command : command, shim ? shim.args : commandArgs, {
+    ...(shim ? shim.options : {}),
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -443,7 +442,11 @@ function expandUserPath(value, fallback) {
 
 function codexCommand() {
   if (process.env.CODEX_STATUS_CODEX_COMMAND) return process.env.CODEX_STATUS_CODEX_COMMAND;
-  return process.platform === "win32" ? "codex.cmd" : "codex";
+  // A native codex.exe has no codex.cmd shim; assuming the shim failed every
+  // probe there (version, login, MCP list, doctor) and left status in
+  // permanent attention. Resolve whichever PATH holds first, like a shell.
+  if (process.platform === "win32") return resolveWindowsCli("codex") || "codex.cmd";
+  return "codex";
 }
 
 function inspectSkillInventory(skipGlobal = false) {
