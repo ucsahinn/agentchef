@@ -395,15 +395,17 @@ try {
       if (options.listProfiles && options.listOperations) console.log("");
       if (options.listOperations) printOperations(discovery);
     }
-    process.exit(0);
-  }
-  const plan = createPlan(options);
-  if (options.json) {
-    console.log(JSON.stringify(plan, null, 2));
-  } else if (options.summary) {
-    printPlanSummary(plan);
+    // No process.exit(0) here: it cut a large --json listing off on a Linux
+    // pipe, where stdout writes are asynchronous.
   } else {
-    printPlan(plan);
+    const plan = createPlan(options);
+    if (options.json) {
+      console.log(JSON.stringify(plan, null, 2));
+    } else if (options.summary) {
+      printPlanSummary(plan);
+    } else {
+      printPlan(plan);
+    }
   }
 } catch (error) {
   process.exitCode = emitCliError({

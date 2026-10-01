@@ -394,6 +394,8 @@ if (jsonOutput) {
   for (const failure of failures) console.error(`Failure: ${failure}`);
 }
 
+// process.exit() right after printing cuts a large report off on a Linux
+// pipe, where stdout writes are asynchronous; the exit code lets Node flush.
 if (failures.length > 0) {
-  process.exit(1);
+  process.exitCode = 1;
 }

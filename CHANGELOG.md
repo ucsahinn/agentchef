@@ -83,9 +83,11 @@
     - `--target claude` skips the Codex runtime, CLI, and doctor checks.
   - The skills screen treats a managed skill with extra local files as valid,
     as the verifier does, so `--install` is no longer blocked.
-  - `codex-status` sets its exit code instead of calling `process.exit()`
-    right after printing. On a Linux pipe that cut a large `--json` report
-    off mid-document.
+  - `codex-status`, `verify-install-runtime`, `codex-doctor`, `repair-install`,
+    and `plan-install` set their exit code instead of calling
+    `process.exit()` right after printing. On a Linux pipe, stdout writes are
+    asynchronous, so a large `--json` report was cut off mid-document. Found
+    by CI: status read the verifier report as unparseable (`unknown`).
 
 ## 1.1.0 - 2026-10-01
 
