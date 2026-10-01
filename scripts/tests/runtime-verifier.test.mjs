@@ -368,3 +368,32 @@ test("the Claude plugin cache check covers skills as well as roles, and ignores 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("the Claude plugin cache check reports a registered version older than the source even when the files match", () => {
+  // Seen live on the 1.1.0 upgrade: `claude plugin install` left the installed
+  // plugin on 1.0.0, whose cached files happened to match the new source.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-claude-version-"));
+  try {
+    const agentsHome = path.join(root, "agents");
+    const claudeHome = path.join(root, "claude");
+    const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
+    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0");
+    const write = (base, relative, text) => {
+      fs.mkdirSync(path.dirname(path.join(base, relative)), { recursive: true });
+      fs.writeFileSync(path.join(base, relative), text);
+    };
+    write(source, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.1.0" }));
+    for (const base of [source, cache]) write(base, "agents/code-mapper.md", "role\n");
+    const registry = (version) => write(claudeHome, "plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins: { "agentchef-workflows@agentchef": [{ scope: "user", version }] } }));
+
+    registry("1.0.0");
+    const before = inspectClaudePluginCache(claudeHome, agentsHome);
+    assert.deepEqual(before.stale, [], "the files themselves match");
+    assert.deepEqual(before.versionMismatch, { registered: "1.0.0", expected: "1.1.0" });
+
+    registry("1.1.0");
+    assert.equal(inspectClaudePluginCache(claudeHome, agentsHome).versionMismatch, null, "an updated registration is current");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

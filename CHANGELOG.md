@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Update the Claude Code plugin on an AgentChef upgrade. Applying 1.1.0 live
+  left Claude Code on plugin 1.0.0 while Codex moved to 1.1.0:
+  `claude plugin install` does nothing for a plugin that is already
+  installed, and nothing ran `claude plugin update`. The verifier missed it
+  too. The new version was not cached yet, so it compared the old copy,
+  whose files happened to match. The installer now runs
+  `claude plugin marketplace update` and `claude plugin update` whenever
+  Claude Code records a version other than the package version. The verifier
+  compares the registered version with the source and names the fix.
+
 ## 1.1.0 - 2026-10-01
 
 - Fixes from a full install → migrate → remove cycle with the real `codex` and

@@ -34,6 +34,7 @@ import { planSettingsMerge } from "./lib/claude-settings-merge.mjs";
 import { planMcpMerge } from "./lib/claude-mcp-merge.mjs";
 import { createSkillLink, inspectSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
+import { readRegisteredClaudePluginVersion } from "./lib/claude-plugin-cache.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { managedMarkerNames, sourceMarkerNames } from "./lib/identity.mjs";
 
@@ -475,6 +476,20 @@ export function applyClaudeInstall(options, plan) {
           outcomes.push({ argv: argv.join(" "), status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
           installed.commands.push(argv.join(" "));
           if (run.status !== 0) break;
+        }
+        // `plugin install` leaves an already installed plugin on its old
+        // version, so an AgentChef upgrade also refreshes the marketplace and
+        // updates the plugin whenever Claude Code still records another one.
+        const registered = readRegisteredClaudePluginVersion(claudeHome);
+        if (outcomes.every((outcome) => outcome.status === 0) && registered && registered !== product.version) {
+          for (const argv of [
+            ["plugin", "marketplace", "update", claudeMarketplaceName],
+            ["plugin", "update", `${pluginName}@${claudeMarketplaceName}`]
+          ]) {
+            const run = spawnHarnessCli("claude", argv, { encoding: "utf8", windowsHide: true, timeout: 120000 }, options.platform);
+            outcomes.push({ argv: argv.join(" "), status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
+            if (run.status !== 0) break;
+          }
         }
         results.push({ id: action.id, status: outcomes.every((outcome) => outcome.status === 0) ? "registered" : "attention", outcomes });
       }

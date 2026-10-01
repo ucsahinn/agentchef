@@ -31,6 +31,14 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
     installedVersion = null;
   }
   const served = installedVersion && versions.includes(installedVersion) ? [installedVersion] : versions.slice(-1);
+  // The version Claude Code has registered is what sessions load. `plugin
+  // install` leaves an installed plugin alone, so after an AgentChef upgrade it
+  // can stay on the previous version even when that copy's files happen to
+  // match the new source.
+  const registeredVersion = readRegisteredClaudePluginVersion(claudeHome);
+  const versionMismatch = registeredVersion && installedVersion && registeredVersion !== installedVersion
+    ? { registered: registeredVersion, expected: installedVersion }
+    : null;
   // Compare what a Claude session loads from the plugin: role definitions and
   // skills. Only comparing agents let a changed skill stay stale unnoticed;
   // scripts/ holds the Codex-only hook and is not loaded by Claude.
@@ -58,5 +66,18 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
     });
     if (differing.length > 0) stale.push({ version, differing: differing.length, total: names.length });
   }
-  return { inspected: true, versions, served, stale };
+  return { inspected: true, versions, served, stale, registeredVersion, versionMismatch };
+}
+
+// The user-scope version Claude Code recorded for the AgentChef plugin, or
+// null when it is not registered or the file cannot be read.
+export function readRegisteredClaudePluginVersion(claudeHome, pluginId = "agentchef-workflows@agentchef") {
+  try {
+    const document = JSON.parse(fs.readFileSync(path.join(claudeHome, "plugins", "installed_plugins.json"), "utf8").replace(/^\uFEFF/, ""));
+    const entries = document?.plugins?.[pluginId];
+    const entry = Array.isArray(entries) ? (entries.find((item) => item?.scope === "user") || entries[0]) : null;
+    return typeof entry?.version === "string" ? entry.version : null;
+  } catch {
+    return null;
+  }
 }
