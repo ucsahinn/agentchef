@@ -60,6 +60,28 @@ function fileDecision(destination, sourceBuffer) {
   return fs.readFileSync(destination).equals(sourceBuffer) ? "remove" : "user-changed";
 }
 
+// A config.toml merged into the user's own settings stays after removal, and
+// it still points at the Serena bridge and the agent role files. Removing
+// those left Codex warning about every missing role file on each session
+// (measured: "Ignoring malformed agent role definition ... must point to an
+// existing file") and starting a Serena entry whose bridge was gone. While the
+// kept config references a managed file, that file stays too.
+function referencedByKeptConfig(target, codexHome) {
+  const configPath = path.join(codexHome, "config.toml");
+  if (path.resolve(target) === path.resolve(configPath)) return false;
+  let config;
+  try { config = fs.readFileSync(configPath, "utf8"); } catch { return false; }
+  const template = (() => {
+    for (const name of ["config.windows.toml", "config.unix.toml"]) {
+      try { if (fs.readFileSync(path.join(repoRoot, "templates", "codex", name), "utf8") === config) return true; } catch { /* absent */ }
+    }
+    return false;
+  })();
+  if (template) return false; // an unmerged template config.toml is removed too
+  const relative = path.relative(codexHome, target).split(path.sep).join("/");
+  return config.includes(relative) || config.includes(relative.split("/").join("\\\\"));
+}
+
 function directoryPlan(sourceRoot, destination, { requireMarker }) {
   const stat = lstatOrNull(destination);
   if (!stat) return { decision: "absent", files: [] };
@@ -100,7 +122,8 @@ export function planCodexRemoval(options) {
   for (const action of contract.operations) {
     if (action.kind === "copy-file") {
       const sourceBuffer = fs.readFileSync(path.join(repoRoot, action.source));
-      items.push({ id: action.id, kind: "file", target: action.destination, source: action.source, decision: fileDecision(action.destination, sourceBuffer) });
+      const decision = fileDecision(action.destination, sourceBuffer);
+      items.push({ id: action.id, kind: "file", target: action.destination, source: action.source, decision: decision === "remove" && referencedByKeptConfig(action.destination, codexHome) ? "kept-referenced" : decision });
       continue;
     }
     if (action.kind === "generate-mcp-profile") {
@@ -186,7 +209,7 @@ export function planCodexRemoval(options) {
     items.push({ id: `pinned-source-cache:${entry.name.slice(0, 12)}`, kind: "source-cache", target, decision: owned ? "remove-cache" : "foreign" });
   }
   const gitGuardNote = "Global Git guards are not removed here; restore them with the receipt printed at install time: node scripts/manage-global-git-guards.mjs restore --home <home> --receipt <receipt> --json";
-  const configNote = "A config.toml that is exactly AgentChef's template is removed; one merged into your own settings keeps its AgentChef blocks, and the generated MCP profiles (full, multi-session, offline) stay in place. Restore a backup or edit them by hand.";
+  const configNote = "A config.toml that is exactly AgentChef's template is removed; one merged into your own settings keeps its AgentChef blocks, and the generated MCP profiles (full, multi-session, offline) stay in place. The Serena bridge and agent role files that a kept config.toml still points at stay too (kept-referenced), so Codex keeps starting cleanly; remove the [mcp_servers.serena] and [agents.*] tables, or restore a backup, then run the removal again to delete them.";
   const cacheNote = "Cached pinned-skill checkouts under CODEX_HOME/cache/pinned-skill-sources are removed without a backup: they are downloads that a reinstall fetches again from the pinned commit.";
   const poolNote = "CODEX_HOME/serena-pool keeps the local Serena pool token: the Codex and Claude bridges share it and a running pool still holds it. Delete the folder once no Codex or Claude Code session is open.";
   return { items, notes: [configNote, cacheNote, poolNote, gitGuardNote] };
@@ -254,9 +277,10 @@ export function applyCodexRemoval(options, plan) {
   try {
     for (const item of orderedItems) {
       if (item.kind === "file") {
-        const decision = item.source
+        let decision = item.source
           ? fileDecision(item.target, fs.readFileSync(path.join(repoRoot, item.source)))
           : item.decision;
+        if (decision === "remove" && referencedByKeptConfig(item.target, codexHome)) decision = "kept-referenced";
         if (decision !== "remove") {
           results.push({ id: item.id, status: decision });
           continue;

@@ -206,3 +206,33 @@ test("Codex removal never deletes a template-identical file reached through a li
   fs.rmSync(state.home, { recursive: true, force: true });
   fs.rmSync(outside, { recursive: true, force: true });
 });
+
+test("Codex removal keeps the bridge and role files a kept config.toml still points at", () => {
+  // Measured: with the files gone Codex warned "Ignoring malformed agent role
+  // definition ... must point to an existing file" for every role on each
+  // session and kept starting a Serena entry whose bridge no longer existed.
+  const state = fixture();
+  copyTemplate("templates/codex/serena-pool.mjs", path.join(state.codexHome, "serena-pool.mjs"));
+  copyTemplate("templates/codex/agents/code_mapper.toml", path.join(state.codexHome, "agents", "code_mapper.toml"));
+  const configPath = path.join(state.codexHome, "config.toml");
+  fs.writeFileSync(configPath, '# user config\nmodel = "x"\n\n[mcp_servers.serena]\nargs = ["-lc", "exec node \\"$CODEX_HOME/serena-pool.mjs\\" bridge"]\n\n[agents.code_mapper]\nconfig_file = "agents/code_mapper.toml"\n');
+
+  const plan = run(state, ["--dry-run"]);
+  const decision = (id) => plan.items.find((item) => item.id === id)?.decision;
+  assert.equal(decision("codex-serena-pool"), "kept-referenced");
+  assert.equal(decision("codex-agents:code_mapper.toml"), "kept-referenced");
+  assert.equal(decision("codex-agents-md"), "remove", "files the config does not point at still go");
+
+  run(state, ["--apply"]);
+  assert.ok(fs.existsSync(path.join(state.codexHome, "serena-pool.mjs")));
+  assert.ok(fs.existsSync(path.join(state.codexHome, "agents", "code_mapper.toml")));
+
+  // Once the user drops the AgentChef tables, a second removal deletes them.
+  fs.writeFileSync(configPath, '# user config\nmodel = "x"\n');
+  const again = run(state, ["--apply"]);
+  const statuses = Object.fromEntries(again.outcome.results.map((result) => [result.id, result.status]));
+  assert.equal(statuses["codex-serena-pool"], "removed");
+  assert.equal(statuses["codex-agents:code_mapper.toml"], "removed");
+  assert.ok(!fs.existsSync(path.join(state.codexHome, "serena-pool.mjs")));
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
