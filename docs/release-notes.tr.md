@@ -2,6 +2,24 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.2.2 - 2026-10-02
+
+AgentChef 1.2.2, 32 AgentChef ajanının her biri bir kez çalıştırılarak bulunan
+düzeltmeleri toplar. `npm run chef -- --update --apply` ile güncelle; göç adımı
+gerekmez.
+
+### Neler Değişti?
+
+- Kabuğu olmayan Claude uzmanlarına, ortak talimatların `rg` dediği yerde
+  Grep ve Glob araçlarıyla aramaları söylenir.
+- Ajan derlemesi, Serena havuzunun okuma aracı listesini kaynağını
+  ayrıştırmak yerine içe aktarır. Bu sayede o listedeki zararsız bir
+  düzenleme derlemeyi bozamaz.
+- `llms.txt`, banner'ın erişilebilir açıklaması, kök `AGENTS.md` ve README
+  hızlı başlangıcı artık yayınlananla uyumludur.
+
+Her düzeltme, nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde listelenir.
+
 ## v1.2.1 - 2026-10-02
 
 AgentChef 1.2.1 bir düzeltme sürümüdür. `npm run chef -- --update --apply`

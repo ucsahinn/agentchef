@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.2 - 2026-10-02
 
 - Findings from running every one of the 32 AgentChef agents once, in
   parallel waves:
