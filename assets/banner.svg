@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
   <title id="title">AgentChef banner</title>
-  <desc id="desc">An animated AgentChef banner showing a safer and clearer Codex setup with agents, skills, MCP tools, approval boundaries, and verification.</desc>
+  <desc id="desc">An animated AgentChef banner showing a safer, clearer setup for coding agents (Codex CLI and Claude Code) with agents, skills, MCP tools, approval boundaries, and verification.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0f172a"/>

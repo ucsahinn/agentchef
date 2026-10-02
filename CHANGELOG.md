@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Findings from running every one of the 32 AgentChef agents once, in
+  parallel waves:
+  - `llms.txt` still said the Claude Code target was "the next release line".
+  - The banner's accessible description still said "Codex setup", while the
+    visible tagline says "coding agents".
+  - The root `AGENTS.md` lacked four rules that its mirror `CLAUDE.md` has:
+    scratch homes, `.tr.md` twins for docs and kb, citing Claude Code docs,
+    and stating shipped behavior per release line.
+  - The agent emitter regex-parsed the Serena pool source for its read
+    tools, so a harmless edit to that list could break the build. It now
+    imports the exported list.
+  - The README called the preview "the first command"; it is the last one
+    in its block.
+
 ## 1.2.1 - 2026-10-02
 
 - Grant Serena to read-only roles by tool name. `mcp__serena` grants every tool of
