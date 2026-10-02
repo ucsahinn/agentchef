@@ -233,3 +233,18 @@ test("the claude CLI is pointed at a Claude home only when it is really relocate
   const explicit = claudeCliEnv(defaultHome, { env: { PATH: "x", CLAUDE_CONFIG_DIR: defaultHome }, home });
   assert.equal(explicit.CLAUDE_CONFIG_DIR, defaultHome, "a user-set variable is kept");
 });
+
+test("a rule AgentChef moves from ask to allow lands in allow in one run", () => {
+  const rule = "Bash(git ls-files *)";
+  const first = planSettingsMerge({}, { permissions: { ask: [rule] } });
+  const second = planSettingsMerge(first.next, { permissions: { allow: [rule] } }, { previousEntries: first.entries, retire: true });
+  assert.deepEqual(second.next.permissions.ask, [], "the old ask copy is retired");
+  assert.deepEqual(second.next.permissions.allow, [rule], "the rule is allowed in the same run");
+});
+
+test("a user's own ask rule still wins over an AgentChef allow", () => {
+  const rule = "Bash(git ls-files *)";
+  const plan = planSettingsMerge({ permissions: { ask: [rule] } }, { permissions: { allow: [rule] } }, { previousEntries: [], retire: true });
+  assert.deepEqual(plan.next.permissions.ask, [rule]);
+  assert.equal(plan.next.permissions.allow?.includes(rule) ?? false, false);
+});

@@ -319,3 +319,19 @@ test("a home without the legacy plugin installed gets no plugin CLI swap", () =>
   assert.equal(decision("codex-plugin-cache"), "absent");
   assert.equal(decision("claude-plugin-cache"), "absent");
 });
+
+test("identity migration finishes when the current operator name is already linked in Claude", () => {
+  const state = legacyFixture({ withClaude: true });
+  // Both names carry markers, so the Claude install linked both.
+  const currentOperator = path.join(state.agentsHome, "skills", identity.operatorSkill);
+  copyTree(state.operator, currentOperator);
+  fs.symlinkSync(currentOperator, path.join(state.claudeHome, "skills", identity.operatorSkill), process.platform === "win32" ? "junction" : "dir");
+  const applied = run(state, ["--apply", "--target", "both"]);
+  const statuses = Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]));
+  assert.equal(statuses["claude-operator-skill-link"], "relinked");
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", identity.legacyOperatorSkill)), "the legacy link is gone");
+  assert.ok(fs.existsSync(path.join(state.claudeHome, "skills", identity.operatorSkill, "SKILL.md")), "the current link still resolves");
+  const again = run(state, ["--apply", "--target", "both"]);
+  assert.ok(again.outcome.results.every((result) => !["relinked", "renamed", "rewritten"].includes(result.status)), "a rerun changes nothing");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

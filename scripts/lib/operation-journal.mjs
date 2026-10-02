@@ -321,6 +321,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             unresolved.push(`kept a replaced target that has no backup: ${target}`);
             continue;
           }
+          // A deleted target with no backup is gone for good; say so instead of
+          // reporting a clean rollback.
+          if (!mutation.backup && !mutation.link && current.kind === "absent" && mutation.before && mutation.before.kind !== "absent") {
+            unresolved.push(`could not restore a deleted target that has no backup: ${target}`);
+            continue;
+          }
           // A link is removed as a link so the managed tree it points at is never touched.
           if (current.kind === "link") fs.unlinkSync(target);
           else fs.rmSync(target, { recursive: true, force: true });

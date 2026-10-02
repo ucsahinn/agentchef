@@ -74,7 +74,8 @@ test("both-target contract is the union of both selections in manifest order", (
   assert.equal(bothIds.length, union.size);
   const manifestOrder = manifest.operations.map((operation) => operation.id);
   assert.deepEqual(bothIds, manifestOrder.filter((id) => union.has(id)));
-  assert.ok(bothIds.indexOf("claude-plugin-register") < bothIds.indexOf("installed-plugin-cache-refresh"));
+  // The Claude helper is the last mutating step, after the Codex plugin refresh.
+  assert.ok(bothIds.indexOf("installed-plugin-cache-refresh") < bothIds.indexOf("claude-working-agreement"));
 });
 
 test("unix contract keeps the Claude JSON in the home directory unless the Claude home is relocated", () => {

@@ -140,3 +140,18 @@ test("a lock left by an interrupted run says so and is never removed automatical
     live.release();
   });
 });
+
+test("an owner record written with a byte-order mark is still read, so a live lock is never reported as unknown", () => {
+  withTemporaryRoot((root) => {
+    const lockPath = join(root, ".agentchef-operation.lock");
+    mkdirSync(lockPath);
+    // Windows PowerShell 5.1 Set-Content -Encoding utf8 writes this prefix.
+    writeFileSync(join(lockPath, "owner.json"), `\uFEFF${JSON.stringify({ pid: process.pid, operation: "install", startedAt: new Date().toISOString(), id: "live" })}`, "utf8");
+    const inspection = inspectOperationLock({ root });
+    assert.notEqual(inspection.status, "unknown-owner");
+    assert.throws(
+      () => acquireOperationLock({ root, operation: "repair" }),
+      (error) => error.code === "OPERATION_LOCKED" && /install \(pid /.test(error.message)
+    );
+  });
+});

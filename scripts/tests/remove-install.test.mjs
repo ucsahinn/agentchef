@@ -47,11 +47,11 @@ function fixture() {
   return { home, codexHome, agentsHome, pluginTarget, directSkill, foreignDirect, curated, userSkill };
 }
 
-function run(state, args) {
+function run(state, args, expectedStatus = 0) {
   const result = spawnSync(process.execPath, [
     helper, "--codex-home", state.codexHome, "--agents-home", state.agentsHome, "--home", state.home, "--platform", platform, "--json", ...args
   ], { cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(60_000), env: { ...process.env, PATH: path.join(state.home, "no-bin") } });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
   return JSON.parse(result.stdout);
 }
 
@@ -172,7 +172,9 @@ test("Codex removal asks the Codex CLI only for an installed plugin and drops Ag
   assert.equal(decision(id(misnamed)), "foreign", "a receipt copied into a directory it does not name proves nothing");
   assert.ok(fs.existsSync(owned), "dry run removes nothing");
 
-  const applied = run(state, ["--apply"]);
+  // The plugin is still registered with Codex, so the removal is incomplete.
+  const applied = run(state, ["--apply"], 1);
+  assert.equal(applied.outcome.incomplete, true);
   const statuses = Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]));
   assert.equal(statuses["installed-plugin-cache-refresh"], "skipped", "no codex CLI on PATH in this test");
   assert.equal(statuses[id(owned)], "removed-cache");

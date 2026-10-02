@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 
 const args = process.argv.slice(2);
 
@@ -121,6 +122,17 @@ const managedRootKeys = new Set([
   "sandbox_mode"
 ]);
 
+// A TOML table header, with an optional trailing comment. An array-of-tables
+// header ([[x]]) gets a bracketed name so it never matches a managed table and
+// is never folded into the table before it.
+function tableHeader(line) {
+  const match = /^\s*(\[\[?)\s*([^\[\]]+?)\s*(\]\]?)\s*(?:#.*)?$/.exec(line);
+  if (!match) return null;
+  const isArray = match[1] === "[[";
+  if (isArray !== (match[3] === "]]")) return null;
+  return { name: isArray ? `[[${match[2]}]]` : match[2], isArray };
+}
+
 function normalizeNewlines(text) {
   return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
@@ -163,10 +175,10 @@ function parseTables(text) {
   }
 
   for (const line of lines) {
-    const match = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    const match = tableHeader(line);
     if (match) {
       flush();
-      current = match[1].trim();
+      current = match.name;
       currentLines = [line];
       continue;
     }
@@ -193,7 +205,22 @@ const removedDeprecatedFields = [];
 const updatedManagedFields = [];
 const updatedManagedTables = [];
 const driftedManagedTables = [];
+const retiredRemovedTables = [];
+const retiredPendingTables = [];
+const retiredUserModifiedTables = [];
 const fullTemplateInstall = !destinationExists;
+
+// Tables earlier templates wrote, keyed by name, each with the sha256 of every
+// block AgentChef ever wrote for it. The file lives next to the template.
+function blockDigest(block) {
+  return crypto.createHash("sha256").update(normalizeNewlines(block).trimEnd()).digest("hex");
+}
+const retiredTables = (() => {
+  const file = path.join(path.dirname(path.resolve(templatePath)), "retired-tables.json");
+  if (!fs.existsSync(file)) return new Map();
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+  return new Map(Object.entries(parsed.tables || {}));
+})();
 
 function addUnique(list, value) {
   if (!list.includes(value)) list.push(value);
@@ -227,10 +254,10 @@ function normalizeManagedFields(text) {
   }
 
   for (const line of lines) {
-    const tableMatch = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    const tableMatch = tableHeader(line);
     if (tableMatch) {
       flushAppsDefaults();
-      currentTable = tableMatch[1].trim();
+      currentTable = tableMatch.name;
       if (currentTable === "apps._default") {
         appsSeen = {
           enabled: false,
@@ -317,6 +344,24 @@ function syncManagedTables(text) {
       currentLines = [];
       return;
     }
+    if (!templateBlock && isManagedTable(currentTable) && retiredTables.has(currentTable)) {
+      // A table an earlier AgentChef template wrote and the current one dropped.
+      // It goes only when it is byte-for-byte what AgentChef wrote; a table the
+      // user edited is kept and reported.
+      const ownedByAgentChef = retiredTables.get(currentTable).includes(blockDigest(currentBlock));
+      if (!ownedByAgentChef) {
+        addUnique(retiredUserModifiedTables, currentTable);
+        next.push(...currentLines);
+      } else if (options.syncManagedTables) {
+        addUnique(retiredRemovedTables, currentTable);
+      } else {
+        addUnique(retiredPendingTables, currentTable);
+        next.push(...currentLines);
+      }
+      currentTable = null;
+      currentLines = [];
+      return;
+    }
     if (templateBlock && isManagedTable(currentTable)) {
       if (currentBlock !== templateBlock) {
         if (options.syncManagedTables) {
@@ -337,10 +382,10 @@ function syncManagedTables(text) {
   }
 
   for (const line of lines) {
-    const tableMatch = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    const tableMatch = tableHeader(line);
     if (tableMatch) {
       flush();
-      currentTable = tableMatch[1].trim();
+      currentTable = tableMatch.name;
       currentLines = [line];
       continue;
     }
@@ -380,13 +425,16 @@ const report = {
   removedDeprecatedFields,
   updatedManagedFields,
   updatedManagedTables,
-  driftedManagedTables
+  driftedManagedTables,
+  retiredRemovedTables,
+  retiredPendingTables,
+  retiredUserModifiedTables
 };
 
 if (fullTemplateInstall && !options.dryRun) {
   fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
   fs.writeFileSync(destinationPath, `${template.trimEnd()}\n`, "utf8");
-} else if ((missingRootAssignments.length > 0 || missing.length > 0 || removedDeprecatedFields.length > 0 || updatedManagedFields.length > 0 || updatedManagedTables.length > 0) && !options.dryRun) {
+} else if ((missingRootAssignments.length > 0 || missing.length > 0 || removedDeprecatedFields.length > 0 || updatedManagedFields.length > 0 || updatedManagedTables.length > 0 || retiredRemovedTables.length > 0) && !options.dryRun) {
   const base = sanitizedDestination.trimEnd();
   const rootAddition = missingRootAssignments.map((entry) => entry.line).join("\n");
   const addition = missing.map((entry) => entry.tableText).join("\n\n");
@@ -408,7 +456,7 @@ if (options.json) {
   console.log("Would install full AgentChef config template.");
 } else if (fullTemplateInstall) {
   console.log("Installed full AgentChef config template.");
-} else if (missingRootAssignments.length === 0 && missing.length === 0 && removedDeprecatedFields.length === 0 && updatedManagedFields.length === 0 && updatedManagedTables.length === 0) {
+} else if (missingRootAssignments.length === 0 && missing.length === 0 && removedDeprecatedFields.length === 0 && updatedManagedFields.length === 0 && updatedManagedTables.length === 0 && retiredRemovedTables.length === 0 && retiredPendingTables.length === 0) {
   console.log("Codex config already contains all managed AgentChef blocks.");
 } else if (options.dryRun) {
   const parts = [];
@@ -417,6 +465,7 @@ if (options.json) {
   if (removedDeprecatedFields.length > 0) parts.push(`remove deprecated managed field(s): ${removedDeprecatedFields.join(", ")}`);
   if (updatedManagedFields.length > 0) parts.push(`update managed field(s): ${updatedManagedFields.join(", ")}`);
   if (updatedManagedTables.length > 0) parts.push(`sync managed table(s): ${updatedManagedTables.join(", ")}`);
+  if (retiredPendingTables.length > 0) parts.push(`retire table(s) AgentChef no longer ships (with --sync-managed-tables): ${retiredPendingTables.join(", ")}`);
   console.log(`Would ${parts.join("; ")}`);
 } else {
   const parts = [];
@@ -425,5 +474,7 @@ if (options.json) {
   if (removedDeprecatedFields.length > 0) parts.push(`removed deprecated managed field(s): ${removedDeprecatedFields.join(", ")}`);
   if (updatedManagedFields.length > 0) parts.push(`updated managed field(s): ${updatedManagedFields.join(", ")}`);
   if (updatedManagedTables.length > 0) parts.push(`synced managed table(s): ${updatedManagedTables.join(", ")}`);
+  if (retiredRemovedTables.length > 0) parts.push(`retired table(s) AgentChef no longer ships: ${retiredRemovedTables.join(", ")}`);
+  if (retiredPendingTables.length > 0) parts.push(`table(s) AgentChef no longer ships, kept until --sync-managed-tables: ${retiredPendingTables.join(", ")}`);
   console.log(parts.join("; "));
 }

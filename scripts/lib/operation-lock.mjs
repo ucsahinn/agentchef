@@ -52,7 +52,8 @@ export function canonicalizeOperationLockRoots({ roots }) {
 
 function readOwner(lockPath) {
   try {
-    return JSON.parse(readFileSync(ownerFilePath(lockPath), "utf8"));
+    // Windows PowerShell 5.1 writes UTF-8 with a byte-order mark.
+    return JSON.parse(readFileSync(ownerFilePath(lockPath), "utf8").replace(/^\uFEFF/, ""));
   } catch {
     return null;
   }

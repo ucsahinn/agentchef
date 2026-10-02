@@ -375,7 +375,10 @@ export function applyCodexRemoval(options, plan) {
     }
     journal.finish("complete");
     spawnSync(process.execPath, [path.join(repoRoot, "scripts", "write-backup-manifest.mjs"), "--backup-root", backupRoot, "--operation", "remove"], { stdio: "ignore", windowsHide: true });
-    return { backupRoot, results };
+    // A step left for the user (the plugin is still registered with Codex, or a
+    // cache folder could not be deleted) means the removal did not finish.
+    const incomplete = results.some((result) => result.status === "attention" || (result.status === "skipped" && /plugin/.test(result.id)));
+    return { backupRoot, results, incomplete };
   } catch (error) {
     try {
       journal.finish("failed");
@@ -454,12 +457,15 @@ function main() {
       notes: plan.notes,
       outcome: outcome ? { ...outcome, backupRoot: redact(outcome.backupRoot, options) } : null
     }, null, 2));
+    if (outcome?.incomplete) process.exitCode = 1;
     return;
   }
   printPlan(plan, options);
+  if (outcome?.incomplete) process.exitCode = 1;
   if (outcome) {
     for (const result of outcome.results) console.log(`  - ${result.id}: ${result.status}${result.reason ? ` (${result.reason})` : ""}`);
     console.log(`Backup root: ${redact(outcome.backupRoot, options)}`);
+    if (outcome.incomplete) console.log("Removal incomplete: finish the steps marked attention or skipped above, then rerun.");
   } else {
     console.log("No files were changed. Add --apply to run this removal.");
   }
