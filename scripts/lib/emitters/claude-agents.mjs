@@ -92,7 +92,7 @@ export function emitWorkerAgent(agent, roleToml, { pluginName }) {
     // Codex read-only still allows commands; the Claude mapping does not, so a
     // role without an execution tool has to be told to ask for command output.
     ...(disallowed.includes("Bash")
-      ? ["- This role cannot run commands. When an instruction below calls for command output, such as a diff, a test run, or a scan, ask the parent session to supply it instead of inferring it."]
+      ? ["- This role cannot run commands. When an instruction below calls for command output, such as a diff, a test run, or a scan, ask the parent session to supply it instead of inferring it. Where an instruction says `rg` or `rg --files`, use the Grep and Glob tools instead."]
       : []),
     "",
     role.developer_instructions || ""
