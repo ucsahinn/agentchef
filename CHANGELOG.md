@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.1 - 2026-10-02
 
 - Grant Serena to read-only roles by tool name. `mcp__serena` grants every tool of
   the active Serena entry; the AgentChef pool serves only read tools, but a

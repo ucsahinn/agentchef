@@ -2,6 +2,33 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.2.1 - 2026-10-02
+
+AgentChef 1.2.1 bir düzeltme sürümüdür. `npm run chef -- --update --apply`
+ile güncelle; göç adımı gerekmez.
+
+### Neler Değişti?
+
+- Güvenlik: Claude uzmanları Serena'yı araç adıyla, yalnızca okuma araçlarıyla
+  alır. Önceki izin (`mcp__serena`), kullanıcının kendi Serena girdisinin
+  düzenleme ve hafıza yazma araçlarına da ulaşıyordu. Bu, ajanlar
+  çalıştırılırken bulundu.
+- Durum ve kontroller:
+  - Boş bir `codex doctor` raporu artık sağlıklı görünmez.
+  - Başarısız bir `claude --version` artık eksik CLI diye raporlanmaz.
+  - `--cleanup-stale --apply`, temizlik planı çıkarılamadığında başarısız
+    olur.
+- MCP: Doğrulayıcı, `project_ref` veya `read_only=true` olmadan açılmış bir
+  Supabase bağlayıcısını başarısız sayar.
+- Kurucu ve belgeler:
+  - Yetenek panosu, yalnızca Claude kurulumunda doğru MCP satırlarını
+    gösterir.
+  - Yükseltme rehberi sürüm sırasındadır.
+  - Belgeler, PowerShell'de `npm`'in neden engellenebileceğini ve
+    `npm.cmd`'nin çalıştığını açıklar.
+
+Her düzeltme, nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde listelenir.
+
 ## v1.2.0 - 2026-10-01
 
 AgentChef 1.2.0, kurulum, durum, kaldırma ve MCP yüzeylerinin dört ajanlı
