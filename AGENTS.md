@@ -22,15 +22,22 @@ file governs maintenance of this repository only.
   directories, dependencies, artifacts, local state, or configuration without
   explicit user approval. Non-destructive edits and validation may continue.
 - Install scripts must back up overwritten files and must not delete user data.
+- Never run installer, repair, verify, or remove flows against the live user
+  homes while developing. Point `CODEX_HOME`, `AGENTS_HOME`, and
+  `CLAUDE_CONFIG_DIR` at a scratch root first (`npm run dev:assert-scratch`
+  refuses live homes).
 - Run `npm run validate` before reporting the repo as push-ready.
 
 ## Documentation
 
-- Keep `README.md` and `README.tr.md` aligned.
-- Cite official Codex documentation for current behavior.
+- Keep `README.md` and `README.tr.md` aligned; keep every `docs/*.md` and
+  `kb/*.md` paired with its `.tr.md` twin.
+- Cite official Codex and Claude Code documentation for current behavior.
 - Prefer concise, copy-pasteable commands.
 - When install behavior changes, update `docs/install.md`,
   `docs/install.tr.md`, and `docs/security-model.md`.
+- State shipped behavior per release line; never describe a planned target as
+  available before it ships.
 
 ## Verification
 

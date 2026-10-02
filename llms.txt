@@ -4,10 +4,10 @@ AgentChef (formerly Codex Chef) is an unofficial, cross-platform setup kit for
 two terminal coding agents: OpenAI Codex CLI and Anthropic Claude Code. It
 packages reviewed global working agreements, conservative config templates,
 specialist subagents, curated skills, MCP defaults, a local plugin, dry-run
-installers, and validation gates. The current release installs the Codex CLI
-surface; the Claude Code install target is the next release line (see
-docs/decisions/006-agentchef-independent-dual-target-product.md and
-docs/release-notes.md for what actually ships).
+installers, and validation gates. It installs for both targets: the
+Codex CLI surface and the Claude Code surface (`--target codex|claude|both`;
+see docs/claude-surfaces.md and docs/release-notes.md for what each release
+ships).
 
 Canonical repository: https://github.com/ucsahinn/agentchef
 

@@ -22,7 +22,7 @@ if (process.platform === "win32") process.env.NoDefaultCurrentDirectoryInExePath
 const SERENA_SOURCE = "949a27ef1e5fda1a6e7b561e777bcece345c6ffd";
 const PROTOCOL_VERSION = "2025-11-25";
 const DEFAULT_IDLE_TTL_MS = 15 * 60 * 1000;
-const TOOL_NAMES = [
+export const TOOL_NAMES = [
   "get_current_config", "initial_instructions", "list_memories", "read_memory",
   "search_for_pattern", "find_symbol", "find_declaration", "find_implementations",
   "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"

@@ -15,12 +15,7 @@ const webTools = ["WebSearch", "WebFetch"];
 // AgentChef never replaces) also serves its editing and memory-writing tools,
 // so a read-only role was handed them (seen live). Serena is granted by tool
 // name, limited to the pool's own read allowlist.
-const serenaReadTools = (() => {
-  const source = fs.readFileSync(new URL("../../../templates/codex/serena-pool.mjs", import.meta.url), "utf8");
-  const match = /const TOOL_NAMES = \[([\s\S]*?)\];/.exec(source);
-  if (!match) throw new Error("serena-pool.mjs TOOL_NAMES not found");
-  return JSON.parse(`[${match[1]}]`);
-})();
+const { TOOL_NAMES: serenaReadTools } = await import(new URL("../../../templates/codex/serena-pool.mjs", import.meta.url));
 
 function mcpGrants(server) {
   return server === "serena" ? serenaReadTools.map((tool) => `mcp__serena__${tool}`) : [`mcp__${server}`];

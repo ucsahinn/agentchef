@@ -129,7 +129,7 @@ cd agentchef
 npm run chef -- --install
 ```
 
-İlk komut yalnızca ön izleme yapar. Ajan home'una yazmadan önce AgentChef'in
+Son komut yalnızca ön izleme yapar. Ajan home'una yazmadan önce AgentChef'in
 hangi dosyaları yöneteceğini gösterir. PowerShell `npm.ps1 cannot be loaded`
 derse `npm` yerine `npm.cmd` yaz ([ayrıntı](docs/troubleshooting.tr.md)).
 
