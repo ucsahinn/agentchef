@@ -96,4 +96,7 @@ and any real upload remains outside this repository's automatic workflow.
 The bundled `gptpro` and `gptpro-handoff` skills build on that same review ID:
 the first creates text bundles for a manually managed GPT Pro Project, and the
 second writes a bounded prompt plus verifies a returned report. Neither skill
-chooses a provider, opens a browser, or uploads source files.
+chooses a provider, opens a browser, or uploads source files. The exporter
+re-applies the review-pack sensitive-path and binary checks to every manifest
+entry on its own, and the handoff ends with a triage record that classifies
+every finding as implement-now, needs-decision, or discard.

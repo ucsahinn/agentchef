@@ -104,4 +104,4 @@ export function createZip(entries) {
   return { data: archive, entries: normalized.map((entry) => ({ name: entry.name, bytes: entry.data.length, sha256: sha256(entry.data) })) };
 }
 
-export { sha256 };
+export { safeEntryName, sha256 };

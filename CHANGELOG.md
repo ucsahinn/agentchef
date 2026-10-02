@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased
+
+- `gptpro` and `gptpro-handoff` hardening and documentation pass:
+  - The exporter now applies the `review pack` sensitive-path deny-list and a
+    binary check to every manifest entry itself, so a hand-edited or stale
+    manifest with a matching hash can no longer carry `.env`, key, session,
+    database, or log files into a bundle.
+  - A custom bundle map that leaves verified files unassigned fails in the
+    preview and names the files, instead of failing late in delivery with a
+    generic coverage error.
+  - `--out` is canonicalised through its deepest existing ancestor before the
+    "outside the worktree" check; a failed exporter spawn now exits 1 instead of
+    0; ZIP entry names in the delivery archive go through the same safety check
+    as subsystem archives; semantic bundle names and filenames are validated
+    against the prefix; source paths with control characters are rejected.
+  - Both references stopped assuming the AgentChef checkout lives at
+    `Desktop\agentchef`; they now say `$chefRoot` is your checkout and show the
+    plain `node scripts/external-review-cli.mjs` form.
+  - `export-contract.md` documents `--prefix`, `--max-bundles`,
+    `--max-bundle-bytes`, the custom-map coverage rule, which guarantee each
+    layer enforces, a troubleshooting table, and the Project limits re-checked
+    against the OpenAI help center on 2026-10-02 (40 files, 10 per batch,
+    512 MB, 2M tokens, retrieval-based reading, project-only memory).
+  - `handoff-contract.md` adds operator settings that stay outside the prompt,
+    a report-intake procedure, a `bundles:` line and "say when a file is
+    missing" rule in the template, and a triage record format that the skill's
+    completion criteria now require.
+- `node scripts/external-review-cli.mjs review pack ...` (the form printed by the
+  CLI's own usage text and taught by `external-review-workflow`) failed with
+  `Unknown review option: pack` when run directly; only the `npm run chef --
+  review ...` dispatch worked. The CLI now accepts an optional leading `review`.
+- `review pack` secret scan: credential assignments with a prefixed name
+  (`POSTGRES_PASSWORD`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `master_password`)
+  are now caught by the generic scanners; Stripe `sk_live_`/`sk_test_` and
+  Google `AIza` keys have explicit patterns; `.htpasswd`, `.pgpass`, and
+  `*.tfstate` join the sensitive-path deny-list (mirrored in the exporter).
+
 ## 1.2.2 - 2026-10-02
 
 - Findings from running every one of the 32 AgentChef agents once, in

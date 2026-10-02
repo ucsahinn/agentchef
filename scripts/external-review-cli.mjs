@@ -14,6 +14,8 @@ import {
 const MANIFEST_NAME = "external-review-manifest.json";
 const DEFAULT_PART_BYTES = 500_000;
 const MAX_FILE_BYTES = 1_000_000;
+// Stripe's published documentation sample key; split so secret scanners do not flag this source file.
+const STRIPE_DOC_SAMPLE_KEY = ["sk_", "test_", "4eC39HqLyjWDarjtT1zdp7dc"].join("");
 const SECRET_PATTERNS = [
   ["private key", /-----BEGIN ((?:(?:ENCRYPTED |RSA |EC |OPENSSH |DSA )?PRIVATE KEY|PGP PRIVATE KEY BLOCK))-----\r?\n[A-Za-z0-9+/=\r\n]{32,}\r?\n-----END \1-----/],
   ["OpenAI API key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/],
@@ -22,6 +24,8 @@ const SECRET_PATTERNS = [
   ["npm token", /\bnpm_[A-Za-z0-9]{20,}\b/],
   ["AWS access key", /\bAKIA[0-9A-Z]{16}\b/],
   ["AWS secret access key", /\bAWS_SECRET_ACCESS_KEY\s*[:=]\s*["']?[A-Za-z0-9/+=]{20,}/i],
+  ["Stripe key", /\b[sr]k_(?:live|test)_[A-Za-z0-9]{16,}\b/],
+  ["Google API key", /\bAIza[0-9A-Za-z_-]{35}\b/],
   ["Docker registry auth", /"auth"\s*:\s*"[A-Za-z0-9+/=]{12,}"/i],
   ["Slack token", /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],
   ["JWT", /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/],
@@ -180,7 +184,7 @@ function defaultOutput(target, reviewId) {
   return path.join(path.dirname(target), `${path.basename(target)}-external-review`, reviewId);
 }
 
-function isSensitivePath(relativePath) {
+export function isSensitivePath(relativePath) {
   const normalized = relativePath.toLowerCase();
   const parts = normalized.split("/");
   const base = parts.at(-1);
@@ -209,11 +213,12 @@ function isSensitivePath(relativePath) {
     "templates/codex/profiles/multi-session.config.toml",
     "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"
   ].includes(normalized)) return false;
-  if ([".npmrc", ".pypirc", ".netrc", ".git-credentials"].includes(base)) return true;
+  if ([".npmrc", ".pypirc", ".netrc", ".git-credentials", ".htpasswd", ".pgpass"].includes(base)) return true;
   // Claude Code's personal, per-machine instruction file.
   if (base === "claude.local.md") return true;
   if (/^\.env(?:\.|$)/.test(base) && !/\.(?:example|sample|template)$/.test(base)) return true;
   if (/(?:^|[-_.])(?:credential|credentials|secret|secrets|cookie|cookies|session|sessions|auth-state)(?:[-_.]|$)/.test(base)) return true;
+  if (/\.tfstate(?:\.backup)?$/i.test(base)) return true;
   return /\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log|har)$/i.test(base);
 }
 
@@ -224,6 +229,15 @@ function looksBinary(buffer) {
 
 function isCredentialPlaceholderOrReference(value) {
   const normalized = String(value || "").trim();
+  // Shell/compose/CI/HCL references are not literals: ${VAR}, ${VAR:-default}, ${VAR:?msg}, $VAR,
+  // ${{ secrets.X }} / ${{ github.token }} / ${{ inputs.x }}, var.x / local.x / module.x / data.x / random_password.x.
+  // Vendor-shaped placeholders such as sk_test_XXXXXXXX or AIzaxxxxxxxx.
+  if (/^(?:[A-Za-z0-9]+[_-])*(?:AIza)?[xX0]{8,}$/.test(normalized)) return true;
+  if (normalized === STRIPE_DOC_SAMPLE_KEY) return true;
+  if (/^\$\{[A-Za-z_][A-Za-z0-9_]*(?:[:?+-][^}\r\n]*)?\}[,;]?$/.test(normalized)) return true;
+  if (/^\$[A-Za-z_][A-Za-z0-9_]*[,;]?$/.test(normalized)) return true;
+  if (/^\$\{\{\s*(?:secrets|env|vars|inputs|github|steps|needs|matrix|job)\.[^{}\r\n]*\}\}[,;]?$/i.test(normalized)) return true;
+  if (/^(?:var|local|module|data|each|count|random_password|random_string|random_id|random_pet|[A-Za-z0-9_]*_secret[A-Za-z0-9_]*)\.[A-Za-z0-9_.\[\]"-]+[,;]?$/.test(normalized)) return true;
   return /^(?:(?:your|example|sample|placeholder|replace|change[-_]?me|not[-_]|sentinel|redacted)(?:[-_ ][A-Za-z0-9.]+)*|x{8,}|0{12,}|\$\{[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*\}|\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}|\{\{[^{}]+\}\}|<[^<>]+>)$/i.test(normalized)
     || /^(?:process\.env\.[A-Za-z0-9_]+|deno\.env\.get\(["'][A-Za-z0-9_]+["']\)|bun\.env\.[A-Za-z0-9_]+|import\.meta\.env\.[A-Za-z0-9_]+|os\.(?:environ(?:\.get\(["'][A-Za-z0-9_]+["']\)|\[['"][A-Za-z0-9_]+['"]\]?)|getenv\(["'][A-Za-z0-9_]+["']\))|std::env::var\(["'][A-Za-z0-9_]+["']\)|environment\.getenvironmentvariable\(["'][A-Za-z0-9_]+["']\)|system\.getenv\(["'][A-Za-z0-9_]+["']\)|env\[['"][A-Za-z0-9_]+['"]\]?|\$env:[A-Za-z0-9_]+|%[A-Za-z0-9_]+%|crypto\.randomUUID\(\)|[A-Za-z_$][A-Za-z0-9_$]*(?:\.(?:substring|substr|slice|replace|trim|toString)\([^()\r\n]*\))+)[,;]?$/i.test(normalized);
 }
@@ -242,9 +256,18 @@ export function scanSecrets(text, relativePath = "") {
   const findings = [];
   const sourceCode = isExecutableSourcePath(relativePath);
   for (const [name, pattern] of SECRET_PATTERNS) {
-    if (pattern.test(text)) findings.push(name);
+    if (!pattern.test(text)) continue;
+    if (name === "Stripe key" || name === "Google API key") {
+      // Documentation placeholders (sk_test_XXXX..., AIzaxxxx...) and Stripe's published sample key are not credentials.
+      const real = [...text.matchAll(new RegExp(pattern.source, "g"))].some((match) => {
+        const body = match[0].replace(/^(?:[sr]k_(?:live|test)_|AIza)/, "");
+        return !/^[xX0]+$/.test(body) && match[0] !== STRIPE_DOC_SAMPLE_KEY;
+      });
+      if (!real) continue;
+    }
+    findings.push(name);
   }
-  const hardcodedFallback = /(?<![-A-Za-z0-9_"'])(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*[^\r\n]*?(?:\|\||\?\?|\bor\b)\s*(?:(["'])([^"'\r\n]{12,})\3|([^\s;,\r\n]{12,}))/gi;
+  const hardcodedFallback = /(?<![-A-Za-z0-9_"'])(["']?)((?:[A-Za-z0-9]+[_-])*(?:api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key))\b\1\s*[:=]\s*[^\r\n]*?(?:\|\||\?\?|\bor\b)\s*(?:(["'])([^"'\r\n]{12,})\3|([^\s;,\r\n]{12,}))/gi;
   for (const match of text.matchAll(hardcodedFallback)) {
     const fallbackValue = String(match[4] || match[5] || "").trim();
     if (isNamedTestFixturePlaceholder(fallbackValue, relativePath)) continue;
@@ -252,7 +275,7 @@ export function scanSecrets(text, relativePath = "") {
     findings.push("generic credential assignment");
     break;
   }
-  const genericAssignments = /(?<![-A-Za-z0-9_"'])(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*(?:(["'])([^"'\r\n]{12,})\3|([^\s,;}\]]{12,}))/gi;
+  const genericAssignments = /(?<![-A-Za-z0-9_"'])(["']?)((?:[A-Za-z0-9]+[_-])*(?:api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key))\b\1\s*[:=]\s*(?:(["'])([^"'\r\n]{12,})\3|(\$\{\{?[^}\r\n]*\}\}?|[^\s,;}\]]{12,}))/gi;
   for (const match of text.matchAll(genericAssignments)) {
     if (sourceCode && !match[3]) continue;
     const value = String(match[4] || match[5] || "").trim();
@@ -263,7 +286,7 @@ export function scanSecrets(text, relativePath = "") {
     break;
   }
   if (!sourceCode) {
-    const lineAssignments = /^\s*(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*[:=]\s*(.+?)\s*$/gim;
+    const lineAssignments = /^\s*(["']?)((?:[A-Za-z0-9]+[_-])*(?:api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key))\b\1\s*[:=]\s*(.+?)\s*$/gim;
     for (const match of text.matchAll(lineAssignments)) {
       const value = String(match[3] || "").trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
       if (value.length < 12) continue;
@@ -274,7 +297,7 @@ export function scanSecrets(text, relativePath = "") {
       break;
     }
   }
-  const yamlBlockAssignment = /^\s*(["']?)\b(api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key)\b\1\s*:\s*[|>][+-]?\s*(?:#.*)?$/gim;
+  const yamlBlockAssignment = /^\s*(["']?)((?:[A-Za-z0-9]+[_-])*(?:api[_-]?key|client[_-]?secret|consumer[_-]?secret|secret|secret[_-]?key|signing[_-]?key|aws[_-]?secret[_-]?access[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|_authToken|token|password|passwd|credential|private[_-]?key))\b\1\s*:\s*[|>][+-]?\s*(?:#.*)?$/gim;
   if (yamlBlockAssignment.test(text) && !findings.includes("generic credential assignment")) {
     findings.push("generic credential assignment");
   }
@@ -772,7 +795,9 @@ Safety:
 
 export async function runExternalReviewCli(argv = process.argv.slice(2)) {
   try {
-    const [command, ...rest] = argv;
+    // Accept the documented `review <command>` form when invoked directly (the chef CLI
+    // strips the namespace before dispatching here).
+    const [command, ...rest] = argv[0] === "review" ? argv.slice(1) : argv;
     if (!command || command === "--help" || command === "-h") {
       usage();
       return 0;

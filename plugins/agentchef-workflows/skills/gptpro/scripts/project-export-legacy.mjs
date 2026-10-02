@@ -49,13 +49,21 @@ function usage() {
   console.log(`GPT Pro Project context export
 
 Usage:
-  node project-export.mjs --target <git-worktree> --manifest <external-review-manifest.json> --out <outside-dir> [--config <gptpro-bundles.json>]
-  node project-export.mjs --target <git-worktree> --manifest <external-review-manifest.json> --out <outside-dir> --apply
-  node project-export.mjs --target <git-worktree> --manifest <external-review-manifest.json> --out <outside-dir> --status
+  node project-export.mjs --target <git-worktree> --manifest <external-review-manifest.json> --out <new-outside-dir> [options]
+  node project-export.mjs ... --apply     write the delivery (text bundles, index, instructions, ZIPs, manifests)
+  node project-export.mjs ... --status    verify an existing delivery against the manifest and worktree
 
-Default behavior is preview-only. --apply writes directly uploadable .txt context
-bundles, an index, Project instructions, and a hash-pinned manifest. No command
-uploads files or invokes an external model.`);
+Options (pass the same ones on preview, --apply, and --status):
+  --config <gptpro-bundles.json>   custom architecture map; must cover every verified file
+  --prefix <name>                  bundle/ZIP name prefix (default: target folder name)
+  --max-bundles <n>                cap on text bundles, 1-${MAX_BUNDLES} (default ${MAX_BUNDLES})
+  --max-bundle-bytes <n>           per-bundle text limit, 10000-${MAX_BUNDLE_BYTES} (default ${MAX_BUNDLE_BYTES})
+
+The manifest is written by AgentChef "review pack --apply"; a pack preview writes
+nothing, so the exporter cannot run before that apply. Default behavior is
+preview-only. --apply writes directly uploadable .txt context bundles, an index,
+Project instructions, and hash-pinned manifests. No command uploads files or
+invokes an external model.`);
 }
 
 function isInside(parent, candidate) {
@@ -65,15 +73,57 @@ function isInside(parent, candidate) {
 
 function safeRelative(value) {
   if (typeof value !== "string" || !value || path.isAbsolute(value) || value.includes("\\\\")) fail(`Unsafe source path: ${value}`);
+  // Control characters (including CR/LF) could forge the BEGIN/END FILE delimiters inside a bundle.
+  if (/[\u0000-\u001f\u007f]/.test(value)) fail(`Unsafe source path (control character): ${JSON.stringify(value)}`);
   const normalized = value.replaceAll("\\", "/");
   if (normalized.split("/").some((part) => !part || part === "." || part === "..")) fail(`Unsafe source path: ${value}`);
   return normalized;
 }
 
+// Mirrors the deny-list applied by AgentChef `review pack` so a hand-edited or stale
+// manifest cannot smuggle a sensitive path past the exporter. Keep the two lists aligned.
+function isSensitivePath(relativePath) {
+  const normalized = relativePath.toLowerCase();
+  const parts = normalized.split("/");
+  const base = parts.at(-1);
+  if (parts.some((part) => [".git", ".codex", ".claude", ".agents", ".serena", ".agentspace", ".ssh", ".aws", ".gnupg", ".docker", ".kube", ".azure"].includes(part))) return true;
+  if (normalized === ".config/gcloud" || normalized.startsWith(".config/gcloud/") || normalized.includes("/.config/gcloud/")) return true;
+  if (["templates/codex/profiles/multi-session.config.toml", "docs/decisions/003-capability-preserving-multi-session-process-hygiene.md"].includes(normalized)) return false;
+  if ([".npmrc", ".pypirc", ".netrc", ".git-credentials", ".htpasswd", ".pgpass"].includes(base)) return true;
+  if (base === "claude.local.md") return true;
+  if (/^\.env(?:\.|$)/.test(base) && !/\.(?:example|sample|template)$/.test(base)) return true;
+  if (/(?:^|[-_.])(?:credential|credentials|secret|secrets|cookie|cookies|session|sessions|auth-state)(?:[-_.]|$)/.test(base)) return true;
+  if (/\.tfstate(?:\.backup)?$/i.test(base)) return true;
+  return /\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log|har)$/i.test(base);
+}
+
+function looksBinary(buffer) {
+  return buffer.subarray(0, Math.min(buffer.length, 8192)).includes(0);
+}
+
+// Resolve the deepest existing ancestor to its real path (defeats junctions and Windows 8.3
+// aliases that could point an apparently external --out back into the worktree), then
+// re-append the not-yet-created tail.
+function canonicalWithMissingTail(resolved) {
+  let current = resolved;
+  const tail = [];
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    tail.unshift(path.basename(current));
+    current = parent;
+  }
+  let real;
+  try { real = fs.realpathSync.native(current); } catch (error) { fail(`Output ancestor does not exist or is unreachable: ${current} (${error.code || error.message})`); }
+  return path.join(real, ...tail);
+}
+
 function assertOutputOutside(target, output) {
   const resolvedTarget = fs.realpathSync.native(path.resolve(target));
   const resolvedOutput = path.resolve(output);
-  if (isInside(resolvedTarget, resolvedOutput)) fail("Output must remain outside the target repository.");
+  // Compare the canonical location so a junction or 8.3 alias cannot point back into the worktree ...
+  if (isInside(resolvedTarget, canonicalWithMissingTail(resolvedOutput))) fail("Output must remain outside the target repository.");
+  // ... and still refuse to write through any linked ancestor at all.
   const root = path.parse(resolvedOutput).root;
   let current = root;
   for (const segment of resolvedOutput.slice(root.length).split(path.sep).filter(Boolean)) {
@@ -105,6 +155,7 @@ function verifiedFiles(target, review) {
     const relative = safeRelative(entry.path);
     if (seen.has(relative)) fail(`Duplicate source in manifest: ${relative}`);
     seen.add(relative);
+    if (isSensitivePath(relative)) fail(`Manifest lists a sensitive path the exporter refuses to package: ${relative}. Regenerate the manifest with review pack; do not hand-edit it.`);
     const source = path.resolve(root, relative);
     if (!isInside(root, source)) fail(`Source escapes target: ${relative}`);
     let current = root;
@@ -118,6 +169,7 @@ function verifiedFiles(target, review) {
     if (!stat.isFile()) fail(`Source is not a regular file: ${relative}`);
     const content = fs.readFileSync(source);
     if (content.length !== entry.bytes || hash(content) !== entry.sha256) fail(`Source changed; snapshot is stale: ${relative}`);
+    if (looksBinary(content)) fail(`Manifest lists a binary file the exporter refuses to package: ${relative}. Regenerate the manifest with review pack.`);
     return { path: relative, bytes: content.length, sha256: entry.sha256, content };
   });
 }
@@ -177,8 +229,14 @@ function selectBundles(specs, files, isDefault) {
     for (const file of selected) assigned.add(file.path);
     result.push({ name: spec.name, description: spec.description, files: selected });
   }
-  if (isDefault && assigned.size !== files.length) fail("Default bundle selection left verified files unassigned.");
   if (!result.length) fail("No verified files matched the requested bundle configuration.");
+  // Every verified source must land in exactly one bundle; the delivery stage enforces the same
+  // rule, so failing here (already in preview) replaces a late, vaguer error with an actionable one.
+  const unassigned = files.filter((file) => !assigned.has(file.path)).map((file) => file.path);
+  if (unassigned.length) {
+    const shown = unassigned.slice(0, 10).join(", ") + (unassigned.length > 10 ? `, ... (${unassigned.length - 10} more)` : "");
+    fail(`${isDefault ? "Default" : "Custom"} bundle selection left ${unassigned.length} verified file(s) unassigned: ${shown}. Every verified source must belong to exactly one bundle; add an include pattern (for example a final catch-all bundle with "**") or narrow the external-review pack.`);
+  }
   return result;
 }
 

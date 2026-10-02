@@ -10,6 +10,7 @@ import {
   buildPackPlan,
   checkBundleIntegrity,
   checkFreshness,
+  isSensitivePath,
   scanSecrets
 } from "../external-review-cli.mjs";
 
@@ -778,4 +779,65 @@ test("tracked sources cannot escape through a replaced ancestor junction", () =>
     safePlan.parts.some((part) => part.content.includes(outsideSentinel)),
     false
   );
+});
+
+test("prefixed credential names, Stripe/Google keys, and state-file paths are blocked", () => {
+  const value = ["correct", "horse", "battery", "staple", "99"].join("-");
+  assert.deepEqual(scanSecrets(`${"POSTGRES_"}PASSWORD: ${value}`, "docker-compose.yml"), ["generic credential assignment"]);
+  assert.deepEqual(scanSecrets(`${"DB_"}PASSWORD=${value}`, "deploy.conf"), ["generic credential assignment"]);
+  assert.deepEqual(scanSecrets(`"${"master_"}password":"${value}"`, "state.json"), ["generic credential assignment"]);
+  assert.deepEqual(scanSecrets(`${"STRIPE_"}SECRET_KEY=${"sk_"}${"live_"}abcdefghijklmnopqrstuvwxyz`, "config.txt"), ["Stripe key", "generic credential assignment"]);
+  assert.deepEqual(scanSecrets(`${"AIza"}SyA${"x".repeat(32)}`, "notes.md"), ["Google API key"]);
+  assert.deepEqual(scanSecrets("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}", "docker-compose.yml"), [], "env references stay allowed");
+  assert.deepEqual(scanSecrets("DB_PASSWORD=your-password-here", "README.md"), [], "placeholders stay allowed");
+  assert.deepEqual(scanSecrets("const csrfToken = request.headers.get(\"x-csrf\");", "route.ts"), [], "unquoted source lookups stay allowed");
+  for (const blocked of ["infra/terraform.tfstate", "infra/terraform.tfstate.backup", "ops/.htpasswd", "home/.pgpass"]) {
+    assert.equal(isSensitivePath(blocked), true, blocked);
+  }
+  assert.equal(isSensitivePath("supabase/migrations/0001_init.sql"), false, "SQL migrations remain reviewable");
+});
+
+test("direct CLI invocation accepts the documented `review <command>` form", () => {
+  const { repo, out } = fixture();
+  const direct = spawnSync(process.execPath, [cliPath, "review", "pack", "--target", repo, "--out", out], { encoding: "utf8" });
+  assert.equal(direct.status, 0, direct.stderr || direct.stdout);
+  assert.equal(JSON.parse(direct.stdout).mode, "preview");
+  const bare = spawnSync(process.execPath, [cliPath, "pack", "--target", repo, "--out", out], { encoding: "utf8" });
+  assert.equal(bare.status, 0, bare.stderr || bare.stdout);
+  assert.equal(JSON.parse(bare.stdout).mode, "preview");
+  assert.equal(fs.existsSync(out), false, "preview must not write");
+});
+
+test("compose, CI, shell, and HCL credential references are not treated as literals", () => {
+  const allowed = [
+    ["POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}", "docker-compose.yml"],
+    ["DB_PASSWORD: ${DB_PASSWORD:?required}", "docker-compose.yml"],
+    ["POSTGRES_PASSWORD: $POSTGRES_PASSWORD", "docker-compose.yml"],
+    ["GITHUB_TOKEN: ${{ github.token }}", ".github/workflows/ci.yml"],
+    ["GH_TOKEN: ${{ inputs.token }}", ".github/workflows/ci.yml"],
+    ["DOCKER_PASSWORD: $CI_REGISTRY_PASSWORD", ".gitlab-ci.yml"],
+    ["db_password = var.db_password", "main.tf"],
+    ["master_password = random_password.db.result", "main.tf"],
+    ["admin_password = module.secrets.admin", "main.tf"],
+    // Built from parts so push protection does not read the placeholder as a key.
+    [`Set STRIPE_SECRET_KEY=${["sk_", "test_", "X".repeat(24)].join("")} in your shell`, "README.md"],
+    [`STRIPE_SECRET_KEY=${["sk_", "test_", "4eC39HqLyjWDarjtT1zdp7dc"].join("")}`, "docs/stripe.md"],
+    ["GOOGLE_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "README.md"]
+  ];
+  for (const [line, file] of allowed) assert.deepEqual(scanSecrets(line, file), [], `${file}: ${line}`);
+  const value = ["correct", "horse", "battery", "staple", "99"].join("-");
+  assert.deepEqual(scanSecrets(`POSTGRES_PASSWORD: ${value}`, "docker-compose.yml"), ["generic credential assignment"], "literal compose values stay blocked");
+  assert.deepEqual(scanSecrets(`db_password = "${value}"`, "main.tf"), ["generic credential assignment"], "literal HCL values stay blocked");
+});
+
+test("the exporter's sensitive-path deny-list stays identical to review pack's", () => {
+  const extract = (file) => {
+    const source = fs.readFileSync(file, "utf8");
+    const start = source.indexOf("function isSensitivePath(");
+    assert.notEqual(start, -1, `${file} must define isSensitivePath`);
+    const body = source.slice(start, source.indexOf("\n}\n", start));
+    return body.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, "");
+  };
+  const exporter = path.resolve(path.dirname(cliPath), "..", "plugins", "agentchef-workflows", "skills", "gptpro", "scripts", "project-export-legacy.mjs");
+  assert.equal(extract(exporter), extract(cliPath), "keep the two deny-lists aligned clause by clause");
 });

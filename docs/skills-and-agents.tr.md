@@ -100,4 +100,7 @@ komut gerekir; gerçek bir upload ise bu reponun otomatik akışının dışınd
 Hazır gelen `gptpro` ve `gptpro-handoff` aynı review ID üzerine kurulur: ilki
 manuel yönetilen GPT Pro Project için metin bundle'ları üretir, ikincisi ise
 sınırları belirli prompt'u yazar ve dönen raporu doğrular. Hiçbiri provider
-seçmez, browser açmaz veya kaynak dosya yüklemez.
+seçmez, browser açmaz veya kaynak dosya yüklemez. Exporter, review pack'in
+hassas yol ve ikili dosya denetimlerini her manifest girdisine kendi başına
+yeniden uygular; handoff ise her bulguyu implement-now, needs-decision veya
+discard olarak sınıflandıran bir triyaj kaydıyla biter.
