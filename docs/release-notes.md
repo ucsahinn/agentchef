@@ -2,6 +2,32 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.2.1 - 2026-10-02
+
+AgentChef 1.2.1 is a fix release. Update with
+`npm run chef -- --update --apply`; no migration step is needed.
+
+### What Changed
+
+- Security: Claude specialists get Serena by tool name, limited to its read
+  tools. The previous grant (`mcp__serena`) also reached the editing and
+  memory-writing tools of a user's own Serena entry. This was found by
+  running the agents.
+- Status and checks:
+  - An empty `codex doctor` report no longer reads as healthy.
+  - A failing `claude --version` is no longer reported as a missing CLI.
+  - `--cleanup-stale --apply` fails when no cleanup plan could be made.
+- MCP: the verifier fails an enabled Supabase connector without a
+  `project_ref` or without `read_only=true`.
+- Installer and docs:
+  - The capability board shows the right MCP lines for a Claude-only
+    install.
+  - The upgrade guide is in release order.
+  - The docs explain why `npm` can be blocked in PowerShell, and that
+    `npm.cmd` works.
+
+The [CHANGELOG](../CHANGELOG.md) lists every fix with its cause.
+
 ## v1.2.0 - 2026-10-01
 
 AgentChef 1.2.0 closes a four-agent audit of the install, status, removal,
