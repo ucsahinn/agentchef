@@ -1,5 +1,5 @@
 {
-  "description": "After a Codex session ends, schedule a fail-closed sweep for only the local MCP processes captured as descendants of that exact session owner.",
+  "description": "After a Codex session ends, record that session's owner and schedule a fail-closed sweep that stops only the local MCP trees the owner started, once the owner has exited.",
   "hooks": {
     "SessionEnd": [
       {
@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "node \"$PLUGIN_ROOT/scripts/codex-process-hygiene.mjs\" --session-end",
-            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"& node (Join-Path $env:PLUGIN_ROOT 'scripts/codex-process-hygiene.mjs') --session-end\"",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"$all = @{}; Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,Name,CreationDate | ForEach-Object { $all[[int]$_.ProcessId] = $_ }; $c = @(); $p = $all[$PID]; for ($i = 0; $i -lt 4 -and $p; $i++) { $p = $all[[int]$p.ParentProcessId]; if ($p) { $c += ('' + $p.ProcessId + ':' + ([DateTimeOffset]$p.CreationDate).ToUnixTimeMilliseconds() + ':' + $p.Name) } }; & node (Join-Path $env:PLUGIN_ROOT 'scripts/codex-process-hygiene.mjs') --session-end ('--owner-chain=' + ($c -join ','))\"",
             "timeout": 3,
             "statusMessage": "Scheduling stale MCP cleanup"
           }

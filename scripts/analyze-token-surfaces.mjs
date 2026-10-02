@@ -115,8 +115,12 @@ function sourceFilePaths() {
   const result = spawnSync(
     "git",
     ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-    { cwd: root, encoding: "utf8", windowsHide: true }
+    // A large repository's NUL-separated list passes Node's 1 MiB default.
+    { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 }
   );
+  if (result.error?.code === "ENOBUFS") {
+    throw new Error("git ls-files output exceeded 64 MiB; the token audit cannot enumerate this repository.");
+  }
   if (result.status === 0) {
     return {
       mode: "git-source-set",

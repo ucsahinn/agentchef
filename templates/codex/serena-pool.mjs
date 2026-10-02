@@ -196,7 +196,10 @@ function stateDirectory() {
 // profile: identical copies share one manager, different ones run side by
 // side until the copies match again. An explicit port still wins.
 export function poolPort() {
-  const derived = 44787 + (Number.parseInt(crypto.createHash("sha256").update(MANAGER_PROFILE).digest("hex").slice(0, 8), 16) % 200);
+  // The token lives in the state directory, so a manager started with another
+  // CODEX_HOME cannot authenticate this one: the port follows that directory.
+  const state = process.platform === "win32" ? stateDirectory().toLowerCase() : stateDirectory();
+  const derived = 44787 + (Number.parseInt(crypto.createHash("sha256").update(`${MANAGER_PROFILE}\0${state}`).digest("hex").slice(0, 8), 16) % 200);
   const parsed = Number.parseInt(process.env.AGENTCHEF_SERENA_POOL_PORT || process.env.CODEX_CHEF_SERENA_POOL_PORT || String(derived), 10);
   if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 65535) throw new Error("AGENTCHEF_SERENA_POOL_PORT must be an integer from 1024 to 65535.");
   return parsed;
@@ -242,7 +245,9 @@ function requestJson({ pathName, method = "GET", body, token, timeoutMs = 1500 }
         let parsed = null;
         try { parsed = text ? JSON.parse(text) : null; } catch { /* manager errors are intentionally generic */ }
         if ((response.statusCode || 500) >= 300) {
-          reject(new Error(parsed?.error || `Serena pool manager returned HTTP ${response.statusCode}.`));
+          const error = new Error(parsed?.error || `Serena pool manager returned HTTP ${response.statusCode}.`);
+          error.statusCode = response.statusCode;
+          reject(error);
           return;
         }
         resolve(parsed);
@@ -259,7 +264,13 @@ async function ensureManager(token) {
   let health = null;
   try {
     health = await requestJson({ pathName: "/health", token, timeoutMs: 350 });
-  } catch { /* start the singleton below */ }
+  } catch (error) {
+    // A manager answers but rejects this token: it belongs to another state
+    // directory. Starting a second one on the same port can only fail.
+    if (error?.statusCode === 401) {
+      throw new Error(`Port ${poolPort()} is held by a Serena pool manager with a different state directory; set AGENTCHEF_SERENA_POOL_PORT to another port.`);
+    }
+  }
   if (health?.profile === MANAGER_PROFILE) return;
   if (health) {
     // An older manager: stop it (it stops the backends it started) and wait
@@ -301,6 +312,34 @@ function toolList() {
     description: "Read-only Serena semantic code-intelligence operation routed through the project-keyed local pool.",
     inputSchema: { type: "object", additionalProperties: true }
   }));
+}
+
+// An explicit --project-root (Claude passes ${CLAUDE_PROJECT_DIR}) wins.
+// Otherwise the nearest folder above the working directory that holds .git or
+// .serena/project.yml is the project, so a session started in a subfolder
+// shares the repository's backend instead of indexing only that subfolder.
+// The walk stops below the home directory: a dotfiles repository or a
+// .serena folder in the home must never turn the whole home into the project.
+export function resolveBridgeProjectRoot(argv = process.argv.slice(3), cwd = process.cwd(), home = os.homedir()) {
+  const flag = argv.indexOf("--project-root");
+  const explicit = flag >= 0 ? argv[flag + 1] : null;
+  if (explicit && !explicit.includes("${")) return path.resolve(explicit);
+  const same = (left, right) => (process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right);
+  const stop = path.resolve(home);
+  let current = path.resolve(cwd);
+  for (;;) {
+    if (same(current, stop)) return path.resolve(cwd);
+    if (fs.existsSync(path.join(current, ".git")) || fs.existsSync(path.join(current, ".serena", "project.yml"))) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return path.resolve(cwd);
+    current = parent;
+  }
+}
+
+let cachedBridgeProjectRoot = null;
+function bridgeProjectRoot() {
+  cachedBridgeProjectRoot ||= resolveBridgeProjectRoot();
+  return cachedBridgeProjectRoot;
 }
 
 async function runBridge() {
@@ -351,7 +390,7 @@ async function handleBridgeMessage(line, { token, clientId }) {
       method: "POST",
       token,
       timeoutMs: 185000,
-      body: { clientId, projectRoot: process.cwd(), toolName, arguments: message.params?.arguments || {} }
+      body: { clientId, projectRoot: bridgeProjectRoot(), toolName, arguments: message.params?.arguments || {} }
     });
     // The client's id goes last: the backend's response carries the id of the
     // pool's own request to Serena, and spreading it after the client's id
@@ -412,7 +451,9 @@ export function parseMcpResponse(response, text) {
   throw new Error("Serena returned an unsupported MCP response.");
 }
 
-function postMcp(endpoint, payload, sessionId) {
+const TOOL_CALL_TIMEOUT_MS = 175_000;
+
+export function postMcp(endpoint, payload, sessionId, { timeoutMs = 0 } = {}) {
   const target = new URL(endpoint);
   const serialized = JSON.stringify(payload);
   return new Promise((resolve, reject) => {
@@ -428,6 +469,13 @@ function postMcp(endpoint, payload, sessionId) {
         try { resolve(parseMcpResponse(response, text)); } catch (error) { reject(error); }
       });
     });
+    if (timeoutMs > 0) {
+      request.setTimeout(timeoutMs, () => {
+        const error = new Error(`Serena tool call timed out after ${Math.round(timeoutMs / 1000)} s.`);
+        error.code = "SERENA_CALL_TIMEOUT";
+        request.destroy(error);
+      });
+    }
     request.once("error", reject);
     request.write(serialized);
     request.end();
@@ -566,7 +614,14 @@ async function runManager() {
       if (!TOOL_NAMES.includes(body.toolName) || typeof body.clientId !== "string" || typeof body.projectRoot !== "string") throw new Error("Invalid Serena pool request.");
       const forwarded = await recoverFromStartupExit(pool, body.projectRoot, (backend) => enqueueBackendCall(backend, async () => {
         const sessionId = await waitForSession(backend, body.clientId);
-        return postMcp(backend.endpoint, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: body.toolName, arguments: body.arguments || {} } }, sessionId);
+        try {
+          return await postMcp(backend.endpoint, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: body.toolName, arguments: body.arguments || {} } }, sessionId, { timeoutMs: TOOL_CALL_TIMEOUT_MS });
+        } catch (error) {
+          // A hung language server would block every later call for this
+          // project; the backend is dropped and the next call starts fresh.
+          if (error?.code === "SERENA_CALL_TIMEOUT") await pool.discard(backend);
+          throw error;
+        }
       }));
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ response: forwarded.response }));
     } catch (error) {
@@ -579,6 +634,10 @@ async function runManager() {
     });
   }, 60_000);
   timer.unref();
+  server.on("error", (error) => {
+    process.stderr.write(`Serena pool manager could not listen on port ${poolPort()}: ${error.message}\n`);
+    void pool.close().finally(() => process.exit(1));
+  });
   server.listen({ host: "127.0.0.1", port: poolPort() });
   process.once("SIGTERM", () => void shutdown(server));
   process.once("SIGINT", () => void shutdown(server));

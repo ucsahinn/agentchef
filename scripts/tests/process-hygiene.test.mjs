@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -444,4 +445,134 @@ test("MCP servers a live Claude Code session started are active, never orphans",
   assert.equal(report.activeMcpInstances, 2, "both Claude-owned trees are active");
   assert.deepEqual(report.cleanupCandidates.map((item) => item.rootPid), [900], "only the genuinely unowned tree is a candidate");
   assert.ok(!report.cleanupCandidates.some((item) => [710, 810].includes(item.rootPid)), "no Claude-owned tree may ever be selected");
+});
+
+test("Windows cleanup stops a tree with taskkill /T /F", async () => {
+  const { buildOwnerExitPlan, terminateCleanupPlan } = await import(hygieneModuleUrl);
+  const owner = { pid: 101, createdAt: old };
+  const afterExit = fixtureProcesses().filter((item) => ![100, 101].includes(item.pid));
+  const plan = buildOwnerExitPlan(afterExit, owner).filter((item) => item.rootPid === 200);
+  const calls = [];
+  terminateCleanupPlan(plan, {
+    processes: afterExit,
+    platform: "win32",
+    spawnSync(command, args) {
+      calls.push([command, args]);
+      return { status: 0, stdout: "", stderr: "" };
+    }
+  });
+  // Without /F a hidden Node process refuses the stop and stays alive.
+  assert.deepEqual(calls, [["taskkill.exe", ["/PID", "200", "/T", "/F"]]]);
+});
+
+test("an owner-exit plan takes only MCP trees the exited owner started", async () => {
+  const { buildOwnerExitPlan } = await import(hygieneModuleUrl);
+  const owner = { pid: 101, createdAt: old };
+  // While the owner lives, nothing is planned.
+  assert.deepEqual(buildOwnerExitPlan(fixtureProcesses(), owner), []);
+  const afterExit = fixtureProcesses().filter((item) => ![100, 101].includes(item.pid));
+  const plan = buildOwnerExitPlan(afterExit, owner);
+  assert.deepEqual(plan.map((item) => [item.rootPid, item.server, item.processCount]), [[200, "playwright", 2]]);
+  // Another session's tree (parent 999) and the control server are never taken.
+  assert.ok(!plan.some((item) => [400, 500, 600].includes(item.rootPid)));
+});
+
+test("an owner-exit plan refuses a child of a process that reused the owner's pid", async () => {
+  const { buildOwnerExitPlan } = await import(hygieneModuleUrl);
+  const owner = { pid: 101, createdAt: old };
+  const later = "2026-07-29T12:50:00.000Z";
+  const reused = [
+    ...fixtureProcesses().filter((item) => ![100, 101, 200, 201].includes(item.pid)),
+    // pid 101 now belongs to an unrelated, newer process ...
+    proc(101, 1, "node.exe", "node some-other-tool.js", later),
+    // ... whose own MCP child is newer still: not the old owner's.
+    proc(220, 101, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.82", "2026-07-29T12:55:00.000Z"),
+    // An orphan created before the reuse is the old owner's and is planned.
+    proc(200, 101, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.76", old)
+  ];
+  assert.deepEqual(buildOwnerExitPlan(reused, owner).map((item) => item.rootPid), [200]);
+});
+
+test("the owner chain picks the nearest Codex or Claude entry and nothing else", async () => {
+  const { ownerFromChain } = await import(hygieneModuleUrl);
+  assert.deepEqual(ownerFromChain("10:1790000000000:bash.exe,20:1790000000500:codex.exe,30:1:claude.exe"), { pid: 20, createdAt: new Date(1790000000500).toISOString() });
+  assert.equal(ownerFromChain("10:1790000000000:bash.exe"), null);
+  assert.equal(ownerFromChain(""), null, "an empty chain means the wrapper could not read it: no sweep");
+});
+
+test("the SessionEnd hook records only the owner, from the chain the wrapper passes", () => {
+  const record = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-hygiene-")), "record.json");
+  const script = path.join(root, "plugins", "agentchef-workflows", "scripts", "codex-process-hygiene.mjs");
+  const run = spawnSync(process.execPath, [script, "--session-end", "--owner-chain=10:1790000000000:bash.exe,20:1790000000500:codex.exe"], {
+    input: JSON.stringify({ hook_event_name: "SessionEnd" }),
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 30_000,
+    env: { ...process.env, AGENTCHEF_TEST_MODE: "1", AGENTCHEF_TEST_HYGIENE_RECORD: record }
+  });
+  assert.equal(run.status, 0, run.stderr);
+  const scheduled = JSON.parse(fs.readFileSync(record, "utf8"));
+  assert.deepEqual(scheduled.snapshot, { schemaVersion: 2, owner: { pid: 20, createdAt: new Date(1790000000500).toISOString() } });
+
+  fs.rmSync(record);
+  const none = spawnSync(process.execPath, [script, "--session-end", "--owner-chain="], {
+    input: JSON.stringify({ hook_event_name: "SessionEnd" }),
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 30_000,
+    env: { ...process.env, AGENTCHEF_TEST_MODE: "1", AGENTCHEF_TEST_HYGIENE_RECORD: record }
+  });
+  assert.equal(none.status, 0, none.stderr);
+  assert.equal(fs.existsSync(record), false, "no owner, no sweep");
+});
+
+test("the Windows hook wrapper passes a readable owner chain within Codex's three seconds", { skip: process.platform !== "win32" }, () => {
+  const config = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef-workflows", "hooks", "process-hygiene.json"), "utf8"));
+  const command = config.hooks.SessionEnd[0].hooks[0].commandWindows;
+  const inner = /^powershell\.exe -NoProfile -NonInteractive -Command "(.*)"$/s.exec(command)[1];
+  // The wrapper's real work, minus the hand-off to node, prints the chain.
+  const probe = inner.replace(/; & node .*$/s, "; $c -join ','");
+  const started = Date.now();
+  const run = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", probe], { encoding: "utf8", windowsHide: true, timeout: 30_000 });
+  assert.equal(run.status, 0, run.stderr);
+  assert.match(run.stdout.trim(), /^\d+:\d+:[^,]+(,\d+:\d+:[^,]+)*$/, "pid:startMs:name entries");
+  // Recorded, not asserted: a loaded machine can exceed it, and then Codex
+  // stops the hook and no sweep is scheduled (fail-closed).
+  console.log(`owner-chain wrapper took ${Date.now() - started} ms`);
+});
+
+test("a manual stale cleanup stops a rechecked orphan and skips one that gained an owner", async () => {
+  const { analyzeProcessSnapshot, staleCleanupExitCode, terminateStaleCandidates } = await import(hygieneModuleUrl);
+  const processes = fixtureProcesses();
+  const report = analyzeProcessSnapshot(processes, { now, orphanGraceMs: 60_000 });
+  assert.deepEqual(report.cleanupCandidates.map((item) => item.rootPid), [400]);
+  const calls = [];
+  const results = terminateStaleCandidates(report.cleanupCandidates, {
+    processes,
+    now,
+    platform: "linux",
+    spawnSync(command, args) {
+      calls.push([command, args]);
+      return { status: 0, stdout: "", stderr: "" };
+    }
+  });
+  assert.deepEqual(calls, [["kill", ["-TERM", "401"]], ["kill", ["-TERM", "400"]]], "children before the root");
+  assert.deepEqual(results.map((item) => item.stopped), [true]);
+  assert.equal(staleCleanupExitCode(report.cleanupCandidates, results), 0);
+
+  // Between the audit and the stop, a Codex session adopted the tree.
+  const adopted = processes.map((item) => (item.pid === 400 ? { ...item, parentPid: 101 } : item));
+  const skipped = terminateStaleCandidates(report.cleanupCandidates, { processes: adopted, now, platform: "linux", spawnSync() { throw new Error("must not stop"); } });
+  assert.equal(skipped[0].stopped, false);
+  assert.match(skipped[0].skippedReason, /no longer a stale candidate/i);
+  assert.equal(staleCleanupExitCode(report.cleanupCandidates, skipped), 1, "candidates but nothing stopped is not a success");
+});
+
+test("a manual stale cleanup on Windows uses taskkill /T /F", async () => {
+  const { analyzeProcessSnapshot, terminateStaleCandidates } = await import(hygieneModuleUrl);
+  const processes = fixtureProcesses();
+  const report = analyzeProcessSnapshot(processes, { now, orphanGraceMs: 60_000 });
+  const calls = [];
+  terminateStaleCandidates(report.cleanupCandidates, { processes, now, platform: "win32", spawnSync(command, args) { calls.push([command, args]); return { status: 0 }; } });
+  assert.deepEqual(calls, [["taskkill.exe", ["/PID", "400", "/T", "/F"]]]);
 });

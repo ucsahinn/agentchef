@@ -381,3 +381,63 @@ test("identical pool copies share one manager port and different copies get thei
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("managers with different state directories get different ports", () => {
+  const env = { ...process.env };
+  delete env.AGENTCHEF_SERENA_POOL_PORT;
+  delete env.CODEX_CHEF_SERENA_POOL_PORT;
+  const portFor = (codexHome) => {
+    const run = spawnSync(process.execPath, ["--input-type=module", "-e", `import(${JSON.stringify(moduleUrl.href)}).then((m) => console.log(m.poolPort()))`], { encoding: "utf8", env: { ...env, CODEX_HOME: codexHome } });
+    assert.equal(run.status, 0, run.stderr);
+    return Number(run.stdout.trim());
+  };
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-home-"));
+  try {
+    const first = portFor(path.join(base, "one"));
+    assert.equal(portFor(path.join(base, "one")), first, "the same state directory shares a manager");
+    // The token lives in the state directory; another directory cannot
+    // authenticate this manager, so it must not land on its port.
+    const others = ["two", "three", "four"].map((name) => portFor(path.join(base, name)));
+    assert.ok(others.some((port) => port !== first), "another state directory gets its own port");
+  } finally {
+    fs.rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("the bridge uses the repository root, an explicit project root, and ignores an unsubstituted variable", async () => {
+  const { resolveBridgeProjectRoot } = await import(moduleUrl.href);
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-root-"));
+  try {
+    const repo = path.join(base, "repo");
+    const sub = path.join(repo, "packages", "app");
+    fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+    fs.mkdirSync(sub, { recursive: true });
+    assert.equal(resolveBridgeProjectRoot([], sub), repo, "a session in a subfolder shares the repository backend");
+    assert.equal(resolveBridgeProjectRoot(["--project-root", base], sub), path.resolve(base), "an explicit root wins");
+    assert.equal(resolveBridgeProjectRoot(["--project-root", "${CLAUDE_PROJECT_DIR}"], sub), repo, "a variable Claude did not substitute is ignored");
+    const loose = path.join(base, "loose");
+    fs.mkdirSync(loose);
+    assert.equal(resolveBridgeProjectRoot([], loose, base), path.resolve(loose), "no marker below the home: the working directory");
+    // A marker in the home itself (a dotfiles repository) is never the project.
+    fs.mkdirSync(path.join(base, ".git"));
+    assert.equal(resolveBridgeProjectRoot([], loose, base), path.resolve(loose), "the home is never the project");
+  } finally {
+    fs.rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("a Serena tool call that hangs times out instead of holding the queue", async () => {
+  const { postMcp } = await import(moduleUrl.href);
+  const server = http.createServer(() => { /* never answers */ });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const endpoint = `http://127.0.0.1:${server.address().port}/mcp`;
+    await assert.rejects(
+      postMcp(endpoint, { jsonrpc: "2.0", id: 2, method: "tools/call", params: {} }, "session", { timeoutMs: 200 }),
+      (error) => error.code === "SERENA_CALL_TIMEOUT"
+    );
+  } finally {
+    server.closeAllConnections?.();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

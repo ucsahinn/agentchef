@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+- Status, CLI, process-hygiene, and Serena fixes from a second bug hunt:
+  - The SessionEnd cleanup never stopped anything on Windows: `taskkill`
+    without `/F` cannot stop a hidden Node process, and reading the whole
+    process table took longer than Codex's three-second hook limit. The hook
+    now records only the session owner from one minimal process query, and
+    the detached sweep reads command lines after the owner exits and stops
+    only MCP trees that owner started, with `/T /F`.
+  - `--processes --cleanup-stale --apply` reported success and stopped
+    nothing, because its candidates carried no session receipt. Each candidate
+    is now checked again against a fresh process table and then stopped; when
+    candidates existed and none was stopped, it exits non-zero.
+  - Two Serena bridges with different `CODEX_HOME` values shared one port
+    while holding different tokens, so the second one failed. The port now
+    follows the state directory, and a foreign manager on the port is
+    reported plainly.
+  - A Serena tool call that hung blocked every later call for that project;
+    calls now time out after 175 seconds and the backend is dropped.
+  - A session started in a subfolder indexed only that subfolder. The
+    bridge now uses an explicit `--project-root` or the nearest `.git` or
+    `.serena/project.yml` below the home directory.
+  - `codex-profile.mjs` assumed a `codex.cmd` shim and failed with a native
+    `codex.exe`; it now starts whichever the PATH holds first.
+  - `review pack` failed on a tracked file deleted but not yet staged; it
+    now lists that file as `deleted` and packs the rest. The token audit keeps
+    failing closed there on purpose. Both now raise Node's output buffer for
+    large repositories.
+  - The Supabase scope check treated a server table with no `enabled` key
+    as disabled. Codex treats it as enabled, so the check does too.
+  - The security audit missed home paths with non-ASCII user names, and git
+    quoted non-ASCII paths past its ignored-directory check.
+  - The GPT Pro exporter's preview passed bundles that `--apply` could not
+    archive (more than 2000 files, or two names that differ only by case).
+  - `ps` start times are read with `LC_ALL=C`, so cleanup works under a
+    non-English locale.
+  - `chef --doctor --json` reported ok when a stderr line broke the report
+    parse. It now parses stdout only, and treats an unreadable report as
+    attention.
+  - `review verify` failed on a report saved with a byte-order mark.
+  - The diagram renderer's Markdown links broke when `--markdown` pointed
+    outside `--out-dir`.
+  - `codex-doctor --include-global` ignored `CODEX_HOME` and `AGENTS_HOME`.
 - `gptpro` and `gptpro-handoff` hardening and documentation pass:
   - The exporter now applies the `review pack` sensitive-path deny-list and a
     binary check to every manifest entry itself, so a hand-edited or stale

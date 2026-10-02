@@ -62,21 +62,30 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 ```
 
 Only old local MCP trees with no live owner (a Codex or Claude Code session, or the Serena pool manager) are candidates. Active
-Codex trees and unrelated runtimes are excluded. Cleanup rechecks process
-identity and creation time before stopping the captured tree, so PID reuse fails
-closed.
+Codex trees and unrelated runtimes are excluded. Right before the stop, each
+candidate is checked again against a fresh process table: the same PID and
+creation time, still without a live owner, still past the grace period. A tree
+that fails the recheck is skipped, so PID reuse fails closed. When candidates
+existed and none was stopped, the command exits non-zero.
 
 ## Session-End Sweep
 
 The bundled plugin registers one reviewed `SessionEnd` hook. On a normal session
-end, it captures only the local MCP descendants of that exact Codex owner,
-starts a detached 45-second grace timer, and then stops only captured processes
-that still have the same PID and creation time after the owner chain is gone.
+end, it records only the session owner: the nearest Codex or Claude Code
+process above the hook, by PID and creation time. It then starts a detached
+45-second grace timer. After the owner has exited, the sweep reads the process
+table and stops only MCP trees the owner started: a direct child of the
+owner's PID with an MCP signature, created after the owner started, and older
+than any process that later reused the owner's PID. On Windows the stop is
+`taskkill /T /F`; a hidden Node process refuses a stop without `/F`.
 It does not run for subagent lifecycle events, inject context, read prompt text,
 delete files, or scan unrelated Node/Python processes.
-The hook command uses Codex's documented three-second `SessionEnd` maximum only
-to capture ownership and schedule the detached sweep; missing or slow process
-metadata fails closed.
+Codex documents a three-second `SessionEnd` maximum. Reading every process with
+its command line takes longer than that on Windows, so the hook reads only
+process IDs, parents, names, and creation times (one query) and leaves the
+command lines to the detached sweep. On a heavily loaded machine even that
+can pass three seconds; Codex then stops the hook and no sweep is scheduled
+(fails closed), and `--cleanup-stale --apply` removes what is left.
 
 Codex requires plugin hooks to be reviewed and trusted. After installing or
 refreshing the plugin, start a new Codex session, open `/hooks`, inspect the

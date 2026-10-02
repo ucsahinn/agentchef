@@ -458,7 +458,9 @@ test("an enabled Supabase connector without a project_ref fails verification", (
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-supabase-scope-"));
   try {
     const verify = (enabled, query) => {
-      fs.writeFileSync(path.join(home, "config.toml"), `[mcp_servers.supabase]\nenabled = ${enabled}\nurl = "https://mcp.supabase.com/mcp?${query}"\n\n[mcp_servers.other]\nenabled = true\n`);
+      // null: no enabled key at all, as `codex mcp add` writes the table.
+      const enabledLine = enabled === null ? "" : `enabled = ${enabled}\n`;
+      fs.writeFileSync(path.join(home, "config.toml"), `[mcp_servers.supabase]\n${enabledLine}url = "https://mcp.supabase.com/mcp?${query}"\n\n[mcp_servers.other]\nenabled = true\n`);
       const result = spawnSync(process.execPath, [path.join(root, "scripts", "verify-install-runtime.mjs"), "--codex-home", home, "--agents-home", home, "--skip-codex-cli", "--json"], {
         cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(120_000)
       });
@@ -467,6 +469,7 @@ test("an enabled Supabase connector without a project_ref fails verification", (
     assert.equal(verify(true, "read_only=true&features=database").length, 1, "account-wide scope is a failure");
     assert.equal(verify(true, "read_only=true&project_ref=abc").length, 0, "a project-scoped connector passes");
     assert.equal(verify(false, "read_only=true").length, 0, "a disabled connector is not checked");
+    assert.equal(verify(null, "features=database").length, 2, "a table with no enabled key is enabled, so both scope rules apply");
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }

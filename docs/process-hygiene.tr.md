@@ -55,21 +55,31 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 ```
 
 Yalnız canlı sahibi (Codex ya da Claude Code oturumu, veya Serena havuz yöneticisi) olmayan, bekleme süresi dolmuş lokal MCP ağaçları aday
-olur. Aktif Codex ağaçları ve ilgisiz runtime'lar dışarıda kalır. Temizlik,
-yakaladığı ağacı durdurmadan önce süreç kimliğini ve oluşturulma zamanını yeniden
-doğrular; PID yeniden kullanılmışsa işlem güvenli biçimde durur.
+olur. Aktif Codex ağaçları ve ilgisiz runtime'lar dışarıda kalır. Durdurmadan
+hemen önce her aday taze bir süreç tablosuna karşı yeniden doğrulanır: aynı PID
+ve oluşturulma zamanı, hâlâ canlı bir sahibi yok, bekleme süresi hâlâ dolmuş.
+Doğrulamayı geçemeyen ağaç atlanır; PID yeniden kullanılmışsa işlem güvenli
+biçimde durur. Aday varken hiçbiri durdurulamadıysa komut sıfırdan farklı kodla
+çıkar.
 
 ## Oturum Sonu Taraması
 
 Bundled plugin tek bir incelenmiş `SessionEnd` hook'u kaydeder. Normal bir oturum
-sonunda yalnız o Codex sahibinin lokal MCP alt süreçlerini yakalar, detached
-45 saniyelik bekleme başlatır ve sahip zinciri gittikten sonra hâlâ aynı PID ile
-oluşturulma zamanını taşıyan yakalanmış süreçleri durdurur. Subagent lifecycle
+sonunda yalnızca oturum sahibini kaydeder: hook'un üstündeki en yakın Codex ya da
+Claude Code süreci, PID'i ve oluşturulma zamanıyla. Ardından ayrık 45 saniyelik
+bir bekleme başlatır. Sahip kapandıktan sonra tarama süreç tablosunu okur ve
+yalnızca sahibin başlattığı MCP ağaçlarını durdurur: sahibin PID'inin MCP imzası
+taşıyan doğrudan çocuğu, sahipten sonra oluşmuş ve sahibin PID'ini sonradan
+alan bir süreçten daha eski. Windows'ta durdurma `taskkill /T /F` ile yapılır;
+gizli bir Node süreci `/F` olmadan durmayı reddeder. Subagent lifecycle
 olaylarında çalışmaz; context eklemez, prompt metni okumaz, dosya silmez ve
 ilgisiz Node/Python süreçlerini taramaz.
-Hook komutu Codex'in belgelediği üç saniyelik `SessionEnd` üst sınırını yalnız
-sahipliği yakalayıp detached taramayı planlamak için kullanır; eksik veya yavaş
-süreç metadata bilgisi fail-closed kalır.
+Codex `SessionEnd` için üç saniyelik bir üst sınır belgeler. Windows'ta bütün
+süreçleri komut satırlarıyla okumak bundan uzun sürer; bu yüzden hook yalnızca
+süreç kimliklerini, üst süreçleri, adları ve oluşturulma zamanlarını okur (tek
+sorgu), komut satırlarını ayrık taramaya bırakır. Çok yüklü bir makinede bu bile
+üç saniyeyi geçebilir; o zaman Codex hook'u durdurur ve tarama planlanmaz
+(fail-closed). Kalanları `--cleanup-stale --apply` temizler.
 
 Codex plugin hook'larının incelenmesini ve güvenilir olarak işaretlenmesini
 ister. Plugin kurulduktan veya yenilendikten sonra yeni Codex oturumu aç,
