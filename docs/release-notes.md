@@ -2,6 +2,23 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.2.2 - 2026-10-02
+
+AgentChef 1.2.2 collects the fixes from running every one of the 32 AgentChef
+agents once. Update with `npm run chef -- --update --apply`; no migration
+step is needed.
+
+### What Changed
+
+- Claude specialists without a shell are told to search with the Grep and
+  Glob tools where their shared instructions say `rg`.
+- The agent build imports the Serena pool's read-tool list instead of parsing
+  its source, so a harmless edit to that list cannot break it.
+- `llms.txt`, the banner's accessible description, the root `AGENTS.md`,
+  and the README quickstart now match what ships.
+
+The [CHANGELOG](../CHANGELOG.md) lists every fix with its cause.
+
 ## v1.2.1 - 2026-10-02
 
 AgentChef 1.2.1 is a fix release. Update with
