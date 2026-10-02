@@ -15,6 +15,9 @@
     imports the exported list.
   - The README called the preview "the first command"; it is the last one
     in its block.
+  - Claude roles with no shell are told to use the Grep and Glob tools where
+    their shared instructions say `rg`. Before, the only guidance was to ask
+    the parent for command output, even for a plain search.
 
 ## 1.2.1 - 2026-10-02
 
