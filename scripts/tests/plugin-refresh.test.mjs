@@ -206,3 +206,20 @@ test("a same-version cache whose files differ from the local source is refreshed
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("refreshes a plugin still listed under the legacy marketplace with that id", () => {
+  const calls = [];
+  const legacyId = "agentchef-workflows@codex-chef";
+  const stale = { ...installedPlugin("0.5.57"), pluginId: legacyId, marketplaceName: "codex-chef" };
+  const result = refreshInstalledPlugin({
+    apply: true,
+    expectedVersion,
+    runCodex(args) {
+      calls.push(args);
+      if (args[1] === "add") return { status: 0, stdout: "{}", stderr: "" };
+      return listResult([calls.some((call) => call[1] === "add") ? { ...stale, version: expectedVersion } : stale]);
+    }
+  });
+  assert.equal(result.status, "refreshed");
+  assert.deepEqual(calls.find((call) => call[1] === "add"), ["plugin", "add", legacyId, "--json"]);
+});

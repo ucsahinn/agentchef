@@ -364,7 +364,10 @@ export function applyIdentityMigration(options, plan) {
     journal.markApplied(target);
   };
   try {
-    for (const step of plan.steps) {
+    const isCliStep = (step) => step.kind === "codex-plugin-cli" || step.kind === "claude-plugin-cli";
+    // The plugin CLI swaps cannot be rolled back, so they run only after every
+    // local step that can still fail.
+    for (const step of [...plan.steps.filter((step) => !isCliStep(step)), ...plan.steps.filter(isCliStep)]) {
       if (!["rewrite", "rename", "remove-legacy", "relink", "cli"].includes(step.decision)) {
         record(step.id, step.decision);
         continue;
@@ -503,6 +506,12 @@ export function applyIdentityMigration(options, plan) {
         journal.markApplied(step.target);
         if (!isRealDirectory(step.linkTarget)) {
           record(step.id, "unlinked", { reason: "renamed operator skill folder is missing; rerun the installer with --target claude" });
+          continue;
+        }
+        // The Claude install links every marker-carrying folder, so the current
+        // name can already be linked; then only the legacy link goes.
+        if (inspectSkillLink(step.destination, step.linkTarget).status === "link-current") {
+          record(step.id, "relinked", { reason: "current link already present; legacy link removed" });
           continue;
         }
         journal.prepareMutation({ target: step.destination, backup: null, link: true });

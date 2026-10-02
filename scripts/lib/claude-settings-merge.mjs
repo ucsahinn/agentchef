@@ -62,17 +62,32 @@ export function planSettingsMerge(current, fragment, { previousEntries = [], ret
     }
   }
 
+  // Rules this run will take back, by list, worked out before any list is
+  // touched: a rule moving from ask to allow must not be blocked by the ask copy
+  // it is about to retire.
+  const pendingRetirement = new Map();
+  if (fragment.permissions) {
+    for (const [list, owned] of recordedRules) {
+      const wantedSet = new Set((fragment.permissions[list] || []).map(String));
+      const existing = Array.isArray(current.permissions?.[list]) ? current.permissions[list].map(String) : [];
+      pendingRetirement.set(list, new Set(existing.filter((value) => !wantedSet.has(value) && owned.has(valueSha256(value)))));
+    }
+  }
+
   if (fragment.permissions) {
     assertShape(next.permissions, "permissions", "object");
     for (const list of permissionLists) {
-      const wanted = fragment.permissions[list];
-      if (!Array.isArray(wanted) || wanted.length === 0) continue;
+      // A list the fragment no longer carries still retires what AgentChef added to it.
+      const wanted = Array.isArray(fragment.permissions[list]) ? fragment.permissions[list] : [];
+      if (wanted.length === 0 && !recordedRules.has(list)) continue;
       assertShape(next.permissions?.[list], list, "array");
       const existingRules = Array.isArray(next.permissions?.[list]) ? next.permissions[list] : [];
       const known = new Set(existingRules.map((rule) => String(rule)));
       // A rule already present in a stricter list must not be re-added below it.
       const stricter = list === "allow" ? ["deny", "ask"] : list === "ask" ? ["deny"] : [];
-      const stricterRules = new Set(stricter.flatMap((name) => Array.isArray(next.permissions?.[name]) ? next.permissions[name].map(String) : []));
+      const stricterRules = new Set(stricter.flatMap((name) => Array.isArray(next.permissions?.[name])
+        ? next.permissions[name].map(String).filter((value) => !pendingRetirement.get(name)?.has(value))
+        : []));
       const additions = [];
       for (const rule of wanted) {
         if (known.has(rule)) {

@@ -475,7 +475,7 @@ function Acquire-OperationLock {
       $acquired += $lockPath
       $ownerPath = Join-Path $lockPath "owner.json"
       @{ id = $OperationLockId; pid = $PID; operation = "install"; startedAt = (Get-Date).ToUniversalTime().ToString("o") } |
-        ConvertTo-Json -Compress | Set-Content -LiteralPath $ownerPath -NoNewline -Encoding utf8 -ErrorAction Stop
+        ConvertTo-Json -Compress | ForEach-Object { [System.IO.File]::WriteAllText($ownerPath, $_, (New-Object System.Text.UTF8Encoding($false))) }
     }
   } catch {
     foreach ($lockPath in @($acquired | Sort-Object -Descending)) {
@@ -1095,16 +1095,26 @@ if ($InstallSkills) {
       }
       $DepthFlag = if ($Skill.fullDepth -eq $true) { " --full-depth" } else { "" }
       Write-Action -Status "installing pinned skill" -Message "$($Skill.name) from $($Skill.package)@$($Skill.commit) --skill $($Skill.skill)$DepthFlag"
-      $Output = & node @SkillArgs 2>&1
-      $ExitCode = $LASTEXITCODE
+      # stdout carries the JSON receipt; stderr (a Node warning, for one) is kept
+      # apart so it can never break the parse and lose the compensation receipt.
+      $StderrFile = [System.IO.Path]::GetTempFileName()
+      try {
+        $Output = & node @SkillArgs 2> $StderrFile
+        $ExitCode = $LASTEXITCODE
+        $StderrText = [System.IO.File]::ReadAllText($StderrFile)
+      } finally {
+        Remove-Item -LiteralPath $StderrFile -Force -ErrorAction SilentlyContinue
+      }
       $OutputText = ($Output -join [Environment]::NewLine)
-      if ($ExitCode -ne 0 -or $OutputText -match "Failed to install|Installation failed|Failed to clone") {
+      if ($ExitCode -ne 0 -or "$OutputText$StderrText" -match "Failed to install|Installation failed|Failed to clone") {
         $Output | ForEach-Object { Write-Host $_ }
+        if ($StderrText) { Write-Host $StderrText }
         throw "Skill install failed for $($Skill.name)"
       }
       try {
         $SkillResult = $OutputText | ConvertFrom-Json
       } catch {
+        if ($StderrText) { Write-Host $StderrText }
         $Output | ForEach-Object { Write-Host $_ }
         throw "Skill install returned an invalid status receipt for $($Skill.name)"
       }
@@ -1126,11 +1136,26 @@ if ($InstallSkills) {
   }
 }
 
+if ($InstallCodex) {
+  # The Codex plugin cache refresh runs before the Claude helper. A failure here
+  # rolls the Codex journal back before anything on the Claude side changed.
+  $PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
+  $PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
+  if (-not $WhatIfPreference -and -not $NoBackup) {
+    $PluginRefreshArgs += "--apply"
+  }
+  & node @PluginRefreshArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Refresh installed AgentChef plugin cache failed with code $LASTEXITCODE."
+  }
+}
+
 if ($InstallClaude) {
   # One Node transaction owns every Claude-side mutation (files, additive JSON
   # merges with receipts, skill links, marketplace manifest, plugin CLI). It
   # rolls its own journal back on failure; the throw below then rolls back the
-  # Codex-side journal so -Target both stays all-or-nothing.
+  # Codex-side journal so -Target both stays all-or-nothing. It is the last
+  # mutating step, so nothing after it can fail with Claude already installed.
   Write-Section "Claude Code target"
   $ClaudeHelper = Join-Path $RepoRoot "scripts\install-claude-target.mjs"
   $ClaudeArgs = @(
@@ -1149,19 +1174,6 @@ if ($InstallClaude) {
   & node @ClaudeArgs
   if ($LASTEXITCODE -ne 0) {
     throw "Claude Code target install failed with code $LASTEXITCODE; the helper rolled back its own changes."
-  }
-}
-
-if ($InstallCodex) {
-  # The plugin cache is the final external mutation: later output/manifest work is non-mutating.
-  $PluginRefreshHelper = Join-Path $RepoRoot "scripts\refresh-installed-plugin.mjs"
-  $PluginRefreshArgs = @($PluginRefreshHelper, "--codex-home", $CodexHome)
-  if (-not $WhatIfPreference -and -not $NoBackup) {
-    $PluginRefreshArgs += "--apply"
-  }
-  & node @PluginRefreshArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "Refresh installed AgentChef plugin cache failed with code $LASTEXITCODE."
   }
 }
 

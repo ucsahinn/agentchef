@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "agentchef.retired-config-tables.v1",
+  "description": "Tables an earlier AgentChef config template wrote and the current template no longer ships. Each table lists the sha256 of every block AgentChef wrote for it (newlines normalized, trailing whitespace trimmed). merge-codex-config removes a table only when its current block matches one of these digests and --sync-managed-tables is set.",
+  "tables": {}
+}

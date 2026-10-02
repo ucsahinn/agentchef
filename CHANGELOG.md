@@ -36,6 +36,55 @@
   are now caught by the generic scanners; Stripe `sk_live_`/`sk_test_` and
   Google `AIza` keys have explicit patterns; `.htpasswd`, `.pgpass`, and
   `*.tfstate` join the sensitive-path deny-list (mirrored in the exporter).
+- Install safety fixes from a bug hunt over the install, migration, and
+  removal paths:
+  - The Codex config merger did not recognize a table header with a trailing
+    comment (`[features] # note`) or an array of tables (`[[x]]`). A sync
+    could fold a user table into the managed one before it and replace it,
+    and a plain merge could append a second `[features]`, which Codex
+    rejects. Headers now parse with comments and arrays, and an array table
+    is never folded.
+  - Tables an earlier template wrote and the current one dropped can now be
+    retired: `templates/codex/retired-tables.json` lists each one with the
+    digest of every block AgentChef wrote, and `--sync-managed-tables`
+    removes a table only while it still matches. A table the user edited is
+    kept and reported.
+  - Claude merge receipts and the install receipt were rewritten outside the
+    journal, so a rolled-back run left receipts describing entries that were
+    no longer there, and AgentChef lost track of its own MCP entry. Receipts
+    are now backed up and journaled with the file they describe.
+  - A Claude removal that failed after reverting a receipt had already
+    deleted that receipt with no backup, so a rerun could never take
+    AgentChef's rules back. Receipts are backed up before deletion, a
+    receipt with nothing left to revert is retired instead of being reused
+    by the next install, and a rollback that cannot restore a deleted file
+    now says so instead of reporting a clean rollback.
+  - `-Target both` / `--target=both` ran the Codex plugin refresh after
+    the Claude helper had finished, so a refresh failure rolled Codex back
+    and left Claude installed. The Claude helper is now the last mutating
+    step, and the read-only capability board can no longer trip the bash
+    rollback trap.
+  - The Codex plugin refresh always re-added `agentchef-workflows@agentchef`,
+    even for a plugin still listed under the legacy marketplace name, so the
+    refresh failed and rolled the install back. It re-adds the id Codex holds.
+  - Identity migration failed for good when the Claude install had linked
+    both the legacy and the current operator-skill name, and it ran the
+    plugin CLI swaps before the local steps that could still fail. It now
+    keeps an existing current link and runs the CLI steps last.
+  - The installer's lock owner record was written with a byte-order mark on
+    Windows PowerShell 5.1, so Node reported a live lock as unreadable and
+    told the user to delete it. The record is written without one and read
+    either way.
+  - `remove-install` exited 0 when `codex plugin remove` failed or was
+    skipped. The removal is now reported as incomplete and exits 1, like the
+    Claude side.
+  - Moving a rule from `ask` to `allow` took two updates: the old `ask`
+    copy blocked the new `allow` entry. Retirements are worked out first.
+  - A pinned-skill install with any stderr output (a Node warning) broke the
+    JSON receipt parse in `install.ps1`; stderr is now kept apart.
+  - `~/.claude.json` changes written by Claude Code between planning and
+    applying the MCP merge were overwritten; the merge is planned again from
+    the current file.
 
 ## 1.2.2 - 2026-10-02
 

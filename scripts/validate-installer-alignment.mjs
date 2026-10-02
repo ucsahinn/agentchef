@@ -453,7 +453,7 @@ requireText(marketplaceHelper, "--check", "Marketplace upsert helper");
 requireText(marketplaceHelper, "--write", "Marketplace upsert helper");
 requireText(marketplaceHelper, "stableJson", "Marketplace upsert helper");
 requireText(pluginRefreshHelper, '["plugin", "list", "--json"]', "Installed plugin refresh helper");
-requireText(pluginRefreshHelper, '["plugin", "add", PLUGIN_ID, "--json"]', "Installed plugin refresh helper");
+requireText(pluginRefreshHelper, '["plugin", "add", plugin.pluginId || PLUGIN_ID, "--json"]', "Installed plugin refresh helper");
 requireText(pluginRefreshHelper, 'status: "not-installed"', "Installed plugin refresh helper");
 requireText(repairHelper, 'import { PLUGIN_ID, refreshInstalledPlugin } from "./refresh-installed-plugin.mjs"', "Repair helper");
 requireText(repairHelper, "pluginRefresh = noBackupPluginRefresh || refreshInstalledPlugin", "Repair helper");
@@ -524,8 +524,8 @@ for (const snippet of [
 ]) {
   requireText(sh, snippet, "Bash installer");
 }
-requireOrderedText(ps, ["Claude Code target", "refresh-installed-plugin.mjs"], "PowerShell installer (Claude target runs before the Codex plugin cache refresh)");
-requireOrderedText(sh, ["Claude Code target", "PLUGIN_REFRESH_HELPER="], "Bash installer (Claude target runs before the Codex plugin cache refresh)");
+requireOrderedText(ps, ["refresh-installed-plugin.mjs", "Claude Code target"], "PowerShell installer (the Claude target runs last, after the Codex plugin cache refresh)");
+requireOrderedText(sh, ["PLUGIN_REFRESH_HELPER=", "Claude Code target"], "Bash installer (the Claude target runs last, after the Codex plugin cache refresh)");
 {
   const fixtureRoot = path.join(os.tmpdir(), "agentchef-install-contract-targets");
   const bothContract = resolveInstallContract({
@@ -540,7 +540,7 @@ requireOrderedText(sh, ["Claude Code target", "PLUGIN_REFRESH_HELPER="], "Bash i
   const cacheIndex = bothIds.indexOf("installed-plugin-cache-refresh");
   for (const id of claudeInstallActionIds) {
     const index = bothIds.indexOf(id);
-    if (index < 0 || index > cacheIndex) fail(`Both-target contract must run ${id} before the Codex plugin cache refresh.`);
+    if (index < 0 || index < cacheIndex) fail(`Both-target contract must run ${id} after the Codex plugin cache refresh.`);
   }
   const sharedCount = bothIds.filter((id) => id === "codex-plugin-marketplace-source").length;
   if (sharedCount !== 1) fail("Both-target contract must run the shared plugin source sync exactly once.");

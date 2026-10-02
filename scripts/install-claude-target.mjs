@@ -167,6 +167,7 @@ export function planClaudeInstall(options) {
     retired: (settingsPlan.retired || []).map((entry) => entry.preview),
     skipped: settingsPlan.skipped.length,
     plan: settingsPlan,
+    plannedFromSha256: fs.existsSync(settingsPath) ? fileSha256(settingsPath) : null,
     backup: true
   });
 
@@ -188,6 +189,7 @@ export function planClaudeInstall(options) {
     entries: mcpPlan.entries.map((entry) => entry.preview),
     skipped: mcpPlan.skipped.length,
     plan: mcpPlan,
+    plannedFromSha256: fs.existsSync(claudeJson) ? fileSha256(claudeJson) : null,
     backup: true
   });
 
@@ -401,6 +403,24 @@ export function applyClaudeInstall(options, plan) {
         continue;
       }
       if (action.kind === "json-merge") {
+        // Claude Code rewrites ~/.claude.json while it runs. A merge planned
+        // against an older copy would drop that write, so plan it again from
+        // the current file; a file that keeps changing fails the run.
+        if (process.env.AGENTCHEF_TEST_MODE === "1" && process.env.AGENTCHEF_TEST_CLAUDE_TOUCH_BEFORE_MERGE === action.id) {
+          // Stands in for Claude Code writing the file between plan and apply.
+          const touched = readJsonOrDefault(action.destination, {});
+          touched.agentchefTestTouched = true;
+          fs.writeFileSync(action.destination, `${JSON.stringify(touched, null, 2)}
+`);
+        }
+        const currentSha = () => (fs.existsSync(action.destination) ? fileSha256(action.destination) : null);
+        if (currentSha() !== action.plannedFromSha256) {
+          const fresh = planClaudeInstall(options).actions.find((candidate) => candidate.id === action.id);
+          if (!fresh || currentSha() !== fresh.plannedFromSha256) {
+            throw new Error(`${action.destination} changed while AgentChef was merging into it; rerun the install.`);
+          }
+          Object.assign(action, fresh);
+        }
         const receiptPath = path.join(receiptsRoot, `${action.id}-receipt.json`);
         const previous = readReceipt(receiptPath);
         if (!action.plan.changed) {
@@ -422,8 +442,12 @@ export function applyClaudeInstall(options, plan) {
           entries: mergeReceiptEntries(previous, action.plan.entries, action.plan.retired || []),
           backupPath: backup
         });
+        const receiptBackup = fs.existsSync(receiptPath) ? backupInto(backupRoot, backupRoots, receiptPath) : null;
+        if (receiptBackup) journal.recordBackup(receiptBackup);
+        journal.prepareMutation({ target: receiptPath, backup: receiptBackup });
         if (fs.existsSync(receiptPath)) fs.rmSync(receiptPath);
         writeReceipt(receiptPath, receipt);
+        journal.markApplied(receiptPath);
         installed.receipts.push(receiptPath);
         results.push({ id: action.id, status: "merged", added: action.plan.entries.length });
         continue;
@@ -520,7 +544,9 @@ export function applyClaudeInstall(options, plan) {
       ...installed
     };
     const installReceiptPath = path.join(agentchefRoot, claudeInstallReceiptName);
-    journal.prepareMutation({ target: installReceiptPath, backup: null });
+    const installReceiptBackup = fs.existsSync(installReceiptPath) ? backupInto(backupRoot, backupRoots, installReceiptPath) : null;
+    if (installReceiptBackup) journal.recordBackup(installReceiptBackup);
+    journal.prepareMutation({ target: installReceiptPath, backup: installReceiptBackup });
     writeFileAtomic(installReceiptPath, Buffer.from(`${JSON.stringify(installReceipt, null, 2)}\n`, "utf8"));
     journal.markApplied(installReceiptPath);
     journal.finish("complete");
@@ -586,7 +612,20 @@ export function applyClaudeRemoval(options, plan) {
   const journal = createOperationJournal({ backupRoot, operation: "claude-remove" });
   const results = [];
   try {
+    const retireReceipt = (receiptPath) => {
+      assertManagedTargetPath(receiptPath, [path.join(claudeHome, "agentchef", "receipts")]);
+      const receiptBackup = backupInto(backupRoot, backupRoots, receiptPath);
+      if (receiptBackup) journal.recordBackup(receiptBackup);
+      journal.prepareMutation({ target: receiptPath, backup: receiptBackup });
+      fs.rmSync(receiptPath, { force: true });
+      journal.markApplied(receiptPath);
+    };
     for (const entry of plan.receipts) {
+      if (entry.decision === "nothing-to-revert") {
+        retireReceipt(entry.receiptPath);
+        results.push({ id: `revert:${path.basename(entry.receiptPath)}`, status: entry.decision });
+        continue;
+      }
       if (entry.decision !== "revert") {
         results.push({ id: `revert:${path.basename(entry.receiptPath)}`, status: entry.decision });
         continue;
@@ -599,11 +638,11 @@ export function applyClaudeRemoval(options, plan) {
       journal.markApplied(entry.target);
       // The receipt path comes from the install receipt, so it must stay inside
       // AgentChef's own receipts folder before it is deleted.
-      assertManagedTargetPath(entry.receiptPath, [path.join(claudeHome, "agentchef", "receipts")]);
-      journal.prepareMutation({ target: entry.receiptPath, backup: null });
-      fs.rmSync(entry.receiptPath, { force: true });
-      journal.markApplied(entry.receiptPath);
+      retireReceipt(entry.receiptPath);
       results.push({ id: `revert:${path.basename(entry.receiptPath)}`, status: "reverted", removed: entry.removed, kept: entry.kept });
+    }
+    if (process.env.AGENTCHEF_TEST_MODE === "1" && process.env.AGENTCHEF_TEST_CLAUDE_FAIL_REMOVAL_AFTER_RECEIPTS === "1") {
+      throw new Error("Injected Claude removal failure after the receipts were reverted");
     }
     for (const link of plan.links) {
       if (link.decision !== "remove") {
@@ -657,7 +696,9 @@ export function applyClaudeRemoval(options, plan) {
     if (unregisterIncomplete) {
       results.push({ id: "claude-remove", status: "incomplete", reason: "plugin registration not removed; install receipt kept so a rerun retries it" });
     } else {
-      journal.prepareMutation({ target: plan.receiptPath, backup: null });
+      const installReceiptBackup = backupInto(backupRoot, backupRoots, plan.receiptPath);
+      if (installReceiptBackup) journal.recordBackup(installReceiptBackup);
+      journal.prepareMutation({ target: plan.receiptPath, backup: installReceiptBackup });
       fs.rmSync(plan.receiptPath, { force: true });
       journal.markApplied(plan.receiptPath);
     }

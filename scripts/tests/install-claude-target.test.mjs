@@ -361,3 +361,59 @@ test("--no-backup refuses to replace an existing settings.json or .claude.json",
   assert.deepEqual(readJson(path.join(state.home, ".claude.json")), state.claudeJson);
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+function runRaw(fixtureState, args, extraEnv = {}) {
+  return spawnSync(process.execPath, [
+    helper,
+    "--claude-home", fixtureState.claudeHome,
+    "--agents-home", fixtureState.agentsHome,
+    "--home", fixtureState.home,
+    "--platform", platform,
+    "--skip-plugin-register",
+    ...args
+  ], { cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(60_000), env: { ...fixtureEnv, AGENTCHEF_TEST_MODE: "1", ...extraEnv } });
+}
+
+test("a failed re-install restores the merge receipt together with the file it describes", () => {
+  const state = fixture();
+  run(state, ["--apply"]);
+  const settingsPath = path.join(state.claudeHome, "settings.json");
+  const receiptPath = path.join(state.claudeHome, "agentchef", "receipts", "claude-settings-merge-receipt.json");
+  // Drop one AgentChef rule so the next run merges it back and rewrites the receipt.
+  const settings = readJson(settingsPath);
+  const owned = readJson(receiptPath).entries.find((entry) => entry.kind === "array-item" && entry.pointer === "/permissions/allow");
+  settings.permissions.allow = settings.permissions.allow.filter((rule) => rule !== owned.preview);
+  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+  const before = { settings: fs.readFileSync(settingsPath, "utf8"), receipt: fs.readFileSync(receiptPath, "utf8") };
+  const failed = runRaw(state, ["--apply"], { AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-skill-links" });
+  assert.notEqual(failed.status, 0);
+  assert.equal(fs.readFileSync(settingsPath, "utf8"), before.settings, "settings.json is restored");
+  assert.equal(fs.readFileSync(receiptPath, "utf8"), before.receipt, "the receipt is restored with it");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a removal that fails after reverting the receipts restores them, so a rerun still removes AgentChef's entries", () => {
+  const state = fixture();
+  run(state, ["--apply"]);
+  const receiptsDir = path.join(state.claudeHome, "agentchef", "receipts");
+  const receiptsBefore = fs.readdirSync(receiptsDir).sort();
+  const failed = runRaw(state, ["--remove", "--apply", "--json"], { AGENTCHEF_TEST_CLAUDE_FAIL_REMOVAL_AFTER_RECEIPTS: "1" });
+  assert.notEqual(failed.status, 0);
+  assert.deepEqual(fs.readdirSync(receiptsDir).sort(), receiptsBefore, "receipts come back with the rollback");
+  run(state, ["--remove", "--apply"]);
+  const settings = readJson(path.join(state.claudeHome, "settings.json"));
+  assert.deepEqual(settings.permissions.allow, state.settings.permissions.allow, "only the user's own rules remain");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a write to ~/.claude.json between plan and apply is kept, not overwritten", () => {
+  const state = fixture();
+  const claudeJsonPath = path.join(state.home, ".claude.json");
+  const result = runRaw(state, ["--apply", "--json"], { AGENTCHEF_TEST_CLAUDE_TOUCH_BEFORE_MERGE: "claude-mcp-merge" });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const after = readJson(claudeJsonPath);
+  assert.equal(after.agentchefTestTouched, true, "the concurrent write survives");
+  assert.ok(after.mcpServers.serena, "AgentChef's merge still landed");
+  assert.equal(after.mcpServers.context7.command, "custom", "the user's own entry is untouched");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

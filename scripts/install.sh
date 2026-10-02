@@ -1151,11 +1151,26 @@ NODE
   fi
 fi
 
+if [ "$INSTALL_CODEX" -eq 1 ]; then
+  # The Codex plugin cache refresh runs before the Claude helper. A failure here
+  # rolls the Codex journal back before anything on the Claude side changed.
+  PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
+  PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
+  if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
+    PLUGIN_REFRESH_ARGS+=("--apply")
+  fi
+  if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
+    echo "Refresh installed AgentChef plugin cache failed." >&2
+    exit 1
+  fi
+fi
+
 if [ "$INSTALL_CLAUDE" -eq 1 ]; then
   # One Node transaction owns every Claude-side mutation (files, additive JSON
   # merges with receipts, skill links, marketplace manifest, plugin CLI). It
   # rolls its own journal back on failure; the exit below then rolls back the
-  # Codex-side journal so --target=both stays all-or-nothing.
+  # Codex-side journal so --target=both stays all-or-nothing. It is the last
+  # mutating step, so nothing after it can fail with Claude already installed.
   section "Claude Code target"
   CLAUDE_TARGET_ARGS=(
     "$REPO_ROOT/scripts/install-claude-target.mjs"
@@ -1176,21 +1191,8 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
   fi
 fi
 
-if [ "$INSTALL_CODEX" -eq 1 ]; then
-  # The plugin cache is the final external mutation: later output/manifest work is non-mutating.
-  PLUGIN_REFRESH_HELPER="$REPO_ROOT/scripts/refresh-installed-plugin.mjs"
-  PLUGIN_REFRESH_ARGS=("$PLUGIN_REFRESH_HELPER" "--codex-home" "$CODEX_HOME_DIR")
-  if [ "$DRY_RUN" -ne 1 ] && [ "$NO_BACKUP" -ne 1 ]; then
-    PLUGIN_REFRESH_ARGS+=("--apply")
-  fi
-  if ! node "${PLUGIN_REFRESH_ARGS[@]}"; then
-    echo "Refresh installed AgentChef plugin cache failed." >&2
-    exit 1
-  fi
-fi
-
 section "Capability board"
-node - "$REPO_ROOT" "$INSTALL_CODEX" "$INSTALL_CLAUDE" <<'NODE'
+node - "$REPO_ROOT" "$INSTALL_CODEX" "$INSTALL_CLAUDE" <<'NODE' || echo "Capability board could not be rendered; the install itself completed." >&2
 const fs = require("fs");
 const path = require("path");
 

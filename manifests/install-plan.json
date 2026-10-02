@@ -24,14 +24,14 @@
       "evidence-research-direct-skill",
       "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
+      "installed-plugin-cache-refresh",
       "claude-working-agreement",
       "claude-serena-pool",
       "claude-settings-merge",
       "claude-mcp-merge",
       "claude-skill-links",
       "claude-plugin-marketplace",
-      "claude-plugin-register",
-      "installed-plugin-cache-refresh"
+      "claude-plugin-register"
     ],
     "all": [
       "codex-agents-md",
@@ -56,14 +56,14 @@
       "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
       "curated-skills",
+      "installed-plugin-cache-refresh",
       "claude-working-agreement",
       "claude-serena-pool",
       "claude-settings-merge",
       "claude-mcp-merge",
       "claude-skill-links",
       "claude-plugin-marketplace",
-      "claude-plugin-register",
-      "installed-plugin-cache-refresh"
+      "claude-plugin-register"
     ]
   },
   "operations": [
@@ -536,6 +536,23 @@
       "conflictPolicy": "Only locked package/skill pairs are allowed. Unmarked, foreign, or locally drifted same-name targets are preserved and skipped by default. A valid AgentChef provenance marker permits a mandatory-backup managed upgrade; replacing any other exact target requires a separately reviewed per-skill --adopt-existing invocation."
     },
     {
+      "id": "installed-plugin-cache-refresh",
+      "kind": "refresh-plugin-cache",
+      "target": "codex",
+      "summary": "Refresh an already-installed AgentChef plugin cache when its version is stale.",
+      "source": "${CODEX_HOME}/plugins/agentchef-workflows",
+      "destination": "${CODEX_HOME}/plugins/cache",
+      "pluginId": "agentchef-workflows@agentchef",
+      "platforms": [
+        "windows",
+        "unix"
+      ],
+      "collision": "inspect-installed-plugin-refresh-only-when-stale",
+      "backup": false,
+      "risk": "medium",
+      "conflictPolicy": "The cache helper only refreshes the managed plugin when Codex reports it installed and stale; missing Codex or an uninstalled plugin produces no cache write."
+    },
+    {
       "id": "claude-working-agreement",
       "kind": "copy-file",
       "target": "claude",
@@ -645,23 +662,6 @@
       "backup": false,
       "risk": "medium",
       "conflictPolicy": "Claude Code's plugin cache is owned by the claude CLI; AgentChef never writes ~/.claude/plugins/*.json by hand. Without the CLI the commands are printed for later."
-    },
-    {
-      "id": "installed-plugin-cache-refresh",
-      "kind": "refresh-plugin-cache",
-      "target": "codex",
-      "summary": "Refresh an already-installed AgentChef plugin cache when its version is stale.",
-      "source": "${CODEX_HOME}/plugins/agentchef-workflows",
-      "destination": "${CODEX_HOME}/plugins/cache",
-      "pluginId": "agentchef-workflows@agentchef",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "inspect-installed-plugin-refresh-only-when-stale",
-      "backup": false,
-      "risk": "medium",
-      "conflictPolicy": "The cache helper only refreshes the managed plugin when Codex reports it installed and stale; missing Codex or an uninstalled plugin produces no cache write."
     }
   ]
 }

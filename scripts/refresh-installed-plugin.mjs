@@ -198,7 +198,9 @@ export function refreshInstalledPlugin({
     };
   }
 
-  const refresh = execute(["plugin", "add", PLUGIN_ID, "--json"]);
+  // Re-add under the id Codex actually holds: an un-migrated home still lists
+  // the plugin under the legacy marketplace name.
+  const refresh = execute(["plugin", "add", plugin.pluginId || PLUGIN_ID, "--json"]);
   if (refresh?.error || refresh?.status !== 0) {
     throw new Error(
       `Codex plugin cache refresh failed: ${commandFailure(refresh, `exit code ${refresh?.status}`, codexHome)}`
