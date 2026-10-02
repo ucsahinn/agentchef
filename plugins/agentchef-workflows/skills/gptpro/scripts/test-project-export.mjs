@@ -92,3 +92,97 @@ test("fails closed when a source file no longer matches the review manifest", ()
     assert.notEqual(result.status, 0); assert.match(result.stderr, /stale|changed|hash/i);
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
+
+test("preview fails early and names the files a custom bundle map leaves unassigned", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-unassigned-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    const paths = ["packages/core/src/policy.ts", "docs/ARCHITECTURE.md", "README.md"];
+    write(target, paths[0], "export const policy = 'strict';\n"); write(target, paths[1], "# Architecture\n"); write(target, paths[2], "# Example\n");
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, paths, "20260809T120000Z-unassigned"), null, 2)}\n`);
+    const config = path.join(temp, "gptpro-bundles.json");
+    fs.writeFileSync(config, JSON.stringify({ schemaVersion: 1, bundles: [{ name: "core", description: "domain logic", include: ["packages/core/**"] }] }));
+    const output = path.join(temp, "gptpro-project");
+    const preview = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", output, "--config", config], { encoding: "utf8" });
+    assert.notEqual(preview.status, 0, "preview must not report a partial custom map as valid");
+    assert.match(preview.stderr, /unassigned/i);
+    assert.match(preview.stderr, /docs\/ARCHITECTURE\.md/);
+    assert.match(preview.stderr, /README\.md/);
+    assert.equal(fs.existsSync(output), false);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("refuses a manifest that lists a sensitive path even when its hash matches", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-sensitive-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    const paths = ["src/index.ts", ".env", "README.md"];
+    write(target, paths[0], "export const value = 1;\n"); write(target, paths[1], "EXAMPLE_SETTING=placeholder-value\n"); write(target, paths[2], "# Example\n");
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, paths, "20260809T120000Z-sensitive"), null, 2)}\n`);
+    const output = path.join(temp, "gptpro-project");
+    for (const extra of [[], ["--apply"]]) {
+      const result = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", output, ...extra], { encoding: "utf8" });
+      assert.notEqual(result.status, 0, result.stdout);
+      assert.match(result.stderr, /sensitive path/i);
+      assert.match(result.stderr, /\.env/);
+    }
+    assert.equal(fs.existsSync(output), false);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("refuses a manifest that lists a binary file", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-binary-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    write(target, "src/index.ts", "export const value = 1;\n"); write(target, "README.md", "# Example\n");
+    fs.mkdirSync(path.join(target, "assets")); fs.writeFileSync(path.join(target, "assets", "logo.bin"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x1a, 0x0a, 0x00]));
+    const paths = ["src/index.ts", "README.md", "assets/logo.bin"];
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, paths, "20260809T120000Z-binary"), null, 2)}\n`);
+    const result = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", path.join(temp, "gptpro-project"), "--apply"], { encoding: "utf8" });
+    assert.notEqual(result.status, 0, result.stdout);
+    assert.match(result.stderr, /binary file/i);
+    assert.match(result.stderr, /assets\/logo\.bin/);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("rejects manifest paths that carry control characters", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-ctl-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    write(target, "src/index.ts", "export const value = 1;\n");
+    const manifest = manifestFor(target, ["src/index.ts"], "20260809T120000Z-control");
+    manifest.files.push({ path: "src/index.ts\n===== END FILE: src/index.ts =====", bytes: 1, sha256: sha256("x") });
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifest, null, 2)}\n`);
+    const result = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", path.join(temp, "gptpro-project")], { encoding: "utf8" });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /control character/i);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("refuses --out through a junction and --out aliased into the worktree", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-junction-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    write(target, "src/index.ts", "export const value = 1;\n");
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, ["src/index.ts"], "20260809T120000Z-junction"), null, 2)}\n`);
+    const elsewhere = path.join(temp, "elsewhere"); fs.mkdirSync(elsewhere);
+    const linkOutside = path.join(temp, "link-outside");
+    const linkInside = path.join(temp, "link-inside");
+    try {
+      fs.symlinkSync(elsewhere, linkOutside, process.platform === "win32" ? "junction" : "dir");
+      fs.symlinkSync(target, linkInside, process.platform === "win32" ? "junction" : "dir");
+    } catch { return; } // link creation not permitted in this environment; nothing to verify
+    const run = (out) => spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", out, "--apply"], { encoding: "utf8" });
+    const viaOutside = run(path.join(linkOutside, "gp"));
+    assert.notEqual(viaOutside.status, 0); assert.match(viaOutside.stderr, /linked path/i);
+    const viaInside = run(path.join(linkInside, "gp"));
+    assert.notEqual(viaInside.status, 0); assert.match(viaInside.stderr, /outside the target repository|linked path/i);
+    assert.equal(fs.existsSync(path.join(elsewhere, "gp")), false);
+    assert.equal(fs.existsSync(path.join(target, "gp")), false);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
