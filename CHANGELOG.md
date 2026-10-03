@@ -16,7 +16,10 @@
     `mcpServers`). npx servers start through
     `plugins/agentchef/scripts/mcp-launch.mjs`, which accepts only an exact
     pinned version and on Windows runs `cmd.exe` + `npx.cmd` with
-    `NoDefaultCurrentDirectoryInExePath`; Serena runs the plugin's copy of the
+    `NoDefaultCurrentDirectoryInExePath`. Once npx has fetched that exact
+    version, the launcher runs the server's entry point in its own node
+    process, so each server is 2 processes instead of 6 (measured on Windows);
+    Serena runs the plugin's copy of the
     pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`. The installer no
     longer writes these into `~/.claude.json`, and retires the entries a
     1.0–1.2 install wrote there (proven by the MCP receipt hash), since a

@@ -90,7 +90,11 @@ Bu starter'ın kuralları:
   bir `ad@x.y.z` pini dışındaki her şeyi (aralık ya da etiket, registry'nin o
   gün sunduğu sürümü başlatırdı) ve shell sözdizimi içeren her argümanı
   reddeder; Windows'ta `NoDefaultCurrentDirectoryInExePath=1` ile
-  `cmd.exe /d /s /c npx.cmd` üzerinden çalışır. Serena, paylaşılan havuz
+  `cmd.exe /d /s /c npx.cmd` üzerinden çalışır. npx önbelleğinde tam o sürüm
+  zaten varsa (kurulu `package.json` sürümü pine eşit ve bin paket klasörünün
+  içinde kalıyorsa) başlatıcı npx'i yeniden başlatmak yerine o giriş noktasını
+  kendi node sürecinde çalıştırır; çalışan kod npx'in çalıştıracağıyla aynıdır.
+  Serena, paylaşılan havuz
   bridge'inin plugin içindeki kopyasıyla `--project-root ${CLAUDE_PROJECT_DIR}`
   argümanıyla çalışır; böylece iki CLI proje başına tek bir salt-okunur
   backend'i paylaşır.

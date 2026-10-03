@@ -23,7 +23,9 @@ On the Claude Code target, the `agentchef` plugin ships `context7`,
 ([plugins/agentchef/mcp/claude.mcp.json](../plugins/agentchef/mcp/claude.mcp.json),
 referenced from the plugin manifest's `mcpServers`). The npx servers start
 through `plugins/agentchef/scripts/mcp-launch.mjs`, which accepts only an exact
-pinned version; Serena runs the plugin's copy of the shared pool bridge with
+pinned version and, once npx has fetched it, runs the server in its own node
+process (2 processes per server instead of 6 on Windows); Serena runs the
+plugin's copy of the shared pool bridge with
 `--project-root ${CLAUDE_PROJECT_DIR}`. Their tools are named
 `mcp__plugin_agentchef_<server>__<tool>`. The installer no longer writes these
 servers into `.claude.json`: an entry AgentChef 1.0–1.2 wrote there is retired,

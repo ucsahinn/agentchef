@@ -99,7 +99,11 @@ Rules used in this starter:
   an exact `name@x.y.z` pin (a range or tag would start whatever the registry
   serves that day) and any argument with shell syntax; on Windows it goes
   through `cmd.exe /d /s /c npx.cmd` with
-  `NoDefaultCurrentDirectoryInExePath=1`. Serena runs the plugin's copy of the
+  `NoDefaultCurrentDirectoryInExePath=1`. When npx's cache already holds that
+  exact version (its installed `package.json` version equals the pin and the
+  bin stays inside the package folder), the launcher runs that entry point in
+  its own node process instead of starting npx again; the code that runs is
+  the same npx would run. Serena runs the plugin's copy of the
   shared pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`, so both CLIs
   share one read-only backend per project.
 - A user-scope `.claude.json` entry outranks a plugin server of the same name.

@@ -45,3 +45,32 @@ test("every npx server the plugin ships is pinned to an exact version the launch
   const template = fs.readFileSync(path.join(root, "templates", "codex", "serena-pool.mjs"), "utf8").replace(/\r\n/g, "\n");
   assert.equal(bridge.replace(/\r\n/g, "\n"), template, "the plugin bridge is byte-identical so it shares the pool manager");
 });
+
+test("an npx-cached server runs in the launcher's own process only for the exact pinned version", async () => {
+  const { cachedEntryPoint } = await import("../../plugins/agentchef/scripts/mcp-launch.mjs");
+  const os = await import("node:os");
+  const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-npx-cache-"));
+  try {
+    const install = (hash, name, version, bin, files = {}) => {
+      const packageRoot = path.join(cacheRoot, hash, "node_modules", ...name.split("/"));
+      fs.mkdirSync(packageRoot, { recursive: true });
+      fs.writeFileSync(path.join(packageRoot, "package.json"), JSON.stringify({ name, version, bin }));
+      for (const [file, text] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(packageRoot, file)), { recursive: true });
+        fs.writeFileSync(path.join(packageRoot, file), text);
+      }
+      return packageRoot;
+    };
+    const current = install("a1", "@scope/server", "1.2.3", { server: "cli.js" }, { "cli.js": "" });
+    install("b2", "@scope/server", "1.2.2", { server: "cli.js" }, { "cli.js": "" });
+    install("c3", "escaper", "1.0.0", "../../../evil.js");
+    install("d4", "missing-bin", "1.0.0", "cli.js");
+    assert.equal(cachedEntryPoint("@scope/server@1.2.3", { cacheRoot }), path.join(current, "cli.js"));
+    assert.equal(cachedEntryPoint("@scope/server@1.2.4", { cacheRoot }), null, "another version falls back to npx");
+    assert.equal(cachedEntryPoint("escaper@1.0.0", { cacheRoot }), null, "a bin outside the package is refused");
+    assert.equal(cachedEntryPoint("missing-bin@1.0.0", { cacheRoot }), null, "a bin file that is not there is refused");
+    assert.equal(cachedEntryPoint("anything@1.0.0", { cacheRoot: path.join(cacheRoot, "absent") }), null);
+  } finally {
+    fs.rmSync(cacheRoot, { recursive: true, force: true });
+  }
+});

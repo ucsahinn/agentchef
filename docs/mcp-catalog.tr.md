@@ -20,7 +20,9 @@ Claude Code hedefinde `context7`, `playwright` ve `serena` sunucularını
 ([plugins/agentchef/mcp/claude.mcp.json](../plugins/agentchef/mcp/claude.mcp.json),
 plugin manifest'indeki `mcpServers` alanından bağlanır). npx sunucuları
 `plugins/agentchef/scripts/mcp-launch.mjs` üzerinden başlar; bu başlatıcı
-yalnızca tam sabitlenmiş sürüm kabul eder. Serena, paylaşılan havuz
+yalnızca tam sabitlenmiş sürüm kabul eder ve npx onu bir kez indirdikten
+sonra sunucuyu kendi node sürecinde çalıştırır (Windows'ta sunucu başına 6
+yerine 2 süreç). Serena, paylaşılan havuz
 bridge'inin plugin içindeki kopyasıyla `--project-root ${CLAUDE_PROJECT_DIR}`
 argümanıyla çalışır. Araç adları `mcp__plugin_agentchef_<server>__<tool>`
 biçimindedir. Kurucu bu sunucuları artık `.claude.json` içine yazmaz:

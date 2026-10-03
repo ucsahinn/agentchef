@@ -7,8 +7,15 @@
 // Windows and runs npx directly elsewhere, with the server's stdio inherited
 // so the MCP stream passes through untouched.
 //
+// Once npx has fetched the pinned version, the server's own entry point runs
+// inside this node process instead: claude -> node, rather than claude ->
+// node -> cmd.exe -> npx -> node for every server in every session.
+//
 // Usage: node mcp-launch.mjs <package@exact-version> [server args...]
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -38,6 +45,54 @@ export function launchPlan(argv, platform = process.platform) {
   return { command: "npx", args: ["-y", pkg, ...serverArgs], env: process.env };
 }
 
+function splitPackage(pkg) {
+  const at = pkg.lastIndexOf("@");
+  return { name: pkg.slice(0, at), version: pkg.slice(at + 1) };
+}
+
+function npxCacheRoot(env = process.env, platform = process.platform) {
+  if (env.npm_config_cache) return path.join(env.npm_config_cache, "_npx");
+  if (platform === "win32") return path.join(env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), "npm-cache", "_npx");
+  return path.join(os.homedir(), ".npm", "_npx");
+}
+
+// The entry point of exactly this package version in npx's cache, or null.
+// Only an installed package.json whose version equals the pin counts, and the
+// bin must resolve inside that package's own folder.
+export function cachedEntryPoint(pkg, { cacheRoot = npxCacheRoot() } = {}) {
+  const { name, version } = splitPackage(pkg);
+  let entries = [];
+  try {
+    entries = fs.readdirSync(cacheRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    const packageRoot = path.join(cacheRoot, entry.name, "node_modules", ...name.split("/"));
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+    } catch {
+      continue;
+    }
+    if (manifest.name !== name || manifest.version !== version) continue;
+    const bins = typeof manifest.bin === "string" ? { [name.split("/").pop()]: manifest.bin } : (manifest.bin || {});
+    const values = Object.values(bins);
+    const chosen = bins[name.split("/").pop()] || (values.length === 1 ? values[0] : null);
+    if (!chosen) continue;
+    const binPath = path.resolve(packageRoot, chosen);
+    if (!binPath.startsWith(packageRoot + path.sep) || !fs.existsSync(binPath)) continue;
+    return binPath;
+  }
+  return null;
+}
+
+function runInProcess(binPath, serverArgs) {
+  // Exactly what `node <bin> <args>` does, including require.main and ESM entries.
+  process.argv = [process.execPath, binPath, ...serverArgs];
+  createRequire(import.meta.url)("node:module").runMain();
+}
+
 function main() {
   let plan;
   try {
@@ -45,6 +100,12 @@ function main() {
   } catch (error) {
     console.error(error.message);
     process.exit(2);
+  }
+  const [pkg, ...serverArgs] = process.argv.slice(2);
+  const cached = process.env.AGENTCHEF_MCP_LAUNCH_NO_INPROCESS === "1" ? null : cachedEntryPoint(pkg);
+  if (cached) {
+    runInProcess(cached, serverArgs);
+    return;
   }
   const child = spawn(plan.command, plan.args, { stdio: "inherit", env: plan.env, windowsHide: true });
   for (const signal of ["SIGINT", "SIGTERM"]) {
