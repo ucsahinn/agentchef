@@ -45,7 +45,7 @@ install or enable it. To use namespaced calls such as
 | [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Frame decision questions, search and appraise current sources, trace claims, explain disagreement and uncertainty, and package reproducible research. |
 | [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Turn Mermaid source into editable Excalidraw, SVG, PNG, and Markdown assets without network access. |
 
-## ✅ Fifteen Reviewed Full-Install Skills
+## ✅ Eighteen Reviewed Full-Install Skills
 
 These entries have `install: true` in the catalog. They are eligible for the
 full install profile; the catalog pins the package/skill pair and the online
@@ -54,57 +54,93 @@ one into the same plugin source as the bundled skills, with its
 `.agentchef-source.json` provenance record, so they appear under the plugin
 too.
 
-| Skill | What it adds | Source |
-| --- | --- | --- |
-| `dependency-upgrade` | Staged dependency upgrades with compatibility checks. | [wshobson/agents](https://github.com/wshobson/agents) |
-| `gh-fix-ci` | Official OpenAI workflow for investigating failed GitHub Actions checks. | [openai/skills](https://github.com/openai/skills) |
-| `systematic-debugging` | Root-cause investigation before changing code. | [obra/superpowers](https://github.com/obra/superpowers) |
-| `request-refactor-plan` | Small, working steps for broad refactors. | [mattpocock/skills](https://github.com/mattpocock/skills) |
-| `security-best-practices` | Official OpenAI secure-default guidance for supported stacks. | [openai/skills](https://github.com/openai/skills) |
-| `frontend-skill` | A broad frontend production workflow. | [nexu-io/open-design](https://github.com/nexu-io/open-design) |
-| `webapp-testing` | Browser evidence, screenshots, and logs for local web apps. | [anthropics/skills](https://github.com/anthropics/skills) |
-| `web-quality-audit` | Performance, accessibility, SEO, and best-practice checks. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) |
-| `accessibility` | Keyboard, focus, forms, ARIA, semantics, and WCAG-oriented review. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) |
-| `test-driven-development` | Focused behavior tests before implementation. | [obra/superpowers](https://github.com/obra/superpowers) |
-| `documentation-and-adrs` | README, ADR, and durable project documentation work. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) |
-| `mcp-builder` | MCP tool, schema, transport, and evaluation design. | [anthropics/skills](https://github.com/anthropics/skills) |
-| `ai-project-starter` | AI-coding-ready project context, starter docs, and guardrails. | [ucsahinn/ai-project-starter](https://github.com/ucsahinn/ai-project-starter) |
-| `prompt-architect` | Plan-first, approval-aware Codex prompts and prompt audits. | [ucsahinn/prompt-architect](https://github.com/ucsahinn/prompt-architect) |
-| `ai-skill-create` | Create, validate, forward-test, and package Codex skills and plugins. | [ucsahinn/ai-skill-create](https://github.com/ucsahinn/ai-skill-create) |
+| Skill | What it adds | Source | License |
+| --- | --- | --- | --- |
+| `dependency-upgrade` | Staged dependency upgrades with compatibility checks. | [wshobson/agents](https://github.com/wshobson/agents) | MIT |
+| `gh-fix-ci` | Official OpenAI workflow for investigating failed GitHub Actions checks. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `git-workflow-and-versioning` | Atomic commits, clean branches and pull requests, semantic versions, tags, and changelogs. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `shipping-and-launch` | Pre-launch checklist, monitoring, staged rollout, and rollback planning. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `systematic-debugging` | Root-cause investigation before changing code. | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| `improve-codebase-architecture` | Find architecture-deepening opportunities and plan the chosen refactor; invoked explicitly upstream. | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT |
+| `security-best-practices` | Official OpenAI secure-default guidance for supported stacks. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `security-threat-model` | Official OpenAI repository-grounded threat model, only when explicitly requested. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `frontend-design` | Distinctive, intentional visual direction and typography for new or reshaped UI. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `webapp-testing` | Browser evidence, screenshots, and logs for local web apps. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `web-quality-audit` | Performance, accessibility, SEO, and best-practice checks. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | MIT |
+| `accessibility` | Keyboard, focus, forms, ARIA, semantics, and WCAG-oriented review. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | MIT |
+| `test-driven-development` | Focused behavior tests before implementation. | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| `documentation-and-adrs` | README, ADR, and durable project documentation work. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `mcp-builder` | MCP tool, schema, transport, and evaluation design. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `ai-project-starter` | AI-coding-ready project context, starter docs, and guardrails. | [ucsahinn/ai-project-starter](https://github.com/ucsahinn/ai-project-starter) | MIT |
+| `prompt-architect` | Plan-first, approval-aware Codex prompts and prompt audits. | [ucsahinn/prompt-architect](https://github.com/ucsahinn/prompt-architect) | MIT |
+| `ai-skill-create` | Create, validate, forward-test, and package Codex skills and plugins. | [ucsahinn/ai-skill-create](https://github.com/ucsahinn/ai-skill-create) | MIT |
+
+The license column records the license measured in the upstream repository at
+the pinned commit; the lock repeats it so a pin change cannot silently change
+the license.
 
 ## 🧰 Other Cataloged Workflows
 
-The following names remain discoverable, but AgentChef does not automatically
-install them. Some are local compatibility names; others are specialized
-upstream options intentionally kept out of the default skill list.
+AgentChef does not install the following names automatically.
 
 <details>
-<summary><strong>Debugging, implementation, review, and release</strong></summary>
+<summary><strong>Compatibility aliases</strong></summary>
 
-- `investigate`, `incident-triage`, `new-feature`, `refactor-plan`,
-  `test-backfill`, `performance-audit`, `db-migration-review`,
-  `release-verify`, `code-review`, `sentry-code-review`, `codex-pr-body`,
-  `babysit-pr`, and `open-pr`
-- `git-hygiene`, `security-check`, and `security-threat-model`
+An alias resolves an older or overlapping name to the installed skill that now
+owns the job. Do not load an alias and its target in the same task.
+
+| Alias | Use instead |
+| --- | --- |
+| `codex-chef-operator` | `agentchef-operator` |
+| `context-engineering-project-starter` | `ai-project-starter` |
+| `codex-skill-forge` | `ai-skill-create` |
+| `codex-enterprise-prompt-architect` | `prompt-architect` |
+| `investigate` | `systematic-debugging` |
+| `incident-triage` | `systematic-debugging` |
+| `new-feature` | `test-driven-development` |
+| `test-backfill` | `test-driven-development` |
+| `security-check` | `security-best-practices` |
+| `context-map` | `context-budget-planner` |
+| `what-context-needed` | `context-budget-planner` |
+| `prompt-engineering-patterns` | `prompt-architect` |
+| `playwright` | `webapp-testing` |
+| `babysit-pr` | `gh-fix-ci` |
+| `impeccable` | `frontend-design` |
+| `design-taste-frontend` | `frontend-design` |
+| `high-end-visual-design` | `frontend-design` |
+| `image-to-code` | `frontend-design` |
+| `frontend-skill` | `frontend-design` |
+| `refactor-plan` | `improve-codebase-architecture` |
+| `request-refactor-plan` | `improve-codebase-architecture` |
+| `open-pr` | `git-workflow-and-versioning` |
+| `codex-pr-body` | `git-workflow-and-versioning` |
+| `git-hygiene` | `git-workflow-and-versioning` |
+| `release-verify` | `shipping-and-launch` |
 
 </details>
 
 <details>
-<summary><strong>Frontend, browser, and hosting references</strong></summary>
+<summary><strong>Retired references</strong></summary>
 
-- `impeccable`, `design-taste-frontend`, `image-to-code`,
-  `high-end-visual-design`, and `web-design-guidelines`
-- `vercel-react-best-practices`, `vercel-optimize`,
-  `vercel-cli-with-tokens`, and `playwright`
+These entries stay in the catalog with `retired: true` so older references keep
+a pointer; the replacement is a harness skill, an agent role, or both.
+
+| Retired name | Replaced by |
+| --- | --- |
+| `mcp-connectors` | `mcp_integrator` + `mcp-builder` |
+| `performance-audit` | `performance_auditor` + `web-quality-audit` |
+| `code-review` | `code_reviewer` |
+| `sentry-code-review` | `code_reviewer` |
+| `web-design-guidelines` | `web-quality-audit` + `accessibility` |
+| `ai-prompt-engineering-safety-review` | `prompt-architect` + `security_auditor` |
 
 </details>
 
 <details>
-<summary><strong>Context, prompts, memory, and MCP setup</strong></summary>
+<summary><strong>Optional manual references</strong></summary>
 
-- `mcp-connectors`, `context-map`, `what-context-needed`,
-  `prompt-engineering-patterns`, `ai-prompt-engineering-safety-review`, and
-  `memory-safety-patterns`
+- `db-migration-review`, `vercel-react-best-practices`, `vercel-optimize`, `memory-safety-patterns`, and `vercel-cli-with-tokens` stay opt-in: they are framework- or
+  vendor-specific, need credentials, or have no harness replacement yet.
 
 </details>
 

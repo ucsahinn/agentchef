@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- Skill catalog:
+  - Harness skills are now 10 bundled + 18 commit-pinned upstream skills
+    (was 10 + 15). `request-refactor-plan` is replaced by
+    `improve-codebase-architecture` (mattpocock/skills@d81f3a1, MIT) and the
+    third-party `frontend-skill` copy (nexu-io/open-design) by
+    `frontend-design` (anthropics/skills@8a1541c, Apache-2.0). New pins:
+    `security-threat-model` (openai/skills@49f948f, Apache-2.0),
+    `shipping-and-launch` and `git-workflow-and-versioning`
+    (addyosmani/agent-skills@9d0c60d, MIT).
+  - Re-pinned: `documentation-and-adrs` (addyosmani/agent-skills@9d0c60d),
+    `systematic-debugging` and `test-driven-development`
+    (obra/superpowers@8ca22db), `web-quality-audit` and `accessibility`
+    (addyosmani/web-quality-skills@afa8da9), `webapp-testing` and
+    `mcp-builder` (anthropics/skills@8a1541c), `dependency-upgrade`
+    (wshobson/agents@156b7a5).
+  - Every pinned entry and its lock entry now record the license measured
+    upstream at the pinned commit instead of `source-repository`;
+    `verify-skill-sources` compares the lock's `license` and rejects lock
+    entries that no installable skill owns.
+  - Nineteen overlapping optional references become `compatibilityAliases`
+    to an installed skill (for example `git-hygiene` →
+    `git-workflow-and-versioning`, `release-verify` → `shipping-and-launch`,
+    `impeccable` → `frontend-design`); six are kept as `retired` with
+    `replacedBy` naming a skill or agent role. `memory-safety-patterns` is
+    recategorized as `systems-programming`.
+  - Routing profiles reference only harness skills: `security-sensitive`
+    adds `security-threat-model`, `release-or-publish` uses
+    `shipping-and-launch` + `git-workflow-and-versioning`,
+    `mcp-connector-change` uses `mcp-builder`, and `dependency-upgrade`,
+    `improve-codebase-architecture`, and `offline-diagram-triplet` join
+    `bounded-feature`, `repo-map-before-change`, and `docs-and-adrs`.
+  - New `scripts/validate-catalog-correlation.mjs` (in `npm run check`)
+    fails on a routing skill or MCP that does not resolve, an alias or
+    retired replacement that is not a harness skill or agent role, a skill
+    description over 400 characters, a coordinator worker that is not a
+    specialist, or Codex/Claude plugin manifests that disagree. The `gptpro`
+    and `gptpro-handoff` descriptions are shortened to fit.
 - Approval rules (`templates/codex/rules/default.rules`):
   - An agent starting a pinned npx MCP package by hand (`npx -y <pkg@ver>`,
     `npx.cmd`, `cmd.exe /c npx ...`) is now `prompt` for every bundled

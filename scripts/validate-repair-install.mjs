@@ -192,8 +192,8 @@ write(
   }, null, 2) + "\n",
   "utf8"
 );
-ensureDir(path.join(codexHome, "skills", "frontend-skill"));
-ensureDir(path.join(agentsHome, "skills", "frontend-skill"));
+ensureDir(path.join(codexHome, "skills", "frontend-design"));
+ensureDir(path.join(agentsHome, "skills", "frontend-design"));
 ensureDir(path.join(agentsHome, "skills", "random-extra-skill"));
 
 const plan = parseResult(runRepair([], codexHome, agentsHome), "repair plan");

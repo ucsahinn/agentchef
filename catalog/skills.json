@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "dateChecked": "2026-09-19",
+  "dateChecked": "2026-10-03",
   "skillsCliVersion": "1.5.20",
   "skillsCliIntegrity": "sha512-lPl5KzMfTW+qwHFwc8t6R+wAqmdmSHw1+HWbGdJ/FZYbWLdB34bAZNFWiencM5DVoRaKAgXArmfTWMlNAbl9Gg==",
   "installCommand": "node scripts/install-pinned-skill.mjs --package <package> --commit <commit> --skill <skill> --cli-version 1.5.20",
@@ -11,14 +11,41 @@
     "codex-chef-operator": "agentchef-operator",
     "context-engineering-project-starter": "ai-project-starter",
     "codex-skill-forge": "ai-skill-create",
-    "codex-enterprise-prompt-architect": "prompt-architect"
+    "codex-enterprise-prompt-architect": "prompt-architect",
+    "investigate": "systematic-debugging",
+    "incident-triage": "systematic-debugging",
+    "new-feature": "test-driven-development",
+    "test-backfill": "test-driven-development",
+    "security-check": "security-best-practices",
+    "context-map": "context-budget-planner",
+    "what-context-needed": "context-budget-planner",
+    "prompt-engineering-patterns": "prompt-architect",
+    "playwright": "webapp-testing",
+    "babysit-pr": "gh-fix-ci",
+    "impeccable": "frontend-design",
+    "design-taste-frontend": "frontend-design",
+    "high-end-visual-design": "frontend-design",
+    "image-to-code": "frontend-design",
+    "frontend-skill": "frontend-design",
+    "refactor-plan": "improve-codebase-architecture",
+    "request-refactor-plan": "improve-codebase-architecture",
+    "open-pr": "git-workflow-and-versioning",
+    "codex-pr-body": "git-workflow-and-versioning",
+    "git-hygiene": "git-workflow-and-versioning",
+    "release-verify": "shipping-and-launch"
   },
   "skills": [
     {
       "name": "mcp-connectors",
       "category": "codex-setup",
       "install": false,
-      "reason": "Configure and troubleshoot Codex MCP connectors."
+      "retired": true,
+      "replacedBy": [
+        "mcp_integrator",
+        "mcp-builder"
+      ],
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use mcp_integrator + mcp-builder instead."
     },
     {
       "name": "agentchef-operator",
@@ -27,12 +54,6 @@
       "directInstall": true,
       "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/agentchef-operator",
       "reason": "Bundled local plugin skill for safe AgentChef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
-    },
-    {
-      "name": "git-hygiene",
-      "category": "release-security",
-      "install": false,
-      "reason": "Keep commits, pushes, releases, and artifacts clean."
     },
     {
       "name": "context-budget-planner",
@@ -75,43 +96,19 @@
       "reason": "Bundled local plugin skill for conditional delegation, canonical skill ownership, profile-inherited agent model selection, and compact routing visibility, with direct invocation required by the global operating contract."
     },
     {
-      "name": "investigate",
-      "category": "debugging",
-      "install": false,
-      "reason": "Local/global reference. The default installable equivalent is systematic-debugging from obra/superpowers."
-    },
-    {
-      "name": "incident-triage",
-      "category": "debugging",
-      "install": false,
-      "reason": "Triage production regressions and incidents."
-    },
-    {
-      "name": "new-feature",
-      "category": "implementation",
-      "install": false,
-      "reason": "Implement bounded product or code features."
-    },
-    {
-      "name": "refactor-plan",
-      "category": "implementation",
-      "install": false,
-      "reason": "Local/global reference. The default installable equivalent is request-refactor-plan from mattpocock/skills."
-    },
-    {
       "name": "dependency-upgrade",
       "category": "maintenance",
       "install": true,
       "package": "wshobson/agents",
-      "commit": "c4b82b0ad771190355eb8e204b1329732a18449a",
+      "commit": "156b7a5e7a8b93642628a339ee4039c925b34c7f",
       "skill": "dependency-upgrade",
       "source": "wshobson/agents@dependency-upgrade",
       "sourceUrl": "https://github.com/wshobson/agents",
-      "license": "source-repository",
+      "license": "MIT",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Upgrade dependencies safely."
     },
     {
@@ -123,25 +120,51 @@
       "skill": "gh-fix-ci",
       "source": "openai/skills@gh-fix-ci",
       "sourceUrl": "https://github.com/openai/skills",
-      "license": "source-repository",
+      "license": "Apache-2.0",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Debug and fix failed GitHub Actions checks with official OpenAI skill guidance."
     },
     {
-      "name": "test-backfill",
-      "category": "testing",
-      "install": false,
-      "reason": "Add tests around existing behavior."
+      "name": "git-workflow-and-versioning",
+      "category": "github",
+      "install": true,
+      "package": "addyosmani/agent-skills",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
+      "skill": "git-workflow-and-versioning",
+      "source": "addyosmani/agent-skills@git-workflow-and-versioning",
+      "sourceUrl": "https://github.com/addyosmani/agent-skills",
+      "license": "MIT",
+      "risk": "medium",
+      "networkRequired": true,
+      "authRequired": false,
+      "lastChecked": "2026-10-03",
+      "reason": "Keep commits atomic, branches and pull requests clean, and versions, tags, and changelogs consistent; release and push steps stay approval-gated."
+    },
+    {
+      "name": "shipping-and-launch",
+      "category": "release-security",
+      "install": true,
+      "package": "addyosmani/agent-skills",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
+      "skill": "shipping-and-launch",
+      "source": "addyosmani/agent-skills@shipping-and-launch",
+      "sourceUrl": "https://github.com/addyosmani/agent-skills",
+      "license": "MIT",
+      "risk": "medium",
+      "networkRequired": true,
+      "authRequired": false,
+      "lastChecked": "2026-10-03",
+      "reason": "Prepare production launches with a pre-launch checklist, monitoring, staged rollout, and rollback plan; deploy and publish stay approval-gated."
     },
     {
       "name": "systematic-debugging",
       "category": "debugging",
       "install": true,
       "package": "obra/superpowers",
-      "commit": "44c9b2d6e889982ac18c27d05a19fefe335194e1",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
       "skill": "systematic-debugging",
       "source": "obra/superpowers@systematic-debugging",
       "sourceUrl": "https://github.com/obra/superpowers",
@@ -149,14 +172,20 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Force root-cause investigation before fixes for bugs, test failures, and unexpected behavior."
     },
     {
       "name": "performance-audit",
       "category": "performance",
       "install": false,
-      "reason": "Measure and improve slow paths."
+      "retired": true,
+      "replacedBy": [
+        "performance_auditor",
+        "web-quality-audit"
+      ],
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use performance_auditor + web-quality-audit instead."
     },
     {
       "name": "db-migration-review",
@@ -165,56 +194,42 @@
       "reason": "Review and implement schema/migration changes safely."
     },
     {
-      "name": "request-refactor-plan",
-      "category": "implementation",
+      "name": "improve-codebase-architecture",
+      "category": "architecture",
       "install": true,
       "package": "mattpocock/skills",
-      "commit": "2ab958093e83e0ec752e6c1c5932da465bf23e0c",
-      "skill": "request-refactor-plan",
-      "source": "mattpocock/skills@request-refactor-plan",
+      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "skill": "improve-codebase-architecture",
+      "source": "mattpocock/skills@improve-codebase-architecture",
       "sourceUrl": "https://github.com/mattpocock/skills",
       "license": "MIT",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Break broad refactors into small, working, reviewable steps before implementation."
-    },
-    {
-      "name": "release-verify",
-      "category": "release-security",
-      "install": false,
-      "reason": "Verify readiness before release, packaging, and deployment."
+      "lastChecked": "2026-10-03",
+      "reason": "Find architecture-deepening opportunities in a codebase, report them, and plan the chosen refactor in small, reviewable steps. User-invoked upstream (disable-model-invocation)."
     },
     {
       "name": "code-review",
       "category": "review",
       "install": false,
-      "reason": "Run a correctness-first review pass."
+      "retired": true,
+      "replacedBy": [
+        "code_reviewer"
+      ],
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use code_reviewer instead."
     },
     {
       "name": "sentry-code-review",
       "category": "review",
       "install": false,
-      "reason": "Perform security/performance-aware reviews."
-    },
-    {
-      "name": "codex-pr-body",
-      "category": "github",
-      "install": false,
-      "reason": "Update PR titles and bodies."
-    },
-    {
-      "name": "babysit-pr",
-      "category": "github",
-      "install": false,
-      "reason": "Watch PR comments, CI, and mergeability."
-    },
-    {
-      "name": "open-pr",
-      "category": "github",
-      "install": false,
-      "reason": "Prepare pull requests when explicitly asked."
+      "retired": true,
+      "replacedBy": [
+        "code_reviewer"
+      ],
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use code_reviewer instead."
     },
     {
       "name": "security-best-practices",
@@ -225,55 +240,59 @@
       "skill": "security-best-practices",
       "source": "openai/skills@security-best-practices",
       "sourceUrl": "https://github.com/openai/skills",
-      "license": "source-repository",
+      "license": "Apache-2.0",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Apply framework-specific secure defaults from the official OpenAI skills catalog."
-    },
-    {
-      "name": "security-check",
-      "category": "security",
-      "install": false,
-      "reason": "Verify auth, validation, and route security."
     },
     {
       "name": "security-threat-model",
       "category": "security",
-      "install": false,
-      "reason": "Create repository-grounded threat models."
-    },
-    {
-      "name": "frontend-skill",
-      "category": "frontend-design",
       "install": true,
-      "package": "nexu-io/open-design",
-      "commit": "f52fda29a8a6fc65c501a45bb165b6f5208194a1",
-      "skill": "frontend-skill",
-      "source": "nexu-io/open-design@frontend-skill",
-      "sourceUrl": "https://github.com/nexu-io/open-design",
-      "license": "source-repository",
+      "package": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "skill": "security-threat-model",
+      "source": "openai/skills@security-threat-model",
+      "sourceUrl": "https://github.com/openai/skills",
+      "license": "Apache-2.0",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Build visually strong frontend experiences."
+      "lastChecked": "2026-10-03",
+      "reason": "Write a repository-grounded threat model: trust boundaries, assets, attacker capabilities, abuse paths, and mitigations. Use only when threat modeling is explicitly requested."
+    },
+    {
+      "name": "frontend-design",
+      "category": "frontend-design",
+      "install": true,
+      "package": "anthropics/skills",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
+      "skill": "frontend-design",
+      "source": "anthropics/skills@frontend-design",
+      "sourceUrl": "https://github.com/anthropics/skills",
+      "license": "Apache-2.0",
+      "risk": "medium",
+      "networkRequired": true,
+      "authRequired": false,
+      "lastChecked": "2026-10-03",
+      "reason": "Give new or reshaped UI a distinctive, intentional visual direction, typography, and layout instead of templated defaults."
     },
     {
       "name": "webapp-testing",
       "category": "browser-testing",
       "install": true,
       "package": "anthropics/skills",
-      "commit": "b29e7cf65e5cb78a5ac33d582270551bc74a14eb",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
       "skill": "webapp-testing",
       "source": "anthropics/skills@webapp-testing",
       "sourceUrl": "https://github.com/anthropics/skills",
-      "license": "source-repository",
+      "license": "Apache-2.0",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Test local web apps with Playwright, screenshots, browser logs, and rendered UI evidence."
     },
     {
@@ -281,7 +300,7 @@
       "category": "web-quality",
       "install": true,
       "package": "addyosmani/web-quality-skills",
-      "commit": "95d6e255afe1596b557d7a8498517884438f5b3a",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "skill": "web-quality-audit",
       "source": "addyosmani/web-quality-skills@web-quality-audit",
       "sourceUrl": "https://github.com/addyosmani/web-quality-skills",
@@ -289,7 +308,7 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Run a general web quality audit across performance, accessibility, SEO, and best practices."
     },
     {
@@ -313,7 +332,7 @@
       "category": "accessibility",
       "install": true,
       "package": "addyosmani/web-quality-skills",
-      "commit": "95d6e255afe1596b557d7a8498517884438f5b3a",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "skill": "accessibility",
       "source": "addyosmani/web-quality-skills@accessibility",
       "sourceUrl": "https://github.com/addyosmani/web-quality-skills",
@@ -321,7 +340,7 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Review keyboard, focus, forms, ARIA, semantic HTML, and WCAG-oriented UI quality."
     },
     {
@@ -329,7 +348,7 @@
       "category": "testing",
       "install": true,
       "package": "obra/superpowers",
-      "commit": "44c9b2d6e889982ac18c27d05a19fefe335194e1",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
       "skill": "test-driven-development",
       "source": "obra/superpowers@test-driven-development",
       "sourceUrl": "https://github.com/obra/superpowers",
@@ -337,7 +356,7 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Drive behavior changes through focused tests before implementation."
     },
     {
@@ -345,7 +364,7 @@
       "category": "documentation",
       "install": true,
       "package": "addyosmani/agent-skills",
-      "commit": "7829ffd90d973b6325f5f12f1b1226dcace74443",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
       "skill": "documentation-and-adrs",
       "source": "addyosmani/agent-skills@documentation-and-adrs",
       "sourceUrl": "https://github.com/addyosmani/agent-skills",
@@ -353,7 +372,7 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Create and maintain README, architecture decision records, and durable project documentation."
     },
     {
@@ -361,81 +380,26 @@
       "category": "connectors",
       "install": true,
       "package": "anthropics/skills",
-      "commit": "b29e7cf65e5cb78a5ac33d582270551bc74a14eb",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
       "skill": "mcp-builder",
       "source": "anthropics/skills@mcp-builder",
       "sourceUrl": "https://github.com/anthropics/skills",
-      "license": "source-repository",
+      "license": "Apache-2.0",
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "Design and test high-quality MCP servers with clear tools, schemas, transports, and evaluations."
-    },
-    {
-      "name": "impeccable",
-      "category": "frontend-design",
-      "install": false,
-      "package": "pbakaus/impeccable",
-      "skill": "impeccable",
-      "source": "pbakaus/impeccable@impeccable",
-      "sourceUrl": "https://github.com/pbakaus/impeccable",
-      "license": "source-repository",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-14",
-      "reason": "Design-polish reference retained for manual install only because it overlaps with the default frontend skill and has shown upstream availability drift."
-    },
-    {
-      "name": "design-taste-frontend",
-      "category": "frontend-design",
-      "install": false,
-      "package": "leonxlnx/taste-skill",
-      "skill": "design-taste-frontend",
-      "source": "leonxlnx/taste-skill@design-taste-frontend",
-      "sourceUrl": "https://github.com/leonxlnx/taste-skill",
-      "license": "source-repository",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-14",
-      "reason": "Manual design-taste reference; not installed by default to avoid overlapping frontend/design trigger noise."
-    },
-    {
-      "name": "image-to-code",
-      "category": "frontend-design",
-      "install": false,
-      "package": "leonxlnx/taste-skill",
-      "skill": "image-to-code",
-      "source": "leonxlnx/taste-skill@image-to-code",
-      "sourceUrl": "https://github.com/leonxlnx/taste-skill",
-      "license": "source-repository",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-14",
-      "reason": "Manual image-to-code reference; omitted from default install because it is specialized and overlaps with broader frontend workflows."
-    },
-    {
-      "name": "high-end-visual-design",
-      "category": "frontend-design",
-      "install": false,
-      "package": "leonxlnx/taste-skill",
-      "skill": "high-end-visual-design",
-      "source": "leonxlnx/taste-skill@high-end-visual-design",
-      "sourceUrl": "https://github.com/leonxlnx/taste-skill",
-      "license": "source-repository",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-14",
-      "reason": "Manual visual-design reference; omitted from default install to keep the starter focused and reduce duplicate design triggers."
     },
     {
       "name": "web-design-guidelines",
       "category": "frontend-design",
       "install": false,
+      "retired": true,
+      "replacedBy": [
+        "web-quality-audit",
+        "accessibility"
+      ],
       "package": "vercel-labs/agent-skills",
       "skill": "web-design-guidelines",
       "source": "vercel-labs/agent-skills@web-design-guidelines",
@@ -444,8 +408,8 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-14",
-      "reason": "Manual Vercel design-guidelines reference; replaced in default install by broader web-quality and accessibility skills."
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use web-quality-audit + accessibility instead."
     },
     {
       "name": "vercel-react-best-practices",
@@ -478,21 +442,6 @@
       "reason": "Manual Vercel hosting reference; not installed by default because authenticated/vendor hosting work should stay opt-in."
     },
     {
-      "name": "context-map",
-      "category": "context-engineering",
-      "install": false,
-      "package": "github/awesome-copilot",
-      "skill": "context-map",
-      "source": "github/awesome-copilot@context-map",
-      "sourceUrl": "https://github.com/github/awesome-copilot",
-      "license": "MIT",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Manual context-engineering reference retained for users who want extra context mapping patterns beyond the bundled context architect and context budget planner."
-    },
-    {
       "name": "ai-project-starter",
       "category": "context-engineering",
       "install": true,
@@ -505,23 +454,8 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "First-party AgentChef ecosystem skill for AI-coding-ready project context, starter docs, agent instruction files, enterprise starter docs, and vibe-coding guardrails. Included in -All because it extends the bundled context_architect and context-budget-planner without requiring credentials."
-    },
-    {
-      "name": "what-context-needed",
-      "category": "context-engineering",
-      "install": false,
-      "package": "github/awesome-copilot",
-      "skill": "what-context-needed",
-      "source": "github/awesome-copilot@what-context-needed",
-      "sourceUrl": "https://github.com/github/awesome-copilot",
-      "license": "MIT",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Manual context-selection reference; not default because AgentChef already ships context_architect plus a local context-budget-planner."
     },
     {
       "name": "prompt-architect",
@@ -536,28 +470,18 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-20",
+      "lastChecked": "2026-10-03",
       "reason": "First-party AgentChef ecosystem skill for plan-first, approval-gated, security-aware Codex prompt generation, prompt audits, and packaged Prompt Lab KB workflows. Included in -All because it complements the bundled prompt_architect with reusable prompt workflows."
-    },
-    {
-      "name": "prompt-engineering-patterns",
-      "category": "prompt-engineering",
-      "install": false,
-      "package": "wshobson/agents",
-      "skill": "prompt-engineering-patterns",
-      "source": "wshobson/agents@prompt-engineering-patterns",
-      "sourceUrl": "https://github.com/wshobson/agents",
-      "license": "source-repository",
-      "risk": "medium",
-      "networkRequired": true,
-      "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Manual prompt-pattern reference; not default because AgentChef already includes prompt_architect and avoids duplicate prompt-skill triggers."
     },
     {
       "name": "ai-prompt-engineering-safety-review",
       "category": "prompt-security",
       "install": false,
+      "retired": true,
+      "replacedBy": [
+        "prompt-architect",
+        "security_auditor"
+      ],
       "package": "github/awesome-copilot",
       "skill": "ai-prompt-engineering-safety-review",
       "source": "github/awesome-copilot@ai-prompt-engineering-safety-review",
@@ -566,8 +490,8 @@
       "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Manual prompt-security reference for teams that want an extra review workflow without making it a noisy default trigger."
+      "lastChecked": "2026-10-03",
+      "reason": "Retired optional reference; use prompt-architect + security_auditor instead."
     },
     {
       "name": "ai-skill-create",
@@ -583,23 +507,23 @@
       "networkRequired": true,
       "authRequired": false,
       "fullDepth": true,
-      "lastChecked": "2026-06-15",
+      "lastChecked": "2026-10-03",
       "reason": "First-party AgentChef ecosystem skill for creating, improving, validating, forward-testing, and packaging Codex skills and plugins. Included in -All because AgentChef should ship a complete skill-authoring path while keeping auth and publishing actions approval-gated."
     },
     {
       "name": "memory-safety-patterns",
-      "category": "memory-security",
+      "category": "systems-programming",
       "install": false,
       "package": "wshobson/agents",
       "skill": "memory-safety-patterns",
       "source": "wshobson/agents@memory-safety-patterns",
       "sourceUrl": "https://github.com/wshobson/agents",
       "license": "source-repository",
-      "risk": "high",
+      "risk": "medium",
       "networkRequired": true,
       "authRequired": false,
-      "lastChecked": "2026-06-15",
-      "reason": "Manual memory-safety reference only; memory workflows can expose private local context and should stay opt-in."
+      "lastChecked": "2026-10-03",
+      "reason": "Manual reference for memory-safe systems code (ownership, RAII, bounds, and lifetime patterns in Rust, C, and C++); not default because the starter stays language-neutral."
     },
     {
       "name": "vercel-cli-with-tokens",
@@ -615,12 +539,6 @@
       "authRequired": true,
       "lastChecked": "2026-06-15",
       "reason": "Manual Vercel auth-token reference. This is for deployment tokens, not LLM context budgeting, so authenticated usage must stay opt-in."
-    },
-    {
-      "name": "playwright",
-      "category": "browser-testing",
-      "install": false,
-      "reason": "Local/global reference. The default installable equivalent is webapp-testing from anthropics/skills."
     },
     {
       "name": "fetch",

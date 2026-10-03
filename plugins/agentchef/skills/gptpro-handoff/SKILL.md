@@ -1,6 +1,6 @@
 ---
 name: gptpro-handoff
-description: Author a high-signal, manifest-bound GPT Pro (ChatGPT Project) prompt and verify the returned external-model report against the live repository before implementation. Use when asking GPT Pro for a deep architecture decision, hard bug investigation, security or optimization analysis, or research brief, or when a GPT Pro report or findings came back and must be checked, triaged, or applied before code changes.
+description: Author a high-signal, manifest-bound GPT Pro (ChatGPT Project) prompt and verify the returned report against the live repository before implementation. Use when asking GPT Pro for a deep architecture decision, hard bug investigation, security or optimization analysis, or research brief, or when a GPT Pro report came back and must be checked, triaged, or applied.
 ---
 # GPT Pro Handoff and Verification
 

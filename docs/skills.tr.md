@@ -43,7 +43,7 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Karar sorusunu çerçevelemek, güncel kaynakları arayıp değerlendirmek, claim'leri izlenebilir tutmak, görüş ayrılıklarını ve belirsizliği açıklamak, yeniden üretilebilir araştırma paketi hazırlamak için. |
 | [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Mermaid kaynağını network kullanmadan editable Excalidraw, SVG, PNG ve Markdown asset'lerine çevirmek için. |
 
-## ✅ Full Install İçin İncelenmiş On Beş Skill
+## ✅ Full Install İçin İncelenmiş On Sekiz Skill
 
 Bu kayıtlar katalogda `install: true` taşır. Full install profili için
 uygundurlar; package/skill çifti katalogda sabitlenir ve online doğrulama bu
@@ -51,57 +51,94 @@ uygundurlar; package/skill çifti katalogda sabitlenir ve online doğrulama bu
 aynı plugin kaynağına, `.agentchef-source.json` provenance kaydıyla yazar;
 böylece bunlar da plugin altında görünür.
 
-| Skill | Ne ekler? | Kaynak |
-| --- | --- | --- |
-| `dependency-upgrade` | Uyumluluk kontrolüyle adımlı dependency upgrade. | [wshobson/agents](https://github.com/wshobson/agents) |
-| `gh-fix-ci` | Failing GitHub Actions kontrolleri için resmi OpenAI workflow'u. | [openai/skills](https://github.com/openai/skills) |
-| `systematic-debugging` | Kod değişmeden önce root-cause araştırması. | [obra/superpowers](https://github.com/obra/superpowers) |
-| `request-refactor-plan` | Geniş refactor'lar için küçük ve çalışır adımlar. | [mattpocock/skills](https://github.com/mattpocock/skills) |
-| `security-best-practices` | Desteklenen stack'ler için resmi OpenAI secure-default rehberi. | [openai/skills](https://github.com/openai/skills) |
-| `frontend-skill` | Geniş kapsamlı frontend üretim workflow'u. | [nexu-io/open-design](https://github.com/nexu-io/open-design) |
-| `webapp-testing` | Lokal web app için browser kanıtı, screenshot ve log. | [anthropics/skills](https://github.com/anthropics/skills) |
-| `web-quality-audit` | Performance, accessibility, SEO ve best-practice kontrolü. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) |
-| `accessibility` | Keyboard, focus, form, ARIA, semantic HTML ve WCAG odaklı inceleme. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) |
-| `test-driven-development` | Implementation öncesi odaklı davranış testleri. | [obra/superpowers](https://github.com/obra/superpowers) |
-| `documentation-and-adrs` | README, ADR ve kalıcı proje dokümantasyonu. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) |
-| `mcp-builder` | MCP tool, schema, transport ve evaluation tasarımı. | [anthropics/skills](https://github.com/anthropics/skills) |
-| `ai-project-starter` | AI-coding-ready proje context'i, starter docs ve guardrail'ler. | [ucsahinn/ai-project-starter](https://github.com/ucsahinn/ai-project-starter) |
-| `prompt-architect` | Plan-first, approval-aware Codex prompt'ları ve prompt audit'leri. | [ucsahinn/prompt-architect](https://github.com/ucsahinn/prompt-architect) |
-| `ai-skill-create` | Codex skill ve plugin'lerini oluşturma, doğrulama, forward-test ve paketleme. | [ucsahinn/ai-skill-create](https://github.com/ucsahinn/ai-skill-create) |
+| Skill | Ne ekler? | Kaynak | Lisans |
+| --- | --- | --- | --- |
+| `dependency-upgrade` | Uyumluluk kontrolüyle adımlı dependency upgrade. | [wshobson/agents](https://github.com/wshobson/agents) | MIT |
+| `gh-fix-ci` | Failing GitHub Actions kontrolleri için resmi OpenAI workflow'u. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `git-workflow-and-versioning` | Atomik commit, temiz branch ve pull request, semantic version, tag ve changelog. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `shipping-and-launch` | Yayın öncesi checklist, monitoring, kademeli rollout ve rollback planı. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `systematic-debugging` | Kod değişmeden önce root-cause araştırması. | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| `improve-codebase-architecture` | Mimariyi derinleştirme fırsatlarını bulup seçilen refactor'ı planlar; upstream'de açık çağrıyla çalışır. | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT |
+| `security-best-practices` | Desteklenen stack'ler için resmi OpenAI secure-default rehberi. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `security-threat-model` | Yalnızca açıkça istendiğinde, repoya dayalı resmi OpenAI threat model'i. | [openai/skills](https://github.com/openai/skills) | Apache-2.0 |
+| `frontend-design` | Yeni veya yeniden şekillenen UI için özgün, bilinçli görsel yön ve tipografi. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `webapp-testing` | Lokal web app için browser kanıtı, screenshot ve log. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `web-quality-audit` | Performance, accessibility, SEO ve best-practice kontrolü. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | MIT |
+| `accessibility` | Keyboard, focus, form, ARIA, semantic HTML ve WCAG odaklı inceleme. | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | MIT |
+| `test-driven-development` | Implementation öncesi odaklı davranış testleri. | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| `documentation-and-adrs` | README, ADR ve kalıcı proje dokümantasyonu. | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | MIT |
+| `mcp-builder` | MCP tool, schema, transport ve evaluation tasarımı. | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| `ai-project-starter` | AI-coding-ready proje context'i, starter docs ve guardrail'ler. | [ucsahinn/ai-project-starter](https://github.com/ucsahinn/ai-project-starter) | MIT |
+| `prompt-architect` | Plan-first, approval-aware Codex prompt'ları ve prompt audit'leri. | [ucsahinn/prompt-architect](https://github.com/ucsahinn/prompt-architect) | MIT |
+| `ai-skill-create` | Codex skill ve plugin'lerini oluşturma, doğrulama, forward-test ve paketleme. | [ucsahinn/ai-skill-create](https://github.com/ucsahinn/ai-skill-create) | MIT |
+
+Lisans sütunu, sabitlenen commit'te upstream depoda ölçülen lisansı kaydeder;
+lock dosyası da aynı değeri tutar, böylece bir pin değişikliği lisansı sessizce
+değiştiremez.
 
 ## 🧰 Katalogda Bulunan Diğer Workflow'lar
 
-Aşağıdaki isimler keşfedilebilir kalır; fakat AgentChef bunları otomatik
-kurmaz. Bazıları lokal uyumluluk adlarıdır, bazılarıysa varsayılan skill
-listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçeneklerdir.
+AgentChef aşağıdaki isimleri otomatik kurmaz.
 
 <details>
-<summary><strong>Debugging, implementation, review ve release</strong></summary>
+<summary><strong>Uyumluluk takma adları</strong></summary>
 
-- `investigate`, `incident-triage`, `new-feature`, `refactor-plan`,
-  `test-backfill`, `performance-audit`, `db-migration-review`,
-  `release-verify`, `code-review`, `sentry-code-review`, `codex-pr-body`,
-  `babysit-pr` ve `open-pr`
-- `git-hygiene`, `security-check` ve `security-threat-model`
+Bir takma ad, eski veya çakışan bir ismi bu işin artık sahibi olan kurulu
+skill'e yönlendirir. Aynı görevde takma adı ve hedefini birlikte yüklemeyin.
+
+| Takma ad | Bunun yerine |
+| --- | --- |
+| `codex-chef-operator` | `agentchef-operator` |
+| `context-engineering-project-starter` | `ai-project-starter` |
+| `codex-skill-forge` | `ai-skill-create` |
+| `codex-enterprise-prompt-architect` | `prompt-architect` |
+| `investigate` | `systematic-debugging` |
+| `incident-triage` | `systematic-debugging` |
+| `new-feature` | `test-driven-development` |
+| `test-backfill` | `test-driven-development` |
+| `security-check` | `security-best-practices` |
+| `context-map` | `context-budget-planner` |
+| `what-context-needed` | `context-budget-planner` |
+| `prompt-engineering-patterns` | `prompt-architect` |
+| `playwright` | `webapp-testing` |
+| `babysit-pr` | `gh-fix-ci` |
+| `impeccable` | `frontend-design` |
+| `design-taste-frontend` | `frontend-design` |
+| `high-end-visual-design` | `frontend-design` |
+| `image-to-code` | `frontend-design` |
+| `frontend-skill` | `frontend-design` |
+| `refactor-plan` | `improve-codebase-architecture` |
+| `request-refactor-plan` | `improve-codebase-architecture` |
+| `open-pr` | `git-workflow-and-versioning` |
+| `codex-pr-body` | `git-workflow-and-versioning` |
+| `git-hygiene` | `git-workflow-and-versioning` |
+| `release-verify` | `shipping-and-launch` |
 
 </details>
 
 <details>
-<summary><strong>Frontend, browser ve hosting referansları</strong></summary>
+<summary><strong>Emekliye ayrılan referanslar</strong></summary>
 
-- `impeccable`, `design-taste-frontend`, `image-to-code`,
-  `high-end-visual-design` ve `web-design-guidelines`
-- `vercel-react-best-practices`, `vercel-optimize`,
-  `vercel-cli-with-tokens` ve `playwright`
+Bu kayıtlar eski referanslar bir yönlendirme bulsun diye katalogda
+`retired: true` ile kalır; yerlerini bir harness skill'i, bir agent rolü ya da
+ikisi birlikte alır.
+
+| Emekli isim | Yerine geçen |
+| --- | --- |
+| `mcp-connectors` | `mcp_integrator` + `mcp-builder` |
+| `performance-audit` | `performance_auditor` + `web-quality-audit` |
+| `code-review` | `code_reviewer` |
+| `sentry-code-review` | `code_reviewer` |
+| `web-design-guidelines` | `web-quality-audit` + `accessibility` |
+| `ai-prompt-engineering-safety-review` | `prompt-architect` + `security_auditor` |
 
 </details>
 
 <details>
-<summary><strong>Context, prompt, memory ve MCP kurulumu</strong></summary>
+<summary><strong>Opsiyonel manuel referanslar</strong></summary>
 
-- `mcp-connectors`, `context-map`, `what-context-needed`,
-  `prompt-engineering-patterns`, `ai-prompt-engineering-safety-review` ve
-  `memory-safety-patterns`
+- `db-migration-review`, `vercel-react-best-practices`, `vercel-optimize`, `memory-safety-patterns`, ve `vercel-cli-with-tokens` opt-in kalır: framework'e veya
+  vendor'a özeldir, credential ister ya da henüz harness karşılığı yoktur.
 
 </details>
 

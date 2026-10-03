@@ -86,9 +86,10 @@ risk pattern, not as the source of truth.
   prompt-polish, release-only, and framework/vendor-specific skills can be
   useful, but they create more trigger overlap or risk than a Windows-first
   Codex setup starter should install by default.
-- Keep `impeccable`, extra design-taste, Vercel, prompt, context, memory, and
-  token-related skills as manual opt-in catalog references when they overlap
-  with bundled agents or require authenticated/vendor-specific flows.
+- Resolve overlapping design, prompt, context, review, and release names
+  through `compatibilityAliases` to an installed harness skill, mark replaced
+  references `retired`, and keep Vercel and other vendor-specific skills as
+  manual opt-in catalog references.
 - Map first-party ecosystem skills into the reviewed `-All` / `-InstallSkills`
   set:
   `ai-project-starter`, `prompt-architect`,

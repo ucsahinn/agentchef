@@ -65,7 +65,7 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
   - `gptpro-handoff`
   - `offline-diagram-triplet`
   - `seo`
-- 15 reviewed pinned skills in `catalog/skills.json` and
+- 18 reviewed pinned skills in `catalog/skills.json` and
   `catalog/skills-lock.json`, written into the same plugin source by the
   full install.
 - Conservative MCP defaults for 14 cataloged servers in

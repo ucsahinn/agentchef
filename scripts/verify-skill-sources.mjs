@@ -156,7 +156,7 @@ if (!fs.existsSync(catalogPath)) {
         if (!locked) {
           fail(`catalog/skills-lock.json missing installable skill ${entry.name}`);
         } else {
-          for (const key of ["package", "commit", "skill", "source", "sourceUrl"]) {
+          for (const key of ["package", "commit", "skill", "source", "sourceUrl", "license"]) {
             if (locked[key] !== entry[key]) {
               fail(`Skill lock mismatch for ${entry.name}: ${key}`);
             }
@@ -184,6 +184,12 @@ if (!fs.existsSync(catalogPath)) {
     }
     if (!String(lock.immutability || "").includes("full upstream commit SHA")) {
       fail("catalog/skills-lock.json must state that it pins upstream commits.");
+    }
+    const installableNames = new Set(installable.map((entry) => entry.name));
+    for (const name of lockEntries.keys()) {
+      if (!installableNames.has(name)) {
+        fail(`catalog/skills-lock.json pins ${name}, which is not an installable catalog skill`);
+      }
     }
     if (
       lock.skillsCliVersion !== catalog.skillsCliVersion
