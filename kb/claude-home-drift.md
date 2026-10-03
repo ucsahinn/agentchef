@@ -21,9 +21,9 @@ nothing about `~/.claude`.
 
 1. Verify the repo state with `npm run validate`.
 2. Print the plan with redacted paths and read the `target` block.
-3. If `AGENTS_HOME` is also overridden, remember that skill links under the
-   Claude home point at that agents home; a link to a scratch tree is drift
-   in the real home.
+3. If `AGENTS_HOME` is also overridden, remember that the Claude plugin
+   marketplace is registered from that agents home; a registration that points
+   at a scratch tree is drift in the real home.
 4. Run `npm run verify:install:runtime -- --target claude` against the home
    you actually mean before deciding anything is broken.
 

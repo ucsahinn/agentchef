@@ -186,7 +186,7 @@ Bu repo bu ayrimi korur:
   `risk` ve `lastChecked` alanlarini tasimalidir.
 - Local plugin on workflow sunar; GPT Pro context ve manifest-bound handoff,
   enterprise operator, zero-network offline diagram triplet, explicit-only Fetch,
-  kanıta dayalı `$seo`, izlenebilir `$evidence-research` ve context budget
+  kanıta dayalı `$agentchef:seo`, izlenebilir `$agentchef:evidence-research` ve context budget
   planner bunların içindedir.
 - Tam hedefli tek `SessionEnd` süreç hijyeni hook'u ayrıca incelenir ve
   trust-gated kalır. Başka plugin hook, MCP server ve app yüzeyleri manifest'te

@@ -68,8 +68,8 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.equal(decision("fetch-direct-skill"), "foreign");
   assert.equal(decision("codex-plugin"), "remove-owned");
   assert.equal(decision("plugin-marketplace"), "remove-entry");
-  assert.equal(decision("curated-skills:systematic-debugging"), "remove");
-  assert.equal(decision("curated-skills:webapp-testing"), "foreign");
+  assert.equal(decision("curated-skills:systematic-debugging:legacy"), "remove");
+  assert.equal(decision("curated-skills:webapp-testing:legacy"), "foreign");
   assert.ok(plan.items.every((item) => item.id !== "codex-config" || item.decision === "user-changed"));
   assert.ok(!plan.items.some((item) => item.kind === "generated-config" && item.decision.startsWith("remove")));
   assert.ok(fs.existsSync(path.join(state.codexHome, "AGENTS.md")), "dry run removes nothing");
@@ -81,8 +81,8 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.equal(statuses["context-budget-planner-direct-skill"], "removed-owned-files");
   assert.equal(statuses["codex-plugin"], "removed-owned-files");
   assert.equal(statuses["plugin-marketplace"], "entry-removed");
-  assert.equal(statuses["curated-skills:systematic-debugging"], "removed");
-  assert.equal(statuses["curated-skills:webapp-testing"], "foreign");
+  assert.equal(statuses["curated-skills:systematic-debugging:legacy"], "removed");
+  assert.equal(statuses["curated-skills:webapp-testing:legacy"], "foreign");
   assert.equal(statuses["installed-plugin-cache-refresh"], "absent", "the plugin was never added to Codex");
   fs.mkdirSync(path.join(state.codexHome, "plugins", "cache", "agentchef", "agentchef", "1.0.0"), { recursive: true });
   assert.equal(run(state, ["--dry-run"]).items.find((item) => item.id === "installed-plugin-cache-refresh")?.decision, "absent", "an emptied cache tree left by `codex plugin remove` is not an installed plugin");
@@ -236,5 +236,24 @@ test("Codex removal keeps the bridge and role files a kept config.toml still poi
   assert.equal(statuses["codex-serena-pool"], "removed");
   assert.equal(statuses["codex-agents:code_mapper.toml"], "removed");
   assert.ok(!fs.existsSync(path.join(state.codexHome, "serena-pool.mjs")));
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("Codex removal takes a pinned skill out of the plugin source when its provenance proves it is AgentChef's", () => {
+  const state = fixture();
+  const pinned = path.join(state.agentsHome, "plugins", "sources", "agentchef", "skills", "gh-fix-ci");
+  fs.mkdirSync(pinned, { recursive: true });
+  fs.writeFileSync(path.join(pinned, "SKILL.md"), "pinned\n");
+  fs.writeFileSync(path.join(pinned, ".agentchef-source.json"), `${JSON.stringify({ schemaVersion: "agentchef.pinned-skill.v1" })}\n`);
+  const userCopy = path.join(state.agentsHome, "plugins", "sources", "agentchef", "skills", "mcp-builder");
+  fs.mkdirSync(userCopy, { recursive: true });
+  fs.writeFileSync(path.join(userCopy, "SKILL.md"), "no provenance\n");
+  const plan = run(state, ["--dry-run"]);
+  const decision = (id) => plan.items.find((item) => item.id === id)?.decision;
+  assert.equal(decision("curated-skills:gh-fix-ci"), "remove");
+  assert.equal(decision("curated-skills:mcp-builder"), "foreign", "without provenance it is not AgentChef's");
+  run(state, ["--apply"]);
+  assert.ok(!fs.existsSync(pinned), "the provenance-marked pinned skill is removed");
+  assert.equal(fs.readFileSync(path.join(userCopy, "SKILL.md"), "utf8"), "no provenance\n", "a copy without provenance stays");
   fs.rmSync(state.home, { recursive: true, force: true });
 });

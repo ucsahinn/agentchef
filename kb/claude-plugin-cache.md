@@ -30,9 +30,11 @@ node scripts/install-claude-target.mjs --json --redact-paths
    the exact commands; run them after installing Claude Code.
 2. If the marketplace is registered but the plugin is stale, run
    `claude plugin update agentchef@agentchef`.
-3. If `/plugin` shows a second copy of a skill (for example both `/seo` and
-   `/agentchef:seo`), that is expected: the direct skill link wins for the
-   unqualified name and the plugin keeps the namespaced one.
+3. Since 1.3.0 each AgentChef skill comes only from the plugin
+   (`/agentchef:seo`; bare `/seo` also works when no other command has that
+   name). If a skill still shows twice, a 1.0–1.2 skill link or copy is left;
+   run `npm run chef -- --migrate-identity --target both`, preview first (see
+   [Claude skill links](claude-skill-links.md)).
 4. Start a new Claude Code session after any plugin change.
 
 ## A Cache Copy That Went Stale Without A Version Change
@@ -52,7 +54,10 @@ Warning: the Claude plugin cache copy 1.0.0 differs from the managed source in
 21 of 32 agent files, so sessions load stale definitions
 ```
 
-Refresh it by reinstalling the plugin, then start a new session:
+The installer does this on its own: when the cached copy differs from the
+source (for example right after pinned skills were written into it), it
+reinstalls the plugin. To refresh by hand, reinstall the plugin, then start a
+new session:
 
 ```bash
 claude plugin uninstall agentchef@agentchef

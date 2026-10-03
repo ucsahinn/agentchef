@@ -21,9 +21,9 @@ taşır; değişken yokken bu dosya `~/.claude` içinde değil, onun yanında
 
 1. Repo durumunu `npm run validate` ile doğrula.
 2. Planı redakte edilmiş yollarla yazdır ve `target` bloğunu oku.
-3. `AGENTS_HOME` da geçersiz kılınmışsa, Claude home altındaki skill
-   bağlantılarının o agents home'a işaret ettiğini unutma; scratch ağacına giden
-   bir bağlantı gerçek home'da sapmadır.
+3. `AGENTS_HOME` da geçersiz kılınmışsa, Claude plugin marketplace'inin o
+   agents home'dan kaydedildiğini unutma; scratch ağacına işaret eden bir kayıt
+   gerçek home'da sapmadır.
 4. Bir şeyin bozuk olduğuna karar vermeden önce, gerçekten kastettiğin home'a
    karşı `npm run verify:install:runtime -- --target claude` çalıştır.
 

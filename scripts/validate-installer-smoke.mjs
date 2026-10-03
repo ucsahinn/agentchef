@@ -252,15 +252,13 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
   assertFileExists(pluginManifestPath, `${label} explicit CODEX_HOME`);
   assertFileExists(marketplacePath, `${label} explicit AGENTS_HOME`);
   for (const skill of directSkills) {
-    const directSkillPath = path.join(agentsHome, "skills", skill.name, "SKILL.md");
-    const directMarkerPath = path.join(agentsHome, "skills", skill.name, ".agentchef-managed.json");
-    assertFileExists(directSkillPath, `${label} direct $${skill.name} skill`);
-    assertFileExists(directMarkerPath, `${label} direct $${skill.name} ownership marker`);
-    if (
-      fs.existsSync(directSkillPath)
-      && read(directSkillPath) !== read(path.join(root, "plugins", "agentchef", "skills", skill.name, "SKILL.md"))
-    ) {
-      fail(`${label} direct $${skill.name} skill must match its canonical plugin source.`);
+    const pluginSkillPath = path.join(agentsHome, "plugins", "sources", "agentchef", "skills", skill.name, "SKILL.md");
+    assertFileExists(pluginSkillPath, `${label} plugin skill ${skill.name}`);
+    if (fs.existsSync(pluginSkillPath) && read(pluginSkillPath) !== read(path.join(root, "plugins", "agentchef", "skills", skill.name, "SKILL.md"))) {
+      fail(`${label} plugin skill ${skill.name} must match its canonical source.`);
+    }
+    if (fs.existsSync(path.join(agentsHome, "skills", skill.name, ".agentchef-managed.json"))) {
+      fail(`${label} must not install a direct copy of ${skill.name}; it comes from the plugin.`);
     }
   }
   for (const profile of expectedProfiles) {
@@ -401,23 +399,6 @@ function runInstallSurfacePreflight(codexHome, agentsHome) {
     codexHome,
     "--agents-home",
     agentsHome
-  ], {
-    cwd: root,
-    env: process.env,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: scaledTimeout(30000),
-    windowsHide: true
-  });
-}
-
-function runDirectSkillTargetPreflight(source, target, allowAdopt = false) {
-  return spawnSync(process.execPath, [
-    "scripts/manage-direct-skill-target.mjs",
-    source,
-    target,
-    "--check",
-    ...(allowAdopt ? ["--allow-adopt"] : [])
   ], {
     cwd: root,
     env: process.env,
@@ -868,7 +849,9 @@ const previewAgentsHome = path.join(previewRoot, ".agents");
 const curatedStatusFixture = initializeCuratedSkillInstallerFixture();
 const curatedStatusCodexHome = path.join(curatedStatusFixture.fixtureRoot, ".codex");
 const curatedStatusAgentsHome = path.join(curatedStatusFixture.fixtureRoot, ".agents");
-const curatedForeignTarget = path.join(curatedStatusAgentsHome, "skills", "example-skill");
+// Pinned skills install into the plugin source since 1.3.0, so a foreign
+// folder there is the one the installer must preserve.
+const curatedForeignTarget = path.join(curatedStatusAgentsHome, "plugins", "sources", "agentchef", "skills", "example-skill");
 ensureDir(curatedForeignTarget);
 fs.writeFileSync(
   path.join(curatedForeignTarget, "SKILL.md"),
@@ -1029,177 +1012,35 @@ if (process.argv.includes("--core")) {
 }
 
 const collisionRoots = [];
-const directAdoptionScenarios = [
-  {
-    name: "fetch",
-    display: "Fetch",
-    flagArgs: [process.platform === "win32" ? "-AdoptFetchSkill" : "--adopt-fetch-skill"]
-  },
-  {
-    name: "seo",
-    display: "SEO",
-    flagArgs: [process.platform === "win32" ? "-AdoptSeoSkill" : "--adopt-seo-skill"]
-  },
-  {
-    name: "evidence-research",
-    display: "Evidence Research",
-    flagArgs: [process.platform === "win32" ? "-AdoptEvidenceResearchSkill" : "--adopt-evidence-research-skill"]
-  },
-  {
-    name: "context-budget-planner",
-    display: "Context Budget Planner",
-    flagArgs: process.platform === "win32"
-      ? ["-AdoptDirectSkill", "context-budget-planner"]
-      : ["--adopt-direct-skill=context-budget-planner"]
+// Since 1.3.0 the installer never writes AGENTS_HOME/skills: a user's own
+// skill named like a bundled one, a link there, and a dangling link are all
+// left exactly as they are, and the install still succeeds.
+{
+  const userRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [user-skills] #-"));
+  collisionRoots.push(userRoot);
+  const userCodexHome = path.join(userRoot, ".codex");
+  const userAgentsHome = path.join(userRoot, ".agents");
+  const ownFetch = path.join(userAgentsHome, "skills", "fetch");
+  ensureDir(ownFetch);
+  const ownSkill = "---\nname: fetch\n---\n\nUser-owned unrelated Fetch workflow.\n";
+  fs.writeFileSync(path.join(ownFetch, "SKILL.md"), ownSkill, "utf8");
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef External Skill #-"));
+  collisionRoots.push(externalRoot);
+  fs.writeFileSync(path.join(externalRoot, "SKILL.md"), "---\nname: seo\n---\n\nExternal.\n", "utf8");
+  const linkedSeo = path.join(userAgentsHome, "skills", "seo");
+  fs.symlinkSync(externalRoot, linkedSeo, process.platform === "win32" ? "junction" : "dir");
+  const dangling = path.join(userAgentsHome, "skills", "gptpro");
+  fs.symlinkSync(path.join(userRoot, "missing"), dangling, process.platform === "win32" ? "junction" : "dir");
+  assertRunOk(runInstaller(userCodexHome, userAgentsHome), "Installer with user skills in AGENTS_HOME/skills");
+  assertInstalledBaseline(userCodexHome, userAgentsHome, "Installer with user skills in AGENTS_HOME/skills");
+  if (read(path.join(ownFetch, "SKILL.md")) !== ownSkill || fs.existsSync(path.join(ownFetch, ".agentchef-managed.json"))) {
+    fail("Installer must leave a user's own skill folder untouched.");
   }
-];
-const foreignSkillFixtures = [];
-for (const scenario of directAdoptionScenarios) {
-  const collisionRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), `AgentChef Install Smoke [foreign-${scenario.name}] #-`)
-  );
-  collisionRoots.push(collisionRoot);
-  const collisionCodexHome = path.join(collisionRoot, ".codex");
-  const collisionAgentsHome = path.join(collisionRoot, ".agents");
-  const foreignSkillRoot = path.join(collisionAgentsHome, "skills", scenario.name);
-  ensureDir(foreignSkillRoot);
-  const foreignSkill = `---\nname: ${scenario.name}\n---\n\nUser-owned unrelated ${scenario.display} workflow.\n`;
-  const foreignSentinel = "preserve this user-owned file\n";
-  fs.writeFileSync(path.join(foreignSkillRoot, "SKILL.md"), foreignSkill, "utf8");
-  fs.writeFileSync(path.join(foreignSkillRoot, "user-owned.txt"), foreignSentinel, "utf8");
-  const collisionResult = runInstaller(collisionCodexHome, collisionAgentsHome);
-  if (collisionResult.error) {
-    fail(`Installer foreign ${scenario.display} collision could not run: ${collisionResult.error.message}`);
-  } else if (collisionResult.status === 0) {
-    fail(`Installer must fail closed before writes when AGENTS_HOME/skills/${scenario.name} is not AgentChef-managed.`);
+  if (!fs.lstatSync(linkedSeo).isSymbolicLink() || read(path.join(externalRoot, "SKILL.md")) !== "---\nname: seo\n---\n\nExternal.\n") {
+    fail("Installer must not write through or replace a skill link.");
   }
-  if (
-    fs.existsSync(collisionCodexHome)
-    || fs.existsSync(path.join(collisionAgentsHome, "plugins", "marketplace.json"))
-  ) {
-    fail(`Installer foreign ${scenario.display} collision must perform zero managed writes before failing.`);
-  }
-  if (
-    read(path.join(foreignSkillRoot, "SKILL.md")) !== foreignSkill
-    || read(path.join(foreignSkillRoot, "user-owned.txt")) !== foreignSentinel
-  ) {
-    fail(`Installer foreign ${scenario.display} collision must preserve every user-owned file byte-for-byte.`);
-  }
-  foreignSkillFixtures.push({ scenario, foreignSkill, foreignSentinel });
-}
-
-// Keep the fail-closed check independent for every managed skill, then run
-// all explicit adoption flags together once. The installer still performs a
-// real preflight and writes every selected target; this avoids repeating the
-// same full baseline install four times.
-const adoptionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [foreign-adoption] #-"));
-collisionRoots.push(adoptionRoot);
-const adoptionCodexHome = path.join(adoptionRoot, ".codex");
-const adoptionAgentsHome = path.join(adoptionRoot, ".agents");
-for (const { scenario, foreignSkill, foreignSentinel } of foreignSkillFixtures) {
-  const foreignSkillRoot = path.join(adoptionAgentsHome, "skills", scenario.name);
-  ensureDir(foreignSkillRoot);
-  fs.writeFileSync(path.join(foreignSkillRoot, "SKILL.md"), foreignSkill, "utf8");
-  fs.writeFileSync(path.join(foreignSkillRoot, "user-owned.txt"), foreignSentinel, "utf8");
-}
-const adoptedOutput = assertRunOk(
-  runInstaller(adoptionCodexHome, adoptionAgentsHome, directAdoptionScenarios.flatMap((scenario) => scenario.flagArgs)),
-  "Installer explicit direct-skill adoption smoke"
-);
-assertInstalledBaseline(adoptionCodexHome, adoptionAgentsHome, "Installer explicit direct-skill adoption smoke");
-assertDefaultBoundaries(adoptedOutput, "Installer explicit direct-skill adoption smoke");
-for (const { scenario, foreignSentinel } of foreignSkillFixtures) {
-  const foreignSkillRoot = path.join(adoptionAgentsHome, "skills", scenario.name);
-  if (
-    read(path.join(foreignSkillRoot, "SKILL.md"))
-    !== read(path.join(root, "plugins", "agentchef", "skills", scenario.name, "SKILL.md"))
-  ) {
-    fail(`Installer explicit ${scenario.display} adoption must replace the selected skill with the canonical managed source.`);
-  }
-  if (read(path.join(foreignSkillRoot, "user-owned.txt")) !== foreignSentinel) {
-    fail(`Installer explicit ${scenario.display} adoption must preserve unrelated files inside the adopted target.`);
-  }
-}
-const adoptFlag = process.platform === "win32" ? "-AdoptFetchSkill" : "--adopt-fetch-skill";
-const foreignSkill = "---\nname: fetch\n---\n\nUser-owned unrelated Fetch workflow.\n";
-
-for (const variant of ["root-link", "nested-link"]) {
-  const linkRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef Install Smoke [fetch-${variant}] #-`));
-  const linkCodexHome = path.join(linkRoot, ".codex");
-  const linkAgentsHome = path.join(linkRoot, ".agents");
-  const linkFetchRoot = path.join(linkAgentsHome, "skills", "fetch");
-  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), `AgentChef External Fetch [${variant}] #-`));
-  const externalSkill = "---\nname: external-fetch\n---\n\nMust remain unchanged.\n";
-  ensureDir(path.dirname(linkFetchRoot));
-  if (variant === "root-link") {
-    fs.writeFileSync(path.join(externalRoot, "SKILL.md"), externalSkill, "utf8");
-    fs.symlinkSync(externalRoot, linkFetchRoot, process.platform === "win32" ? "junction" : "dir");
-  } else {
-    ensureDir(linkFetchRoot);
-    fs.writeFileSync(path.join(linkFetchRoot, "SKILL.md"), foreignSkill, "utf8");
-    const externalAgents = path.join(externalRoot, "agents");
-    ensureDir(externalAgents);
-    fs.writeFileSync(path.join(externalAgents, "openai.yaml"), "external: true\n", "utf8");
-    fs.symlinkSync(externalAgents, path.join(linkFetchRoot, "agents"), process.platform === "win32" ? "junction" : "dir");
-  }
-  const before = variant === "root-link"
-    ? read(path.join(externalRoot, "SKILL.md"))
-    : read(path.join(externalRoot, "agents", "openai.yaml"));
-  const linkedResult = variant === "root-link"
-    // Keep one end-to-end installer invocation for the direct-skill linked
-    // target boundary. The nested case below calls the exact preflight helper
-    // that install.ps1/install.sh invoke before acquiring a write lock.
-    ? runInstaller(linkCodexHome, linkAgentsHome, [adoptFlag])
-    : runDirectSkillTargetPreflight(
-      path.join(root, "plugins", "agentchef", "skills", "fetch"),
-      linkFetchRoot,
-      true
-    );
-  if (linkedResult.error) {
-    fail(`Installer ${variant} Fetch collision could not run: ${linkedResult.error.message}`);
-  } else if (linkedResult.status === 0) {
-    fail(`Installer must reject unsafe ${variant} Fetch targets even with explicit adoption.`);
-  }
-  if (
-    fs.existsSync(linkCodexHome)
-    || fs.existsSync(path.join(linkAgentsHome, "plugins", "marketplace.json"))
-  ) {
-    fail(`Installer ${variant} Fetch collision must perform zero managed writes.`);
-  }
-  const after = variant === "root-link"
-    ? read(path.join(externalRoot, "SKILL.md"))
-    : read(path.join(externalRoot, "agents", "openai.yaml"));
-  if (after !== before) {
-    fail(`Installer ${variant} Fetch collision must not write through a link.`);
-  }
-}
-
-const danglingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "AgentChef Install Smoke [fetch-dangling-root] #-"));
-const danglingCodexHome = path.join(danglingRoot, ".codex");
-const danglingAgentsHome = path.join(danglingRoot, ".agents");
-const danglingFetchRoot = path.join(danglingAgentsHome, "skills", "fetch");
-const missingExternalRoot = path.join(danglingRoot, "missing-external-fetch");
-ensureDir(path.dirname(danglingFetchRoot));
-fs.symlinkSync(missingExternalRoot, danglingFetchRoot, process.platform === "win32" ? "junction" : "dir");
-for (const args of [[], [adoptFlag]]) {
-  const danglingResult = runDirectSkillTargetPreflight(
-    path.join(root, "plugins", "agentchef", "skills", "fetch"),
-    danglingFetchRoot,
-    args.length > 0
-  );
-  if (danglingResult.error) {
-    fail(`Installer dangling Fetch collision could not run: ${danglingResult.error.message}`);
-  } else if (danglingResult.status === 0) {
-    fail("Installer must reject a dangling Fetch root with or without explicit adoption.");
-  }
-  if (
-    fs.existsSync(danglingCodexHome)
-    || fs.existsSync(path.join(danglingAgentsHome, "plugins", "marketplace.json"))
-  ) {
-    fail("Installer dangling Fetch collision must perform zero managed writes.");
-  }
-  if (fs.existsSync(missingExternalRoot) || !fs.lstatSync(danglingFetchRoot).isSymbolicLink()) {
-    fail("Installer dangling Fetch collision must preserve the dangling link without creating its target.");
+  if (!fs.lstatSync(dangling).isSymbolicLink() || fs.existsSync(path.join(userRoot, "missing"))) {
+    fail("Installer must leave a dangling skill link alone without creating its target.");
   }
 }
 

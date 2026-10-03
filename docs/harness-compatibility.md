@@ -121,8 +121,10 @@ The planned Claude Code target follows current official Claude Code guidance:
   supports `@path` imports; the kit adds one import line instead of replacing
   the user's file.
 - Skills are `SKILL.md` folders under `~/.claude/skills/`, project
-  `.claude/skills/`, or a plugin's `skills/` directory; symlinked skill folders
-  are supported and deduplicated.
+  `.claude/skills/`, or a plugin's `skills/` directory. AgentChef uses only the
+  plugin route: since 1.3.0 every AgentChef skill ships in the `agentchef`
+  plugin (`/agentchef:<skill>`) and nothing is copied or linked into
+  `~/.claude/skills/`, so each skill is listed once.
 - Subagents are Markdown files with frontmatter; plugin subagents are
   namespaced as `plugin:name` and never override the user's own agents.
 - Permissions live in `settings.json` (`permissions.allow`, `deny`, `ask`) and

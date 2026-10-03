@@ -155,9 +155,14 @@ claude mcp list
 ```
 
 Yeni bir oturum başlat; Claude Code kuralları, plugin'leri ve skill'leri
-açılışta okur. `foreign` skill bağlantısı kararı, `~/.claude/skills/<ad>`
-altında sana ait gerçek bir dizin olduğu anlamına gelir; AgentChef onu asla
-değiştirmez. `user-changed` makbuz girdisi, AgentChef'in eklediği bir şeyi
+açılışta okur. AgentChef skill'leri yalnızca `agentchef` plugin'inden gelir
+(`/agentchef:<skill>`). Bir skill iki kez listeleniyorsa 1.0–1.2'den kalma bir
+kopya ya da bağlantı hâlâ yerindedir;
+`npm run chef -- --migrate-identity --target both` çalıştır (önce ön izle,
+sonra `--apply`). Eski bir skill bağlantısı için `foreign` kararı, eski
+kurulumun kaydettiği yolun artık AgentChef'in bağlantısı olmadığı anlamına
+gelir (örneğin `~/.claude/skills/<ad>` altında sana ait gerçek bir dizin);
+AgentChef ona dokunmaz. `user-changed` makbuz girdisi, AgentChef'in eklediği bir şeyi
 düzenlediğini gösterir; senin içeriğin olarak korunur. Bkz.
 [Claude skill bağlantıları](../kb/claude-skill-links.tr.md),
 [Claude ayar birleştirme](../kb/claude-settings-merge.tr.md) ve

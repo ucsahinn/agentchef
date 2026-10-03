@@ -63,8 +63,9 @@ the `codex-chef` prefix. New in 0.9.0:
 ownership markers (`.agentchef-managed.json`, `.agentchef-source.json`), the
 operation journal and lock names, backup-folder prefixes, receipt and report
 schema strings (`agentchef.<name>.vN`), the plugin folder
-(`plugins/agentchef`), the operator skill (`agentchef-operator`),
-the personal marketplace name and plugin id (`agentchef@agentchef`),
+(`plugins/agentchef-workflows`), the operator skill (`agentchef-operator`),
+the personal marketplace name and plugin id (`agentchef-workflows@agentchef`;
+the plugin itself became `agentchef` in 1.3.0),
 the Git hook banner, and the `AGENTCHEF_*` environment variables.
 
 Nothing breaks on upgrade day: every reader accepts the legacy spelling, so an
@@ -122,6 +123,55 @@ Pass `--target codex|claude|both` to choose explicitly. After the update the
 Serena backend is fetched once more for the new pin (v1.7.0), so the first
 semantic call takes longer. See the [release notes](release-notes.md) for what
 changed.
+
+## Upgrading From 1.0–1.2 To 1.3.0
+
+1.3.0 renames the plugin from `agentchef-workflows` to `agentchef`. Calls now
+read `$agentchef:<skill>` in Codex, `/agentchef:<skill>` in Claude Code (bare
+`/<skill>` also works there when no other command has that name), and
+`agentchef:<role>` for a role.
+
+Every AgentChef skill now reaches both CLIs only as a plugin skill. The ten
+bundled skills ship inside the plugin, and the fifteen pinned upstream skills
+(`-All`, `-InstallSkills`, `--all`, `--install-skills`) are written into the
+same plugin source, `AGENTS_HOME/plugins/sources/agentchef/skills/<name>`,
+each with its `.agentchef-source.json` provenance record. The installer no
+longer copies skills into `AGENTS_HOME/skills` and no longer links skills into
+`~/.claude/skills`, so each skill is listed once per CLI instead of twice.
+`-AdoptSkillLinks`, `--adopt-skill-links`, and the `-Adopt*Skill` /
+`--adopt-*-skill` flags are still accepted but only print a warning.
+
+Convert a 1.0–1.2 install with the migration command; preview first:
+
+```powershell
+npm run chef -- --migrate-identity --target both          # preview
+npm run chef -- --migrate-identity --target both --apply
+```
+
+The migration renames the plugin folders, the marketplace entries, and the
+Codex `[plugins."agentchef-workflows@agentchef"]` and hook-state tables, and
+swaps the Codex and Claude plugin registrations. It also retires AgentChef's
+own direct skill copies in `AGENTS_HOME/skills`: each copy is backed up, then
+removed. A copy is retired only when its marker (`.agentchef-managed.json`)
+or provenance record (`.agentchef-source.json`) proves it is AgentChef's, and
+only when the plugin source already holds that skill. A pinned copy whose
+skill the plugin does not hold yet is kept (decision `keep-until-plugin`)
+until the installer has written it into the plugin; run the full install, then
+the migration again. Claude links that point into a retired copy are removed
+with it and dropped from the install receipt. Your own skills and foreign
+links are never touched.
+
+The Claude installer also retires the skill links its previous install
+receipt recorded, but only after the plugin was registered successfully. If
+registration is skipped or fails, the links stay and stay recorded.
+
+After the migration, AgentChef skills are no longer under `~/.agents/skills`.
+Other tools that read `~/.agents/skills` directly no longer see them; only
+Codex and Claude Code, through the plugin, do.
+
+`npm run verify:install:runtime -- --expect-skills` checks the skills inside
+the plugin source and warns, without failing, when a skill still has a direct
+copy outside the plugin, pointing to the migration command.
 
 ## Safe Upgrade Flow
 

@@ -16,13 +16,16 @@ Official Codex reference: [Build skills](https://developers.openai.com/codex/ski
 
 ## 🍱 Ten Bundled Workflows
 
-These live in the AgentChef plugin and travel with the repository. The
-installer synchronizes all ten from that same canonical source to
-`AGENTS_HOME/skills/<name>`, so every workflow can be called directly. Examples
-include `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`,
-`$seo <target>`, and `$evidence-research <question>`. Fetch remains
-explicit-only; SEO and Evidence Research can also activate when the request
-unambiguously matches their descriptions.
+These live in the `agentchef` plugin and travel with the repository. The
+installer places them in the plugin source
+`AGENTS_HOME/plugins/sources/agentchef/skills/<name>`; since 1.3.0 it no longer
+copies them into `AGENTS_HOME/skills`, so each skill is listed once per CLI.
+The `$fetch`, `$seo`, and `$evidence-research` workflows, for example, are
+called as `$agentchef:fetch <url>`, `$agentchef:seo <target>`, and
+`$agentchef:evidence-research <question>` in Codex, and as
+`/agentchef:<skill>` in Claude Code. Fetch remains explicit-only; SEO and
+Evidence Research can also activate when the request unambiguously matches
+their descriptions.
 
 The personal marketplace entry makes the plugin discoverable; it does not
 install or enable it. To use namespaced calls such as
@@ -46,7 +49,10 @@ install or enable it. To use namespaced calls such as
 
 These entries have `install: true` in the catalog. They are eligible for the
 full install profile; the catalog pins the package/skill pair and the online
-verification checks that the pair still resolves.
+verification checks that the pair still resolves. The installer writes each
+one into the same plugin source as the bundled skills, with its
+`.agentchef-source.json` provenance record, so they appear under the plugin
+too.
 
 | Skill | What it adds | Source |
 | --- | --- | --- |
@@ -105,18 +111,18 @@ upstream options intentionally kept out of the default skill list.
 ## What “Cataloged” Does And Does Not Mean
 
 - A catalog entry is reviewed metadata, not proof that the skill is installed.
-- A bundled skill lives in this repository's plugin. All ten bundled
-  workflows are also synchronized as managed direct skills without creating a
-  second canonical source in the repository.
+- A bundled skill lives in this repository's plugin. It reaches Codex and
+  Claude Code only through that plugin; there is no second direct copy.
 - An `install: true` entry is eligible for the full install profile.
 - A manual reference may overlap with a default skill or require credentials,
   vendor setup, or a more specialized task.
 - Skills do not execute by themselves. Codex selects one when the task matches
   or when you explicitly invoke it.
-- Claude Code sees the same managed tree through directory links
-  (`~/.claude/skills/<name>` into `~/.agents/skills/<name>`) and through the
-  plugin, so there is still one canonical copy per skill. Invoke a skill there
-  with `/<name>`. See [Claude skill links](../kb/claude-skill-links.md).
+- Claude Code loads the same plugin source through `claude plugin install`;
+  nothing is linked into `~/.claude/skills`, so each skill is listed once.
+  Invoke a skill there with `/agentchef:<name>`, or bare `/<name>` when no
+  other command has that name. Links left by a 1.0–1.2 install are covered in
+  [Claude skill links](../kb/claude-skill-links.md).
 
 The machine-readable source is
 [`catalog/skills.json`](../catalog/skills.json). Reviewed install targets are

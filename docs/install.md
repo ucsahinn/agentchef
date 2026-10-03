@@ -38,8 +38,8 @@ want the preview and installer to target it.
 
 | Selection | What is managed |
 | --- | --- |
-| `codex` (default) | `~/.codex` files, the shared `~/.agents` skill and plugin trees, optional Git guards |
-| `claude` | the shared `~/.agents` trees plus the Claude Code surface: a user-level rule file, additive `settings.json` permissions and `.claude.json` MCP entries recorded in receipts, skill links, the Claude plugin marketplace, and plugin registration through the `claude plugin` CLI |
+| `codex` (default) | `~/.codex` files, the shared `~/.agents` plugin source and marketplace (every AgentChef skill lives in the plugin source), optional Git guards |
+| `claude` | the shared `~/.agents` trees plus the Claude Code surface: a user-level rule file, additive `settings.json` permissions and `.claude.json` MCP entries recorded in receipts, the Claude plugin marketplace, and plugin registration through the `claude plugin` CLI |
 | `both` | everything above; shared operations run once |
 
 `npm run chef -- --install` detects which CLIs are on `PATH`, proposes a
@@ -55,6 +55,14 @@ npm run chef -- --install --target both
 ```bash
 ./scripts/install.sh --all --target=claude --dry-run
 ```
+
+On the Claude target the installer registers the plugin with
+`claude plugin marketplace add` and
+`claude plugin install agentchef@agentchef --scope user`. Claude Code caches a
+plugin per version, so when the cached copy differs from the source (for
+example right after pinned skills were written into it), the installer
+reinstalls the plugin (uninstall, then install). On the Codex side the
+cache-drift check re-adds the plugin when its cache differs from the source.
 
 Claude-side details, ownership, and removal live in
 [Claude Code surfaces](claude-surfaces.md); the mapping between the two targets
@@ -87,8 +95,8 @@ managed targets, optional global Git changes, curated skill commands, collision
 policy, backup behavior, and risk level.
 The selected manifest profile is the normative operation contract used by the
 planner and installers. Its ordered operations include copied files, generated
-`full`/`multi-session`/`offline` profiles, direct-skill ownership markers,
-installed-plugin cache refresh, and the Unix hook-permission step instead of
+`full`/`multi-session`/`offline` profiles, the plugin source that carries every
+AgentChef skill, installed-plugin cache refresh, and the Unix hook-permission step instead of
 leaving those mutations as undocumented installer behavior.
 The profile operation includes `development.config.toml`,
 `review.config.toml`, `ci.config.toml`, `token-safe.config.toml`,
@@ -131,8 +139,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair mode is for machines that already have a Codex setup. It previews or
 applies backup-backed reconciliation for AgentChef-managed guidance, rules,
-agent/profile files, the bundled plugin, all ten managed direct local
-workflows, `serena-pool.mjs`, missing config blocks, and the local plugin
+agent/profile files, the bundled plugin and its ten bundled skills,
+`serena-pool.mjs`, missing config blocks, and the local plugin
 marketplace entry. The launcher, Serena bridge, generated/copied profiles,
 ownership markers, marketplace, and every other selected source and target are
 preflighted before the first managed write; a missing, linked, or unsafe path
@@ -299,13 +307,17 @@ Useful switches:
 - `-All`: install Codex templates, the local AgentChef plugin, specialist
   agents, profiles, rules, and verified public/first-party skills. It does not
   change global Git config.
-- Every default managed install synchronizes all ten canonical local workflow
-  sources to `AGENTS_HOME/skills/<name>`. This makes direct calls such as
-  `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
-  <target>`, and `$evidence-research <question>` available without installing
-  the plugin. Fetch disables implicit invocation; SEO and Evidence Research
-  allow it only for unambiguous matching requests. If an exact direct target
-  contains a foreign skill, installation fails before any managed write.
+- Since 1.3.0 every AgentChef skill reaches both CLIs only as a plugin skill.
+  The ten bundled skills ship inside the plugin and are installed into the
+  marketplace source `AGENTS_HOME/plugins/sources/agentchef/skills/<name>`.
+  The installer no longer copies them into `AGENTS_HOME/skills` and no longer
+  links anything into `~/.claude/skills`, so each skill is listed once per
+  CLI. Call them as `$agentchef:<skill>` in Codex (the `$seo` workflow, for
+  example, is `$agentchef:seo`, and `$evidence-research` is
+  `$agentchef:evidence-research`) and `/agentchef:<skill>` in Claude Code (bare `/<skill>` also works there when no other command has
+  that name). Fetch disables implicit invocation; SEO and Evidence Research
+  allow it only for unambiguous matching requests. An install from 1.0–1.2
+  still has direct copies; see [Upgrade](upgrade.md) for the migration.
 - The personal marketplace entry makes `agentchef` discoverable; it
   does not install or enable the plugin. To use
   `$agentchef:<skill-name>`, run `codex plugin add
@@ -319,23 +331,21 @@ Useful switches:
   not proof that the active Codex host discovers that marketplace. For a
   non-default root, register it with `codex plugin marketplace add <root>` and
   verify the resolved root with `codex plugin marketplace list --json`.
-- `-AdoptFetchSkill`: explicitly adopt only
-  `AGENTS_HOME/skills/fetch` after a foreign-collision preflight. The Bash
-  equivalent is `--adopt-fetch-skill`. Normal install and repair never infer
-  this authority.
-- `-AdoptSeoSkill`: explicitly adopt only `AGENTS_HOME/skills/seo` after
-  reviewing the foreign collision. The Bash equivalent is
-  `--adopt-seo-skill`.
-- `-AdoptEvidenceResearchSkill`: explicitly adopt only
-  `AGENTS_HOME/skills/evidence-research`. The Bash equivalent is
-  `--adopt-evidence-research-skill`.
-- `-AdoptDirectSkill <name>`: explicitly adopt another cataloged direct skill.
-  The Bash equivalent is `--adopt-direct-skill=<name>`.
+- `-AdoptFetchSkill`, `-AdoptSeoSkill`, `-AdoptEvidenceResearchSkill`,
+  `-AdoptDirectSkill <name>`, and `-AdoptSkillLinks` (Bash:
+  `--adopt-fetch-skill`, `--adopt-seo-skill`,
+  `--adopt-evidence-research-skill`, `--adopt-direct-skill=<name>`,
+  `--adopt-skill-links`): accepted so older scripts keep running, but they
+  have no effect since 1.3.0 and print a warning. There are no direct skill
+  targets or skill links left to adopt.
 - `-InstallSkills`: install `catalog/skills.json` entries that have
   `install: true`, a verified `package` in `owner/repo` format, a full commit
   SHA, and a matching `skill` name. The installer fetches that exact commit,
   verifies the selected skill, stages and hashes a native copy, then atomically
-  activates it. It does not execute fetched repository code or a
+  activates it inside the plugin source
+  (`AGENTS_HOME/plugins/sources/agentchef/skills/<name>`) with its
+  `.agentchef-source.json` provenance record, so it is listed with the bundled
+  skills under the one plugin. It does not execute fetched repository code or a
   registry-delivered installer. A matching valid AgentChef provenance marker
   permits a backup-backed managed upgrade. An unmarked, foreign, or locally
   drifted same-name target is preserved and reported as skipped.
@@ -395,11 +405,10 @@ Useful flags:
 
 - `--all`: recommended full AgentChef setup without global Git config changes.
 - `--install-skills`
-- `--adopt-fetch-skill`, `--adopt-seo-skill`, and
-  `--adopt-evidence-research-skill`: adopt only the named foreign direct target
-  after review; normal install and repair fail closed.
-- `--adopt-direct-skill=<name>`: adopt another cataloged foreign direct target
-  after review.
+- `--adopt-fetch-skill`, `--adopt-seo-skill`,
+  `--adopt-evidence-research-skill`, `--adopt-direct-skill=<name>`, and
+  `--adopt-skill-links`: accepted for older scripts, no effect since 1.3.0
+  (a warning is printed).
 - `--install-git-guards`: opt in to global Git ignore and hook settings.
 - `--adopt-git-ignore`, `--adopt-git-hook`,
   `--adopt-git-excludes-file`, and `--adopt-git-hooks-path`: grant adoption
@@ -485,7 +494,6 @@ The installer backs up managed targets before replacing them:
 - managed profile files in `CODEX_HOME`
 - personal plugin marketplace file
 - both managed plugin mirrors
-- all managed direct-skill directories and ownership markers
 
 Managed directory updates synchronize source-owned entries and preserve
 unrelated extras. A destructive prune remains a separate, explicit,
@@ -569,7 +577,7 @@ claude mcp list
 
 Inside Claude Code, `/context` lists the AgentChef rule file under memory
 files, `/plugin` shows the `agentchef` marketplace, and `/skills` lists the
-linked skills.
+plugin skills once each.
 
 ## Test Without Touching Your Real Setup
 

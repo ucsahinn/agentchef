@@ -65,9 +65,11 @@ bilgisini okur; bu bilgi yoksa fail-closed kalır ve temizlik adayı üretmez.
 İkincil eşzamanlı pencerelerde `codex --profile multi-session` kullan ve
 [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
 
-Claude Code skill bağlantıları dizin junction'larıdır (`~/.claude/skills/<ad>`
-→ `~/.agents/skills/<ad>`). Junction için yönetici hakkı veya Developer Mode
-gerekmez. `CLAUDE_CONFIG_DIR`, `.claude.json` dahil tüm Claude home'unu taşır (değişken
+1.3.0'dan beri AgentChef skill junction'ı oluşturmaz: Claude Code AgentChef'in
+her skill'ini `agentchef` plugin'inden yükler; bu yüzden yönetici hakkı ya da
+Developer Mode söz konusu olmaz. 1.0–1.2 kurulumunun `~/.claude/skills`
+altında oluşturduğu junction'ları göç emekli eder (bkz.
+[Claude skill bağlantıları](../kb/claude-skill-links.tr.md)). `CLAUDE_CONFIG_DIR`, `.claude.json` dahil tüm Claude home'unu taşır (değişken
 yokken bu dosya `~/.claude` içinde değil, `~/.claude.json` konumundadır);
 scratch-home testleri bu sayede izole kalır.
 

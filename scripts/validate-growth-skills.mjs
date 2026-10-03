@@ -151,25 +151,14 @@ for (const [skillName, spec] of Object.entries(packages)) {
     if (catalogEntry.install !== false || catalogEntry.directInstall !== true) {
       failures.push(`${skillName} must be bundled with install=false and directInstall=true.`);
     }
-    if (catalogEntry.directTarget !== `\${AGENTS_HOME}/skills/${skillName}`) {
-      failures.push(`${skillName} directTarget must use AGENTS_HOME/skills/${skillName}.`);
+    if (catalogEntry.directTarget !== `\${AGENTS_HOME}/plugins/sources/agentchef/skills/${skillName}`) {
+      failures.push(`${skillName} directTarget must be its folder in the plugin source.`);
     }
   }
 
-  const operationId = `${skillName}-direct-skill`;
-  const operation = operationById.get(operationId);
-  if (!operation) {
-    failures.push(`manifests/install-plan.json must include ${operationId}.`);
-  } else {
-    if (operation.source !== skillRel) failures.push(`${operationId} source must be ${skillRel}.`);
-    if (operation.destination !== `\${AGENTS_HOME}/skills/${skillName}`) {
-      failures.push(`${operationId} destination must use AGENTS_HOME/skills/${skillName}.`);
-    }
-  }
-  for (const profileName of ["default", "all"]) {
-    if (!installPlan.profiles?.[profileName]?.includes(operationId)) {
-      failures.push(`install profile ${profileName} must include ${operationId}.`);
-    }
+  // Bundled skills come from the plugin; a direct copy would list them twice.
+  if (operationById.has(`${skillName}-direct-skill`)) {
+    failures.push(`${skillName} must not also be installed as a direct copy.`);
   }
 
   validateTemplate(skillRoot, spec);

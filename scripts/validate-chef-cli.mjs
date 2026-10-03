@@ -12,7 +12,6 @@ import {
 } from "./lib/skill-provenance.mjs";
 import { activatePinnedSkill } from "./lib/pinned-skill-activation.mjs";
 import { acquireOperationLock } from "./lib/operation-lock.mjs";
-import { writeDirectSkillMarker } from "./manage-direct-skill-target.mjs";
 import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -155,7 +154,8 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
   const catalog = JSON.parse(read("catalog/skills.json"));
   const installable = catalog.skills.filter((skill) => skill.install === true);
   const bundled = catalog.skills.filter((skill) => skill.directInstall === true);
-  const upstreamRoot = path.join(rootPath, ".codex", "skills");
+  // Every harness skill lives in the plugin marketplace source since 1.3.0.
+  const upstreamRoot = path.join(rootPath, ".agents", "plugins", "sources", "agentchef", "skills");
   for (const skill of installable) {
     const skillRoot = path.join(upstreamRoot, skill.name);
     fs.mkdirSync(skillRoot, { recursive: true });
@@ -179,7 +179,7 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
       );
     }
   }
-  const directRoot = path.join(rootPath, ".agents", "skills");
+  const directRoot = upstreamRoot;
   for (const skill of bundled) {
     const source = path.join(root, "plugins", "agentchef", "skills", skill.name);
     const target = path.join(directRoot, skill.name);
@@ -188,7 +188,6 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
       continue;
     }
     fs.cpSync(source, target, { recursive: true });
-    writeDirectSkillMarker(source, target);
   }
   return {
     CODEX_HOME: path.join(rootPath, ".codex"),
@@ -1281,10 +1280,10 @@ if (!exists(cliPath)) {
   }
 
   if (/update-install",\s*"\\.\\scripts\\install\.ps1",\s*\[[^\]]*"-All"/s.test(cli)) {
-    fail(`${cliPath} update-install must not use -All because update is scoped to managed files, not curated skills`);
+    fail(`${cliPath} update-install must not use -All; -InstallSkills alone installs the pinned plugin skills`);
   }
   if (/update-install",\s*"scripts\/install\.sh",\s*\[[^\]]*"--all"/s.test(cli)) {
-    fail(`${cliPath} update-install must not use --all because update is scoped to managed files, not curated skills`);
+    fail(`${cliPath} update-install must not use --all; --install-skills alone installs the pinned plugin skills`);
   }
   if (cli.includes('runPowerShell("install", ".\\\\scripts\\\\install.ps1", ["-All", "-Interactive"')) {
     fail(`${cliPath} Full install must not open a second nested Windows confirmation flow after CLI APPLY`);
@@ -1298,10 +1297,10 @@ if (!exists(cliPath)) {
   if (cli.includes('runBash("reset-apply", "scripts/install.sh", ["--all", "--force", "--interactive"')) {
     fail(`${cliPath} Refresh setup must not open a second nested Bash confirmation flow after CLI APPLY`);
   }
-  if (!cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Update", "-PlainOutput"')) {
+  if (!cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Update", "-PlainOutput", "-InstallSkills"')) {
     fail(`${cliPath} Windows update-install must use -Update so user-owned config survives managed refresh`);
   }
-  if (!cli.includes('runBash("update-install", "scripts/install.sh", ["--update", "--plain-output"')) {
+  if (!cli.includes('runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", "--install-skills"')) {
     fail(`${cliPath} Bash update-install must use --update so user-owned config survives managed refresh`);
   }
   if (cli.includes('runPowerShell("update-install", ".\\\\scripts\\\\install.ps1", ["-Force"')) {
@@ -1524,7 +1523,7 @@ try {
   const invalidEnv = createCuratedSkillFixture(invalidSkillStatusRoot, {
     invalid: ["dependency-upgrade"]
   });
-  fs.rmSync(path.join(invalidEnv.CODEX_HOME, "skills", "systematic-debugging"), { recursive: true, force: true });
+  fs.rmSync(path.join(invalidEnv.AGENTS_HOME, "plugins", "sources", "agentchef", "skills", "systematic-debugging"), { recursive: true, force: true });
   runCliSmoke("skills-status-invalid", ["--skills", "--details", "--plain", "--no-log"], [
     `${skillCounts.total - 2} of ${skillCounts.total} Chef-managed skills ready`,
     "1 missing",

@@ -135,23 +135,9 @@ if [ "${AGENTCHEF_TEST_MODE:-}" = "1" ] && [ "${AGENTCHEF_TEST_SKILLS_CATALOG:-}
   CURATED_SKILLS_CATALOG="$AGENTCHEF_TEST_SKILLS_CATALOG"
 fi
 
-direct_skill_names() {
-  node -e 'const fs=require("fs");const skills=JSON.parse(fs.readFileSync(process.argv[1],"utf8")).skills;for(const skill of skills){if(skill.directInstall===true)console.log(skill.name)}' "$REPO_ROOT/catalog/skills.json"
-}
-
-for requested_name in $ADOPT_DIRECT_SKILLS; do
-  known_direct_skill=0
-  while IFS= read -r catalog_name; do
-    if [ "$requested_name" = "$catalog_name" ]; then
-      known_direct_skill=1
-      break
-    fi
-  done < <(direct_skill_names)
-  if [ "$known_direct_skill" -ne 1 ]; then
-    echo "Unknown managed direct skill adoption target: $requested_name" >&2
-    exit 2
-  fi
-done
+if [ "$ADOPT_FETCH_SKILL" -eq 1 ] || [ "$ADOPT_SEO_SKILL" -eq 1 ] || [ "$ADOPT_EVIDENCE_RESEARCH_SKILL" -eq 1 ] || [ "$ADOPT_DIRECT_SKILLS" != " " ]; then
+  echo "The --adopt-*-skill flags no longer have an effect: bundled skills come from the AgentChef plugin." >&2
+fi
 
 icon() {
   if [ "$PLAIN_OUTPUT" -eq 1 ] || [ "${NO_COLOR:-}" != "" ] || [ "${TERM:-}" = "dumb" ]; then
@@ -271,57 +257,8 @@ preflight_install_targets() {
   fi
 
   local plugin_source="$REPO_ROOT/plugins/agentchef"
-  local direct_helper="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
-  local direct_name direct_display direct_adopt direct_flag direct_source direct_target
-  while IFS= read -r direct_name; do
-    case "$direct_name" in
-      fetch)
-        direct_display="Fetch"
-        direct_adopt="$ADOPT_FETCH_SKILL"
-        direct_flag="--adopt-fetch-skill"
-        ;;
-      seo)
-        direct_display="SEO"
-        direct_adopt="$ADOPT_SEO_SKILL"
-        direct_flag="--adopt-seo-skill"
-        ;;
-      evidence-research)
-        direct_display="Evidence Research"
-        direct_adopt="$ADOPT_EVIDENCE_RESEARCH_SKILL"
-        direct_flag="--adopt-evidence-research-skill"
-        ;;
-      *)
-        direct_display="$direct_name"
-        direct_adopt=0
-        direct_flag="--adopt-direct-skill=$direct_name"
-        case "$ADOPT_DIRECT_SKILLS" in
-          *" $direct_name "*) direct_adopt=1 ;;
-        esac
-        ;;
-    esac
-    direct_source="$plugin_source/skills/$direct_name"
-    direct_target="$AGENTS_HOME_DIR/skills/$direct_name"
-    local alternate_target="$CODEX_HOME_DIR/skills/$direct_name"
-    if [ "$alternate_target" != "$direct_target" ] && { [ -e "$alternate_target" ] || [ -L "$alternate_target" ]; }; then
-      echo "Duplicate direct skill root detected; move or explicitly reconcile the existing CODEX_HOME copy before install: $alternate_target" >&2
-      exit 1
-    fi
-    local direct_args=("$direct_helper" "$direct_source" "$direct_target" "--check")
-    if [ "$direct_adopt" -eq 1 ]; then
-      direct_args+=("--allow-adopt")
-    fi
-    if node "${direct_args[@]}" >/dev/null; then
-      :
-    else
-      local direct_status=$?
-      if [ "$direct_status" -eq 2 ]; then
-        echo "Refusing to overwrite user-owned $direct_display skill without $direct_flag: $direct_target" >&2
-      else
-        echo "Direct $direct_display ownership preflight failed: $direct_target" >&2
-      fi
-      exit 1
-    fi
-  done < <(direct_skill_names)
+  # Bundled skills reach both CLIs through the plugin; 1.3.0 installs no
+  # separate direct copies, so there is no direct-skill ownership preflight.
 
   if [ "$INSTALL_CODEX" -ne 1 ]; then return; fi
   local marketplace_path="$AGENTS_HOME_DIR/plugins/marketplace.json"
@@ -933,38 +870,6 @@ section "Shared agent surfaces"
 ensure_dir "$AGENTS_HOME_DIR"
 MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/agentchef"
 install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"
-DIRECT_SKILL_HELPER="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
-while IFS= read -r DIRECT_SKILL_NAME; do
-  DIRECT_SKILL_SOURCE="$PLUGIN_SOURCE/skills/$DIRECT_SKILL_NAME"
-  DIRECT_SKILL_TARGET="$AGENTS_HOME_DIR/skills/$DIRECT_SKILL_NAME"
-  install_directory "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET"
-  if [ "$DRY_RUN" -ne 1 ]; then
-    assert_managed_write_target "$DIRECT_SKILL_TARGET/.agentchef-managed.json"
-    DIRECT_MARK_ARGS=("$DIRECT_SKILL_HELPER" "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET" "--mark")
-    case "$DIRECT_SKILL_NAME" in
-      fetch) DIRECT_SKILL_ADOPT="$ADOPT_FETCH_SKILL" ;;
-      seo) DIRECT_SKILL_ADOPT="$ADOPT_SEO_SKILL" ;;
-      evidence-research) DIRECT_SKILL_ADOPT="$ADOPT_EVIDENCE_RESEARCH_SKILL" ;;
-      *)
-        DIRECT_SKILL_ADOPT=0
-        case "$ADOPT_DIRECT_SKILLS" in
-          *" $DIRECT_SKILL_NAME "*) DIRECT_SKILL_ADOPT=1 ;;
-        esac
-        ;;
-    esac
-    if [ "$DIRECT_SKILL_ADOPT" -eq 1 ]; then
-      DIRECT_MARK_ARGS+=("--allow-adopt")
-    fi
-    DIRECT_MARK_BACKUP="-"
-    if [ -n "$LAST_BACKUP_PATH" ] && [ -e "$LAST_BACKUP_PATH/.agentchef-managed.json" ]; then
-      DIRECT_MARK_BACKUP="$LAST_BACKUP_PATH/.agentchef-managed.json"
-    fi
-    prepare_install_write "$DIRECT_SKILL_TARGET/.agentchef-managed.json" "$DIRECT_MARK_BACKUP"
-    node "${DIRECT_MARK_ARGS[@]}" >/dev/null
-    mark_install_write_applied "$DIRECT_SKILL_TARGET/.agentchef-managed.json"
-  fi
-done < <(direct_skill_names)
-
 if [ "$INSTALL_CODEX" -eq 1 ]; then
   MARKETPLACE_DIR="$AGENTS_HOME_DIR/plugins"
   MARKETPLACE_PATH="$MARKETPLACE_DIR/marketplace.json"
@@ -1073,7 +978,7 @@ for (const skill of catalog.skills.filter((item) => item.install)) {
 NODE
     echo "Skipped skill installation because --dry-run is active."
   else
-  node - "$CURATED_SKILLS_CATALOG" "$REPO_ROOT" "$SKILL_COMPENSATION_RECEIPT_LOG" <<'NODE'
+  node - "$CURATED_SKILLS_CATALOG" "$REPO_ROOT" "$SKILL_COMPENSATION_RECEIPT_LOG" "$AGENTS_HOME_DIR/plugins/sources/agentchef/skills" <<'NODE'
 const fs = require("fs");
 const { spawnSync } = require("child_process");
 const catalog = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1109,6 +1014,9 @@ for (const skill of catalog.skills.filter((item) => item.install)) {
     "--json"
   ];
   if (skill.fullDepth) args.push("--full-depth");
+  // Pinned skills live inside the AgentChef plugin's marketplace source, so
+  // both CLIs list them with the bundled skills under one plugin.
+  args.push("--skills-root", process.argv[5]);
   const result = spawnSync(
     process.execPath,
     args,

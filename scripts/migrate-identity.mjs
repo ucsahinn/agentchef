@@ -25,6 +25,7 @@ import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
 import { KNOWN_LEGACY_FILE_SHA256, inspectGlobalGitGuards } from "./lib/global-git-guards.mjs";
 import { inspectSkillLink, createSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
+import { inspectPinnedSkillOwnership } from "./lib/skill-provenance.mjs";
 import { claudeInstallReceiptName } from "./install-claude-target.mjs";
 import crypto from "node:crypto";
 
@@ -287,6 +288,42 @@ export function planIdentityMigration(options) {
     }
   }
 
+  // 3b. Direct skill copies. Since 1.3.0 every skill reaches both CLIs from
+  // the plugin, so a copy under AGENTS_HOME/skills lists it a second time. A
+  // copy goes only when AgentChef's marker or provenance proves it is ours and
+  // the plugin source already holds that skill; otherwise it stays.
+  const pluginSkillRoots = [identity.pluginName, ...retiredPluginNames].map((name) => path.join(agentsHome, "plugins", "sources", name, "skills"));
+  const pluginHasSkill = (name) => pluginSkillRoots.some((rootDir) => fs.existsSync(path.join(rootDir, name, "SKILL.md")));
+  const catalogSkills = readJson(path.join(repoRoot, "catalog", "skills.json"), { skills: [] }).skills;
+  for (const skill of catalogSkills.filter((entry) => entry.directInstall === true || entry.install === true)) {
+    const names = skill.name === identity.operatorSkill ? [identity.operatorSkill, identity.legacyOperatorSkill] : [skill.name];
+    for (const name of names) {
+      const target = path.join(skillsRoot, name);
+      if (!isRealDirectory(target)) continue;
+      let owned = false;
+      if (skill.directInstall === true) {
+        const hasMarker = [identity.managedMarker, identity.legacyManagedMarker].some((marker) => fs.existsSync(path.join(target, marker)));
+        if (hasMarker) {
+          try {
+            const status = inspectDirectSkillTarget(path.join(repoRoot, "plugins", identity.pluginName, "skills", skill.name), target).status;
+            owned = status.startsWith("managed") || status === "legacy-match";
+          } catch {
+            owned = false;
+          }
+          // The operator folder under its pre-1.0 name is proven by its marker.
+          if (!owned && name === identity.legacyOperatorSkill) {
+            const marker = readJson(path.join(target, identity.legacyManagedMarker));
+            owned = acceptsSchema(marker?.schemaVersion, "managed-direct-skill", 1);
+          }
+        }
+      } else {
+        owned = inspectPinnedSkillOwnership(target, { package: skill.package, skill: skill.skill || skill.name }).valid;
+      }
+      const decision = !owned ? "foreign" : pluginHasSkill(skill.name) || pluginHasSkill(skill.skill || skill.name) ? "retire" : "keep-until-plugin";
+      note(`direct-skill-copy:${name}`, "retire-direct-copy", target, decision, { skill: skill.name });
+    }
+  }
+
   // 4. Git hook that still carries a legacy template.
   const hookPath = path.join(home, ".githooks", "pre-commit");
   const hookStat = lstatOrNull(hookPath);
@@ -334,6 +371,38 @@ export function planIdentityMigration(options) {
     "Backup folders keep their existing names; `npm run chef -- --backups` lists both prefixes.",
     ...(staleEnvironment.length > 0 ? [`Environment variables still using the legacy prefix (rename them yourself): ${staleEnvironment.join(", ")}`] : [])
   ];
+  const retiredTargets = new Set(steps.filter((step) => step.kind === "retire-direct-copy" && step.decision === "retire").map((step) => step.target));
+  // A Claude link into a retired copy would dangle; it goes with the copy.
+  if (withClaude && retiredTargets.size > 0) {
+    const claudeSkills = path.join(claudeHome, "skills");
+    let entries = [];
+    try { entries = fs.readdirSync(claudeSkills, { withFileTypes: true }); } catch { entries = []; }
+    for (const entry of entries) {
+      const link = path.join(claudeSkills, entry.name);
+      const stat = lstatOrNull(link);
+      if (!stat?.isSymbolicLink()) continue;
+      let resolved = null;
+      try { resolved = path.resolve(claudeSkills, fs.readlinkSync(link)); } catch { resolved = null; }
+      const same = (left, right) => (process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right);
+      if (resolved && [...retiredTargets].some((retired) => same(path.resolve(retired), resolved.replace(/[\\/]+$/, "")))) {
+        note(`claude-skill-link:${entry.name}`, "retire-claude-link", link, "retire");
+      }
+    }
+  }
+  const retiredLinks = new Set(steps.filter((step) => step.kind === "retire-claude-link").map((step) => step.target));
+  const receiptStep = steps.find((step) => step.id === "claude-install-receipt");
+  if (receiptStep && retiredLinks.size > 0) {
+    receiptStep.dropLinks = [...retiredLinks];
+    if (receiptStep.decision === "current") receiptStep.decision = "rewrite";
+  }
+  for (const step of steps) {
+    if (step.kind === "relink" && step.decision === "relink" && retiredLinks.has(step.target)) step.decision = "superseded-by-retire";
+  }
+  for (const step of steps) {
+    if (step.kind === "retire-direct-copy" || step.kind === "retire-claude-link") continue;
+    const touchesRetired = [step.target, step.destination].filter(Boolean).some((value) => [...retiredTargets].some((retired) => value === retired || value.startsWith(`${retired}${path.sep}`)));
+    if (touchesRetired && ["rewrite", "rename", "remove-legacy"].includes(step.decision)) step.decision = "superseded-by-retire";
+  }
   return { steps, notes, targets: [...targets], claudeJson };
 }
 
@@ -362,8 +431,9 @@ export function applyIdentityMigration(options, plan) {
   const roots = [codexHome, agentsHome, ...(plan.targets.includes("claude") ? [claudeHome] : [])];
   const homeRoots = [...roots, path.join(home, ".githooks")];
   for (const step of plan.steps) {
-    if (["rewrite", "rename", "remove-legacy", "relink"].includes(step.decision) && step.kind !== "rewrite-git-hook") {
-      assertManagedTargetPath(step.kind === "relink" ? path.dirname(step.target) : step.target, homeRoots);
+    if (["rewrite", "rename", "remove-legacy", "relink", "retire"].includes(step.decision) && step.kind !== "rewrite-git-hook") {
+      // A link is checked through its parent folder: the link itself is a link.
+      assertManagedTargetPath(step.kind === "relink" || step.kind === "retire-claude-link" ? path.dirname(step.target) : step.target, homeRoots);
     }
   }
   const stamp = `${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-")}-${process.pid}`;
@@ -385,7 +455,7 @@ export function applyIdentityMigration(options, plan) {
     // The plugin CLI swaps cannot be rolled back, so they run only after every
     // local step that can still fail.
     for (const step of [...plan.steps.filter((step) => !isCliStep(step)), ...plan.steps.filter(isCliStep)]) {
-      if (!["rewrite", "rename", "remove-legacy", "relink", "cli"].includes(step.decision)) {
+      if (!["rewrite", "rename", "remove-legacy", "relink", "cli", "retire"].includes(step.decision)) {
         record(step.id, step.decision);
         continue;
       }
@@ -408,6 +478,22 @@ export function applyIdentityMigration(options, plan) {
           journal.markApplied(step.target);
           record(step.id, "legacy-removed");
         }
+        continue;
+      }
+      if (step.kind === "retire-claude-link") {
+        journal.prepareMutation({ target: step.target, backup: null, link: true });
+        removeSkillLink(step.target);
+        journal.markApplied(step.target);
+        record(step.id, "retired");
+        continue;
+      }
+      if (step.kind === "retire-direct-copy") {
+        const backup = backupInto(backupRoot, homeRoots, step.target);
+        journal.recordBackup(backup);
+        journal.prepareMutation({ target: step.target, backup });
+        fs.rmSync(step.target, { recursive: true, force: true });
+        journal.markApplied(step.target);
+        record(step.id, "retired");
         continue;
       }
       if (step.kind === "rewrite-codex-config") {
@@ -497,6 +583,13 @@ export function applyIdentityMigration(options, plan) {
           continue;
         }
         document.schemaVersion = modernSchema(document.schemaVersion);
+        if (Array.isArray(document.links) && Array.isArray(step.dropLinks)) {
+          const dropped = new Set(step.dropLinks.flatMap((link) => [
+            path.resolve(link),
+            path.resolve(String(link).replace(`${path.sep}${identity.legacyOperatorSkill}`, `${path.sep}${identity.operatorSkill}`))
+          ]));
+          document.links = document.links.filter((entry) => !dropped.has(path.resolve(String(entry.link))));
+        }
         if (Array.isArray(document.links)) {
           document.links = document.links.map((link) => ({
             ...link,

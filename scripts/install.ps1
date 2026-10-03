@@ -216,32 +216,10 @@ function Invoke-InstallTargetPreflight {
   }
 
   $PluginSource = Join-Path $RepoRoot "plugins\agentchef"
-  $DirectSkillHelper = Join-Path $RepoRoot "scripts\manage-direct-skill-target.mjs"
-  $DirectSkills = @(Get-ManagedDirectSkills)
-  foreach ($DirectSkill in $DirectSkills) {
-    $DirectSource = Join-Path $PluginSource "skills\$($DirectSkill.Name)"
-    $DirectTarget = Join-Path $AgentsHome "skills\$($DirectSkill.Name)"
-    $AlternateTarget = Join-Path $CodexHome "skills\$($DirectSkill.Name)"
-    if (
-      -not ([System.IO.Path]::GetFullPath($AlternateTarget).Equals(
-        [System.IO.Path]::GetFullPath($DirectTarget),
-        [System.StringComparison]::OrdinalIgnoreCase
-      )) -and
-      (Test-PathEntryExists $AlternateTarget)
-    ) {
-      throw "Duplicate direct skill root detected; move or explicitly reconcile the existing CODEX_HOME copy before install: $AlternateTarget"
-    }
-    $DirectArgs = @($DirectSkillHelper, $DirectSource, $DirectTarget, "--check")
-    if ($DirectSkill.Adopt) {
-      $DirectArgs += "--allow-adopt"
-    }
-    & node @DirectArgs | Out-Null
-    if ($LASTEXITCODE -eq 2) {
-      throw "Refusing to overwrite user-owned $($DirectSkill.Display) skill without $($DirectSkill.Flag): $DirectTarget"
-    }
-    if ($LASTEXITCODE -ne 0) {
-      throw "Direct $($DirectSkill.Display) ownership preflight failed: $DirectTarget"
-    }
+  # Bundled skills reach both CLIs through the plugin; 1.3.0 installs no
+  # separate direct copies, so there is no direct-skill ownership preflight.
+  if ($AdoptDirectSkill.Count -gt 0 -or $AdoptFetchSkill -or $AdoptSeoSkill -or $AdoptEvidenceResearchSkill) {
+    Write-Warning "The -Adopt*Skill switches no longer have an effect: bundled skills come from the AgentChef plugin."
   }
 
   if ($InstallCodex) {
@@ -319,38 +297,6 @@ function Get-GlobalGitGuardArgs {
   }
   $GuardArgs += "--json"
   return $GuardArgs
-}
-
-function Get-ManagedDirectSkills {
-  $CatalogPath = Join-Path $RepoRoot "catalog\skills.json"
-  $CatalogSkills = @((Get-Content -LiteralPath $CatalogPath -Raw | ConvertFrom-Json).skills)
-  $KnownNames = @($CatalogSkills | Where-Object { $_.directInstall -eq $true } | ForEach-Object { $_.name })
-  $UnknownNames = @($AdoptDirectSkill | Where-Object { $_ -notin $KnownNames })
-  if ($UnknownNames.Count -gt 0) {
-    throw "Unknown managed direct skill adoption target: $($UnknownNames -join ', ')"
-  }
-  foreach ($Skill in ($CatalogSkills | Where-Object { $_.directInstall -eq $true })) {
-    $LegacyAdopt = switch ($Skill.name) {
-      "fetch" { [bool]$AdoptFetchSkill }
-      "seo" { [bool]$AdoptSeoSkill }
-      "evidence-research" { [bool]$AdoptEvidenceResearchSkill }
-      default { $false }
-    }
-    $LegacyFlag = switch ($Skill.name) {
-      "fetch" { "-AdoptFetchSkill" }
-      "seo" { "-AdoptSeoSkill" }
-      "evidence-research" { "-AdoptEvidenceResearchSkill" }
-      default { "-AdoptDirectSkill $($Skill.name)" }
-    }
-    [pscustomobject]@{
-      Name = $Skill.name
-      Display = (($Skill.name -split "-") | ForEach-Object {
-        if ($_.Length -eq 0) { "" } else { $_.Substring(0, 1).ToUpperInvariant() + $_.Substring(1) }
-      }) -join " "
-      Adopt = $LegacyAdopt -or ($AdoptDirectSkill -contains $Skill.name)
-      Flag = $LegacyFlag
-    }
-  }
 }
 
 if ($Interactive) {
@@ -962,31 +908,6 @@ Write-Section "Shared agent surfaces"
 Ensure-Dir $AgentsHome
 $MarketplacePluginTarget = Join-Path $AgentsHome "plugins\sources\agentchef"
 Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget
-$DirectSkillHelper = Join-Path $RepoRoot "scripts\manage-direct-skill-target.mjs"
-$DirectSkills = @(Get-ManagedDirectSkills)
-foreach ($DirectSkill in $DirectSkills) {
-  $DirectSource = Join-Path $PluginSource "skills\$($DirectSkill.Name)"
-  $DirectTarget = Join-Path $AgentsHome "skills\$($DirectSkill.Name)"
-  Install-Directory -Source $DirectSource -Destination $DirectTarget
-  if (-not $WhatIfPreference) {
-    Assert-ManagedWriteTarget (Join-Path $DirectTarget ".agentchef-managed.json")
-    $DirectMarkArgs = @($DirectSkillHelper, $DirectSource, $DirectTarget, "--mark")
-    if ($DirectSkill.Adopt) {
-      $DirectMarkArgs += "--allow-adopt"
-    }
-    $markerBackup = "-"
-    if ($Script:LastBackupPath -and (Test-Path -LiteralPath (Join-Path $Script:LastBackupPath ".agentchef-managed.json"))) {
-      $markerBackup = Join-Path $Script:LastBackupPath ".agentchef-managed.json"
-    }
-    Prepare-InstallWrite -Path (Join-Path $DirectTarget ".agentchef-managed.json") -BackupPath $markerBackup
-    & node @DirectMarkArgs | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-      throw "Cannot record AgentChef ownership for the direct $($DirectSkill.Display) skill: $DirectTarget"
-    }
-    Mark-InstallWriteApplied -Path (Join-Path $DirectTarget ".agentchef-managed.json")
-  }
-}
-
 if ($InstallCodex) {
   $MarketplaceDir = Join-Path $AgentsHome "plugins"
   Ensure-Dir $MarketplaceDir
@@ -1093,6 +1014,9 @@ if ($InstallSkills) {
       if ($Skill.fullDepth -eq $true) {
         $SkillArgs += "--full-depth"
       }
+      # Pinned skills live inside the AgentChef plugin's marketplace source, so
+      # both CLIs list them with the bundled skills under one plugin.
+      $SkillArgs += @("--skills-root", (Join-Path $AgentsHome "plugins\sources\agentchef\skills"))
       $DepthFlag = if ($Skill.fullDepth -eq $true) { " --full-depth" } else { "" }
       Write-Action -Status "installing pinned skill" -Message "$($Skill.name) from $($Skill.package)@$($Skill.commit) --skill $($Skill.skill)$DepthFlag"
       # stdout carries the JSON receipt; stderr (a Node warning, for one) is kept

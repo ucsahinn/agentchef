@@ -32,11 +32,10 @@ import {
 } from "./lib/json-merge-receipt.mjs";
 import { planSettingsMerge } from "./lib/claude-settings-merge.mjs";
 import { planMcpMerge } from "./lib/claude-mcp-merge.mjs";
-import { createSkillLink, inspectSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
+import { inspectSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
-import { readRegisteredClaudePluginVersion } from "./lib/claude-plugin-cache.mjs";
+import { inspectClaudePluginCache, readRegisteredClaudePluginVersion } from "./lib/claude-plugin-cache.mjs";
 import { resolveClaudeHomes } from "./lib/targets/claude.mjs";
-import { managedMarkerNames, sourceMarkerNames } from "./lib/identity.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
@@ -44,7 +43,6 @@ export const claudeInstallSchemaVersion = "agentchef.claude-install.v1";
 export const legacyClaudeInstallSchemaVersion = "codex-chef.claude-install.v1";
 export const claudeInstallReceiptName = "install-receipt.json";
 // Both marker spellings: an un-migrated home still carries the codex-chef names.
-const managedSkillMarkers = [...managedMarkerNames, ...sourceMarkerNames];
 const pluginName = "agentchef";
 const claudeMarketplaceName = "agentchef";
 
@@ -76,22 +74,6 @@ function fileState(destination, sourceBuffer) {
 // un-migrated home still carries the legacy operator folder name). A managed
 // directory outside that set was retired from the catalog; it is reported as
 // `retired` and never linked, adopted, or removed.
-function knownSkillNames() {
-  const catalog = readJson("catalog/skills.json");
-  return new Set([...catalog.skills.map((skill) => skill.name), ...Object.keys(catalog.compatibilityAliases || {})]);
-}
-
-function managedSkillEntries(agentsHome) {
-  const skillsRoot = path.join(agentsHome, "skills");
-  if (!fs.existsSync(skillsRoot)) return [];
-  const known = knownSkillNames();
-  return fs.readdirSync(skillsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink())
-    .filter((entry) => managedSkillMarkers.some((marker) => fs.existsSync(path.join(skillsRoot, entry.name, marker))))
-    .map((entry) => ({ name: entry.name, known: known.has(entry.name) }))
-    .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
-}
-
 // Shape verified with `claude plugin validate --strict` (Claude Code 2.1.276):
 // a relative-path string is the local plugin source, and the marketplace needs
 // a description to pass strict validation.
@@ -119,7 +101,6 @@ export const claudeInstallActionIds = Object.freeze([
   "claude-serena-pool",
   "claude-settings-merge",
   "claude-mcp-merge",
-  "claude-skill-links",
   "claude-plugin-marketplace",
   "claude-plugin-register"
 ]);
@@ -193,21 +174,14 @@ export function planClaudeInstall(options) {
     backup: true
   });
 
-  const links = managedSkillEntries(agentsHome).map(({ name, known }) => {
-    const target = path.join(agentsHome, "skills", name);
-    const link = path.join(claudeHome, "skills", name);
-    const inspection = inspectSkillLink(link, target);
-    let decision = "skip";
-    if (!known) decision = "retired";
-    else if (inspection.status === "absent") decision = "create";
-    else if (inspection.status === "link-current") decision = "current";
-    else if (inspection.status === "real-directory") {
-      const chefCopy = managedSkillMarkers.some((marker) => fs.existsSync(path.join(link, marker)));
-      decision = chefCopy && options.adoptSkillLinks ? "replace-copy-with-link" : chefCopy ? "adoptable-copy" : "foreign";
-    } else decision = "foreign";
-    return { name, link, target, status: inspection.status, decision };
+  // Skills reach Claude Code through the plugin since 1.3.0. Links an earlier
+  // install recorded in its receipt are removed once the plugin is
+  // registered; a link that no longer points where the receipt says is left.
+  const previousInstall = readJsonOrDefault(path.join(claudeHome, "agentchef", claudeInstallReceiptName), {});
+  const legacyLinks = (Array.isArray(previousInstall.links) ? previousInstall.links : []).map((recorded) => {
+    const inspection = inspectSkillLink(recorded.link, recorded.target);
+    return { name: path.basename(String(recorded.link)), link: recorded.link, target: recorded.target, status: inspection.status, decision: inspection.status === "link-current" ? "retire" : inspection.status === "absent" ? "absent" : "foreign" };
   });
-  actions.push({ id: "claude-skill-links", kind: "link-directory", links, backup: true });
 
   const marketplacePath = path.join(agentsHome, "plugins", ".claude-plugin", "marketplace.json");
   const marketplaceDesired = claudeMarketplaceDocument();
@@ -232,6 +206,7 @@ export function planClaudeInstall(options) {
       `${claudeCommand} plugin install ${pluginName}@${claudeMarketplaceName} --scope user`
     ],
     state: options.skipPluginRegister ? "skipped-by-flag" : "planned",
+    retireLinks: legacyLinks,
     backup: false
   });
 
@@ -344,11 +319,7 @@ export function applyClaudeInstall(options, plan) {
   const backupRoots = { claudeHome, agentsHome, claudeJson: options.claudeJson };
   for (const action of plan.actions) {
     if (action.destination) assertManagedTargetPath(action.destination, action.destination === claudeJson ? [path.dirname(claudeJson)] : roots);
-    for (const link of action.links || []) if (link.decision !== "retired") assertSkillLinkPath(link, claudeHome);
-  }
-  const foreignLinks = plan.actions.find((action) => action.kind === "link-directory").links.filter((link) => link.decision === "foreign");
-  if (foreignLinks.length > 0) {
-    throw new Error(`Refusing to touch foreign skill paths under ${claudeHome}: ${foreignLinks.map((link) => link.name).join(", ")}`);
+    for (const link of action.retireLinks || []) if (link.decision === "retire") assertSkillLinkPath(link, claudeHome);
   }
 
   // --no-backup is creation-only: with no backup, a failure later in the run
@@ -452,35 +423,6 @@ export function applyClaudeInstall(options, plan) {
         results.push({ id: action.id, status: "merged", added: action.plan.entries.length });
         continue;
       }
-      if (action.kind === "link-directory") {
-        const created = [];
-        for (const link of action.links) {
-          if (link.decision === "current") {
-            installed.links.push({ link: link.link, target: link.target });
-            continue;
-          }
-          if (link.decision === "create") {
-            journal.prepareMutation({ target: link.link, backup: null, link: true });
-            createSkillLink(link.link, link.target);
-            journal.markApplied(link.link);
-            installed.links.push({ link: link.link, target: link.target });
-            created.push(link.name);
-            continue;
-          }
-          if (link.decision === "replace-copy-with-link") {
-            const backup = backupInto(backupRoot, backupRoots, link.link);
-            journal.recordBackup(backup);
-            journal.prepareMutation({ target: link.link, backup, link: true });
-            fs.rmSync(link.link, { recursive: true, force: true });
-            createSkillLink(link.link, link.target);
-            journal.markApplied(link.link);
-            installed.links.push({ link: link.link, target: link.target });
-            created.push(`${link.name} (adopted copy)`);
-          }
-        }
-        results.push({ id: action.id, status: created.length > 0 ? "linked" : "current", created });
-        continue;
-      }
       if (action.kind === "write-claude-marketplace") {
         if (action.state === "identical") {
           installed.files.push({ path: action.destination, sha256: fileSha256(action.destination), source: "generated:claude-marketplace" });
@@ -497,12 +439,21 @@ export function applyClaudeInstall(options, plan) {
         continue;
       }
       if (action.kind === "claude-plugin-register") {
+        // Until the plugin is registered the old links are the only way Claude
+        // sees the skills, so they stay and remain recorded as AgentChef's.
+        const keepLinks = () => {
+          for (const link of action.retireLinks || []) {
+            if (link.decision === "retire") installed.links.push({ link: link.link, target: link.target });
+          }
+        };
         if (action.state === "skipped-by-flag") {
+          keepLinks();
           results.push({ id: action.id, status: "skipped" });
           continue;
         }
         const probe = spawnHarnessCli("claude", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000 }, options.platform);
         if (probe.error || probe.status !== 0) {
+          keepLinks();
           results.push({ id: action.id, status: "skipped", reason: "claude CLI not available; run the listed commands after installing Claude Code" });
           continue;
         }
@@ -530,7 +481,37 @@ export function applyClaudeInstall(options, plan) {
             if (run.status !== 0) break;
           }
         }
-        results.push({ id: action.id, status: outcomes.every((outcome) => outcome.status === 0) ? "registered" : "attention", outcomes });
+        // Claude Code keeps its cache per version, so pinned skills written into
+        // the source at an unchanged version never reach a session. A cache that
+        // differs from the source is reinstalled.
+        if (outcomes.every((outcome) => outcome.status === 0)) {
+          const cache = inspectClaudePluginCache(claudeHome, agentsHome);
+          if (cache.inspected && cache.stale.length > 0) {
+            for (const argv of [
+              ["plugin", "uninstall", `${pluginName}@${claudeMarketplaceName}`],
+              ["plugin", "install", `${pluginName}@${claudeMarketplaceName}`, "--scope", "user"]
+            ]) {
+              const run = spawnHarnessCli("claude", argv, { encoding: "utf8", windowsHide: true, timeout: 120000 }, options.platform);
+              outcomes.push({ argv: argv.join(" "), status: run.status, output: `${run.stdout || ""}${run.stderr || ""}`.trim().slice(0, 400) });
+              if (run.status !== 0) break;
+            }
+          }
+        }
+        const registeredOk = outcomes.every((outcome) => outcome.status === 0);
+        if (registeredOk) {
+          const retired = [];
+          for (const link of action.retireLinks || []) {
+            if (link.decision !== "retire") continue;
+            journal.prepareMutation({ target: link.link, backup: null, link: true });
+            removeSkillLink(link.link);
+            journal.markApplied(link.link);
+            retired.push(link.name);
+          }
+          if (retired.length > 0) outcomes.push({ argv: "retire legacy skill links", status: 0, output: retired.join(", ") });
+        } else {
+          keepLinks();
+        }
+        results.push({ id: action.id, status: registeredOk ? "registered" : "attention", outcomes });
       }
     }
 
@@ -782,7 +763,7 @@ Options:
   --agents-home <path>        Override AGENTS_HOME (default ~/.agents)
   --home <path>               Override HOME for planning only
   --platform <name>           windows or unix (defaults to current platform)
-  --adopt-skill-links         Replace AgentChef-marked skill copies under ~/.claude/skills with links
+  --adopt-skill-links         No effect since 1.3.0 (skills come from the plugin); accepted for old scripts
   --agents-lock-held          Internal: the calling installer already holds the AGENTS_HOME operation lock
   --skip-plugin-register      Do not run the claude plugin CLI commands
   --no-backup                 Creation-only mode; refuses to replace existing targets
@@ -797,10 +778,8 @@ function printPlan(plan, options) {
   console.log(`Agents home: ${redact(options.agentsHome, options)}`);
   console.log("");
   for (const action of plan.actions) {
-    if (action.kind === "link-directory") {
-      console.log(`[link-directory] claude-skill-links (${action.links.length})`);
-      for (const link of action.links) console.log(`  ${link.decision.padEnd(24)} ${link.name}`);
-      continue;
+    if (action.kind === "claude-plugin-register" && (action.retireLinks || []).some((link) => link.decision === "retire")) {
+      console.log(`  retires ${action.retireLinks.filter((link) => link.decision === "retire").length} legacy skill link(s) once the plugin is registered`);
     }
     if (action.kind === "claude-plugin-register") {
       console.log(`[${action.kind}] ${action.id}: ${action.state}`);

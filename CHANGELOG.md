@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- Every AgentChef skill now reaches both CLIs only through the plugin, so each
+  one is listed once instead of twice:
+  - The bundled skills ship inside the plugin.
+  - The installer writes the pinned upstream skills into the plugin's
+    marketplace source, `AGENTS_HOME/plugins/sources/agentchef/skills`, each
+    with its provenance record. The new `--skills-root` option of
+    `install-pinned-skill.mjs` sets that location.
+  - Nothing is copied into `AGENTS_HOME/skills` any more, and nothing is linked
+    into `~/.claude/skills`. The `-Adopt*Skill` and `-AdoptSkillLinks` flags
+    are still accepted but no longer do anything.
+  - When Claude Code's cached copy of the plugin differs from the source, the
+    plugin is reinstalled at the same version.
+  - The Claude installer retires the skill links its earlier receipt recorded,
+    but only after the plugin is registered.
+  - `--migrate-identity` backs up and retires AgentChef's own direct copies
+    (proven by marker or provenance), and only once the plugin source holds
+    that skill. It also removes Claude links into those copies.
+  - Repair keeps provenance-marked pinned skills out of the plugin's extra
+    files. Removal handles both the new location and the copies from 1.2.
+  - `--expect-skills` verifies skills inside the plugin, and warns while a
+    direct copy still waits for the migration.
 - The agent research corpus was re-dated after re-checking the four supplemental
   sources on a 14-day cadence (ECC, gstack, and the Codex issue tracker are live
   and unarchived; the Skills CLI search entry stays a dated snapshot).

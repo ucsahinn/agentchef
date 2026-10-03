@@ -68,8 +68,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   const plan = run(state, ["--dry-run"]);
   assert.equal(plan.dryRunOnly, true);
   assert.deepEqual(plan.plan.actions.map((action) => action.id), [...claudeInstallActionIds]);
-  const links = plan.plan.actions.find((action) => action.kind === "link-directory").links;
-  assert.deepEqual(links.map((link) => [link.name, link.decision]), [["seo", "create"]], "only marker-carrying skills are linked");
+  assert.ok(!plan.plan.actions.some((action) => action.kind === "link-directory"), "skills reach Claude through the plugin, never through links");
   assert.ok(fs.existsSync(path.join(state.claudeHome, "settings.json")));
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "agentchef")), "dry run writes nothing");
 
@@ -79,7 +78,6 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(statuses["claude-serena-pool"], "installed");
   assert.equal(statuses["claude-settings-merge"], "merged");
   assert.equal(statuses["claude-mcp-merge"], "merged");
-  assert.equal(statuses["claude-skill-links"], "linked");
   assert.equal(statuses["claude-plugin-marketplace"], "installed");
   assert.equal(statuses["claude-plugin-register"], "skipped");
 
@@ -97,7 +95,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(claudeJson.mcpServers.serena.command, "node");
   assert.ok(fs.existsSync(path.join(state.claudeHome, "rules", "agentchef-working-agreement.md")));
   assert.ok(fs.existsSync(path.join(state.claudeHome, "agentchef", "serena-pool.mjs")));
-  assert.ok(fs.lstatSync(path.join(state.claudeHome, "skills", "seo")).isSymbolicLink());
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", "seo")), "no skill link is created");
   assert.equal(fs.readFileSync(path.join(state.claudeHome, "skills", "user-claude-skill", "SKILL.md"), "utf8"), "mine\n");
   const marketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
   assert.equal(marketplace.name, "agentchef");
@@ -105,7 +103,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   const receipts = fs.readdirSync(path.join(state.claudeHome, "agentchef", "receipts")).sort();
   assert.deepEqual(receipts, ["claude-mcp-merge-receipt.json", "claude-settings-merge-receipt.json"]);
   const installReceipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));
-  assert.equal(installReceipt.links.length, 1);
+  assert.deepEqual(installReceipt.links, []);
   assert.ok(fs.existsSync(path.join(state.claudeHome, "agentchef", "backups")));
   assert.ok(!fs.existsSync(path.join(state.claudeHome, ".agentchef-operation.lock")), "lock released");
 
@@ -120,7 +118,6 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.ok(removed.outcome.results.some((result) => result.status === "reverted"));
   assert.deepEqual(readJson(path.join(state.claudeHome, "settings.json")), state.settings, "settings restored to the user's document");
   assert.deepEqual(readJson(path.join(state.home, ".claude.json")), state.claudeJson, ".claude.json restored to the user's document");
-  assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", "seo")));
   assert.equal(fs.readFileSync(path.join(state.claudeHome, "skills", "user-claude-skill", "SKILL.md"), "utf8"), "mine\n");
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "rules", "agentchef-working-agreement.md")));
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "agentchef", "install-receipt.json")));
@@ -130,90 +127,46 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
-test("Claude target refuses to replace a foreign real directory that shadows a managed skill", () => {
-  const state = fixture();
-  const shadow = path.join(state.claudeHome, "skills", "seo");
-  fs.mkdirSync(shadow, { recursive: true });
-  fs.writeFileSync(path.join(shadow, "SKILL.md"), "hand copy without marker\n");
-  const plan = run(state, ["--dry-run"]);
-  const link = plan.plan.actions.find((action) => action.kind === "link-directory").links[0];
-  assert.equal(link.decision, "foreign");
-  const result = spawnSync(process.execPath, [
-    helper, "--claude-home", state.claudeHome, "--agents-home", state.agentsHome, "--home", state.home,
-    "--platform", platform, "--skip-plugin-register", "--apply"
-  ], { cwd: root, encoding: "utf8", windowsHide: true, timeout: scaledTimeout(60_000), env: fixtureEnv });
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stderr}${result.stdout}`, /foreign skill paths/);
-  assert.equal(fs.readFileSync(path.join(shadow, "SKILL.md"), "utf8"), "hand copy without marker\n");
-  assert.ok(!fs.existsSync(path.join(state.claudeHome, "rules", "agentchef-working-agreement.md")), "nothing was written");
-  fs.rmSync(state.home, { recursive: true, force: true });
-});
+// A home a 1.2 install left: its receipt records a skill link it created.
+function withLegacyLink(state) {
+  const target = path.join(state.agentsHome, "skills", "seo");
+  const link = path.join(state.claudeHome, "skills", "seo");
+  fs.symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
+  fs.mkdirSync(path.join(state.claudeHome, "agentchef"), { recursive: true });
+  fs.writeFileSync(path.join(state.claudeHome, "agentchef", "install-receipt.json"), `${JSON.stringify({
+    schemaVersion: "agentchef.claude-install.v1", product: { name: "agentchef", version: "1.2.2" }, createdAt: new Date().toISOString(),
+    claudeHome: state.claudeHome, agentsHome: state.agentsHome, backupRoot: "", files: [], links: [{ link, target }], receipts: [], commands: []
+  }, null, 2)}\n`);
+  return link;
+}
 
-test("an AgentChef-marked copy is adopted into a link only with --adopt-skill-links", () => {
+test("legacy skill links stay while the plugin cannot be registered, and stay recorded", () => {
   const state = fixture();
-  const copy = path.join(state.claudeHome, "skills", "seo");
-  fs.mkdirSync(copy, { recursive: true });
-  fs.writeFileSync(path.join(copy, "SKILL.md"), "older managed copy\n");
-  fs.writeFileSync(path.join(copy, ".agentchef-managed.json"), "{}\n");
-  const plan = run(state, ["--dry-run"]);
-  assert.equal(plan.plan.actions.find((action) => action.kind === "link-directory").links[0].decision, "adoptable-copy");
-  const adopted = run(state, ["--apply", "--adopt-skill-links"]);
-  const linkResult = adopted.outcome.results.find((result) => result.id === "claude-skill-links");
-  assert.equal(linkResult.status, "linked");
-  assert.ok(fs.lstatSync(copy).isSymbolicLink());
-  const backupRoot = adopted.outcome.backupRoot;
-  assert.ok(fs.existsSync(path.join(backupRoot, "claude", "skills", "seo", "SKILL.md")), "the replaced copy was backed up first");
-  fs.rmSync(state.home, { recursive: true, force: true });
-});
-
-test("an un-migrated home with legacy marker spellings is still linked and adopted", () => {
-  const state = fixture();
-  // Managed tree written before 1.0.0: legacy marker on the AGENTS_HOME skill...
-  const legacySkill = path.join(state.agentsHome, "skills", "gh-fix-ci");
-  fs.mkdirSync(legacySkill, { recursive: true });
-  fs.writeFileSync(path.join(legacySkill, "SKILL.md"), "---\nname: gh-fix-ci\ndescription: legacy\n---\n# legacy\n");
-  fs.writeFileSync(path.join(legacySkill, ".codex-chef-source.json"), `${JSON.stringify({ schemaVersion: "codex-chef.pinned-skill.v1" })}\n`);
-  // ...and a hand-mirrored copy under the Claude home that carries the legacy marker too.
-  const copy = path.join(state.claudeHome, "skills", "gh-fix-ci");
-  fs.mkdirSync(copy, { recursive: true });
-  fs.writeFileSync(path.join(copy, "SKILL.md"), "older mirrored copy\n");
-  fs.writeFileSync(path.join(copy, ".codex-chef-source.json"), "{}\n");
-  const plan = run(state, ["--dry-run"]);
-  const links = Object.fromEntries(plan.plan.actions.find((action) => action.kind === "link-directory").links.map((link) => [link.name, link.decision]));
-  assert.equal(links.seo, "create");
-  assert.equal(links["gh-fix-ci"], "adoptable-copy", "a legacy-marked copy is adoptable, not foreign");
-  const applied = run(state, ["--apply", "--adopt-skill-links"]);
-  assert.equal(applied.outcome.results.find((result) => result.id === "claude-skill-links").status, "linked");
-  assert.ok(fs.lstatSync(copy).isSymbolicLink());
-  assert.ok(fs.existsSync(path.join(applied.outcome.backupRoot, "claude", "skills", "gh-fix-ci", "SKILL.md")));
-  fs.rmSync(state.home, { recursive: true, force: true });
-});
-
-test("a managed directory that is no longer in the catalog is reported as retired and never linked", () => {
-  const state = fixture();
-  // A skill AgentChef installed before it was retired from catalog/skills.json...
-  const retired = path.join(state.agentsHome, "skills", "codex-chef-brain");
-  fs.mkdirSync(retired, { recursive: true });
-  fs.writeFileSync(path.join(retired, "SKILL.md"), "---\nname: codex-chef-brain\ndescription: retired\n---\n# retired\n");
-  fs.writeFileSync(path.join(retired, ".codex-chef-managed.json"), "{}\n");
-  // ...and a hand copy of it under the Claude home that carries a marker too.
-  const copy = path.join(state.claudeHome, "skills", "codex-chef-brain");
-  fs.mkdirSync(copy, { recursive: true });
-  fs.writeFileSync(path.join(copy, "SKILL.md"), "hand copy of the retired skill\n");
-  fs.writeFileSync(path.join(copy, ".codex-chef-managed.json"), "{}\n");
-  const plan = run(state, ["--dry-run"]);
-  const links = Object.fromEntries(plan.plan.actions.find((action) => action.kind === "link-directory").links.map((link) => [link.name, link.decision]));
-  assert.deepEqual(links, { "codex-chef-brain": "retired", seo: "create" });
-  const applied = run(state, ["--apply", "--adopt-skill-links"]);
-  assert.equal(applied.outcome.results.find((result) => result.id === "claude-skill-links").status, "linked");
-  const copyStat = fs.lstatSync(copy);
-  assert.ok(copyStat.isDirectory() && !copyStat.isSymbolicLink(), "the retired copy stays a real directory");
-  assert.equal(fs.readFileSync(path.join(copy, "SKILL.md"), "utf8"), "hand copy of the retired skill\n");
+  const link = withLegacyLink(state);
+  const applied = run(state, ["--apply"]);
+  assert.equal(applied.outcome.results.find((result) => result.id === "claude-plugin-register").status, "skipped");
+  assert.ok(fs.lstatSync(link).isSymbolicLink(), "without a registered plugin the link is still how Claude sees the skill");
   const receipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));
-  assert.deepEqual(receipt.links.map((link) => path.basename(link.link)), ["seo"], "only the catalog skill is recorded");
-  const removed = run(state, ["--remove", "--apply"]);
-  assert.ok(removed.outcome.results.some((result) => result.status === "reverted"));
-  assert.equal(fs.readFileSync(path.join(copy, "SKILL.md"), "utf8"), "hand copy of the retired skill\n", "removal never touches the retired copy");
+  assert.deepEqual(receipt.links.map((entry) => path.basename(entry.link)), ["seo"], "ownership is carried forward");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("legacy skill links are retired once the plugin is registered; a foreign link is left alone", () => {
+  const state = fixture();
+  const link = withLegacyLink(state);
+  // A link the user made to somewhere else, recorded nowhere.
+  const foreignTarget = path.join(state.home, "elsewhere");
+  fs.mkdirSync(foreignTarget);
+  const foreign = path.join(state.claudeHome, "skills", "mine-linked");
+  fs.symlinkSync(foreignTarget, foreign, process.platform === "win32" ? "junction" : "dir");
+  const cli = fakeClaude(state.home);
+  const applied = runWithCli(state, ["--apply"], { bin: cli.bin, log: cli.log });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.equal(applied.report.outcome.results.find((result) => result.id === "claude-plugin-register").status, "registered");
+  assert.ok(!fs.existsSync(link), "the legacy link is gone");
+  assert.ok(fs.existsSync(path.join(state.agentsHome, "skills", "seo", "SKILL.md")), "its target is never touched");
+  assert.ok(fs.lstatSync(foreign).isSymbolicLink(), "a link AgentChef never recorded stays");
+  assert.deepEqual(readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json")).links, []);
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
@@ -236,10 +189,10 @@ test("a failed install rolls ~/.claude.json back along with the files under the 
     encoding: "utf8",
     windowsHide: true,
     timeout: scaledTimeout(60_000),
-    env: { ...fixtureEnv, AGENTCHEF_TEST_MODE: "1", AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-skill-links" }
+    env: { ...fixtureEnv, AGENTCHEF_TEST_MODE: "1", AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-plugin-marketplace" }
   });
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr + result.stdout, /Injected Claude install failure before claude-skill-links/);
+  assert.match(result.stderr + result.stdout, /Injected Claude install failure before\s+claude-plugin-marketplace/);
   assert.doesNotMatch(result.stderr + result.stdout, /Rollback could not restore/);
   assert.equal(fs.readFileSync(claudeJsonPath, "utf8"), before.claudeJson, "~/.claude.json is restored");
   assert.equal(fs.readFileSync(settingsPath, "utf8"), before.settings, "settings.json is restored");
@@ -385,7 +338,7 @@ test("a failed re-install restores the merge receipt together with the file it d
   settings.permissions.allow = settings.permissions.allow.filter((rule) => rule !== owned.preview);
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
   const before = { settings: fs.readFileSync(settingsPath, "utf8"), receipt: fs.readFileSync(receiptPath, "utf8") };
-  const failed = runRaw(state, ["--apply"], { AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-skill-links" });
+  const failed = runRaw(state, ["--apply"], { AGENTCHEF_TEST_CLAUDE_FAIL_BEFORE_ACTION: "claude-plugin-marketplace" });
   assert.notEqual(failed.status, 0);
   assert.equal(fs.readFileSync(settingsPath, "utf8"), before.settings, "settings.json is restored");
   assert.equal(fs.readFileSync(receiptPath, "utf8"), before.receipt, "the receipt is restored with it");
@@ -415,5 +368,25 @@ test("a write to ~/.claude.json between plan and apply is kept, not overwritten"
   assert.equal(after.agentchefTestTouched, true, "the concurrent write survives");
   assert.ok(after.mcpServers.serena, "AgentChef's merge still landed");
   assert.equal(after.mcpServers.context7.command, "custom", "the user's own entry is untouched");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a Claude plugin cache that differs from the source is reinstalled at the same version", () => {
+  const state = fixture();
+  const version = readJson(path.join(root, "package.json")).version;
+  const source = path.join(state.agentsHome, "plugins", "sources", "agentchef");
+  fs.mkdirSync(path.join(source, "agents"), { recursive: true });
+  fs.mkdirSync(path.join(source, ".claude-plugin"), { recursive: true });
+  fs.writeFileSync(path.join(source, ".claude-plugin", "plugin.json"), `${JSON.stringify({ name: "agentchef", version })}\n`);
+  fs.writeFileSync(path.join(source, "agents", "role.md"), "new role\n");
+  const cached = path.join(state.claudeHome, "plugins", "cache", "agentchef", "agentchef", version, "agents");
+  fs.mkdirSync(cached, { recursive: true });
+  fs.writeFileSync(path.join(cached, "role.md"), "stale role\n");
+  fs.writeFileSync(path.join(state.claudeHome, "plugins", "installed_plugins.json"), `${JSON.stringify({ version: 2, plugins: { "agentchef@agentchef": [{ scope: "user", version }] } })}\n`);
+  const cli = fakeClaude(state.home);
+  const applied = runWithCli(state, ["--apply"], { bin: cli.bin, log: cli.log });
+  assert.equal(applied.status, 0, applied.stderr);
+  const calls = fs.readFileSync(cli.log, "utf8").trim().split("\n").map((line) => JSON.parse(line).slice(0, 2).join(" "));
+  assert.deepEqual(calls.slice(-2), ["plugin uninstall", "plugin install"], "a stale same-version cache is reinstalled");
   fs.rmSync(state.home, { recursive: true, force: true });
 });

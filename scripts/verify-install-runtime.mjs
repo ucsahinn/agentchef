@@ -21,7 +21,6 @@ import {
   inspectPinnedSkillTarget,
   inspectSkillTree
 } from "./lib/skill-provenance.mjs";
-import { inspectDirectSkillTarget } from "./manage-direct-skill-target.mjs";
 import {
   CliUsageError,
   installCliErrorBoundary,
@@ -334,7 +333,6 @@ function inspectInstalledFiles(failures) {
   const marketplacePath = actionByComponent.get("plugin-marketplace").destination;
   const pluginPath = actionByComponent.get("codex-plugin").destination;
   const marketplacePluginPath = actionByComponent.get("codex-plugin-marketplace-source").destination;
-  const directSkills = readJson("catalog/skills.json").skills.filter((skill) => skill.directInstall === true);
 
   const requiredFiles = contract.operations
     .filter((action) => ["copy-file", "generate-mcp-profile", "write-ownership-marker", "write-marketplace"].includes(action.kind))
@@ -365,24 +363,6 @@ function inspectInstalledFiles(failures) {
   if (!fs.existsSync(marketplacePluginPath)) {
     failures.push(`Installed marketplace plugin source is missing: ${redact(marketplacePluginPath)}`);
   }
-  for (const skill of directSkills) {
-    const source = path.join(root, "plugins", "agentchef", "skills", skill.name);
-    const target = path.join(options.agentsHome, "skills", skill.name);
-    try {
-      const state = inspectDirectSkillTarget(source, target);
-      if (!["managed", "managed-with-extras"].includes(state.status)) {
-        failures.push(
-          `Installed direct skill ownership is invalid for ${skill.name}: ${redact(target)} (${state.reason || state.status})`
-        );
-      }
-      if (state.status === "managed-with-extras") {
-        warnings.push(`Installed direct skill preserves local extra files: ${skill.name} at ${redact(target)}.`);
-      }
-    } catch (error) {
-      failures.push(`Installed direct skill ownership could not be verified for ${skill.name}: ${error.message}`);
-    }
-  }
-
   let installedMcp = new Set();
   if (fs.existsSync(configPath)) {
     const configText = readText(configPath);
@@ -855,10 +835,21 @@ function inspectSkills(failures, warnings) {
     };
   }
 
-  const skillRoots = [
-    path.join(options.codexHome, "skills"),
-    path.join(options.agentsHome, "skills")
-  ];
+  // Every harness skill lives in the plugin's marketplace source; the bundled
+  // ones ship with it and the installer writes the pinned ones there.
+  const pluginSkillsRoot = path.join(options.agentsHome, "plugins", "sources", "agentchef", "skills");
+  const skillRoots = [pluginSkillsRoot];
+  // A harness skill still sitting in a plain skills folder is listed twice
+  // (and shadows the plugin copy in Claude Code) until the migration runs.
+  for (const plainRoot of [path.join(options.codexHome, "skills"), path.join(options.agentsHome, "skills")]) {
+    for (const skill of expectedEntries) {
+      for (const name of [skill.name, ...(skill.name === "agentchef-operator" ? ["codex-chef-operator"] : [])]) {
+        if (fs.existsSync(path.join(plainRoot, name, "SKILL.md"))) {
+          warnings.push(`Harness skill ${skill.name} also has a direct copy at ${redact(path.join(plainRoot, name))}; run npm run chef -- --migrate-identity --target both --apply to retire it.`);
+        }
+      }
+    }
+  }
   const locations = new Map();
   for (const skillRoot of skillRoots) {
     if (!fs.existsSync(skillRoot)) continue;
@@ -880,7 +871,7 @@ function inspectSkills(failures, warnings) {
   const duplicates = [...locations.entries()]
     .filter(([, roots]) => roots.length > 1)
     .map(([name, roots]) => ({ name, roots: roots.map(redact) }));
-  if (missing.length > 0) failures.push(`Curated global skills missing: ${missing.join(", ")}`);
+  if (missing.length > 0) failures.push(`Harness skills missing from the plugin: ${missing.join(", ")}`);
   if (duplicates.length > 0) {
     failures.push(`Duplicate global skill names are visible across skill roots: ${duplicates.map((entry) => entry.name).join(", ")}`);
   }
@@ -901,7 +892,7 @@ function inspectSkills(failures, warnings) {
         : inspectSkillTree(target, skill.name);
       if (!state.valid) {
         invalid.push({ name: skill.name, reason: state.reason, path: redact(target) });
-        failures.push(`Curated global skill is invalid: ${skill.name} (${state.reason}) at ${redact(target)}`);
+        failures.push(`Harness skill is invalid: ${skill.name} (${state.reason}) at ${redact(target)}`);
       }
     } catch (error) {
       invalid.push({ name: skill.name, reason: error.message, path: redact(target) });

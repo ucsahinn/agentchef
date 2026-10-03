@@ -165,32 +165,14 @@ write(
 );
 write(path.join(pluginTarget, "extra.txt"), "extra managed plugin file\n");
 write(path.join(marketplacePluginTarget, "marketplace-extra.txt"), "extra marketplace mirror file\n");
+const staleDirectCopy = path.join(agentsHome, "skills", directSkills[0].name);
+write(path.join(staleDirectCopy, "SKILL.md"), `---\nname: ${directSkills[0].name}\n---\n\nstale 1.2 direct copy\n`);
 for (const skill of directSkills) {
-  const directTarget = path.join(agentsHome, "skills", skill.name);
-  write(path.join(directTarget, "SKILL.md"), `---\nname: ${skill.name}\n---\n\nstale direct skill\n`);
-  write(
-    path.join(directTarget, ".agentchef-managed.json"),
-    JSON.stringify({
-      schemaVersion: "agentchef.managed-direct-skill.v1",
-      manager: "agentchef",
-      component: "direct-skill",
-      name: skill.name,
-      source: `plugins/agentchef/skills/${skill.name}`
-    }, null, 2) + "\n"
-  );
+  write(path.join(marketplacePluginTarget, "skills", skill.name, "SKILL.md"), `---\nname: ${skill.name}\n---\n\nstale plugin copy\n`);
 }
-// A pre-1.0.0 marker left next to a current one must be retired, not ignored.
-const dualMarkerSkill = directSkills[0].name;
-write(
-  path.join(agentsHome, "skills", dualMarkerSkill, ".codex-chef-managed.json"),
-  JSON.stringify({
-    schemaVersion: "codex-chef.managed-direct-skill.v1",
-    manager: "codex-chef",
-    component: "direct-skill",
-    name: dualMarkerSkill,
-    source: `plugins/codex-chef-workflows/skills/${dualMarkerSkill}`
-  }, null, 2) + "\n"
-);
+const pinnedInPlugin = path.join(marketplacePluginTarget, "skills", "systematic-debugging");
+write(path.join(pinnedInPlugin, "SKILL.md"), "---\nname: systematic-debugging\n---\n\npinned\n");
+write(path.join(pinnedInPlugin, ".agentchef-source.json"), JSON.stringify({ schemaVersion: "agentchef.pinned-skill.v1", package: "obra/superpowers", skill: "systematic-debugging" }) + "\n");
 write(
   path.join(agentsHome, "plugins", "marketplace.json"),
   JSON.stringify({
@@ -332,32 +314,22 @@ if (!fs.existsSync(path.join(pluginTarget, "extra.txt"))) {
 if (!fs.existsSync(path.join(marketplacePluginTarget, "marketplace-extra.txt"))) {
   fail("repair apply must not delete marketplace mirror extras without the explicit prune flag.");
 }
-if (fs.existsSync(path.join(agentsHome, "skills", dualMarkerSkill, ".codex-chef-managed.json"))) {
-  fail("repair apply must retire a legacy ownership marker left next to a current one.");
+if (fs.readFileSync(path.join(staleDirectCopy, "SKILL.md"), "utf8").indexOf("stale 1.2 direct copy") < 0) {
+  fail("repair apply must leave a direct skill copy alone; the migration retires it.");
 }
 for (const skill of directSkills) {
-  const directTarget = path.join(agentsHome, "skills", skill.name);
-  if (
-    fs.readFileSync(path.join(directTarget, "SKILL.md"), "utf8")
-    !== read(`plugins/agentchef/skills/${skill.name}/SKILL.md`)
-  ) {
-    fail(`repair apply must restore the direct $${skill.name} skill from its canonical plugin source.`);
-  }
-  const marker = readJson(path.join(directTarget, ".agentchef-managed.json"));
-  if (
-    marker.name !== skill.name
-    || marker.source !== `plugins/agentchef/skills/${skill.name}`
-  ) {
-    fail(`repair apply must write the correct direct $${skill.name} ownership marker.`);
+  const pluginCopy = path.join(marketplacePluginTarget, "skills", skill.name);
+  if (fs.readFileSync(path.join(pluginCopy, "SKILL.md"), "utf8") !== read(`plugins/agentchef/skills/${skill.name}/SKILL.md`)) {
+    fail(`repair apply must restore the plugin's ${skill.name} skill from its canonical source.`);
   }
   for (const relativePath of directSupportFiles[skill.name] || []) {
-    if (
-      fs.readFileSync(path.join(directTarget, relativePath), "utf8")
-      !== read(`plugins/agentchef/skills/${skill.name}/${relativePath}`)
-    ) {
-      fail(`repair apply must install the direct $${skill.name} support file ${relativePath}.`);
+    if (fs.readFileSync(path.join(pluginCopy, relativePath), "utf8") !== read(`plugins/agentchef/skills/${skill.name}/${relativePath}`)) {
+      fail(`repair apply must install the plugin's ${skill.name} support file ${relativePath}.`);
     }
   }
+}
+if (!fs.existsSync(path.join(pinnedInPlugin, "SKILL.md"))) {
+  fail("repair apply must keep a pinned skill the installer wrote into the plugin source.");
 }
 
 const repairedMarketplace = readJson(path.join(agentsHome, "plugins", "marketplace.json"));
@@ -609,7 +581,8 @@ const noteOnlyAgentsHome = path.join(noteOnlyRoot, ".agents");
 ensureDir(noteOnlyCodexHome);
 ensureDir(noteOnlyAgentsHome);
 for (const skill of JSON.parse(read("catalog/skills.json")).skills.filter((entry) => entry.install === true)) {
-  ensureDir(path.join(noteOnlyAgentsHome, "skills", skill.name));
+  // Pinned skills live in the plugin source since 1.3.0.
+  ensureDir(path.join(noteOnlyAgentsHome, "plugins", "sources", "agentchef", "skills", skill.name));
 }
 const noteOnlyApplied = parseResult(runRepair(["--apply"], noteOnlyCodexHome, noteOnlyAgentsHome), "repair note-only apply");
 if (noteOnlyApplied) {
@@ -628,117 +601,24 @@ if (noteOnlyApplied) {
   }
 }
 
-const repairAdoptionScenarios = [
-  { name: "fetch", display: "Fetch", flagArgs: ["--adopt-fetch-skill"] },
-  { name: "seo", display: "SEO", flagArgs: ["--adopt-seo-skill"] },
-  {
-    name: "evidence-research",
-    display: "Evidence Research",
-    flagArgs: ["--adopt-evidence-research-skill"]
-  },
-  {
-    name: "context-budget-planner",
-    display: "Context Budget Planner",
-    flagArgs: ["--adopt-direct-skill", "context-budget-planner"]
-  }
-];
-for (const scenario of repairAdoptionScenarios) {
-  const foreignRoot = fs.mkdtempSync(path.join(os.tmpdir(), `agentchef-repair-foreign-${scenario.name}-`));
-  const foreignCodexHome = path.join(foreignRoot, ".codex");
-  const foreignAgentsHome = path.join(foreignRoot, ".agents");
-  const foreignSkillRoot = path.join(foreignAgentsHome, "skills", scenario.name);
-  const foreignSkillText = `---\nname: ${scenario.name}\n---\n\nUser-owned unrelated ${scenario.display} workflow.\n`;
-  const foreignSentinel = "preserve this user-owned file\n";
-  write(path.join(foreignSkillRoot, "SKILL.md"), foreignSkillText);
-  write(path.join(foreignSkillRoot, "user-owned.txt"), foreignSentinel);
-  const foreignApply = runRepair(["--apply"], foreignCodexHome, foreignAgentsHome);
-  if (foreignApply.error) {
-    fail(`repair foreign ${scenario.display} collision could not run: ${foreignApply.error.message}`);
-  } else if (foreignApply.status === 0) {
-    fail(`repair apply must fail closed when the direct ${scenario.display} target is user-owned.`);
-  }
-  if (
-    fs.existsSync(foreignCodexHome)
-    || fs.existsSync(path.join(foreignAgentsHome, "plugins", "marketplace.json"))
-  ) {
-    fail(`repair foreign ${scenario.display} collision must perform zero managed writes before failing.`);
-  }
-  if (
-    fs.readFileSync(path.join(foreignSkillRoot, "SKILL.md"), "utf8") !== foreignSkillText
-    || fs.readFileSync(path.join(foreignSkillRoot, "user-owned.txt"), "utf8") !== foreignSentinel
-  ) {
-    fail(`repair foreign ${scenario.display} collision must preserve every user-owned file byte-for-byte.`);
-  }
-
-  const adopted = parseResult(
-    runRepair(["--apply", ...scenario.flagArgs], foreignCodexHome, foreignAgentsHome),
-    `repair explicit ${scenario.display} adoption`
-  );
-  if (adopted) {
-    if (
-      fs.readFileSync(path.join(foreignSkillRoot, "SKILL.md"), "utf8")
-      !== read(`plugins/agentchef/skills/${scenario.name}/SKILL.md`)
-    ) {
-      fail(`repair explicit ${scenario.display} adoption must install the canonical managed source.`);
-    }
-    if (fs.readFileSync(path.join(foreignSkillRoot, "user-owned.txt"), "utf8") !== foreignSentinel) {
-      fail(`repair explicit ${scenario.display} adoption must preserve unrelated user-owned files.`);
-    }
-  }
-}
-
-const linkedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-linked-fetch-"));
-const linkedCodexHome = path.join(linkedRoot, ".codex");
-const linkedAgentsHome = path.join(linkedRoot, ".agents");
-const linkedFetchRoot = path.join(linkedAgentsHome, "skills", "fetch");
-const linkedExternalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-linked-external-"));
-const foreignSkill = "---\nname: fetch\n---\n\nUser-owned unrelated Fetch workflow.\n";
-ensureDir(path.dirname(linkedFetchRoot));
-write(path.join(linkedExternalRoot, "SKILL.md"), foreignSkill);
-fs.symlinkSync(linkedExternalRoot, linkedFetchRoot, process.platform === "win32" ? "junction" : "dir");
-const linkedApply = runRepair(
-  ["--apply", "--adopt-fetch-skill"],
-  linkedCodexHome,
-  linkedAgentsHome
-);
-if (linkedApply.error) {
-  fail(`repair linked Fetch collision could not run: ${linkedApply.error.message}`);
-} else if (linkedApply.status === 0) {
-  fail("repair must reject a linked Fetch root even with explicit adoption.");
-}
-if (
-  fs.existsSync(linkedCodexHome)
-  || fs.existsSync(path.join(linkedAgentsHome, "plugins", "marketplace.json"))
-) {
-  fail("repair linked Fetch collision must perform zero managed writes.");
-}
-if (fs.readFileSync(path.join(linkedExternalRoot, "SKILL.md"), "utf8") !== foreignSkill) {
-  fail("repair linked Fetch collision must not write through the linked target.");
-}
-
-const danglingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-dangling-fetch-"));
-const danglingCodexHome = path.join(danglingRoot, ".codex");
-const danglingAgentsHome = path.join(danglingRoot, ".agents");
-const danglingFetchRoot = path.join(danglingAgentsHome, "skills", "fetch");
-const danglingExternalRoot = path.join(danglingRoot, "missing-external-fetch");
-ensureDir(path.dirname(danglingFetchRoot));
-fs.symlinkSync(danglingExternalRoot, danglingFetchRoot, process.platform === "win32" ? "junction" : "dir");
-for (const repairArgs of [["--apply"], ["--apply", "--adopt-fetch-skill"]]) {
-  const danglingApply = runRepair(repairArgs, danglingCodexHome, danglingAgentsHome);
-  if (danglingApply.error) {
-    fail(`repair dangling Fetch collision could not run: ${danglingApply.error.message}`);
-  } else if (danglingApply.status === 0) {
-    fail("repair must reject a dangling Fetch root with or without explicit adoption.");
-  }
-  if (
-    fs.existsSync(danglingCodexHome)
-    || fs.existsSync(path.join(danglingAgentsHome, "plugins", "marketplace.json"))
-  ) {
-    fail("repair dangling Fetch collision must perform zero managed writes.");
-  }
-  if (fs.existsSync(danglingExternalRoot) || !fs.lstatSync(danglingFetchRoot).isSymbolicLink()) {
-    fail("repair dangling Fetch collision must preserve the dangling link without creating its target.");
-  }
+// Since 1.3.0 repair never writes AGENTS_HOME/skills: a user's own skill
+// named like a bundled one, a link, and a dangling link stay exactly as they
+// are, and the repair still succeeds.
+{
+  const userRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-user-skills-"));
+  const userCodexHome = path.join(userRoot, ".codex");
+  const userAgentsHome = path.join(userRoot, ".agents");
+  const ownFetch = path.join(userAgentsHome, "skills", "fetch");
+  const ownSkill = "---\nname: fetch\n---\n\nUser-owned unrelated Fetch workflow.\n";
+  write(path.join(ownFetch, "SKILL.md"), ownSkill);
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-external-"));
+  write(path.join(externalRoot, "SKILL.md"), "external\n");
+  fs.symlinkSync(externalRoot, path.join(userAgentsHome, "skills", "seo"), process.platform === "win32" ? "junction" : "dir");
+  fs.symlinkSync(path.join(userRoot, "missing"), path.join(userAgentsHome, "skills", "gptpro"), process.platform === "win32" ? "junction" : "dir");
+  parseResult(runRepair(["--apply"], userCodexHome, userAgentsHome), "repair with user skills in AGENTS_HOME/skills");
+  if (fs.readFileSync(path.join(ownFetch, "SKILL.md"), "utf8") !== ownSkill) fail("repair must leave a user's own skill folder untouched.");
+  if (fs.readFileSync(path.join(externalRoot, "SKILL.md"), "utf8") !== "external\n") fail("repair must not write through a skill link.");
+  if (fs.existsSync(path.join(userRoot, "missing"))) fail("repair must not create a dangling link's target.");
 }
 
 for (const scenario of [

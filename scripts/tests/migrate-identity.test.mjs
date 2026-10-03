@@ -181,55 +181,58 @@ test("identity migration previews, converts, and is idempotent for both targets"
   const plan = run(state, ["--dry-run", "--target", "both"]);
   const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
   assert.equal(decision("codex-plugin-cache"), "cli");
-  assert.equal(decision("operator-skill-folder"), "rename");
-  assert.equal(decision(`direct-skill-marker:${identity.operatorSkill}`), "rewrite");
-  assert.equal(decision("direct-skill-marker:fetch"), "rewrite");
+  // Since 1.3.0 every skill comes from the plugin: AgentChef's direct copies
+  // are retired instead of being renamed or re-marked.
+  assert.equal(decision(`direct-skill-copy:${identity.legacyOperatorSkill}`), "retire");
+  assert.equal(decision("direct-skill-copy:fetch"), "retire");
+  // The plugin source has no pinned copy yet (the installer writes it), so
+  // the direct pinned copy stays until it does.
+  assert.equal(decision("direct-skill-copy:systematic-debugging"), "keep-until-plugin");
+  assert.equal(decision("operator-skill-folder"), "superseded-by-retire");
+  assert.equal(decision("direct-skill-marker:fetch"), "superseded-by-retire");
   assert.equal(decision("curated-skill-marker:systematic-debugging"), "rewrite");
+  assert.equal(decision(`claude-skill-link:${identity.legacyOperatorSkill}`), "retire");
+  assert.equal(decision("claude-operator-skill-link"), "superseded-by-retire");
   assert.equal(decision("codex-plugin-directory"), "rename");
   assert.equal(decision("marketplace-source-directory"), "rename");
   assert.equal(decision("marketplace"), "rewrite");
   assert.equal(decision("git-pre-commit-hook"), "rewrite");
   assert.equal(decision("claude-install-receipt"), "rewrite");
   assert.equal(decision("claude-merge-receipt:claude-settings-merge-receipt.json"), "rewrite");
-  assert.equal(decision("claude-operator-skill-link"), "relink");
   assert.equal(decision("claude-marketplace"), "rewrite");
   assert.equal(plan.dryRunOnly, true);
-  assert.ok(fs.existsSync(state.operator), "dry run renames nothing");
+  assert.ok(fs.existsSync(state.operator), "dry run removes nothing");
 
   const applied = run(state, ["--apply", "--target", "both"]);
   const statuses = Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]));
-  assert.equal(statuses["operator-skill-folder"], "renamed");
-  assert.equal(statuses[`direct-skill-marker:${identity.operatorSkill}`], "rewritten");
+  assert.equal(statuses[`direct-skill-copy:${identity.legacyOperatorSkill}`], "retired");
+  assert.equal(statuses["direct-skill-copy:fetch"], "retired");
+  assert.equal(statuses["direct-skill-copy:systematic-debugging"], "keep-until-plugin");
+  assert.equal(statuses[`claude-skill-link:${identity.legacyOperatorSkill}`], "retired");
   assert.equal(statuses["marketplace"], "rewritten");
   assert.equal(statuses["git-pre-commit-hook"], "rewritten");
-  assert.equal(statuses["claude-operator-skill-link"], "relinked");
   assert.equal(statuses["codex-plugin-cache"], "skipped");
 
-  const newOperator = path.join(state.agentsHome, "skills", identity.operatorSkill);
-  assert.ok(!fs.existsSync(state.operator) && fs.existsSync(newOperator));
-  const operatorMarker = readJson(path.join(newOperator, identity.managedMarker));
-  assert.equal(operatorMarker.schemaVersion, "agentchef.managed-direct-skill.v1");
-  assert.equal(operatorMarker.manager, "agentchef");
-  assert.equal(operatorMarker.name, identity.operatorSkill);
-  assert.equal(operatorMarker.source, `plugins/${identity.pluginName}/skills/${identity.operatorSkill}`);
-  assert.ok(!fs.existsSync(path.join(newOperator, identity.legacyManagedMarker)));
-  assert.equal(inspectDirectSkillTarget(path.join(root, "plugins", identity.pluginName, "skills", identity.operatorSkill), newOperator).status, "managed");
-  assert.equal(readJson(path.join(state.fetchSkill, identity.managedMarker)).source, `plugins/${identity.pluginName}/skills/fetch`);
-  const curatedMarker = readJson(path.join(state.curated, identity.sourceMarker));
-  assert.equal(curatedMarker.schemaVersion, "agentchef.pinned-skill.v1");
-  assert.ok(!fs.existsSync(path.join(state.curated, identity.legacySourceMarker)));
+  for (const copy of [state.operator, state.fetchSkill]) assert.ok(!fs.existsSync(copy), `${path.basename(copy)} copy retired`);
+  assert.ok(fs.existsSync(state.curated), "a pinned copy the plugin does not carry yet stays");
+  assert.ok(!fs.existsSync(path.join(state.agentsHome, "skills", identity.operatorSkill)), "the operator copy is not recreated under the new name");
+  // Everything removed sits in the migration backup.
+  const backupRoot = applied.outcome.backupRoot;
+  assert.ok(fs.readdirSync(backupRoot, { recursive: true }).some((entry) => String(entry).includes("fetch")), "the fetch copy is backed up");
   assert.ok(fs.existsSync(path.join(state.codexHome, "plugins", identity.pluginName, ".codex-plugin", "plugin.json")));
   assert.ok(!fs.existsSync(path.join(state.codexHome, "plugins", identity.legacyPluginName)));
-  assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName, ".codex-plugin", "plugin.json")));
+  assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName, "skills", "fetch", "SKILL.md")), "the plugin source carries the skill");
   const marketplace = readJson(path.join(state.agentsHome, "plugins", "marketplace.json"));
   assert.equal(marketplace.name, identity.marketplaceName);
   assert.deepEqual(marketplace.plugins.map((plugin) => plugin.name).sort(), [identity.pluginName, "other-plugin"].sort());
   const hook = fs.readFileSync(path.join(state.home, ".githooks", "pre-commit"), "utf8");
   assert.ok(hook.includes(identity.hookBanner) && !hook.includes(identity.legacyHookBanner));
-  assert.equal(readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json")).schemaVersion, "agentchef.claude-install.v1");
+  const installReceipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));
+  assert.equal(installReceipt.schemaVersion, "agentchef.claude-install.v1");
+  assert.deepEqual(installReceipt.links, [], "the retired link leaves the receipt too");
   assert.equal(readJson(path.join(state.claudeHome, "agentchef", "receipts", "claude-settings-merge-receipt.json")).schemaVersion, "agentchef.json-merge-receipt.v1");
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", identity.legacyOperatorSkill)));
-  assert.ok(fs.lstatSync(path.join(state.claudeHome, "skills", identity.operatorSkill)).isSymbolicLink());
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", identity.operatorSkill)));
   const claudeMarketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
   assert.deepEqual(claudeMarketplace.plugins.map((plugin) => plugin.source), [`./sources/${identity.pluginName}`]);
   const backups = fs.readdirSync(path.join(state.codexHome, "backups"));
@@ -241,7 +244,8 @@ test("identity migration previews, converts, and is idempotent for both targets"
   const secondStatuses = again.outcome.results.map((result) => result.status);
   // "foreign": the plugin CLI swap is skipped here, so the legacy cache still
   // holds the installed plugin and is kept.
-  assert.ok(secondStatuses.every((status) => ["current", "absent", "skipped", "no-marker", "foreign"].includes(status)), JSON.stringify(again.outcome.results));
+  // "keep-until-plugin": the pinned copy waits for the installer to put it in the plugin.
+  assert.ok(secondStatuses.every((status) => ["current", "absent", "skipped", "no-marker", "foreign", "keep-until-plugin"].includes(status)), JSON.stringify(again.outcome.results));
   assert.ok(fs.existsSync(path.join(legacyCachedPlugin, "plugin.json")), "a cache that still holds the plugin is never deleted");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
@@ -328,11 +332,12 @@ test("identity migration finishes when the current operator name is already link
   fs.symlinkSync(currentOperator, path.join(state.claudeHome, "skills", identity.operatorSkill), process.platform === "win32" ? "junction" : "dir");
   const applied = run(state, ["--apply", "--target", "both"]);
   const statuses = Object.fromEntries(applied.outcome.results.map((result) => [result.id, result.status]));
-  assert.equal(statuses["claude-operator-skill-link"], "relinked");
+  assert.equal(statuses[`claude-skill-link:${identity.legacyOperatorSkill}`], "retired");
+  assert.equal(statuses[`claude-skill-link:${identity.operatorSkill}`], "retired");
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", identity.legacyOperatorSkill)), "the legacy link is gone");
-  assert.ok(fs.existsSync(path.join(state.claudeHome, "skills", identity.operatorSkill, "SKILL.md")), "the current link still resolves");
+  assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", identity.operatorSkill)), "the current link to a retired copy is gone too");
   const again = run(state, ["--apply", "--target", "both"]);
-  assert.ok(again.outcome.results.every((result) => !["relinked", "renamed", "rewritten"].includes(result.status)), "a rerun changes nothing");
+  assert.ok(again.outcome.results.every((result) => !["relinked", "renamed", "rewritten", "retired"].includes(result.status)), "a rerun changes nothing");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
@@ -415,8 +420,22 @@ test("a 1.2 home moves from agentchef-workflows to agentchef", () => {
   assert.deepEqual(marketplace.plugins.map((plugin) => plugin.name).sort(), [identity.pluginName, "other-plugin"].sort());
   const claudeMarketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
   assert.deepEqual(claudeMarketplace.plugins.map((plugin) => [plugin.name, plugin.source]), [[identity.pluginName, `./sources/${identity.pluginName}`]]);
-  // A direct-skill marker written under the old folder name still proves ownership.
-  const fetchState = inspectDirectSkillTarget(path.join(root, "plugins", identity.pluginName, "skills", "fetch"), state.fetchSkill);
-  assert.equal(fetchState.status.startsWith("managed"), true, fetchState.status);
+  // A direct-skill marker written under the old folder name still proves
+  // ownership, so the copy is retired once the plugin source carries fetch.
+  assert.equal(decision("direct-skill-copy:fetch"), "retire");
+  assert.ok(!fs.existsSync(state.fetchSkill), "the 1.2 direct copy is retired");
+  assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName, "skills", "fetch", "SKILL.md")));
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+test("a pinned direct copy is retired once the plugin source carries that skill", () => {
+  const state = legacyFixture({ withClaude: false });
+  // The installer wrote the pinned skill into the plugin source.
+  copyTree(state.curated, path.join(state.agentsHome, "plugins", "sources", identity.legacyPluginName, "skills", "systematic-debugging"));
+  const plan = run(state, ["--dry-run"]);
+  assert.equal(plan.steps.find((step) => step.id === "direct-skill-copy:systematic-debugging")?.decision, "retire");
+  run(state, ["--apply"]);
+  assert.ok(!fs.existsSync(state.curated), "the direct pinned copy is gone");
+  assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName, "skills", "systematic-debugging", "SKILL.md")), "the plugin copy stays");
   fs.rmSync(state.home, { recursive: true, force: true });
 });

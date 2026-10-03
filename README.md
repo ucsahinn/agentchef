@@ -79,13 +79,15 @@ continue to win where they should.
 
 Skills teach the agent how to handle a focused job. The agent sees a short
 description first and loads the full instructions only when the task matches.
-AgentChef ships ten local plugin workflows and offers fifteen reviewed skills
-through the full install profile. Every local workflow is synchronized as a
-managed direct skill, so calls such as `$adaptive-agent-routing`,
-`$context-budget-planner`, `$fetch`, `$seo`, and `$evidence-research` work
-without a separate plugin installation. The equivalent plugin namespace becomes
-available only after the marketplace plugin is installed and a new session is
-started.
+AgentChef ships ten bundled workflows and offers fifteen reviewed skills
+through the full install profile. All of them reach both CLIs only through the
+`agentchef` plugin, so each skill is listed once per CLI. The `$seo` and
+`$evidence-research` workflows, for example, are called `$agentchef:seo` and
+`$agentchef:evidence-research` in Codex and `/agentchef:seo` and
+`/agentchef:evidence-research` in Claude Code (bare `/seo` also works in
+Claude Code when no other command has that name). The plugin
+skills become available after the installer registers the plugin and a new
+session is started.
 
 [See what is bundled, installed, and optional →](docs/skills.md)
 

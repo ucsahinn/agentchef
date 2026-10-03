@@ -188,20 +188,13 @@ const requiredOperations = [
 for (const id of requiredOperations) {
   if (!operation(id)) fail(`Manifest missing installer-covered operation: ${id}`);
 }
+// Since 1.3.0 every skill reaches both CLIs through the plugin; a direct copy
+// of a bundled skill would list it twice.
 for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall === true)) {
-  const id = `${skill.name}-direct-skill`;
-  const directOperation = operation(id);
-  if (!directOperation) {
-    fail(`Manifest missing managed direct-skill operation: ${id}`);
-    continue;
-  }
-  if (directOperation.source !== `plugins/agentchef/skills/${skill.name}`) {
-    fail(`Manifest direct-skill source drifted for ${skill.name}.`);
-  }
-  if (directOperation.destination !== `\${AGENTS_HOME}/skills/${skill.name}`) {
-    fail(`Manifest direct-skill destination drifted for ${skill.name}.`);
-  }
+  if (operation(`${skill.name}-direct-skill`)) fail(`Bundled skill ${skill.name} must not be installed as a direct copy.`);
 }
+requireText(ps, "--skills-root", "PowerShell installer (pinned skills go into the plugin source)");
+requireText(sh, "--skills-root", "Bash installer (pinned skills go into the plugin source)");
 
 requireText(ps, "[switch]$All", "PowerShell installer");
 requireText(ps, "[switch]$InstallSkills", "PowerShell installer");
@@ -244,12 +237,10 @@ requireText(ps, "agents", "PowerShell installer");
 requireText(ps, "profiles", "PowerShell installer");
 requireText(ps, "plugins\\agentchef", "PowerShell installer");
 requireText(ps, "plugins\\sources\\agentchef", "PowerShell installer");
-requireText(ps, "manage-direct-skill-target.mjs", "PowerShell installer");
 requireText(ps, "AdoptFetchSkill", "PowerShell installer");
 requireText(ps, "AdoptSeoSkill", "PowerShell installer");
 requireText(ps, "AdoptEvidenceResearchSkill", "PowerShell installer");
 requireText(ps, "AdoptDirectSkill", "PowerShell installer");
-requireText(ps, "Get-ManagedDirectSkills", "PowerShell installer");
 requireText(ps, "marketplace.json", "PowerShell installer");
 requireText(ps, "upsert-marketplace-entry.mjs", "PowerShell installer");
 requireText(ps, "Upsert AgentChef plugin marketplace entry", "PowerShell installer");
@@ -291,7 +282,6 @@ requireText(sh, "--adopt-git-ignore", "Bash installer");
 requireText(sh, "--adopt-git-hook", "Bash installer");
 requireText(sh, "--adopt-git-excludes-file", "Bash installer");
 requireText(sh, "--adopt-git-hooks-path", "Bash installer");
-requireText(sh, "direct_skill_names", "Bash installer");
 requireText(sh, "NO_BACKUP=0", "Bash installer");
 requireText(sh, "DRY_RUN=0", "Bash installer");
 requireText(sh, "PLAIN_OUTPUT=0", "Bash installer");
@@ -330,7 +320,6 @@ requireText(sh, "/agents", "Bash installer");
 requireText(sh, "/profiles", "Bash installer");
 requireText(sh, "plugins/agentchef", "Bash installer");
 requireText(sh, "plugins/sources/agentchef", "Bash installer");
-requireText(sh, "manage-direct-skill-target.mjs", "Bash installer");
 requireText(sh, "adopt-fetch-skill", "Bash installer");
 requireText(sh, "adopt-seo-skill", "Bash installer");
 requireText(sh, "adopt-evidence-research-skill", "Bash installer");
@@ -489,9 +478,6 @@ for (const id of [
 ]) {
   if (operation(id)?.target !== "shared") fail(`Operation ${id} must be shared between install targets.`);
 }
-for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall === true)) {
-  if (operation(`${skill.name}-direct-skill`)?.target !== "shared") fail(`Direct skill ${skill.name} must be a shared install operation.`);
-}
 for (const id of ["codex-agents-md", "codex-config", "codex-plugin", "plugin-marketplace", "installed-plugin-cache-refresh"]) {
   if (operation(id)?.target !== "codex") fail(`Operation ${id} must stay a codex-only operation.`);
 }
@@ -555,8 +541,8 @@ requireOrderedText(sh, ["PLUGIN_REFRESH_HELPER=", "Claude Code target"], "Bash i
   if (claudeOnly.selectedComponents.some((item) => item.target === "codex")) {
     fail("Claude-only contract must not select codex operations.");
   }
-  if (!claudeOnly.operations.some((action) => action.kind === "write-ownership-marker")) {
-    fail("Claude-only contract must still write shared direct-skill ownership markers.");
+  if (!claudeOnly.selectedComponents.some((item) => item.id === "codex-plugin-marketplace-source")) {
+    fail("Claude-only contract must still sync the plugin source that carries every skill.");
   }
 }
 
@@ -618,9 +604,8 @@ function validateResolvedInstallContract() {
   if (copiedProfiles.some((name) => generatedNames.includes(name))) {
     fail("Generated MCP profiles must not also be modeled as plain copies.");
   }
-  const markerActions = contract.operations.filter((action) => action.kind === "write-ownership-marker");
-  if (markerActions.length !== skillCatalog.skills.filter((skill) => skill.directInstall === true).length) {
-    fail("Resolved installer contract must include one ownership-marker action per direct skill.");
+  if (contract.operations.some((action) => action.kind === "write-ownership-marker")) {
+    fail("Resolved installer contract must not write direct-skill ownership markers; skills come from the plugin.");
   }
   if (!contract.operations.some((action) => action.kind === "refresh-plugin-cache")) {
     fail("Resolved installer contract must include installed plugin cache refresh.");
@@ -656,8 +641,7 @@ function validateResolvedInstallContract() {
     path.join(codexHome, "serena-pool.mjs"),
     path.join(codexHome, "full.config.toml"),
     path.join(codexHome, "multi-session.config.toml"),
-    path.join(codexHome, "offline.config.toml"),
-    ...markerActions.map((action) => action.destination)
+    path.join(codexHome, "offline.config.toml")
   ]) {
     if (!contract.preflightTargets.includes(expectedTarget)) {
       fail(`Manifest-derived preflight inventory is missing target: ${expectedTarget}`);
@@ -674,7 +658,6 @@ function validateResolvedInstallContract() {
     '"profiles") -Filter "*.toml"',
     "Install-Directory -Source $PluginSource -Destination $PluginTarget",
     "Install-Directory -Source $PluginSource -Destination $MarketplacePluginTarget",
-    "Install-Directory -Source $DirectSource -Destination $DirectTarget",
     "Upsert AgentChef plugin marketplace entry",
     "Refresh installed AgentChef plugin cache"
   ], "PowerShell installer operation order");
@@ -688,7 +671,6 @@ function validateResolvedInstallContract() {
     '/profiles/*.toml',
     'install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"',
     'install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"',
-    'install_directory "$DIRECT_SKILL_SOURCE" "$DIRECT_SKILL_TARGET"',
     "Would upsert AgentChef plugin marketplace entry",
     "Refresh installed AgentChef plugin cache"
   ], "Bash installer operation order");

@@ -2204,9 +2204,9 @@ async function runUpdate(interaction = {}) {
     let applied;
     if (resumableReceipt) advanceUpdateRecoveryReceipt(resumableReceipt, "managed-refresh-started", { sourceHead: beforeHead.value });
     if (process.platform === "win32") {
-      applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
+      applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", "-InstallSkills", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
     } else {
-      applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
+      applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", "--install-skills", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
     }
     const completed = completeAppliedAction(applied, false, {
       kind: "update",
@@ -2291,9 +2291,9 @@ async function runUpdate(interaction = {}) {
   printProgress(80, localText("Refreshing managed files", "Managed dosyalar yenileniyor"));
   advanceUpdateRecoveryReceipt(recoveryReceipt, "managed-refresh-started", { sourceHead: afterHead.value });
   if (process.platform === "win32") {
-    applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
+    applied = runPowerShell("update-install", ".\\scripts\\install.ps1", ["-Update", "-PlainOutput", "-InstallSkills", ...installerTargetArgs(updateTarget()).powershell], { quiet: !options.details });
   } else {
-    applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
+    applied = runBash("update-install", "scripts/install.sh", ["--update", "--plain-output", "--install-skills", ...installerTargetArgs(updateTarget()).bash], { quiet: !options.details });
   }
   if (applied.ok) printProgress(90, localText("Verifying installed runtime", "Kurulu runtime doğrulanıyor"));
   const completed = completeAppliedAction(applied, false, {
@@ -3986,10 +3986,8 @@ function printInstallState(installation) {
 }
 
 function inspectCuratedSkillStatus(managedSkills, skillsCliVersion = "") {
-  const roots = [
-    path.join(codexHome(), "skills"),
-    path.join(agentsHome(), "skills")
-  ];
+  // Every harness skill lives in the plugin's marketplace source since 1.3.0.
+  const roots = [path.join(agentsHome(), "plugins", "sources", "agentchef", "skills")];
   const discoveredNames = new Set();
   for (const root of roots) {
     if (!fs.existsSync(root)) continue;
@@ -4012,11 +4010,20 @@ function inspectCuratedSkillStatus(managedSkills, skillsCliVersion = "") {
     } else if (matchingRoots.length === 1) {
       const target = path.join(matchingRoots[0], skill.name);
       try {
+        // A bundled skill in the plugin source carries no marker; it is the
+        // installed copy of the repository source and must match it.
+        const bundledMatches = () => {
+          const source = path.join(root, "plugins", "agentchef", "skills", skill.name);
+          return listCanonicalTreeFiles(source).every((file) => {
+            try {
+              return fs.readFileSync(path.join(source, ...file.split("/"))).equals(fs.readFileSync(path.join(target, ...file.split("/"))));
+            } catch {
+              return false;
+            }
+          });
+        };
         const inspection = skill.directInstall === true
-          ? inspectDirectSkillTarget(
-              path.join(root, "plugins", "agentchef", "skills", skill.name),
-              target
-            )
+          ? (bundledMatches() ? { status: "managed" } : { status: "drifted", reason: "differs-from-source" })
           : inspectPinnedSkillTarget(target, {
               package: skill.package,
               commit: skill.commit,

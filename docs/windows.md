@@ -65,9 +65,11 @@ is unavailable it fails closed and produces no cleanup candidates. Use
 `codex --profile multi-session` for secondary concurrent windows and see
 [multi-session process hygiene](process-hygiene.md).
 
-Claude Code skill links are directory junctions (`~/.claude/skills/<name>`
-into `~/.agents/skills/<name>`). Junctions need no administrator rights or
-Developer Mode. `CLAUDE_CONFIG_DIR` relocates the whole Claude home,
+Since 1.3.0 AgentChef creates no skill junctions: Claude Code loads every
+AgentChef skill from the `agentchef` plugin, so no administrator rights or
+Developer Mode are involved. Junctions a 1.0–1.2 install made under
+`~/.claude/skills` are retired by the migration (see
+[Claude skill links](../kb/claude-skill-links.md)). `CLAUDE_CONFIG_DIR` relocates the whole Claude home,
 including `.claude.json` (which otherwise lives at `~/.claude.json`, not inside
 `~/.claude`); that is how the scratch-home tests stay isolated.
 

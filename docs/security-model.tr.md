@@ -296,13 +296,20 @@ ayarlar. Kurucu, devralınan Git konum değişkenlerini (`GIT_DIR`,
 oluşturur. Geri alma, yedeği olmayan ve üzerine yazılmış bir dosyayı asla
 silmez.
 
-Yonetilen installer on canonical lokal workflow dizininin tamamını
-`AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder; böylece direct invocation
-plugin kurulumuna bağlı kalmaz. Skill başına kalıcı ownership marker,
-Chef-managed veya exact legacy içeriği foreign collision'dan ayırır. Foreign
-içerikte installer hiçbir managed dosya yazmadan durur; exact hedef açıkça
-sahiplenilmedikçe üzerine yazmaz. Güncellemeler backup desteklidir, ilgisiz
-skill dizinleri ve extra dosyalar korunur. Fetch
+1.3.0'dan beri AgentChef'in her skill'i iki CLI'ya da yalnızca plugin
+üzerinden ulaşır. On bundled skill
+`AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` plugin kaynağında gelir;
+pinned skill'ler de `.agentchef-source.json` provenance kayıtlarıyla aynı
+klasöre yazılır. Installer `AGENTS_HOME/skills` altına hiçbir şey yazmaz ve
+`~/.claude/skills` altında bağlantı kurmaz; bu yüzden oradaki kullanıcı
+skill'leri hiçbir zaman çakışma hedefi olmaz. `-Adopt*Skill` ve
+`--adopt-skill-links` bayrakları etkisizdir. 1.0–1.2 kurulumundan kalan
+doğrudan kopyalar yalnızca açık `--migrate-identity` komutuyla emekli edilir
+(önce yedek alınır; yalnızca marker'ı ya da provenance kaydı AgentChef'e ait
+olduğunu kanıtlayan ve skill'i plugin kaynağında zaten bulunan kopyalar için);
+yabancı dizin ve bağlantılara asla dokunulmaz. Claude installer'ı, önceki
+makbuzunun kaydettiği bağlantıları yalnızca plugin başarıyla kaydedildikten
+sonra emekli eder. Fetch
 `allow_implicit_invocation: false` kalır; SEO ile Evidence Research yalnız
 açıklamaları açıkça eşleştiğinde implicit seçilebilir.
 
@@ -311,7 +318,7 @@ kalan `AGENTS_HOME/plugins/sources/agentchef` yonetilen aynasini
 kullanir. Bu kayıt plugin'i keşfedilebilir yapar; kurmaz veya etkinleştirmez.
 Namespace'li plugin kullanımı explicit plugin kurulumu ve yeni oturum gerektirir.
 Marketplace JSON, platform launcher'ı, `serena-pool.mjs`, kopyalanan/üretilen
-profiller, direct-skill ownership, seçilen bütün kaynaklar ve mevcut hedef yol
+profiller, seçilen bütün kaynaklar ve mevcut hedef yol
 bileşenlerinin tamamı herhangi bir managed write öncesinde preflight edilir.
 Configured home dışına kaçan symlink veya junction descendant'ları fail-closed
 davranır.
@@ -339,7 +346,9 @@ adlari cleanup adayi olarak raporlanir; cunku Codex'in initial skill-list
 butcesini sisirebilirler ama kullanici tarafindan bilerek kurulmus olabilirler.
 Managed AgentChef plugin dizini icindeki ekstra dosyalari silmek icin ayrica
 `--prune-managed-plugin-extras` flag'i gerekir; bu islem de backup sonrasi
-yalnizca tek managed plugin hedefiyle sinirli kalir.
+yalnizca tek managed plugin hedefiyle sinirli kalir. Plugin kaynağındaki,
+provenance kaydını taşıyan pinned skill'ler bu flag verilse bile ekstra dosya
+sayılmaz. Repair artık doğrudan skill kopyalarını uzlaştırmaz.
 
 ## Update Modu
 

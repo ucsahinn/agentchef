@@ -38,7 +38,8 @@ const options = {
   adoptExisting: false,
   verifyOnly: false,
   json: false,
-  rollbackReceipt: ""
+  rollbackReceipt: "",
+  skillsRoot: ""
 };
 
 const PINNED_SOURCE_RECEIPT = ".agentchef-pinned-source.json";
@@ -50,13 +51,14 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--adopt-existing") options.adoptExisting = true;
   else if (arg === "--verify-only") options.verifyOnly = true;
   else if (arg === "--json") options.json = true;
-  else if (["--package", "--commit", "--skill", "--cli-version", "--rollback-receipt"].includes(arg)) {
+  else if (["--package", "--commit", "--skill", "--cli-version", "--rollback-receipt", "--skills-root"].includes(arg)) {
     const key = {
       "--package": "package",
       "--commit": "commit",
       "--skill": "skill",
       "--cli-version": "cliVersion",
-      "--rollback-receipt": "rollbackReceipt"
+      "--rollback-receipt": "rollbackReceipt",
+      "--skills-root": "skillsRoot"
     }[arg];
     options[key] = requireCliValue(args, index, arg);
     index += 1;
@@ -317,7 +319,11 @@ try {
     );
   } else {
     const agentsHome = path.resolve(process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"));
-    const target = path.join(agentsHome, "skills", options.skill);
+    // The installers place pinned skills inside the AgentChef plugin's
+    // marketplace source, so both CLIs list them with the bundled ones. The
+    // root must stay inside AGENTS_HOME.
+    const skillsRoot = options.skillsRoot ? path.resolve(options.skillsRoot) : path.join(agentsHome, "skills");
+    const target = path.join(skillsRoot, options.skill);
     const backupRoot = path.join(
       codexHome,
       "backups",

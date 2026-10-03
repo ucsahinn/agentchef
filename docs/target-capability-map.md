@@ -22,14 +22,14 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | Runtime MCP profiles (`full`, `multi-session`, `offline`, `token-safe`, ...) | generated `*.config.toml` profiles | no profile concept | **not mapped** |
 | Specialist agents | `~/.codex/agents/*.toml` (32 role files) | plugin subagents `agentchef:<role>` under `plugins/agentchef/agents/*.md`; `~/.claude/agents/` untouched | mapped, namespaced |
 | Coordinator to worker enforcement | catalog-bound worker lists in role config | coordinator subagents declare `Agent(agentchef:<worker>, ...)` tool allowlists; enforcement is by tool permission, not by catalog | partial |
-| Bundled workflow skills | direct copies under `~/.agents/skills/<name>` plus the plugin | directory links `~/.claude/skills/<name>` to the same managed `~/.agents/skills/<name>` tree, plus the plugin | mapped, single managed copy |
-| Curated commit-pinned skills | `~/.agents/skills/<name>` with provenance marker | same tree, exposed to Claude through the same directory links | mapped |
-| Plugin distribution | `~/.codex/plugins/agentchef` copy plus `~/.agents/plugins/marketplace.json` written by AgentChef | `~/.agents/plugins/.claude-plugin/marketplace.json` written by AgentChef; installation only through `claude plugin marketplace add` and `claude plugin install`; Claude's own plugin cache is never hand-written | partial: different ownership model |
+| Bundled workflow skills | plugin skills `$agentchef:<skill>` from `~/.agents/plugins/sources/agentchef/skills/<name>`; no direct copy in `~/.agents/skills` | plugin skills `/agentchef:<skill>` from the same plugin source; nothing linked into `~/.claude/skills` | mapped, plugin is the single source |
+| Curated commit-pinned skills | written into `~/.agents/plugins/sources/agentchef/skills/<name>` with a provenance record | same plugin source, so they reach Claude through the plugin too | mapped |
+| Plugin distribution | `~/.codex/plugins/agentchef` copy plus `~/.agents/plugins/marketplace.json` written by AgentChef | `~/.agents/plugins/.claude-plugin/marketplace.json` written by AgentChef; installation only through `claude plugin marketplace add` and `claude plugin install --scope user` (reinstalled when the cached copy differs from the source); Claude's own plugin cache is never hand-written | partial: different ownership model |
 | Approval rules | `~/.codex/rules/default.rules` prefix rules (`allow` / `prompt`) | `permissions.allow` and `permissions.ask` rules generated from the same file (`Bash(...)`, `PowerShell(...)`); nothing is emitted as `deny` | mapped (allow, prompt); see below for what does not carry over |
 | Session-end process hygiene hook | plugin hook `hooks/process-hygiene.json` trusted by Codex | not published in this release (Claude Code ends its own MCP children at session end) | **not mapped** yet |
 | Global Git guards | shared `~/.githooks/pre-commit`, `~/.gitignore_global`, `core.hooksPath`, `core.excludesfile` | identical files; one global slot owned once for both targets | mapped, shared |
 | Backups, journal, lock | `~/.codex/backups/<prefix>-*` with journal and lock directories | `~/.claude/agentchef/backups/agentchef-*` with the same journal format; lock on `~/.claude` and `~/.agents` | mapped |
-| Runtime verification | `codex doctor`, `codex mcp list`, installed-file drift | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt verification, link verification | mapped |
+| Runtime verification | `codex doctor`, `codex mcp list`, installed-file drift | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt verification, plugin-source skill verification | mapped |
 
 ## Permission and sandbox semantics
 
@@ -63,7 +63,8 @@ Date checked: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 
 - Write `bypassPermissions`, `dontAsk`, broad `allow` wildcards, HTTP hooks, or
   `disableAllHooks`.
-- Replace a foreign real directory under `~/.claude/skills/` with a link; only
-  AgentChef-marked copies are adopted, and only with `--adopt-skill-links`.
+- Write, link, or remove anything of yours under `~/.claude/skills/` or
+  `~/.agents/skills/`; only links and copies AgentChef can prove it made in
+  1.0–1.2 are retired (see [Claude skill links](../kb/claude-skill-links.md)).
 - Edit `~/.claude/CLAUDE.md`, `~/.claude/agents/`, OAuth state, project
   history, or any key of `.claude.json` other than `mcpServers`.

@@ -79,13 +79,15 @@ yerde üstün gelmeye devam eder.
 
 Skill, ajana belirli bir işi hangi adımlarla yapacağını anlatır. Ajan önce
 kısa açıklamayı görür; tam talimatı yalnızca görev eşleştiğinde yükler.
-AgentChef on lokal plugin workflow'u sunar ve full install profilinde on beş
-incelenmiş skill'e yer verir. On lokal workflow'un tamamı yönetilen direct
-skill olarak senkronize edilir; `$adaptive-agent-routing`,
-`$context-budget-planner`, `$fetch`, `$seo` ve `$evidence-research` gibi
-çağrılar ayrı bir plugin kurulumu olmadan çalışır. Plugin namespace'i ise
-marketplace plugin'i kurulduktan ve yeni bir oturum açıldıktan sonra
-kullanılabilir.
+AgentChef on bundled workflow sunar ve full install profilinde on beş
+incelenmiş skill'e yer verir. Hepsi iki CLI'ya da yalnızca `agentchef`
+plugin'i üzerinden ulaşır; bu yüzden her skill CLI başına bir kez listelenir.
+Örneğin `$seo` ve `$evidence-research` workflow'ları Codex'te
+`$agentchef:seo` ve `$agentchef:evidence-research`, Claude Code'da
+`/agentchef:seo` ve `/agentchef:evidence-research` diye çağrılır (başka bir
+komut aynı adı taşımıyorsa Claude Code'da yalın `/seo` da çalışır).
+Plugin skill'leri, installer plugin'i kaydettikten ve yeni bir oturum
+açıldıktan sonra kullanılabilir.
 
 [Hangisi bundled, hangisi kurulur, hangisi opsiyonel gör →](docs/skills.tr.md)
 

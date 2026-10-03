@@ -63,9 +63,10 @@ ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler
 1.0.0, diskteki kimliği `codex-chef`'ten `agentchef`'e çevirir: sahiplik
 işaretçileri (`.agentchef-managed.json`, `.agentchef-source.json`), işlem
 günlüğü ve kilit adları, yedek klasörü önekleri, makbuz ve rapor şema
-stringleri (`agentchef.<ad>.vN`), plugin klasörü (`plugins/agentchef`),
-operator skill'i (`agentchef-operator`), kişisel marketplace adı ve plugin
-id'si (`agentchef@agentchef`), Git hook banner'ı ve `AGENTCHEF_*`
+stringleri (`agentchef.<ad>.vN`), plugin klasörü
+(`plugins/agentchef-workflows`), operator skill'i (`agentchef-operator`),
+kişisel marketplace adı ve plugin id'si (`agentchef-workflows@agentchef`;
+plugin'in kendisi 1.3.0'da `agentchef` oldu), Git hook banner'ı ve `AGENTCHEF_*`
 ortam değişkenleri.
 
 Güncelleme günü hiçbir şey bozulmaz: her okuyucu eski yazımı kabul eder, bu
@@ -123,6 +124,58 @@ npm run chef -- --update --apply    # incelemeden sonra uygula
 Açıkça seçmek için `--target codex|claude|both` ver. Güncellemeden sonra Serena
 backend'i yeni pin (v1.7.0) için bir kez daha indirilir; bu yüzden ilk semantic
 çağrı daha uzun sürer. Nelerin değiştiği [sürüm notlarında](release-notes.tr.md).
+
+## 1.0–1.2'den 1.3.0'a Geçiş
+
+1.3.0, plugin'in adını `agentchef-workflows`'tan `agentchef`'e çevirir.
+Çağrılar artık Codex'te `$agentchef:<skill>`, Claude Code'da
+`/agentchef:<skill>` (başka bir komut aynı adı taşımıyorsa orada yalın
+`/<skill>` da çalışır), bir rol için de `agentchef:<rol>` biçimindedir.
+
+AgentChef'in her skill'i artık iki CLI'ya da yalnızca plugin skill'i olarak
+ulaşır. On bundled skill plugin'in içinde gelir; on beş pinned upstream skill
+ise (`-All`, `-InstallSkills`, `--all`, `--install-skills`) aynı plugin
+kaynağına, `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` altına, her
+biri kendi `.agentchef-source.json` provenance kaydıyla yazılır. Installer
+artık skill'leri `AGENTS_HOME/skills` altına kopyalamaz ve
+`~/.claude/skills` altına bağlamaz; böylece her skill CLI başına iki kez
+değil bir kez listelenir. `-AdoptSkillLinks`, `--adopt-skill-links` ve
+`-Adopt*Skill` / `--adopt-*-skill` bayrakları hâlâ kabul edilir ama yalnızca
+bir uyarı basar.
+
+1.0–1.2 kurulumunu göç komutuyla dönüştür; önce ön izle:
+
+```powershell
+npm run chef -- --migrate-identity --target both          # ön izleme
+npm run chef -- --migrate-identity --target both --apply
+```
+
+Göç; plugin klasörlerini, marketplace girdilerini ve Codex'teki
+`[plugins."agentchef-workflows@agentchef"]` ile hook-state tablolarını yeniden
+adlandırır, Codex ve Claude plugin kayıtlarını da yenisiyle değiştirir.
+Ayrıca AgentChef'in `AGENTS_HOME/skills` altındaki kendi doğrudan skill
+kopyalarını emekli eder: her kopya önce yedeklenir, sonra kaldırılır. Bir kopya
+yalnızca marker'ı (`.agentchef-managed.json`) ya da provenance kaydı
+(`.agentchef-source.json`) onun AgentChef'e ait olduğunu kanıtlıyorsa ve plugin
+kaynağı o skill'i zaten taşıyorsa emekli edilir. Skill'i henüz plugin'de
+olmayan pinned bir kopya, installer onu plugin'e yazana kadar korunur (karar
+`keep-until-plugin`); tam kurulumu çalıştır, sonra göçü yeniden çalıştır.
+Emekli edilen bir kopyaya işaret eden Claude bağlantıları onunla birlikte
+kaldırılır ve kurulum makbuzundan düşülür. Kendi skill'lerine ve yabancı
+bağlantılara asla dokunulmaz.
+
+Claude installer'ı da önceki kurulum makbuzunun kaydettiği skill
+bağlantılarını emekli eder, ama yalnızca plugin başarıyla kaydedildikten
+sonra. Kayıt atlanır ya da başarısız olursa bağlantılar yerinde ve makbuzda
+kayıtlı kalır.
+
+Göçten sonra AgentChef skill'leri artık `~/.agents/skills` altında değildir.
+`~/.agents/skills` dizinini doğrudan okuyan başka araçlar onları artık görmez;
+onları yalnızca Codex ve Claude Code, plugin üzerinden görür.
+
+`npm run verify:install:runtime -- --expect-skills` skill'leri plugin
+kaynağının içinde denetler; bir skill'in plugin dışında hâlâ doğrudan bir
+kopyası varsa başarısız olmadan uyarır ve göç komutunu gösterir.
 
 ## Güvenli Upgrade Akışı
 

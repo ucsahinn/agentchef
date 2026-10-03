@@ -31,9 +31,12 @@ node scripts/install-claude-target.mjs --json --redact-paths
    Claude Code'u kurduktan sonra bunları çalıştır.
 2. Marketplace kayıtlı ama plugin stale ise
    `claude plugin update agentchef@agentchef` çalıştır.
-3. `/plugin` bir skill'in ikinci kopyasını gösteriyorsa (örneğin hem `/seo`
-   hem `/agentchef:seo`), bu beklenen durumdur: nitelenmemiş ad için doğrudan
-   skill bağlantısı kazanır, plugin ise ad-alanlı olanı korur.
+3. 1.3.0'dan beri AgentChef'in her skill'i yalnızca plugin'den gelir
+   (`/agentchef:seo`; başka bir komut aynı adı taşımıyorsa yalın `/seo` da
+   çalışır). Bir skill hâlâ iki kez görünüyorsa 1.0–1.2'den kalma bir skill
+   bağlantısı ya da kopyası duruyordur; önce ön izleyerek
+   `npm run chef -- --migrate-identity --target both` çalıştır (bkz.
+   [Claude skill bağlantıları](claude-skill-links.tr.md)).
 4. Her plugin değişikliğinden sonra yeni bir Claude Code oturumu başlat.
 
 ## Sürüm Değişmeden Bayatlayan Cache Kopyası
@@ -52,7 +55,9 @@ Warning: the Claude plugin cache copy 1.0.0 differs from the managed source in
 21 of 32 agent files, so sessions load stale definitions
 ```
 
-Plugin'i yeniden kurarak tazele, sonra yeni bir oturum başlat:
+Installer bunu kendisi yapar: cache'teki kopya kaynaktan farklıysa (örneğin
+pinned skill'ler kaynağa yeni yazıldığında) plugin'i yeniden kurar. Elle
+tazelemek için plugin'i yeniden kur, sonra yeni bir oturum başlat:
 
 ```bash
 claude plugin uninstall agentchef@agentchef

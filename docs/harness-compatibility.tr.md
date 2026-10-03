@@ -121,8 +121,10 @@ Planlanan Claude Code hedefi güncel resmi Claude Code yönlendirmesini izler:
   `@path` import'larını destekler; kit kullanıcının dosyasını değiştirmek
   yerine tek bir import satırı ekler.
 - Skill'ler `~/.claude/skills/`, proje `.claude/skills/` veya bir plugin'in
-  `skills/` dizini altındaki `SKILL.md` klasörleridir; symlink'li skill
-  klasörleri desteklenir ve tekilleştirilir.
+  `skills/` dizini altındaki `SKILL.md` klasörleridir. AgentChef yalnızca
+  plugin yolunu kullanır: 1.3.0'dan beri AgentChef'in her skill'i `agentchef`
+  plugin'i içinde gelir (`/agentchef:<skill>`) ve `~/.claude/skills/` altına
+  hiçbir şey kopyalanmaz ya da bağlanmaz; böylece her skill bir kez listelenir.
 - Subagent'lar frontmatter'lı Markdown dosyalarıdır; plugin subagent'ları
   `plugin:name` ad-alanındadır ve kullanıcının kendi ajanlarını asla ezmez.
 - İzinler `settings.json` içinde yaşar (`permissions.allow`, `deny`, `ask`) ve

@@ -62,9 +62,9 @@ Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-
 | `/document-generate` | `docs_author` veya docs skill | `docs_author` | Docs kod ve komutlarla eslesir. |
 | `/codex` / cross-model review | Acik review workflow'u | `code_reviewer`, manuel Codex CLI kullanimi | Baska agent veya CLI otomatik calistirilmaz; cross-model kontrolu kullanici istemelidir. |
 | `/browse` | Browser MCP + `frontend_verifier` | `frontend_verifier`, Playwright/Chrome MCP entries | Browser tool'lari prompt-gated. |
-| `$fetch <url>` | Explicit yetkili site reconstruction skill'i | `fetch`, browser MCP, gerekirse dar kapsamlı uzmanlar | Public capture pasiftir; auth, private route, korumalı asset, install ve external write gated kalır. |
-| `$seo <hedef>` | Kanıta dayalı audit, implementation ve verification skill'i | `seo`, `google_seo_auditor`, browser MCP, gerekirse performance verification | Local, rendered, deployed ve account kanıtı ayrı kalır; ranking, indexing, account write, publication ve deploy çıkarım yoluyla iddia edilmez. |
-| `$evidence-research <soru>` | Kaynakları izlenebilir deep research skill'i | `evidence-research`, resmi kaynak araması, gerekirse domain reviewer | Fact, inference ve recommendation ayrılır; private data, ücretli API, katılımcı ve publication onay ister. |
+| `$agentchef:fetch <url>` | Explicit yetkili site reconstruction skill'i | `fetch`, browser MCP, gerekirse dar kapsamlı uzmanlar | Public capture pasiftir; auth, private route, korumalı asset, install ve external write gated kalır. |
+| `$agentchef:seo <hedef>` | Kanıta dayalı audit, implementation ve verification skill'i | `seo`, `google_seo_auditor`, browser MCP, gerekirse performance verification | Local, rendered, deployed ve account kanıtı ayrı kalır; ranking, indexing, account write, publication ve deploy çıkarım yoluyla iddia edilmez. |
+| `$agentchef:evidence-research <soru>` | Kaynakları izlenebilir deep research skill'i | `evidence-research`, resmi kaynak araması, gerekirse domain reviewer | Fact, inference ve recommendation ayrılır; private data, ücretli API, katılımcı ve publication onay ister. |
 | `/setup-browser-cookies` | Auth/session connector workflow | Default acik degil | Cookie/session import hassastir ve acik onay ister. |
 | `/pair-agent` | External-agent collaboration service | Import edilmedi | Tunnel, scoped token ve external agent icin ayri design gerekir. |
 | `/ship` | Release verification workflow | `release_verifier` | Commit, push, PR, tag, release ve deploy icin acik onay gerekir. |
@@ -111,8 +111,8 @@ Ciddi islerde bu sirayi kullan:
 
 1. `product_strategist` veya `spec_author` hedefi netlestirir.
 2. Is genisse `context-budget-planner` kaynaklari ve handoff'u butceler.
-3. Karar açısından kritik kaynak araştırmasını `$evidence-research`, arama
-   odaklı kanıt ve uygulamayı ise kapsamdaysa `$seo` üstlenir.
+3. Karar açısından kritik kaynak araştırmasını `$agentchef:evidence-research`, arama
+   odaklı kanıt ve uygulamayı ise kapsamdaysa `$agentchef:seo` üstlenir.
 4. `engineering_planner` mimariyi, data flow'u ve testleri map eder.
 5. `code_mapper` genis edit oncesi repo kaniti toplar.
 6. Ana thread scoped degisikligi uygular.

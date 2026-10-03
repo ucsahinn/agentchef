@@ -25,7 +25,7 @@
       "category": "codex-setup",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/agentchef-operator",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/agentchef-operator",
       "reason": "Bundled local plugin skill for safe AgentChef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
     },
     {
@@ -39,7 +39,7 @@
       "category": "context-engineering",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/context-budget-planner",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/context-budget-planner",
       "reason": "Bundled local plugin skill for token/context budgeting, source prioritization, compaction handoff, and verification planning, with direct invocation required by the global operating contract."
     },
     {
@@ -47,7 +47,7 @@
       "category": "code-review",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/external-review-workflow",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/external-review-workflow",
       "reason": "Bundled local plugin skill for secret-safe external review packaging, manual handoff, snapshot freshness checks, and structured finding verification without automatic upload, with direct invocation."
     },
     {
@@ -55,7 +55,7 @@
       "category": "code-review",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/gptpro",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/gptpro",
       "reason": "Bundled local plugin skill for preparing secret-safe, architecture-aware GPT Pro Project context from a fresh AgentChef external-review snapshot without automatic upload."
     },
     {
@@ -63,7 +63,7 @@
       "category": "code-review",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/gptpro-handoff",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/gptpro-handoff",
       "reason": "Bundled local plugin skill for authoring a manifest-bound GPT Pro review prompt and verifying its returned report against the live repository before implementation."
     },
     {
@@ -71,7 +71,7 @@
       "category": "context-engineering",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/adaptive-agent-routing",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/adaptive-agent-routing",
       "reason": "Bundled local plugin skill for conditional delegation, canonical skill ownership, profile-inherited agent model selection, and compact routing visibility, with direct invocation required by the global operating contract."
     },
     {
@@ -297,7 +297,7 @@
       "category": "search-discoverability",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/seo",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/seo",
       "reason": "Bundled local plugin skill for evidence-backed technical, content, structured-data, international, local, performance, measurement, implementation, and verification work, with direct $seo invocation."
     },
     {
@@ -305,7 +305,7 @@
       "category": "research",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/evidence-research",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/evidence-research",
       "reason": "Bundled local plugin skill for scoped, source-traceable deep research, screening, appraisal, synthesis, uncertainty, reproducibility, and decision-ready evidence packages, with direct $evidence-research invocation."
     },
     {
@@ -627,7 +627,7 @@
       "category": "browser-reconstruction",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/fetch",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/fetch",
       "reason": "Bundled local plugin skill for explicit, authorized website reconstruction with browser evidence, inert authentication defaults, zero-egress local output, and validated fidelity gaps."
     },
     {
@@ -635,7 +635,7 @@
       "category": "documentation-diagrams",
       "install": false,
       "directInstall": true,
-      "directTarget": "${AGENTS_HOME}/skills/offline-diagram-triplet",
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/offline-diagram-triplet",
       "reason": "Bundled local plugin skill that converts Mermaid source into editable Excalidraw plus SVG/PNG artifacts with zero network, with direct invocation."
     }
   ]
