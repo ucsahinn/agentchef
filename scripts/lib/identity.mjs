@@ -6,12 +6,16 @@ export const productName = "agentchef";
 export const legacyProductName = "codex-chef";
 
 export const identity = Object.freeze({
-  pluginName: "agentchef-workflows",
+  pluginName: "agentchef",
   legacyPluginName: "codex-chef-workflows",
+  // 1.0.0 through 1.2.x shipped the plugin as agentchef-workflows under the
+  // same marketplace; 1.3.0 shortened it so calls read agentchef:<name>.
+  previousPluginName: "agentchef-workflows",
   marketplaceName: "agentchef",
   legacyMarketplaceName: "codex-chef",
-  pluginId: "agentchef-workflows@agentchef",
+  pluginId: "agentchef@agentchef",
   legacyPluginId: "codex-chef-workflows@codex-chef",
+  previousPluginId: "agentchef-workflows@agentchef",
   operatorSkill: "agentchef-operator",
   legacyOperatorSkill: "codex-chef-operator",
   managedMarker: ".agentchef-managed.json",
@@ -37,6 +41,11 @@ export const identity = Object.freeze({
   npmCacheFolder: "agentchef",
   legacyNpmCacheFolder: "codex-chef"
 });
+
+// Every plugin name and id AgentChef installed under before the current one,
+// newest first. The migration moves any of them to the current name.
+export const retiredPluginNames = Object.freeze([identity.previousPluginName, identity.legacyPluginName]);
+export const retiredPluginIds = Object.freeze([identity.previousPluginId, identity.legacyPluginId]);
 
 // Marker file names in read order: current first, then legacy.
 export const managedMarkerNames = Object.freeze([identity.managedMarker, identity.legacyManagedMarker]);

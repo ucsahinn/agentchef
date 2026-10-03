@@ -11,7 +11,7 @@ const root = path.resolve(testDir, "..", "..");
 const hygieneModuleUrl = pathToFileURL(path.join(
   root,
   "plugins",
-  "agentchef-workflows",
+  "agentchef",
   "scripts",
   "codex-process-hygiene.mjs"
 )).href;
@@ -78,7 +78,7 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
 });
 
 test("plugin registers only the reviewed SessionEnd process-hygiene hook", () => {
-  const pluginRoot = path.join(root, "plugins", "agentchef-workflows");
+  const pluginRoot = path.join(root, "plugins", "agentchef");
   const manifest = JSON.parse(fs.readFileSync(
     path.join(pluginRoot, ".codex-plugin", "plugin.json"),
     "utf8"
@@ -107,7 +107,7 @@ test("SessionEnd hook fails closed without turning unavailable process metadata 
       path.join(
         root,
         "plugins",
-        "agentchef-workflows",
+        "agentchef",
         "scripts",
         "codex-process-hygiene.mjs"
       ),
@@ -135,7 +135,7 @@ test("SessionEnd worker rejects forgeable serialized cleanup snapshots", () => {
   const result = spawnSync(
     process.execPath,
     [
-      path.join(root, "plugins", "agentchef-workflows", "scripts", "codex-process-hygiene.mjs"),
+      path.join(root, "plugins", "agentchef", "scripts", "codex-process-hygiene.mjs"),
       "--owned-sweep",
       Buffer.from("{}", "utf8").toString("base64url"),
       "--apply",
@@ -502,7 +502,7 @@ test("the owner chain picks the nearest Codex or Claude entry and nothing else",
 
 test("the SessionEnd hook records only the owner, from the chain the wrapper passes", () => {
   const record = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-hygiene-")), "record.json");
-  const script = path.join(root, "plugins", "agentchef-workflows", "scripts", "codex-process-hygiene.mjs");
+  const script = path.join(root, "plugins", "agentchef", "scripts", "codex-process-hygiene.mjs");
   const run = spawnSync(process.execPath, [script, "--session-end", "--owner-chain=10:1790000000000:bash.exe,20:1790000000500:codex.exe"], {
     input: JSON.stringify({ hook_event_name: "SessionEnd" }),
     encoding: "utf8",
@@ -527,7 +527,7 @@ test("the SessionEnd hook records only the owner, from the chain the wrapper pas
 });
 
 test("the Windows hook wrapper passes a readable owner chain within Codex's three seconds", { skip: process.platform !== "win32" }, () => {
-  const config = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef-workflows", "hooks", "process-hygiene.json"), "utf8"));
+  const config = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef", "hooks", "process-hygiene.json"), "utf8"));
   const command = config.hooks.SessionEnd[0].hooks[0].commandWindows;
   const inner = /^powershell\.exe -NoProfile -NonInteractive -Command "(.*)"$/s.exec(command)[1];
   // The wrapper's real work, minus the hand-off to node, prints the chain.

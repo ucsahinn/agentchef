@@ -54,7 +54,7 @@ function operation(id) {
 function runMarketplaceHelperSmokes() {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-marketplace-"));
   const marketplacePath = path.join(fixtureRoot, "agents", "plugins", "marketplace.json");
-  const pluginTarget = path.join(fixtureRoot, "agents", "plugins", "sources", "agentchef-workflows");
+  const pluginTarget = path.join(fixtureRoot, "agents", "plugins", "sources", "agentchef");
   const expectedPluginSource = `./${path.relative(fixtureRoot, pluginTarget).replaceAll(path.sep, "/")}`;
   fs.mkdirSync(path.dirname(marketplacePath), { recursive: true });
 
@@ -72,7 +72,7 @@ function runMarketplaceHelperSmokes() {
             interface: { displayName: "Other Plugin", shortDescription: "Must survive." }
           },
           {
-            name: "agentchef-workflows",
+            name: "agentchef",
             source: { source: "local", path: "C:/old/plugin" },
             policy: { installation: "AVAILABLE", authentication: "NONE" },
             category: "Productivity",
@@ -92,7 +92,7 @@ function runMarketplaceHelperSmokes() {
   writeMarketplaceEntry(marketplacePath, pluginTarget);
   const written = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
   const other = written.plugins.find((plugin) => plugin.name === "other-plugin");
-  const chef = written.plugins.find((plugin) => plugin.name === "agentchef-workflows");
+  const chef = written.plugins.find((plugin) => plugin.name === "agentchef");
   if (!other || other.interface?.displayName !== "Other Plugin") {
     fail("Marketplace helper smoke must preserve unrelated plugin entries and interface metadata.");
   }
@@ -195,7 +195,7 @@ for (const skill of skillCatalog.skills.filter((entry) => entry.directInstall ==
     fail(`Manifest missing managed direct-skill operation: ${id}`);
     continue;
   }
-  if (directOperation.source !== `plugins/agentchef-workflows/skills/${skill.name}`) {
+  if (directOperation.source !== `plugins/agentchef/skills/${skill.name}`) {
     fail(`Manifest direct-skill source drifted for ${skill.name}.`);
   }
   if (directOperation.destination !== `\${AGENTS_HOME}/skills/${skill.name}`) {
@@ -242,8 +242,8 @@ requireText(ps, "config.windows.toml", "PowerShell installer");
 requireText(ps, "rules\\default.rules", "PowerShell installer");
 requireText(ps, "agents", "PowerShell installer");
 requireText(ps, "profiles", "PowerShell installer");
-requireText(ps, "plugins\\agentchef-workflows", "PowerShell installer");
-requireText(ps, "plugins\\sources\\agentchef-workflows", "PowerShell installer");
+requireText(ps, "plugins\\agentchef", "PowerShell installer");
+requireText(ps, "plugins\\sources\\agentchef", "PowerShell installer");
 requireText(ps, "manage-direct-skill-target.mjs", "PowerShell installer");
 requireText(ps, "AdoptFetchSkill", "PowerShell installer");
 requireText(ps, "AdoptSeoSkill", "PowerShell installer");
@@ -328,8 +328,8 @@ requireText(sh, "config.unix.toml", "Bash installer");
 requireText(sh, "rules/default.rules", "Bash installer");
 requireText(sh, "/agents", "Bash installer");
 requireText(sh, "/profiles", "Bash installer");
-requireText(sh, "plugins/agentchef-workflows", "Bash installer");
-requireText(sh, "plugins/sources/agentchef-workflows", "Bash installer");
+requireText(sh, "plugins/agentchef", "Bash installer");
+requireText(sh, "plugins/sources/agentchef", "Bash installer");
 requireText(sh, "manage-direct-skill-target.mjs", "Bash installer");
 requireText(sh, "adopt-fetch-skill", "Bash installer");
 requireText(sh, "adopt-seo-skill", "Bash installer");

@@ -31,7 +31,7 @@ Development and tests must point all three at a scratch root;
 | MCP servers | `~/.claude.json` → `mcpServers.context7`, `mcpServers.serena` | receipt `claude-mcp-merge-receipt.json` | a server with the same name is left untouched, unless an update can prove AgentChef still owns it: the value has to match the hash in the receipt, and then the entry is refreshed so a catalog version bump reaches the home |
 | Skill links | `~/.claude/skills/<name>` → `~/.agents/skills/<name>` | directory link (junction on Windows) | foreign real directories are skipped; AgentChef-marked copies are adopted only with `--adopt-skill-links`; managed directories that left the catalog are reported as `retired` and left alone |
 | Plugin marketplace | `~/.agents/plugins/.claude-plugin/marketplace.json` | AgentChef file | backup, then refresh |
-| Plugin installation | Claude's plugin cache | Claude Code (`claude plugin`) | AgentChef runs `claude plugin marketplace add` and `claude plugin install agentchef-workflows@agentchef`; it never writes the cache directly |
+| Plugin installation | Claude's plugin cache | Claude Code (`claude plugin`) | AgentChef runs `claude plugin marketplace add` and `claude plugin install agentchef@agentchef`; it never writes the cache directly |
 | Install receipt | `~/.claude/agentchef/install-receipt.json` | AgentChef file | lists installed files, links, receipts, and commands for status, repair, and removal |
 | Backups, journal, lock | `~/.claude/agentchef/backups/agentchef-*`, `.agentchef-operation-journal.json`, `.agentchef-operation.lock` | AgentChef | same transaction machinery as the Codex target |
 
@@ -63,7 +63,7 @@ shows the previous one:
 
 ```text
 claude plugin marketplace update agentchef
-claude plugin update agentchef-workflows@agentchef
+claude plugin update agentchef@agentchef
 ```
 
 ## Verification
@@ -71,7 +71,7 @@ claude plugin update agentchef-workflows@agentchef
 ```powershell
 npm run verify:install:runtime -- --target claude
 claude --version
-claude plugin validate "$env:AGENTS_HOME\plugins\sources\agentchef-workflows"
+claude plugin validate "$env:AGENTS_HOME\plugins\sources\agentchef"
 claude mcp list
 ```
 

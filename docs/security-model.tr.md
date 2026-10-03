@@ -271,7 +271,7 @@ onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdile
 dokunur. Claude plugin önbelleği `claude plugin` CLI'sına aittir ve asla elle
 yazılmaz. Süreç hijyeni hook'u bu sürümde Claude Code'a yayınlanmaz.
 
-Installer'lar yalniz `agentchef-workflows` marketplace kaydini upsert eder.
+Installer'lar yalniz `agentchef` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
 okunamaz veya JSON object degilse fail-closed davranir.
 
@@ -307,7 +307,7 @@ skill dizinleri ve extra dosyalar korunur. Fetch
 açıklamaları açıkça eşleştiğinde implicit seçilebilir.
 
 Marketplace kaydi, current Codex schema'nin istedigi marketplace root'u icinde
-kalan `AGENTS_HOME/plugins/sources/agentchef-workflows` yonetilen aynasini
+kalan `AGENTS_HOME/plugins/sources/agentchef` yonetilen aynasini
 kullanir. Bu kayıt plugin'i keşfedilebilir yapar; kurmaz veya etkinleştirmez.
 Namespace'li plugin kullanımı explicit plugin kurulumu ve yeni oturum gerektirir.
 Marketplace JSON, platform launcher'ı, `serena-pool.mjs`, kopyalanan/üretilen

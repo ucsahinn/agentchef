@@ -102,8 +102,8 @@ function assertManagedFileAccounting(report, label) {
 const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-repair-"));
 const codexHome = path.join(fixtureRoot, ".codex");
 const agentsHome = path.join(fixtureRoot, ".agents");
-const pluginTarget = path.join(codexHome, "plugins", "agentchef-workflows");
-const marketplacePluginTarget = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
+const pluginTarget = path.join(codexHome, "plugins", "agentchef");
+const marketplacePluginTarget = path.join(agentsHome, "plugins", "sources", "agentchef");
 const directSkills = JSON.parse(read("catalog/skills.json")).skills.filter((skill) => skill.directInstall === true);
 const directSupportFiles = {
   fetch: [
@@ -125,7 +125,7 @@ const directSupportFiles = {
     "scripts/validate-research-report.mjs"
   ]
 };
-const expectedPluginSource = "./.agents/plugins/sources/agentchef-workflows";
+const expectedPluginSource = "./.agents/plugins/sources/agentchef";
 
 write(path.join(codexHome, "AGENTS.md"), "# stale guidance\n");
 write(
@@ -161,7 +161,7 @@ for (const profile of ["conservative.config.toml", "trusted-project.config.toml"
 }
 write(
   path.join(pluginTarget, ".codex-plugin", "plugin.json"),
-  "{\n  \"name\": \"agentchef-workflows\",\n  \"version\": \"0.0.0\"\n}\n"
+  "{\n  \"name\": \"agentchef\",\n  \"version\": \"0.0.0\"\n}\n"
 );
 write(path.join(pluginTarget, "extra.txt"), "extra managed plugin file\n");
 write(path.join(marketplacePluginTarget, "marketplace-extra.txt"), "extra marketplace mirror file\n");
@@ -175,7 +175,7 @@ for (const skill of directSkills) {
       manager: "agentchef",
       component: "direct-skill",
       name: skill.name,
-      source: `plugins/agentchef-workflows/skills/${skill.name}`
+      source: `plugins/agentchef/skills/${skill.name}`
     }, null, 2) + "\n"
   );
 }
@@ -202,8 +202,8 @@ write(
         policy: { installation: "AVAILABLE", authentication: "ON_USE" }
       },
       {
-        name: "agentchef-workflows",
-        source: { source: "local", path: "C:/stale/agentchef-workflows" },
+        name: "agentchef",
+        source: { source: "local", path: "C:/stale/agentchef" },
         policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" }
       }
     ]
@@ -322,7 +322,7 @@ if (fs.readFileSync(path.join(codexHome, "AGENTS.md"), "utf8") !== read("templat
 }
 if (
   fs.readFileSync(path.join(pluginTarget, ".codex-plugin", "plugin.json"), "utf8") !==
-  read("plugins/agentchef-workflows/.codex-plugin/plugin.json")
+  read("plugins/agentchef/.codex-plugin/plugin.json")
 ) {
   fail("repair apply must restore the plugin manifest from source.");
 }
@@ -339,21 +339,21 @@ for (const skill of directSkills) {
   const directTarget = path.join(agentsHome, "skills", skill.name);
   if (
     fs.readFileSync(path.join(directTarget, "SKILL.md"), "utf8")
-    !== read(`plugins/agentchef-workflows/skills/${skill.name}/SKILL.md`)
+    !== read(`plugins/agentchef/skills/${skill.name}/SKILL.md`)
   ) {
     fail(`repair apply must restore the direct $${skill.name} skill from its canonical plugin source.`);
   }
   const marker = readJson(path.join(directTarget, ".agentchef-managed.json"));
   if (
     marker.name !== skill.name
-    || marker.source !== `plugins/agentchef-workflows/skills/${skill.name}`
+    || marker.source !== `plugins/agentchef/skills/${skill.name}`
   ) {
     fail(`repair apply must write the correct direct $${skill.name} ownership marker.`);
   }
   for (const relativePath of directSupportFiles[skill.name] || []) {
     if (
       fs.readFileSync(path.join(directTarget, relativePath), "utf8")
-      !== read(`plugins/agentchef-workflows/skills/${skill.name}/${relativePath}`)
+      !== read(`plugins/agentchef/skills/${skill.name}/${relativePath}`)
     ) {
       fail(`repair apply must install the direct $${skill.name} support file ${relativePath}.`);
     }
@@ -364,7 +364,7 @@ const repairedMarketplace = readJson(path.join(agentsHome, "plugins", "marketpla
 if (!repairedMarketplace.plugins.some((plugin) => plugin.name === "other-plugin")) {
   fail("repair apply must preserve unrelated marketplace plugins.");
 }
-const chefPlugin = repairedMarketplace.plugins.find((plugin) => plugin.name === "agentchef-workflows");
+const chefPlugin = repairedMarketplace.plugins.find((plugin) => plugin.name === "agentchef");
 if (!chefPlugin || chefPlugin.source?.path !== expectedPluginSource) {
   fail("repair apply must write the portable marketplace-root-relative managed plugin path.");
 }
@@ -677,7 +677,7 @@ for (const scenario of repairAdoptionScenarios) {
   if (adopted) {
     if (
       fs.readFileSync(path.join(foreignSkillRoot, "SKILL.md"), "utf8")
-      !== read(`plugins/agentchef-workflows/skills/${scenario.name}/SKILL.md`)
+      !== read(`plugins/agentchef/skills/${scenario.name}/SKILL.md`)
     ) {
       fail(`repair explicit ${scenario.display} adoption must install the canonical managed source.`);
     }

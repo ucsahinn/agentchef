@@ -306,15 +306,15 @@ Useful switches:
   the plugin. Fetch disables implicit invocation; SEO and Evidence Research
   allow it only for unambiguous matching requests. If an exact direct target
   contains a foreign skill, installation fails before any managed write.
-- The personal marketplace entry makes `agentchef-workflows` discoverable; it
+- The personal marketplace entry makes `agentchef` discoverable; it
   does not install or enable the plugin. To use
-  `$agentchef-workflows:<skill-name>`, run `codex plugin add
-  agentchef-workflows@agentchef --json` (or use `/plugins`) and start a new
+  `$agentchef:<skill-name>`, run `codex plugin add
+  agentchef@agentchef --json` (or use `/plugins`) and start a new
   Codex session. After that explicit first install, later installer, update,
   and repair applies refresh a stale versioned plugin cache in place and verify
   the active version. They do not install the plugin before that opt-in.
 - The personal marketplace reads its plugin mirror from
-  `AGENTS_HOME/plugins/sources/agentchef-workflows` through a path relative to
+  `AGENTS_HOME/plugins/sources/agentchef` through a path relative to
   the marketplace root. A custom `AGENTS_HOME` is an installer destination,
   not proof that the active Codex host discovers that marketplace. For a
   non-default root, register it with `codex plugin marketplace add <root>` and

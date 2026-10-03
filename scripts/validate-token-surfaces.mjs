@@ -95,8 +95,8 @@ if (exists("templates/codex/AGENTS.md")) {
   }
 }
 
-if (exists("plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md")) {
-  const strategy = read("plugins/agentchef-workflows/skills/context-budget-planner/references/context-strategy.md");
+if (exists("plugins/agentchef/skills/context-budget-planner/references/context-strategy.md")) {
+  const strategy = read("plugins/agentchef/skills/context-budget-planner/references/context-strategy.md");
   for (const required of ["npm run token:audit", "token-safe.config.toml", "model/reasoning pin"]) {
     if (!strategy.includes(required)) fail(`context-budget strategy missing: ${required}`);
   }

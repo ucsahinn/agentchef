@@ -282,7 +282,7 @@
             "minLength": 1
           },
           "pluginId": {
-            "const": "agentchef-workflows@agentchef"
+            "const": "agentchef@agentchef"
           },
           "mode": {
             "const": "+x"

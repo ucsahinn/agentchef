@@ -5,7 +5,7 @@ import path from "node:path";
 const root = path.resolve(process.cwd());
 const failures = [];
 
-const pluginManifestRel = "plugins/agentchef-workflows/.codex-plugin/plugin.json";
+const pluginManifestRel = "plugins/agentchef/.codex-plugin/plugin.json";
 const pluginManifestPath = path.join(root, pluginManifestRel);
 const expectedBundledSkills = new Set([
   "adaptive-agent-routing",
@@ -117,8 +117,8 @@ if (!fs.existsSync(pluginManifestPath)) {
   failures.push(`Missing plugin manifest: ${pluginManifestRel}`);
 } else {
   const plugin = JSON.parse(readText(pluginManifestPath));
-  if (plugin.name !== "agentchef-workflows") {
-    failures.push(`${pluginManifestRel} must keep name agentchef-workflows.`);
+  if (plugin.name !== "agentchef") {
+    failures.push(`${pluginManifestRel} must keep name agentchef.`);
   }
   if (typeof plugin.skills !== "string") {
     failures.push(`${pluginManifestRel} must declare skills as a string path.`);

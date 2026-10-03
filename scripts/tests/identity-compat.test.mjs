@@ -97,7 +97,7 @@ test("the installed plugin id follows the personal marketplace name until migrat
   fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({ name: identity.marketplaceName, plugins: [] })}\n`);
   assert.equal(resolvePluginId(agentsHome), PLUGIN_ID);
   assert.equal(resolvePluginId(path.join(home, "missing")), PLUGIN_ID);
-  assert.equal(PLUGIN_ID, "agentchef-workflows@agentchef");
+  assert.equal(PLUGIN_ID, "agentchef@agentchef");
   fs.rmSync(home, { recursive: true, force: true });
 });
 

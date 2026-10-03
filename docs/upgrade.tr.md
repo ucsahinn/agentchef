@@ -63,9 +63,9 @@ ve diskteki kimlik hâlâ `codex-chef` önekini kullanır. 0.9.0'daki yenilikler
 1.0.0, diskteki kimliği `codex-chef`'ten `agentchef`'e çevirir: sahiplik
 işaretçileri (`.agentchef-managed.json`, `.agentchef-source.json`), işlem
 günlüğü ve kilit adları, yedek klasörü önekleri, makbuz ve rapor şema
-stringleri (`agentchef.<ad>.vN`), plugin klasörü (`plugins/agentchef-workflows`),
+stringleri (`agentchef.<ad>.vN`), plugin klasörü (`plugins/agentchef`),
 operator skill'i (`agentchef-operator`), kişisel marketplace adı ve plugin
-id'si (`agentchef-workflows@agentchef`), Git hook banner'ı ve `AGENTCHEF_*`
+id'si (`agentchef@agentchef`), Git hook banner'ı ve `AGENTCHEF_*`
 ortam değişkenleri.
 
 Güncelleme günü hiçbir şey bozulmaz: her okuyucu eski yazımı kabul eder, bu

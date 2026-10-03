@@ -45,7 +45,7 @@ export const legacyClaudeInstallSchemaVersion = "codex-chef.claude-install.v1";
 export const claudeInstallReceiptName = "install-receipt.json";
 // Both marker spellings: an un-migrated home still carries the codex-chef names.
 const managedSkillMarkers = [...managedMarkerNames, ...sourceMarkerNames];
-const pluginName = "agentchef-workflows";
+const pluginName = "agentchef";
 const claudeMarketplaceName = "agentchef";
 
 function readJson(relativePath) {

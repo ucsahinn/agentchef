@@ -26,7 +26,7 @@ const pinnedInstaller = path.join(root, "scripts", "install-pinned-skill.mjs");
 const seoValidator = path.join(
   root,
   "plugins",
-  "agentchef-workflows",
+  "agentchef",
   "skills",
   "seo",
   "scripts",
@@ -35,7 +35,7 @@ const seoValidator = path.join(
 const researchValidator = path.join(
   root,
   "plugins",
-  "agentchef-workflows",
+  "agentchef",
   "skills",
   "evidence-research",
   "scripts",
@@ -258,7 +258,7 @@ function validResearchReport() {
 test("managed direct skill marker records the actual skill identity", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-skill-"));
   try {
-    const source = path.join(tempRoot, "plugins", "agentchef-workflows", "skills", "seo");
+    const source = path.join(tempRoot, "plugins", "agentchef", "skills", "seo");
     const target = path.join(tempRoot, "agents", "skills", "seo");
     fs.mkdirSync(source, { recursive: true });
     fs.writeFileSync(
@@ -272,7 +272,7 @@ test("managed direct skill marker records the actual skill identity", () => {
 
     const marker = JSON.parse(fs.readFileSync(path.join(target, markerFileName), "utf8"));
     assert.equal(marker.name, "seo");
-    assert.equal(marker.source, "plugins/agentchef-workflows/skills/seo");
+    assert.equal(marker.source, "plugins/agentchef/skills/seo");
     assert.equal(inspectDirectSkillTarget(source, target).status, "managed");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -282,7 +282,7 @@ test("managed direct skill marker records the actual skill identity", () => {
 test("managed direct skill marker does not hide missing or modified source files", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-skill-drift-"));
   try {
-    const source = path.join(tempRoot, "plugins", "agentchef-workflows", "skills", "seo");
+    const source = path.join(tempRoot, "plugins", "agentchef", "skills", "seo");
     const target = path.join(tempRoot, "agents", "skills", "seo");
     fs.mkdirSync(source, { recursive: true });
     fs.writeFileSync(

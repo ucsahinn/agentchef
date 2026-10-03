@@ -838,7 +838,7 @@ test("the exporter's sensitive-path deny-list stays identical to review pack's",
     const body = source.slice(start, source.indexOf("\n}\n", start));
     return body.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, "");
   };
-  const exporter = path.resolve(path.dirname(cliPath), "..", "plugins", "agentchef-workflows", "skills", "gptpro", "scripts", "project-export-legacy.mjs");
+  const exporter = path.resolve(path.dirname(cliPath), "..", "plugins", "agentchef", "skills", "gptpro", "scripts", "project-export-legacy.mjs");
   assert.equal(extract(exporter), extract(cliPath), "keep the two deny-lists aligned clause by clause");
 });
 

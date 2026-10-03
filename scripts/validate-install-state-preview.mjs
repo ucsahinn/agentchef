@@ -413,7 +413,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
     if (!nonEmptyString(operation.source) || !nonEmptyString(operation.destination)) {
       fail(`${label} ${operation.id} must include cache source and destination`);
     }
-    if (operation.pluginId !== "agentchef-workflows@agentchef") {
+    if (operation.pluginId !== "agentchef@agentchef") {
       fail(`${label} ${operation.id} must declare the managed plugin id`);
     }
   }
@@ -430,7 +430,7 @@ function validateOperation(operation, label, selected, noBackupRequested) {
     if (!nonEmptyString(operation.pluginTarget)) fail(`${label} ${operation.id} must include pluginTarget`);
   }
   if (operation.kind === "claude-plugin-register") {
-    if (operation.pluginId !== "agentchef-workflows@agentchef") fail(`${label} ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (operation.pluginId !== "agentchef@agentchef") fail(`${label} ${operation.id} must declare the AgentChef Claude plugin id`);
     if (!nonEmptyString(operation.command)) fail(`${label} ${operation.id} must include command`);
   }
   if (operation.kind === "skill-install") {
@@ -589,7 +589,7 @@ if (semanticPlan) {
     fail("Semantic side-effect plan must include direct-skill ownership marker writes");
   }
   const marketplace = semanticPlan.operations.find((operation) => operation.id === "plugin-marketplace");
-  if (!marketplace?.pluginTarget?.includes("/plugins/sources/agentchef-workflows")) {
+  if (!marketplace?.pluginTarget?.includes("/plugins/sources/agentchef")) {
     fail("Semantic side-effect plan marketplace target must use AGENTS_HOME plugin sources");
   }
   if (!semanticPlan.operations.some((operation) => operation.kind === "refresh-plugin-cache")) {

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The agent research corpus was re-dated after re-checking the four supplemental
+  sources on a 14-day cadence (ECC, gstack, and the Codex issue tracker are live
+  and unarchived; the Skills CLI search entry stays a dated snapshot).
 - Status, CLI, process-hygiene, and Serena fixes from a second bug hunt:
   - The SessionEnd cleanup never stopped anything on Windows: `taskkill`
     without `/F` cannot stop a hidden Node process, and reading the whole
@@ -43,6 +46,16 @@
   - The diagram renderer's Markdown links broke when `--markdown` pointed
     outside `--out-dir`.
   - `codex-doctor --include-global` ignored `CODEX_HOME` and `AGENTS_HOME`.
+- The plugin is now called `agentchef` (was `agentchef-workflows`), so
+  calls read `agentchef:<name>`: `$agentchef:fetch` in Codex, `/agentchef:fetch`
+  in Claude Code, and `agentchef:qa-coordinator` for a role. This also fixes the
+  Claude coordinators: their `Agent(agentchef:<worker>)` allowlists named a
+  plugin that did not exist, so they matched no worker. `npm run chef --
+  --migrate-identity --target both --apply` moves a 1.0 to 1.2 install (plugin
+  folders, both marketplaces, the Codex `[plugins.*]` and hook-state tables,
+  and the Codex and Claude plugin registrations), as it already did for pre-1.0
+  homes. A direct-skill marker written under the old folder name still counts
+  as AgentChef's.
 - `gptpro` and `gptpro-handoff` hardening and documentation pass:
   - The exporter now applies the `review pack` sensitive-path deny-list and a
     binary check to every manifest entry itself, so a hand-edited or stale

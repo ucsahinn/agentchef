@@ -79,7 +79,7 @@ test("no-backup repair fails before any write when a managed target already exis
 
 test("no-backup repair cannot prune an existing managed plugin extra", () => {
   const target = fixture("no-backup-prune");
-  const extra = path.join(target.codexHome, "plugins", "agentchef-workflows", "extra.txt");
+  const extra = path.join(target.codexHome, "plugins", "agentchef", "extra.txt");
   write(extra, "must survive\n");
 
   const result = runRepair(target, [
@@ -110,7 +110,7 @@ test("repair restores nested support files for a managed direct skill", () => {
 
   const result = runRepair(target, ["--apply"]);
   const payload = report(result);
-  const source = path.join(root, "plugins", "agentchef-workflows", "skills", "seo", "agents", "openai.yaml");
+  const source = path.join(root, "plugins", "agentchef", "skills", "seo", "agents", "openai.yaml");
   const installed = path.join(target.agentsHome, "skills", "seo", "agents", "openai.yaml");
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -126,8 +126,8 @@ test("no-backup repair rejects a stale installed plugin cache before managed wri
   );
   const payload = JSON.stringify({
     installed: [{
-      pluginId: "agentchef-workflows@agentchef",
-      name: "agentchef-workflows",
+      pluginId: "agentchef@agentchef",
+      name: "agentchef",
       version: "0.0.0-stale",
       installed: true,
       enabled: true

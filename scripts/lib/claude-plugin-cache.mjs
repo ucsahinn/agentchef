@@ -10,8 +10,8 @@ function fileSha256(filePath) {
 // so a same-version change to a role or skill never reaches a session unless
 // the cache is reinstalled. Reports the served copies that differ.
 export function inspectClaudePluginCache(claudeHome, agentsHome) {
-  const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
-  const cacheRoot = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows");
+  const source = path.join(agentsHome, "plugins", "sources", "agentchef");
+  const cacheRoot = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef");
   if (!fs.existsSync(source) || !fs.existsSync(cacheRoot)) return { inspected: false };
   let versions;
   try {
@@ -71,7 +71,7 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
 
 // The user-scope version Claude Code recorded for the AgentChef plugin, or
 // null when it is not registered or the file cannot be read.
-export function readRegisteredClaudePluginVersion(claudeHome, pluginId = "agentchef-workflows@agentchef") {
+export function readRegisteredClaudePluginVersion(claudeHome, pluginId = "agentchef@agentchef") {
   try {
     const document = JSON.parse(fs.readFileSync(path.join(claudeHome, "plugins", "installed_plugins.json"), "utf8").replace(/^\uFEFF/, ""));
     const entries = document?.plugins?.[pluginId];

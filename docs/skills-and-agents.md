@@ -16,7 +16,7 @@ or you can name it directly when you want a specific workflow.
 - [Read the official Codex skills guide](https://developers.openai.com/codex/skills)
 
 The bundled workflows live under
-[`plugins/agentchef-workflows/skills`](../plugins/agentchef-workflows/skills).
+[`plugins/agentchef/skills`](../plugins/agentchef/skills).
 The public catalog also lists optional skills; being listed does not mean every
 skill is installed automatically.
 
@@ -25,9 +25,9 @@ skill is installed automatically.
 The local plugin packages AgentChef's own workflows so they can be installed
 and updated together:
 
-- [Plugin manifest](../plugins/agentchef-workflows/.codex-plugin/plugin.json)
+- [Plugin manifest](../plugins/agentchef/.codex-plugin/plugin.json)
 - [Marketplace entry](../.agents/plugins/marketplace.json)
-- [Bundled workflow sources](../plugins/agentchef-workflows/skills)
+- [Bundled workflow sources](../plugins/agentchef/skills)
 
 Restart Codex after installing the plugin, then use `/plugins` to inspect it.
 

@@ -29,7 +29,7 @@ function fixture() {
   const foreignSkill = path.join(agentsHome, "skills", "user-agents-skill");
   fs.mkdirSync(foreignSkill, { recursive: true });
   fs.writeFileSync(path.join(foreignSkill, "SKILL.md"), "user\n");
-  fs.mkdirSync(path.join(agentsHome, "plugins", "sources", "agentchef-workflows"), { recursive: true });
+  fs.mkdirSync(path.join(agentsHome, "plugins", "sources", "agentchef"), { recursive: true });
   fs.mkdirSync(path.join(claudeHome, "skills", "user-claude-skill"), { recursive: true });
   fs.writeFileSync(path.join(claudeHome, "skills", "user-claude-skill", "SKILL.md"), "mine\n");
   const settings = {
@@ -101,7 +101,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(fs.readFileSync(path.join(state.claudeHome, "skills", "user-claude-skill", "SKILL.md"), "utf8"), "mine\n");
   const marketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
   assert.equal(marketplace.name, "agentchef");
-  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./sources/agentchef-workflows"]);
+  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./sources/agentchef"]);
   const receipts = fs.readdirSync(path.join(state.claudeHome, "agentchef", "receipts")).sort();
   assert.deepEqual(receipts, ["claude-mcp-merge-receipt.json", "claude-settings-merge-receipt.json"]);
   const installReceipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));

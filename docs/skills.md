@@ -26,21 +26,21 @@ unambiguously matches their descriptions.
 
 The personal marketplace entry makes the plugin discoverable; it does not
 install or enable it. To use namespaced calls such as
-`$agentchef-workflows:fetch`, install `agentchef-workflows@agentchef` from
+`$agentchef:fetch`, install `agentchef@agentchef` from
 `/plugins` or with `codex plugin add`, then start a new Codex session.
 
 | Skill | Use it for |
 | --- | --- |
-| [`agentchef-operator`](../plugins/agentchef-workflows/skills/agentchef-operator/SKILL.md) | Keep this starter aligned without weakening installer or security boundaries. |
-| [`context-budget-planner`](../plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
-| [`adaptive-agent-routing`](../plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
-| [`external-review-workflow`](../plugins/agentchef-workflows/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
-| [`gptpro`](../plugins/agentchef-workflows/skills/gptpro/SKILL.md) | Export a fresh external-review snapshot as architecture-aware GPT Pro Project text context without uploading it. |
-| [`gptpro-handoff`](../plugins/agentchef-workflows/skills/gptpro-handoff/SKILL.md) | Write a review-ID-bound GPT Pro prompt and verify its returned report before implementation. |
-| [`fetch`](../plugins/agentchef-workflows/skills/fetch/SKILL.md) | Reconstruct an authorized reference site from browser evidence, verify responsive interactions, and report every fidelity gap without copying credentials or server internals. |
-| [`seo`](../plugins/agentchef-workflows/skills/seo/SKILL.md) | Audit, implement, and verify technical, rendering, structured-data, content-intent, international, local, performance, and measurement work without inventing rankings or indexing evidence. |
-| [`evidence-research`](../plugins/agentchef-workflows/skills/evidence-research/SKILL.md) | Frame decision questions, search and appraise current sources, trace claims, explain disagreement and uncertainty, and package reproducible research. |
-| [`offline-diagram-triplet`](../plugins/agentchef-workflows/skills/offline-diagram-triplet/SKILL.md) | Turn Mermaid source into editable Excalidraw, SVG, PNG, and Markdown assets without network access. |
+| [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Keep this starter aligned without weakening installer or security boundaries. |
+| [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
+| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
+| [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
+| [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Export a fresh external-review snapshot as architecture-aware GPT Pro Project text context without uploading it. |
+| [`gptpro-handoff`](../plugins/agentchef/skills/gptpro-handoff/SKILL.md) | Write a review-ID-bound GPT Pro prompt and verify its returned report before implementation. |
+| [`fetch`](../plugins/agentchef/skills/fetch/SKILL.md) | Reconstruct an authorized reference site from browser evidence, verify responsive interactions, and report every fidelity gap without copying credentials or server internals. |
+| [`seo`](../plugins/agentchef/skills/seo/SKILL.md) | Audit, implement, and verify technical, rendering, structured-data, content-intent, international, local, performance, and measurement work without inventing rankings or indexing evidence. |
+| [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Frame decision questions, search and appraise current sources, trace claims, explain disagreement and uncertainty, and package reproducible research. |
+| [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Turn Mermaid source into editable Excalidraw, SVG, PNG, and Markdown assets without network access. |
 
 ## ✅ Fifteen Reviewed Full-Install Skills
 

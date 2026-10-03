@@ -25,22 +25,22 @@ yalnız explicit çağrıyla çalışır; SEO ile Evidence Research ise istek
 açıklamalarıyla açıkça eşleştiğinde otomatik de seçilebilir.
 
 Kişisel marketplace kaydı plugin'i yalnızca keşfedilebilir yapar; kurmaz veya
-etkinleştirmez. `$agentchef-workflows:fetch` gibi namespace'li çağrılar için
-`agentchef-workflows@agentchef` plugin'ini `/plugins` ya da `codex plugin add`
+etkinleştirmez. `$agentchef:fetch` gibi namespace'li çağrılar için
+`agentchef@agentchef` plugin'ini `/plugins` ya da `codex plugin add`
 ile kurup yeni bir Codex oturumu başlatmak gerekir.
 
 | Skill | Ne için kullanılır? |
 | --- | --- |
-| [`agentchef-operator`](../plugins/agentchef-workflows/skills/agentchef-operator/SKILL.md) | Installer veya güvenlik sınırlarını gevşetmeden bu starter'ı bakımlı tutmak için. |
-| [`context-budget-planner`](../plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
-| [`adaptive-agent-routing`](../plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
-| [`external-review-workflow`](../plugins/agentchef-workflows/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
-| [`gptpro`](../plugins/agentchef-workflows/skills/gptpro/SKILL.md) | Taze external-review snapshot'ını yükleme yapmadan architecture-aware GPT Pro Project metin bağlamına dönüştürmek için. |
-| [`gptpro-handoff`](../plugins/agentchef-workflows/skills/gptpro-handoff/SKILL.md) | Review-ID-bound GPT Pro prompt'u yazmak ve dönen raporu implementation öncesinde doğrulamak için. |
-| [`fetch`](../plugins/agentchef-workflows/skills/fetch/SKILL.md) | Yetkili bir referans siteyi gerçek browser kanıtıyla yeniden kurmak, responsive etkileşimleri doğrulamak ve credential ya da server içi mantık kopyalamadan bütün fidelity farklarını raporlamak için. |
-| [`seo`](../plugins/agentchef-workflows/skills/seo/SKILL.md) | Ranking veya indexing kanıtı uydurmadan teknik SEO, rendering, structured data, content intent, uluslararası/lokal SEO, performans ve ölçüm işlerini audit etmek, uygulamak ve doğrulamak için. |
-| [`evidence-research`](../plugins/agentchef-workflows/skills/evidence-research/SKILL.md) | Karar sorusunu çerçevelemek, güncel kaynakları arayıp değerlendirmek, claim'leri izlenebilir tutmak, görüş ayrılıklarını ve belirsizliği açıklamak, yeniden üretilebilir araştırma paketi hazırlamak için. |
-| [`offline-diagram-triplet`](../plugins/agentchef-workflows/skills/offline-diagram-triplet/SKILL.md) | Mermaid kaynağını network kullanmadan editable Excalidraw, SVG, PNG ve Markdown asset'lerine çevirmek için. |
+| [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Installer veya güvenlik sınırlarını gevşetmeden bu starter'ı bakımlı tutmak için. |
+| [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
+| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
+| [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
+| [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Taze external-review snapshot'ını yükleme yapmadan architecture-aware GPT Pro Project metin bağlamına dönüştürmek için. |
+| [`gptpro-handoff`](../plugins/agentchef/skills/gptpro-handoff/SKILL.md) | Review-ID-bound GPT Pro prompt'u yazmak ve dönen raporu implementation öncesinde doğrulamak için. |
+| [`fetch`](../plugins/agentchef/skills/fetch/SKILL.md) | Yetkili bir referans siteyi gerçek browser kanıtıyla yeniden kurmak, responsive etkileşimleri doğrulamak ve credential ya da server içi mantık kopyalamadan bütün fidelity farklarını raporlamak için. |
+| [`seo`](../plugins/agentchef/skills/seo/SKILL.md) | Ranking veya indexing kanıtı uydurmadan teknik SEO, rendering, structured data, content intent, uluslararası/lokal SEO, performans ve ölçüm işlerini audit etmek, uygulamak ve doğrulamak için. |
+| [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Karar sorusunu çerçevelemek, güncel kaynakları arayıp değerlendirmek, claim'leri izlenebilir tutmak, görüş ayrılıklarını ve belirsizliği açıklamak, yeniden üretilebilir araştırma paketi hazırlamak için. |
+| [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Mermaid kaynağını network kullanmadan editable Excalidraw, SVG, PNG ve Markdown asset'lerine çevirmek için. |
 
 ## ✅ Full Install İçin İncelenmiş On Beş Skill
 

@@ -1908,7 +1908,7 @@ const MANAGED_REFRESH_TARGETS = [
   "CODEX_HOME/rules/default.rules",
   "CODEX_HOME/*.config.toml profiles",
   "CODEX_HOME/agents/*.toml role files",
-  "CODEX_HOME/plugins/agentchef-workflows",
+  "CODEX_HOME/plugins/agentchef",
   "AGENTS_HOME/plugins/marketplace.json"
 ];
 
@@ -2950,12 +2950,12 @@ function buildManagedRestoreAllowlist() {
     if (file.endsWith(".config.toml")) addCodex(file);
   }
 
-  const pluginSource = path.join(root, "plugins", "agentchef-workflows");
+  const pluginSource = path.join(root, "plugins", "agentchef");
   for (const file of listCanonicalTreeFiles(pluginSource)) {
-    addCodex(`plugins/agentchef-workflows/${file}`);
+    addCodex(`plugins/agentchef/${file}`);
     add(
-      `agents/plugins/sources/agentchef-workflows/${file}`,
-      path.join(agentsHome(), "plugins", "sources", "agentchef-workflows", ...file.split("/"))
+      `agents/plugins/sources/agentchef/${file}`,
+      path.join(agentsHome(), "plugins", "sources", "agentchef", ...file.split("/"))
     );
   }
 
@@ -4014,7 +4014,7 @@ function inspectCuratedSkillStatus(managedSkills, skillsCliVersion = "") {
       try {
         const inspection = skill.directInstall === true
           ? inspectDirectSkillTarget(
-              path.join(root, "plugins", "agentchef-workflows", "skills", skill.name),
+              path.join(root, "plugins", "agentchef", "skills", skill.name),
               target
             )
           : inspectPinnedSkillTarget(target, {

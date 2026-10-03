@@ -63,8 +63,8 @@ the `codex-chef` prefix. New in 0.9.0:
 ownership markers (`.agentchef-managed.json`, `.agentchef-source.json`), the
 operation journal and lock names, backup-folder prefixes, receipt and report
 schema strings (`agentchef.<name>.vN`), the plugin folder
-(`plugins/agentchef-workflows`), the operator skill (`agentchef-operator`),
-the personal marketplace name and plugin id (`agentchef-workflows@agentchef`),
+(`plugins/agentchef`), the operator skill (`agentchef-operator`),
+the personal marketplace name and plugin id (`agentchef@agentchef`),
 the Git hook banner, and the `AGENTCHEF_*` environment variables.
 
 Nothing breaks on upgrade day: every reader accepts the legacy spelling, so an

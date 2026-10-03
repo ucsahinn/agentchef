@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 
-import { identity } from "./lib/identity.mjs";
+import { identity, retiredPluginNames } from "./lib/identity.mjs";
 
 export const PLUGIN_ID = identity.pluginId;
 export const LEGACY_PLUGIN_ID = identity.legacyPluginId;
@@ -94,7 +94,8 @@ function findManagedPlugin(installed, pluginId = PLUGIN_ID) {
 export function findLegacyPlugin(installed) {
   return installed.find((plugin) =>
     plugin?.pluginId === LEGACY_PLUGIN_ID
-    || (plugin?.name === identity.legacyPluginName)
+    || plugin?.pluginId === identity.previousPluginId
+    || retiredPluginNames.includes(plugin?.name)
   );
 }
 
@@ -305,7 +306,7 @@ function readExpectedVersion() {
   const manifestPath = path.join(
     root,
     "plugins",
-    "agentchef-workflows",
+    "agentchef",
     ".codex-plugin",
     "plugin.json"
   );

@@ -270,7 +270,7 @@ entries whose current value still matches the receipt. The Claude plugin cache
 is owned by the `claude plugin` CLI and is never written by hand. The
 process-hygiene hook is not published to Claude Code in this release.
 
-Installers upsert only the `agentchef-workflows` marketplace entry. They do
+Installers upsert only the `agentchef` marketplace entry. They do
 not replace the full marketplace file, and they fail closed if an existing
 marketplace file is invalid, unreadable, or not a JSON object.
 
@@ -304,7 +304,7 @@ SEO and Evidence Research allow implicit activation only when their
 descriptions unambiguously match.
 
 The marketplace entry points to a managed mirror under
-`AGENTS_HOME/plugins/sources/agentchef-workflows`, which always stays inside
+`AGENTS_HOME/plugins/sources/agentchef`, which always stays inside
 the marketplace root required by the current Codex schema. This registration
 makes the plugin discoverable, not installed or enabled; namespaced plugin use
 requires an explicit plugin install and a new session. Marketplace JSON, the
@@ -315,7 +315,7 @@ descendants that escape the configured homes fail closed.
 
 After that explicit first plugin install, installer, repair, and update applies
 inspect the installed plugin version through the targeted `CODEX_HOME`. They
-run `codex plugin add agentchef-workflows@agentchef --json` only when the
+run `codex plugin add agentchef@agentchef --json` only when the
 plugin is already installed and its versioned cache is stale, then read the
 installed version again before reporting success. A missing or uninstalled
 plugin remains uninstalled, and a failed refresh fails closed instead of
