@@ -1,7 +1,7 @@
 ---
 name: docs-researcher
 description: "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts."
-tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
+tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

@@ -7,11 +7,22 @@ bilmen gerekiyorsa bu makaleyi kullan.
 ## AgentChef Neyi Yönetir?
 
 - `templates/codex/rules/default.rules` dosyasından üretilen `permissions.allow`
-  ve `permissions.ask` kuralları.
-- Başka hiçbir şey: `hooks`, `env`, `deny` listeleri ve diğer tüm anahtarlar
-  senin yazdığın gibi kalır. Bu sürümde Claude Code için hook kurulmaz.
-- `.claude.json` içindeki `mcpServers.context7` ve `mcpServers.serena`
-  girdileri (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun içinde).
+  ve `permissions.ask` kuralları ile `catalog/mcp-servers.json` kaynağından
+  üretilen `allow`, `ask` ve `deny` MCP araç kuralları (yasaklar
+  codebase-memory'nin yönetim araçlarını ve Playwright'ın
+  `browser_run_code_unsafe`, `browser_evaluate`, `browser_file_upload`
+  araçlarını kapsar). Bir `deny` kuralı yalnızca eklenir; mevcut `deny`
+  kuralları asla kaldırılmaz.
+- `settings.json` içinde başka hiçbir şey: `hooks`, `env` ve diğer tüm
+  anahtarlar senin yazdığın gibi kalır. Bu sürümde Claude Code için hook
+  kurulmaz.
+- `.claude.json` içine (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun
+  içinde) AgentChef 1.3.0'dan beri MCP girdisi yazmaz; çünkü `context7`,
+  `playwright` ve `serena` sunucularını plugin getirir. Yalnızca önceki bir
+  sürümün yazdığı `mcpServers.context7` ve `mcpServers.serena` girdilerini,
+  değerleri makbuz hash'i ile hâlâ eşleşiyorsa kaldırır. Aynı adlı kendi
+  girdin korunur ve plugin'i gölgelediği bildirilir; `-AdoptMcp` /
+  `--adopt-mcp` onu yedekledikten sonra kaldırır.
 
 Bu iki dosyadaki diğer her şey sana veya Claude Code'a aittir. AgentChef
 eklediği her girdiyi `~/.claude/agentchef/receipts/` altındaki yan bir makbuza

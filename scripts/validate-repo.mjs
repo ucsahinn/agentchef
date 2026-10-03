@@ -645,14 +645,14 @@ const mcpCatalog = path.join(root, "catalog/mcp-servers.json");
 if (fs.existsSync(mcpCatalog)) {
   const catalog = JSON.parse(fs.readFileSync(mcpCatalog, "utf8"));
   const servers = catalog.servers || [];
-  if (servers.length !== 16) {
-    failures.push(`Public MCP catalog contract expects 16 entries; found ${servers.length}.`);
+  if (servers.length !== 14) {
+    failures.push(`Public MCP catalog contract expects 14 entries; found ${servers.length}.`);
   }
   const defaultEnabledServers = servers
     .filter((server) => server.defaultEnabled === true)
     .map((server) => server.name)
     .sort();
-  const expectedDefaultEnabledServers = ["openaiDeveloperDocs", "serena"];
+  const expectedDefaultEnabledServers = ["openaiDeveloperDocs", "playwright", "serena"];
   if (JSON.stringify(defaultEnabledServers) !== JSON.stringify(expectedDefaultEnabledServers)) {
     failures.push(`Public MCP catalog default-enabled servers must be exactly: ${expectedDefaultEnabledServers.join(", ")}`);
   }

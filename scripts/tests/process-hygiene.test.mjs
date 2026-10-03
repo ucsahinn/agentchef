@@ -63,7 +63,6 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
     "playwright",
     "chrome-devtools",
     "serena",
-    "memory",
     "codebase-memory"
   ];
   const base = mcpEnabledState(path.join(root, "templates", "codex", "config.windows.toml"));
@@ -71,7 +70,8 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
   const multiSession = mcpEnabledState(path.join(root, "templates", "codex", "profiles", "multi-session.config.toml"));
   const offline = mcpEnabledState(path.join(root, "templates", "codex", "profiles", "offline.config.toml"));
 
-  assert.deepEqual(localMcp.filter((name) => base.get(name)), ["serena"]);
+  // Playwright runs isolated and is on by default since 1.3.0.
+  assert.deepEqual(localMcp.filter((name) => base.get(name)), ["playwright", "serena"]);
   assert.deepEqual(localMcp.filter((name) => full.get(name)), localMcp);
   assert.deepEqual(localMcp.filter((name) => multiSession.get(name)), ["serena"]);
   assert.equal([...offline.values()].every((enabled) => enabled === false), true);
@@ -432,7 +432,7 @@ test("MCP servers a live Claude Code session started are active, never orphans",
     proc(711, 710, "node.exe", "node @upstash/context7-mcp/dist/index.js"),
     // An npm-installed Claude Code session with a playwright server.
     proc(800, 1, "node.exe", "node C:\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js"),
-    proc(810, 800, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.82"),
+    proc(810, 800, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.83"),
     proc(811, 810, "node.exe", "node @playwright/mcp/dist/index.js"),
     // A tree whose owner is really gone: this one is still an orphan.
     proc(900, 999, "cmd.exe", "cmd /c npx.cmd -y codebase-memory-mcp@0.8.1"),
@@ -486,7 +486,7 @@ test("an owner-exit plan refuses a child of a process that reused the owner's pi
     // pid 101 now belongs to an unrelated, newer process ...
     proc(101, 1, "node.exe", "node some-other-tool.js", later),
     // ... whose own MCP child is newer still: not the old owner's.
-    proc(220, 101, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.82", "2026-07-29T12:55:00.000Z"),
+    proc(220, 101, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.83", "2026-07-29T12:55:00.000Z"),
     // An orphan created before the reuse is the old owner's and is planned.
     proc(200, 101, "cmd.exe", "cmd /c npx.cmd -y @playwright/mcp@0.0.76", old)
   ];

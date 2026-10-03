@@ -61,7 +61,7 @@ Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-
 | `/document-release` | `docs_author` subagent | `docs_author` | Remote release state kanitsiz iddia edilmez. |
 | `/document-generate` | `docs_author` veya docs skill | `docs_author` | Docs kod ve komutlarla eslesir. |
 | `/codex` / cross-model review | Acik review workflow'u | `code_reviewer`, manuel Codex CLI kullanimi | Baska agent veya CLI otomatik calistirilmaz; cross-model kontrolu kullanici istemelidir. |
-| `/browse` | Browser MCP + `frontend_verifier` | `frontend_verifier`, Playwright/Chrome MCP entries | Browser tool'lari prompt-gated. |
+| `/browse` | Browser MCP + `frontend_verifier` | `frontend_verifier`, Playwright (varsayılan açık) ve Chrome DevTools MCP girdileri | Browser tool'lari prompt-gated; Claude Code'da Playwright'ın kod çalıştırma ve upload araçları reddedilir. |
 | `$agentchef:fetch <url>` | Explicit yetkili site reconstruction skill'i | `fetch`, browser MCP, gerekirse dar kapsamlı uzmanlar | Public capture pasiftir; auth, private route, korumalı asset, install ve external write gated kalır. |
 | `$agentchef:seo <hedef>` | Kanıta dayalı audit, implementation ve verification skill'i | `seo`, `google_seo_auditor`, browser MCP, gerekirse performance verification | Local, rendered, deployed ve account kanıtı ayrı kalır; ranking, indexing, account write, publication ve deploy çıkarım yoluyla iddia edilmez. |
 | `$agentchef:evidence-research <soru>` | Kaynakları izlenebilir deep research skill'i | `evidence-research`, resmi kaynak araması, gerekirse domain reviewer | Fact, inference ve recommendation ayrılır; private data, ücretli API, katılımcı ve publication onay ister. |
@@ -69,7 +69,7 @@ Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-
 | `/pair-agent` | External-agent collaboration service | Import edilmedi | Tunnel, scoped token ve external agent icin ayri design gerekir. |
 | `/ship` | Release verification workflow | `release_verifier` | Commit, push, PR, tag, release ve deploy icin acik onay gerekir. |
 | `/land-and-deploy` | Release/deploy workflow | `release_verifier` | Merge, deploy ve production verification otomatik default olmaz. |
-| `/learn` | Memory workflow | Memory MCP uygun durumda kullanilir | Secret, session, cookie veya auth materyali saklanmaz. |
+| `/learn` | Memory workflow | Codex built-in memory'leri veya host'un kendi memory dosyalari; katalogda memory MCP yok | Secret, session, cookie veya auth materyali saklanmaz. |
 | `/make-pdf` | Gelecekte offline doc-export skill | Default uygulanmadi | Buyuk implicit dependency install yok; offline diagram asset'leri zaten `offline-diagram-triplet` ile uretilir. |
 | `/diagram` | Offline diagram skill | `offline-diagram-triplet` | Zero network; artifact'ler istenmeden commit edilmez. |
 

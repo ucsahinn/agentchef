@@ -31,11 +31,10 @@ Delegasyon denetlenebilir olsun diye `Agent plan`, `Agent started` ve
 ## Varsayilan MCP Siniri
 
 AgentChef read-heavy destek yüzeylerini varsayılan olarak kullanışlı tutar:
-resmi docs, Context7, reasoning, browser evidence, semantic code navigation,
-secret icermeyen memory reads ve lokal codebase graph reads. Interaction, symbol
-edit, graph indexing, account access, database access, production telemetry,
-deployment operasyonları ve geniş filesystem access prompt-gated veya disabled
-kalır.
+resmi docs, Context7, reasoning, browser evidence, semantic code navigation ve
+lokal codebase graph reads. Interaction, symbol edit, graph indexing, account
+access, database access, production telemetry ve deployment operasyonları
+prompt-gated veya disabled kalır.
 
 ## İlgili Dokümanlar
 

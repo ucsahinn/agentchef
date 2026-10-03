@@ -109,11 +109,11 @@ What if: Performing the operation ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (2):
-    openaiDeveloperDocs, serena
-  - MCP opt-in / disabled by default (14):
-    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
-  - MCP setup notes (14):
+  - MCP ready by default (3):
+    openaiDeveloperDocs, playwright, serena
+  - MCP opt-in / disabled by default (11):
+    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
     adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
@@ -165,11 +165,11 @@ Continue with this plan? [Y/n]:
 [chef] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (2):
-    openaiDeveloperDocs, serena
-  - MCP opt-in / disabled by default (14):
-    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
-  - MCP setup notes (14):
+  - MCP ready by default (3):
+    openaiDeveloperDocs, playwright, serena
+  - MCP opt-in / disabled by default (11):
+    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
     adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
@@ -223,7 +223,7 @@ current managed-file inventory vary by machine and release.
 AgentChef status
 Overall: attention
 Repo Git: attention - git status --short reports changed lines.
-MCP: 16/16 cataloged configured, 0 missing, <user-added> user-added; 2 enabled/14 disabled; live not probed
+MCP: 14/14 cataloged configured, 0 missing, <user-added> user-added; 3 enabled/11 disabled; live not probed
 Codex CLI: ok (strict config ok, login ok, MCP ok)
 Installed runtime: attention/current (...)
 Skills: <installed> total across global roots (<managed> AgentChef managed, <missing> missing, <other> other/user-installed)
@@ -254,11 +254,11 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (2):
-    openaiDeveloperDocs, serena
-  - MCP opt-in / disabled by default (14):
-    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
-  - MCP setup notes (14):
+  - MCP ready by default (3):
+    openaiDeveloperDocs, playwright, serena
+  - MCP opt-in / disabled by default (11):
+    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
     adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo
@@ -286,11 +286,11 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (2):
-    openaiDeveloperDocs, serena
-  - MCP opt-in / disabled by default (14):
-    context7, sequential-thinking, playwright, chrome-devtools, memory, codebase-memory, github, figma, ...
-  - MCP setup notes (14):
+  - MCP ready by default (3):
+    openaiDeveloperDocs, playwright, serena
+  - MCP opt-in / disabled by default (11):
+    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
     adaptive-agent-routing, agentchef-operator, context-budget-planner, evidence-research, external-review-workflow, fetch, gptpro, gptpro-handoff, offline-diagram-triplet, seo

@@ -20,7 +20,6 @@ const MCP_SIGNATURES = [
   ["context7", /@upstash[\\/]+context7-mcp/i],
   ["sequential-thinking", /server-sequential-thinking/i],
   ["playwright", /@playwright[\\/]+mcp/i],
-  ["memory", /@modelcontextprotocol[\\/]+server-memory/i],
   ["serena", /serena(?:.+)(?:start-mcp-server|mcp_server|serena-mcp-server)/i]
 ];
 

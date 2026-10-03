@@ -50,9 +50,15 @@ connectors, not harmless documentation helpers.
 
 Rules used in this starter:
 
-- OpenAI Docs and the lazy Serena semantic bridge are enabled by default.
-  Context7 is an opt-in library-documentation helper because it starts an
-  additional Node process and may need first-run network access.
+- OpenAI Docs, Playwright, and the lazy Serena semantic bridge are enabled by
+  default in the Codex base config; the `multi-session` and `offline` profiles
+  keep Playwright off. Context7 is an opt-in library-documentation helper on
+  Codex because it starts an additional Node process and may need first-run
+  network access.
+- The former `memory` and `filesystem` servers are no longer cataloged. A Codex
+  `-Update` drops their config tables only when they are byte-identical to what
+  AgentChef wrote (`templates/codex/retired-tables.json`); an edited table stays
+  and is reported.
 - Playwright and Chrome DevTools are local browser verification tools; only
   evidence/navigation tools are allowlisted by default, while interaction,
   evaluation, upload, and request-detail tools stay prompt-gated or disabled.
@@ -68,9 +74,8 @@ Rules used in this starter:
   codebase-graph MCP servers use `default_tools_approval_mode = "prompt"` with
   explicit `enabled_tools` allowlists for evidence, navigation, and read-only
   graph queries. Browser request/response detail, browser interaction, symbol
-  edits, graph indexing, memory writes, filesystem, account, database,
-  production, deploy, publish, and mutating tools should use `"prompt"` or stay
-  disabled.
+  edits, graph indexing, account, database, production, deploy, publish, and
+  mutating tools should use `"prompt"` or stay disabled.
 - Browser network listing can be approved for local QA. Request/response
   detail tools such as Playwright `browser_network_request` and Chrome DevTools
   `get_network_request` stay prompt-gated or disabled because they may expose
@@ -88,6 +93,33 @@ Rules used in this starter:
   Codex from untrusted working directories should also set
   `NoDefaultCurrentDirectoryInExePath=1` in the parent environment or
   materialize trusted absolute launcher paths for that machine.
+- On Claude Code the `agentchef` plugin ships `context7`, `playwright`, and
+  `serena` (`plugins/agentchef/mcp/claude.mcp.json`). The npx servers start
+  through `plugins/agentchef/scripts/mcp-launch.mjs`, which refuses anything but
+  an exact `name@x.y.z` pin (a range or tag would start whatever the registry
+  serves that day) and any argument with shell syntax; on Windows it goes
+  through `cmd.exe /d /s /c npx.cmd` with
+  `NoDefaultCurrentDirectoryInExePath=1`. When npx's cache already holds that
+  exact version (its installed `package.json` version equals the pin and the
+  bin stays inside the package folder), the launcher runs that entry point in
+  its own node process instead of starting npx again; the code that runs is
+  the same npx would run. Serena runs the plugin's copy of the
+  shared pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`, so both CLIs
+  share one read-only backend per project.
+- A user-scope `.claude.json` entry outranks a plugin server of the same name.
+  The installer therefore retires the `context7` and `serena` entries a 1.0–1.2
+  install wrote there, but only when the value still matches the hash in the
+  MCP receipt. Any other same-name entry is the user's: it is kept and reported
+  as shadowing the plugin, and only `-AdoptMcp` / `--adopt-mcp` retires it,
+  after a backup of `.claude.json`.
+- Claude Code has no per-server tool allowlist, so the Codex decisions become
+  permission rules generated from the catalog: `approve` → `allow`, `prompt` →
+  `ask`, and `deny` for codebase-memory's `delete_project`, `index_repository`,
+  `ingest_traces`, and `manage_adr` plus Playwright's
+  `browser_run_code_unsafe`, `browser_evaluate`, and `browser_file_upload`.
+  Claude Code cannot turn off one plugin MCP server on its own (only
+  `--strict-mcp-config` disables every server), so Playwright is on in every
+  Claude Code session; those deny rules are what keeps its riskiest tools shut.
 - Apps/connectors also have a separate `[apps._default]` gate:
   `enabled = false`, `destructive_enabled = false`, and
   `open_world_enabled = false` are part of the reviewed templates.
@@ -257,12 +289,16 @@ conflict that needs explicit adoption.
 Every manifest operation names its target (`codex`, `claude`, or `shared`).
 The Codex target is the default; the Claude target is selected only by an
 explicit `--target` or an interactive confirmation. Claude-side files that
-An update may refresh an MCP entry it wrote earlier, but only while the value
-in `.claude.json` still hashes to what the receipt records. An entry that was
-edited, or that AgentChef never wrote, is reported and left as it is. Permission rules are additive by
+Since 1.3.0 the installer writes no MCP entry into `.claude.json`; it only
+retires the entries an earlier release wrote, and only while the value still
+hashes to what the receipt records. An entry that was edited, or that
+AgentChef never wrote, is reported and left as it is unless `-AdoptMcp` /
+`--adopt-mcp` is passed, which backs the file up first. Permission rules are additive by
 default. An update may also retire a rule it added earlier once the fragment no
 longer asks for it, under the same ownership proof, so a moved package pin does
-not leave its old allow rule behind forever. The `deny` list is never changed. Claude files
+not leave its old allow rule behind forever. `deny` rules are only ever added
+(the generated MCP denials), never retired, and existing ones are never
+changed. Claude files
 AgentChef does not own (`settings.json`, `.claude.json`) are merged
 additively and every added entry is recorded in a sidecar receipt under
 `~/.claude/agentchef/receipts/`; repair, status, and removal act only on

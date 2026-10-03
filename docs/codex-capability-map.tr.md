@@ -23,8 +23,8 @@ Resmi kaynaklar:
 | `config.toml` | Model, sandbox, approval, MCP, feature ve profile ayarlari | Workspace-write sandbox ve on-request approval | `npm run validate:mcp` |
 | Rules | Dar komut approval varsayilanlari | Sadece dogrulama komutlari; destructive/publish aksiyonlari gated | `npm run validate:content` |
 | Skills | Progressive disclosure ile yeniden kullanilabilir workflow'lar | Commit-pinned curated kurulumlar ve GPT Pro context/handoff, yetkili reconstruction, kanıta dayalı SEO, izlenebilir deep research dahil on yerel plugin skill'i | `npm run verify:skills` |
-| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; bundled MCP/app yok | `npm run validate` |
-| MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli iki varsayılan; Context7, diğer lokal stdio yardımcıları ve auth isteyen connector'lar ihtiyaç olana kadar kapalı | `npm run validate:mcp` |
+| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; Codex manifest'inde bundled MCP/app yok (Claude Code manifest'i `context7`, `playwright` ve `serena` getirir) | `npm run validate` |
+| MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli üç varsayılan (OpenAI Docs, Playwright, Serena); Context7, diğer lokal stdio yardımcıları ve auth isteyen connector'lar ihtiyaç olana kadar kapalı | `npm run validate:mcp` |
 | Subagents | Evidence-heavy uzman delegasyonu | Sandbox'li role dosyalariyla 21 incelenmis uzman ajan | `npm run validate:agents` |
 | Doctor/status | No-write saglik ve drift ozeti | Default repo-only; opsiyonel global varlik kontrolu | `npm run codex:doctor` |
 
@@ -166,7 +166,7 @@ capability boundary olarak ele alir. Bu starter dort kural uygular:
 
 - Resmi veya yuksek sinyalli server'lari tercih et.
 - Lokal package version'larini veya git source ref'lerini pinle.
-- Account, filesystem, database, production ve billing-adjacent connector'lari
+- Account, database, production ve billing-adjacent connector'lari
   somut gorev gerekene kadar kapali tut.
 - Private data okuyabilen veya aksiyon alabilen her sey icin prompt-based
   approval ve dar tool exposure kullan.
@@ -189,8 +189,8 @@ Bu repo bu ayrimi korur:
   kanıta dayalı `$agentchef:seo`, izlenebilir `$agentchef:evidence-research` ve context budget
   planner bunların içindedir.
 - Tam hedefli tek `SessionEnd` süreç hijyeni hook'u ayrıca incelenir ve
-  trust-gated kalır. Başka plugin hook, MCP server ve app yüzeyleri manifest'te
-  yer almaz.
+  trust-gated kalır. Başka plugin hook, MCP server ve app yüzeyleri Codex
+  manifest'inde yer almaz; Codex MCP sunucuları `config.toml` içindedir.
 
 `/diagram` benzeri cikti gerektiğinde local renderer'i dogrudan calistir:
 

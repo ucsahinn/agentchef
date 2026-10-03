@@ -160,15 +160,17 @@ export function planClaudeInstall(options) {
     platform,
     claudeHome,
     previousEntries: mcpReceipt?.entries || [],
-    refresh: Boolean(options.refreshManaged)
+    refresh: Boolean(options.refreshManaged),
+    adopt: Boolean(options.adoptMcp)
   });
   actions.push({
     id: "claude-mcp-merge",
     kind: "json-merge",
     destination: claudeJson,
     state: mcpPlan.changed ? (fs.existsSync(claudeJson) ? "merge" : "create") : "identical",
-    entries: mcpPlan.entries.map((entry) => entry.preview),
+    entries: [...mcpPlan.entries, ...mcpPlan.retired].map((entry) => entry.preview),
     skipped: mcpPlan.skipped.length,
+    shadowing: mcpPlan.shadowing.map((entry) => entry.name),
     plan: mcpPlan,
     plannedFromSha256: fs.existsSync(claudeJson) ? fileSha256(claudeJson) : null,
     backup: true
@@ -285,9 +287,14 @@ function writeFileAtomic(target, buffer) {
 function mergeReceiptEntries(previous, added, retired = []) {
   const positionByKey = new Map();
   const merged = [];
-  const dropped = new Set(retired.map((entry) => `array-item:${entry.pointer}:${entry.valueSha256}`));
+  // A retired array item is matched by value; a retired object key (an MCP
+  // entry the plugin now ships) by its pointer.
+  const dropped = new Set(retired.map((entry) => (entry.kind === "object-key"
+    ? `object-key:${entry.pointer}`
+    : `array-item:${entry.pointer}:${entry.valueSha256}`)));
   for (const entry of [...(previous?.entries || []), ...added]) {
     if (entry.kind === "array-item" && dropped.has(`array-item:${entry.pointer}:${entry.valueSha256}`)) continue;
+    if (entry.kind === "object-key" && dropped.has(`object-key:${entry.pointer}`)) continue;
     const key = entry.kind === "array-item"
       ? `${entry.kind}:${entry.pointer}:${entry.valueSha256}`
       : `${entry.kind}:${entry.pointer}`;
@@ -716,6 +723,7 @@ export function resolveClaudeInstallOptions(raw = {}) {
     noBackup: Boolean(raw.noBackup),
     agentsLockHeld: Boolean(raw.agentsLockHeld),
     adoptSkillLinks: Boolean(raw.adoptSkillLinks),
+    adoptMcp: Boolean(raw.adoptMcp),
     skipPluginRegister: Boolean(raw.skipPluginRegister),
     redactPaths: Boolean(raw.redactPaths),
     json: Boolean(raw.json)
@@ -733,6 +741,7 @@ function parseArgs(argv) {
     else if (arg === "--no-backup") raw.noBackup = true;
     else if (arg === "--agents-lock-held") raw.agentsLockHeld = true;
     else if (arg === "--adopt-skill-links") raw.adoptSkillLinks = true;
+    else if (arg === "--adopt-mcp") raw.adoptMcp = true;
     else if (arg === "--skip-plugin-register") raw.skipPluginRegister = true;
     else if (arg === "--redact-paths") raw.redactPaths = true;
     else if (arg === "--claude-home") { raw.claudeHome = requireCliValue(argv, index, arg); index += 1; }
@@ -764,6 +773,10 @@ Options:
   --home <path>               Override HOME for planning only
   --platform <name>           windows or unix (defaults to current platform)
   --adopt-skill-links         No effect since 1.3.0 (skills come from the plugin); accepted for old scripts
+  --adopt-mcp                 Also retire a user-scope entry you added under the name of
+                              a server the plugin ships (context7, playwright, serena);
+                              it is backed up first. Without it such an entry is
+                              reported as shadowing the plugin and kept
   --agents-lock-held          Internal: the calling installer already holds the AGENTS_HOME operation lock
   --skip-plugin-register      Do not run the claude plugin CLI commands
   --no-backup                 Creation-only mode; refuses to replace existing targets
@@ -788,6 +801,9 @@ function printPlan(plan, options) {
     }
     console.log(`[${action.kind}] ${action.id}: ${action.state} -> ${redact(action.destination, options)}`);
     for (const entry of action.entries || []) console.log(`  + ${entry}`);
+    for (const name of action.shadowing || []) {
+      console.log(`  ! ${name}: your own .claude.json entry shadows the plugin's server; kept (--adopt-mcp retires it with a backup)`);
+    }
   }
 }
 

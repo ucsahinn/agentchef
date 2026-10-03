@@ -1,7 +1,7 @@
 ---
 name: spec-author
 description: "Spec author for turning vague intent into executable specs with scope, evidence, edge cases, and quality gates; architecture and test strategy for a settled requirement belongs to engineering_planner."
-tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
 disallowedTools: NotebookEdit
 ---
 

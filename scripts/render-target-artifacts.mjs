@@ -5,6 +5,8 @@
 //   catalog/agents.json + templates/codex/agents/*.toml -> plugins/agentchef/agents/*.md
 //   templates/codex/rules/default.rules -> templates/claude/settings.fragment.json
 //   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
+//   catalog/mcp-servers.json (claudeSource: plugin) -> plugins/agentchef/mcp/claude.mcp.json
+//   templates/codex/serena-pool.mjs -> plugins/agentchef/scripts/serena-pool.mjs
 // The Claude manifest declares no hooks: the SessionEnd process-hygiene hook
 // stays Codex-only until the Claude owner-detection branch ships.
 // `--check` (used by npm run check) fails when a committed artifact drifts.
@@ -14,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { renderWorkingAgreement, workingAgreementTargets } from "./lib/emitters/working-agreement.mjs";
 import { emitClaudeAgents } from "./lib/emitters/claude-agents.mjs";
 import { emitClaudePermissions } from "./lib/emitters/claude-permissions.mjs";
+import { emitClaudeMcpPermissions } from "./lib/emitters/claude-mcp-permissions.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
@@ -22,6 +25,8 @@ const agentsOutputDirectory = `${pluginDirectory}/agents`;
 const codexPluginManifestPath = `${pluginDirectory}/.codex-plugin/plugin.json`;
 const claudePluginManifestPath = `${pluginDirectory}/.claude-plugin/plugin.json`;
 const settingsFragmentPath = "templates/claude/settings.fragment.json";
+export const claudePluginMcpPath = `${pluginDirectory}/mcp/claude.mcp.json`;
+const pluginSerenaBridgePath = `${pluginDirectory}/scripts/serena-pool.mjs`;
 const projectUrl = "https://github.com/ucsahinn/agentchef";
 
 function normalize(text) {
@@ -48,8 +53,29 @@ export function renderClaudePluginManifest(repoRoot, agentFileNames) {
     license: packageJson.license,
     keywords: ["agentchef", "claude-code", "codex", "workflows", "security-first"],
     skills: "./skills/",
-    agents: [...agentFileNames].sort().map((fileName) => `./agents/${fileName}`)
+    agents: [...agentFileNames].sort().map((fileName) => `./agents/${fileName}`),
+    // Not the root .mcp.json: Claude would load that one on its own as well.
+    mcpServers: "./mcp/claude.mcp.json"
   };
+}
+
+// The MCP servers Claude Code gets from the plugin. Every entry runs through
+// node, the one command both platforms resolve the same way; npx packages go
+// through scripts/mcp-launch.mjs and Serena through the shared pool bridge,
+// pointed at the session's project.
+export function renderClaudePluginMcp(repoRoot) {
+  const catalog = readJson(repoRoot, "catalog/mcp-servers.json");
+  const mcpServers = {};
+  for (const server of catalog.servers.filter((entry) => entry.claudeSource === "plugin")) {
+    if (server.name === "serena") {
+      mcpServers.serena = { command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/scripts/serena-pool.mjs", "bridge", "--project-root", "${CLAUDE_PROJECT_DIR}"] };
+    } else if (server.transport === "stdio" && server.package) {
+      mcpServers[server.name] = { command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launch.mjs", server.package, ...(server.launchArgs || [])] };
+    } else {
+      throw new Error(`No plugin launch form for MCP server ${server.name}`);
+    }
+  }
+  return { mcpServers };
 }
 
 export function renderAllTargetArtifacts(repoRoot = root) {
@@ -65,11 +91,20 @@ export function renderAllTargetArtifacts(repoRoot = root) {
     agentFileNames.push(fileName);
   }
   outputs.set(claudePluginManifestPath, `${JSON.stringify(renderClaudePluginManifest(repoRoot, agentFileNames), null, 2)}\n`);
+  outputs.set(claudePluginMcpPath, `${JSON.stringify(renderClaudePluginMcp(repoRoot), null, 2)}\n`);
+  // The plugin carries its own copy of the bridge; identical bytes keep it on
+  // the same pool manager as the Codex copy.
+  outputs.set(pluginSerenaBridgePath, normalize(fs.readFileSync(path.join(repoRoot, "templates", "codex", "serena-pool.mjs"), "utf8")));
   const rules = fs.readFileSync(path.join(repoRoot, "templates", "codex", "rules", "default.rules"), "utf8");
   const permissions = emitClaudePermissions(rules);
+  const mcpPermissions = emitClaudeMcpPermissions(readJson(repoRoot, "catalog/mcp-servers.json"));
   outputs.set(settingsFragmentPath, `${JSON.stringify({
-    $comment: "Generated from templates/codex/rules/default.rules by scripts/render-target-artifacts.mjs; do not edit by hand.",
-    permissions: permissions.permissions
+    $comment: "Generated from templates/codex/rules/default.rules and catalog/mcp-servers.json by scripts/render-target-artifacts.mjs; do not edit by hand.",
+    permissions: {
+      allow: [...permissions.permissions.allow, ...mcpPermissions.allow],
+      ask: [...permissions.permissions.ask, ...mcpPermissions.ask],
+      deny: mcpPermissions.deny
+    }
   }, null, 2)}\n`);
   return outputs;
 }

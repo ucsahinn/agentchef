@@ -31,10 +31,10 @@ delegation is auditable.
 ## Default MCP Boundary
 
 AgentChef keeps read-heavy support surfaces useful by default: official docs,
-Context7, reasoning, browser evidence, semantic code navigation, non-secret
-memory reads, and local codebase graph reads. Interaction, symbol edits, graph
-indexing, account access, database access, production telemetry, deployment
-operations, and broad filesystem access stay prompt-gated or disabled.
+Context7, reasoning, browser evidence, semantic code navigation, and local
+codebase graph reads. Interaction, symbol edits, graph indexing, account
+access, database access, production telemetry, and deployment operations stay
+prompt-gated or disabled.
 
 ## Related Docs
 

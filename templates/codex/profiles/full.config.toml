@@ -18,8 +18,5 @@ enabled = true
 [mcp_servers.serena]
 enabled = true
 
-[mcp_servers.memory]
-enabled = true
-
 [mcp_servers.codebase-memory]
 enabled = true

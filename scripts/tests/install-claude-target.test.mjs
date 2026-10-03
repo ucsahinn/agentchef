@@ -7,6 +7,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { scaledTimeout } from "../lib/test-timeouts.mjs";
 import { claudeInstallActionIds } from "../install-claude-target.mjs";
+import { createReceipt, pointerFor, valueSha256, writeReceipt } from "../lib/json-merge-receipt.mjs";
+import { buildClaudeMcpEntry } from "../lib/claude-mcp-merge.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const helper = path.join(root, "scripts", "install-claude-target.mjs");
@@ -77,7 +79,8 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(statuses["claude-working-agreement"], "installed");
   assert.equal(statuses["claude-serena-pool"], "installed");
   assert.equal(statuses["claude-settings-merge"], "merged");
-  assert.equal(statuses["claude-mcp-merge"], "merged");
+  // The default servers come from the plugin; the user's own context7 stays.
+  assert.equal(statuses["claude-mcp-merge"], "current");
   assert.equal(statuses["claude-plugin-marketplace"], "installed");
   assert.equal(statuses["claude-plugin-register"], "skipped");
 
@@ -85,14 +88,18 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.ok(settings.permissions.allow.includes("Bash(ls *)"));
   assert.ok(settings.permissions.allow.length > 10);
   assert.ok(!settings.permissions.allow.includes("Bash(gh pr list *)"), "denied rule stays out of allow");
-  assert.deepEqual(settings.permissions.deny, ["Bash(gh pr list *)"]);
+  // The user's deny rule stays first; AgentChef adds the MCP tools Codex
+  // disables (codebase-memory admin tools, Playwright code execution).
+  const fragmentDeny = readJson(path.join(root, "templates", "claude", "settings.fragment.json")).permissions.deny;
+  assert.deepEqual(settings.permissions.deny, ["Bash(gh pr list *)", ...fragmentDeny]);
+  assert.ok(fragmentDeny.includes("mcp__plugin_agentchef_playwright__browser_run_code_unsafe"));
   assert.deepEqual(settings.hooks, state.settings.hooks, "user hooks untouched; no hook is installed for Claude in this release");
   assert.equal(settings.theme, "dark");
   const claudeJson = readJson(path.join(state.home, ".claude.json"));
   assert.ok(!fs.existsSync(path.join(state.claudeHome, ".claude.json")), "no stray .claude.json inside the config directory");
   assert.deepEqual(claudeJson.mcpServers.context7, { type: "stdio", command: "custom" });
   assert.equal(claudeJson.numStartups, 4);
-  assert.equal(claudeJson.mcpServers.serena.command, "node");
+  assert.equal(claudeJson.mcpServers.serena, undefined, "Serena comes from the plugin, not a user entry");
   assert.ok(fs.existsSync(path.join(state.claudeHome, "rules", "agentchef-working-agreement.md")));
   assert.ok(fs.existsSync(path.join(state.claudeHome, "agentchef", "serena-pool.mjs")));
   assert.ok(!fs.existsSync(path.join(state.claudeHome, "skills", "seo")), "no skill link is created");
@@ -101,7 +108,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   assert.equal(marketplace.name, "agentchef");
   assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./sources/agentchef"]);
   const receipts = fs.readdirSync(path.join(state.claudeHome, "agentchef", "receipts")).sort();
-  assert.deepEqual(receipts, ["claude-mcp-merge-receipt.json", "claude-settings-merge-receipt.json"]);
+  assert.deepEqual(receipts, ["claude-settings-merge-receipt.json"]);
   const installReceipt = readJson(path.join(state.claudeHome, "agentchef", "install-receipt.json"));
   assert.deepEqual(installReceipt.links, []);
   assert.ok(fs.existsSync(path.join(state.claudeHome, "agentchef", "backups")));
@@ -359,14 +366,53 @@ test("a removal that fails after reverting the receipts restores them, so a reru
   fs.rmSync(state.home, { recursive: true, force: true });
 });
 
+// A home a 1.2 install left: .claude.json carries the Serena entry AgentChef
+// wrote there, and the MCP receipt records it.
+function withRecordedSerena(state) {
+  const claudeJsonPath = path.join(state.home, ".claude.json");
+  const catalog = readJson(path.join(root, "catalog", "mcp-servers.json"));
+  const serena = buildClaudeMcpEntry(catalog.servers.find((server) => server.name === "serena"), { platform, claudeHome: state.claudeHome });
+  const document = readJson(claudeJsonPath);
+  document.mcpServers.serena = serena;
+  fs.writeFileSync(claudeJsonPath, `${JSON.stringify(document, null, 2)}\n`);
+  const receiptsDir = path.join(state.claudeHome, "agentchef", "receipts");
+  fs.mkdirSync(receiptsDir, { recursive: true });
+  writeReceipt(path.join(receiptsDir, "claude-mcp-merge-receipt.json"), createReceipt({
+    product: { name: "agentchef", version: "1.2.2" },
+    target: claudeJsonPath,
+    beforeSha256: null,
+    afterSha256: null,
+    entries: [{ kind: "object-key", pointer: pointerFor(["mcpServers", "serena"]), valueSha256: valueSha256(serena), preview: "serena" }]
+  }));
+  return claudeJsonPath;
+}
+
+test("a user entry a 1.2 install wrote for a plugin server is retired; the user's own entry stays", () => {
+  const state = fixture();
+  const claudeJsonPath = withRecordedSerena(state);
+  const applied = run(state, ["--apply"]);
+  assert.equal(applied.outcome.results.find((result) => result.id === "claude-mcp-merge").status, "merged");
+  const after = readJson(claudeJsonPath);
+  assert.equal(after.mcpServers.serena, undefined, "the plugin's Serena is no longer shadowed");
+  assert.equal(after.mcpServers.context7.command, "custom", "the user's own entry is kept");
+  const receipt = readJson(path.join(state.claudeHome, "agentchef", "receipts", "claude-mcp-merge-receipt.json"));
+  assert.ok(!receipt.entries.some((entry) => entry.pointer === "/mcpServers/serena"), "the retired entry leaves the receipt");
+  const plan = run(state, ["--dry-run"]);
+  assert.deepEqual(plan.plan.actions.find((action) => action.id === "claude-mcp-merge").shadowing, ["context7"]);
+  const adopted = run(state, ["--apply", "--adopt-mcp"]);
+  assert.equal(adopted.outcome.results.find((result) => result.id === "claude-mcp-merge").status, "merged");
+  assert.equal(readJson(claudeJsonPath).mcpServers.context7, undefined, "--adopt-mcp retires the user's same-name entry");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
 test("a write to ~/.claude.json between plan and apply is kept, not overwritten", () => {
   const state = fixture();
-  const claudeJsonPath = path.join(state.home, ".claude.json");
+  const claudeJsonPath = withRecordedSerena(state);
   const result = runRaw(state, ["--apply", "--json"], { AGENTCHEF_TEST_CLAUDE_TOUCH_BEFORE_MERGE: "claude-mcp-merge" });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const after = readJson(claudeJsonPath);
   assert.equal(after.agentchefTestTouched, true, "the concurrent write survives");
-  assert.ok(after.mcpServers.serena, "AgentChef's merge still landed");
+  assert.equal(after.mcpServers.serena, undefined, "AgentChef's retirement still landed");
   assert.equal(after.mcpServers.context7.command, "custom", "the user's own entry is untouched");
   fs.rmSync(state.home, { recursive: true, force: true });
 });

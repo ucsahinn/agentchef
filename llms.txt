@@ -68,8 +68,11 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
 - 15 reviewed pinned skills in `catalog/skills.json` and
   `catalog/skills-lock.json`, written into the same plugin source by the
   full install.
-- Conservative MCP defaults in `catalog/mcp-servers.json` and
-  `templates/codex/config.*.toml`.
+- Conservative MCP defaults for 14 cataloged servers in
+  `catalog/mcp-servers.json` and `templates/codex/config.*.toml` (Codex on by
+  default: `openaiDeveloperDocs`, `playwright`, `serena`); the Claude Code
+  plugin ships `context7`, `playwright`, and `serena` through
+  `plugins/agentchef/mcp/claude.mcp.json`.
 - Bilingual task-focused knowledge base under `kb/`.
 - No-write installer previews for PowerShell and Bash.
 - Repo-only doctor command:

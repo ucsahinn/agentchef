@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+- MCP servers:
+  - The `memory` and `filesystem` servers are removed everywhere; the catalog
+    now lists 14 servers. `-Update` drops their Codex config tables when they
+    are exactly what AgentChef wrote (`templates/codex/retired-tables.json`);
+    an edited table stays and is reported.
+  - Pins: `@playwright/mcp@0.0.83`, `chrome-devtools-mcp@1.10.1`.
+  - Playwright is on by default in the Codex base config; the `multi-session`
+    and `offline` profiles keep it off. Codex now starts with
+    `openaiDeveloperDocs`, `playwright`, and `serena`.
+  - Claude Code gets `context7`, `playwright`, and `serena` from the
+    `agentchef` plugin (`plugins/agentchef/mcp/claude.mcp.json`, manifest
+    `mcpServers`). npx servers start through
+    `plugins/agentchef/scripts/mcp-launch.mjs`, which accepts only an exact
+    pinned version and on Windows runs `cmd.exe` + `npx.cmd` with
+    `NoDefaultCurrentDirectoryInExePath`. Once npx has fetched that exact
+    version, the launcher runs the server's entry point in its own node
+    process, so each server is 2 processes instead of 6 (measured on Windows);
+    Serena runs the plugin's copy of the
+    pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`. The installer no
+    longer writes these into `~/.claude.json`, and retires the entries a
+    1.0–1.2 install wrote there (proven by the MCP receipt hash), since a
+    user-scope entry outranks a plugin server. A same-name entry of your own
+    is kept and reported as shadowing; the new `-AdoptMcp` / `--adopt-mcp`
+    retires it after a backup. Plugin tools are named
+    `mcp__plugin_agentchef_<server>__<tool>`; agent grants carry that and the
+    plain `mcp__<server>` form.
+  - The Claude settings fragment now carries MCP rules generated from the
+    catalog: Codex `approve` → `allow`, `prompt` → `ask`, and `deny` for
+    codebase-memory's four admin tools and Playwright's
+    `browser_run_code_unsafe`, `browser_evaluate`, and `browser_file_upload`.
+    Claude Code cannot turn off one plugin MCP server on its own (only
+    `--strict-mcp-config` disables all of them), so Playwright is on in every
+    Claude Code session.
+
 - Coordinators go from eleven to seven, so the plugin ships 28 roles instead
   of 32:
   - The new `ui_coordinator` owns `frontend_verifier` and `design_reviewer`.

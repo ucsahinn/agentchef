@@ -39,7 +39,7 @@ want the preview and installer to target it.
 | Selection | What is managed |
 | --- | --- |
 | `codex` (default) | `~/.codex` files, the shared `~/.agents` plugin source and marketplace (every AgentChef skill lives in the plugin source), optional Git guards |
-| `claude` | the shared `~/.agents` trees plus the Claude Code surface: a user-level rule file, additive `settings.json` permissions and `.claude.json` MCP entries recorded in receipts, the Claude plugin marketplace, and plugin registration through the `claude plugin` CLI |
+| `claude` | the shared `~/.agents` trees plus the Claude Code surface: a user-level rule file, additive `settings.json` permissions (shell and MCP tool rules) recorded in a receipt, the Claude plugin marketplace, and plugin registration through the `claude plugin` CLI; the plugin ships the `context7`, `playwright`, and `serena` MCP servers, and `.claude.json` entries a 1.0–1.2 install wrote for them are retired |
 | `both` | everything above; shared operations run once |
 
 `npm run chef -- --install` detects which CLIs are on `PATH`, proposes a
@@ -338,6 +338,13 @@ Useful switches:
   `--adopt-skill-links`): accepted so older scripts keep running, but they
   have no effect since 1.3.0 and print a warning. There are no direct skill
   targets or skill links left to adopt.
+- `-AdoptMcp` (Bash: `--adopt-mcp`; requires `-Target claude` or `both`):
+  retire a user-scope `~/.claude.json` entry you added yourself under the name
+  of a server the plugin ships (`context7`, `playwright`, `serena`). The file is
+  backed up first. Without it such an entry is kept, reported as shadowing the
+  plugin's server, and wins over it, because a user-scope entry outranks a
+  plugin server. Entries AgentChef 1.0–1.2 wrote (proven by the hash in the MCP
+  receipt) are retired without this switch.
 - `-InstallSkills`: install `catalog/skills.json` entries that have
   `install: true`, a verified `package` in `owner/repo` format, a full commit
   SHA, and a matching `skill` name. The installer fetches that exact commit,
@@ -409,6 +416,9 @@ Useful flags:
   `--adopt-evidence-research-skill`, `--adopt-direct-skill=<name>`, and
   `--adopt-skill-links`: accepted for older scripts, no effect since 1.3.0
   (a warning is printed).
+- `--adopt-mcp`: retire your own `~/.claude.json` entry for `context7`,
+  `playwright`, or `serena` after a backup so the plugin's server takes effect
+  (requires `--target=claude` or `--target=both`).
 - `--install-git-guards`: opt in to global Git ignore and hook settings.
 - `--adopt-git-ignore`, `--adopt-git-hook`,
   `--adopt-git-excludes-file`, and `--adopt-git-hooks-path`: grant adoption
@@ -434,7 +444,7 @@ Both installers finish with a capability board that lists the specialist
 agents, default-ready MCP servers, disabled opt-in MCP connectors, bundled
 plugin skills, reviewed global skills, enterprise routing profiles, and MCP
 setup notes. The setup notes call out local tooling, OAuth authorization,
-filesystem-path selection, broad/destructive graph-indexing, and
+broad/destructive graph-indexing, and
 Supabase project/read-only requirements before a task needs that connector. Account,
 database, production, broad filesystem, and broad/destructive graph-indexing
 connectors remain disabled unless you explicitly enable them later. Local
@@ -578,6 +588,21 @@ claude mcp list
 Inside Claude Code, `/context` lists the AgentChef rule file under memory
 files, `/plugin` shows the `agentchef` marketplace, and `/skills` lists the
 plugin skills once each.
+
+Claude Code gets its MCP servers from the `agentchef` plugin, not from
+`.claude.json`: the plugin manifest points at `mcp/claude.mcp.json`, which
+starts `context7` and `playwright` through `scripts/mcp-launch.mjs` (exact
+pinned versions only; on Windows through `cmd.exe` and `npx.cmd` with
+`NoDefaultCurrentDirectoryInExePath`) and Serena through the plugin's copy of
+the shared pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`. `/mcp` and
+`claude mcp list` show them as plugin servers, and their tools are named
+`mcp__plugin_agentchef_<server>__<tool>`. Claude Code cannot disable one plugin
+server on its own (only `--strict-mcp-config` turns every server off), so
+`playwright` is available in every Claude Code session; its riskiest tools are
+denied in the generated permission rules. If
+`verify-install-runtime --target claude` warns that your own `.claude.json`
+entry shadows a plugin server, rerun the installer with `-AdoptMcp` /
+`--adopt-mcp` to retire it with a backup.
 
 ## Test Without Touching Your Real Setup
 

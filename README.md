@@ -50,7 +50,7 @@ credentials, sessions, or local memory.
 | --- | --- |
 | [🤖 See 7 coordinators + 21 specialists](docs/agents.md) | The coordination roles, specialist workers, and when delegation is actually useful. |
 | [🧩 Browse the skill catalog](docs/skills.md) | Ten bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
-| [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The two-server Codex default (plus Context7 on Claude Code), optional local capabilities, eight gated connectors, and their process/access boundaries. |
+| [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The three-server Codex default, the three servers the Claude Code plugin ships, optional local capabilities, seven gated connectors, and their process/access boundaries. |
 | [📜 Read the installed working agreement](templates/codex/AGENTS.md) | The user-wide defaults installed as `~/.codex/AGENTS.md`; a repository-local `AGENTS.md` still has precedence. |
 | [🛡️ Read the security model](docs/security-model.md) | Preview-first changes, backups, approval gates, secret handling, and the actions AgentChef deliberately leaves to you. |
 
@@ -94,19 +94,22 @@ session is started.
 ### MCPs: tools and live context with visible boundaries
 
 MCP connects the agent to documentation, browsers, semantic code navigation,
-memory, and codebase graph reads. On Codex the balanced base enables the
-remote `openaiDeveloperDocs` server and a lightweight Serena bridge. The bridge
-starts no Serena/LSP at session startup: the same canonical project shares one
-lazy backend, while a distinct worktree gets its own only when semantic
-navigation is actually used. The six other local stdio servers (`context7`,
-`sequential-thinking`, `playwright`, `chrome-devtools`, `memory`, and
-`codebase-memory`) stay configured but off so concurrent sessions do not
-eagerly duplicate their Node/Python helper trees. Use the `full` profile for
-one capability-heavy primary session and `multi-session` for low-process
-secondary sessions. Account, database, production, and broad-filesystem
-connectors remain off until you deliberately enable them. The Claude Code
-target adds `context7` and the same Serena bridge to `~/.claude.json`, and an
-entry you already have under either name is left as it is.
+and codebase graph reads. AgentChef catalogs 14 servers. On Codex the balanced
+base enables the remote `openaiDeveloperDocs` server, `playwright` for browser
+evidence, and a lightweight Serena bridge. The bridge starts no Serena/LSP at
+session startup: the same canonical project shares one lazy backend, while a
+distinct worktree gets its own only when semantic navigation is actually used.
+The four other local stdio servers (`context7`, `sequential-thinking`,
+`chrome-devtools`, and `codebase-memory`) stay configured but off so concurrent
+sessions do not eagerly duplicate their Node/Python helper trees. Use the
+`full` profile for one capability-heavy primary session and `multi-session`
+for low-process secondary sessions. Account, database, and production
+connectors remain off until you deliberately enable them. On Claude Code the
+`agentchef` plugin ships `context7`, `playwright`, and the same Serena bridge;
+Claude Code cannot switch off a single plugin server, so `playwright` is on in
+every Claude Code session, with its riskiest tools denied in the permission
+rules. An entry you already have in `~/.claude.json` under one of those names
+is kept and reported as shadowing the plugin's server.
 
 [See every MCP, prerequisite, and access boundary →](docs/mcp-catalog.md)
 
