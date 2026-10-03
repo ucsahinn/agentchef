@@ -28,7 +28,7 @@ test("coordinates an explicit task lifecycle, parent-routed handoff, and report 
   for (const status of ["todo", "in_progress", "review"]) {
     assert.equal(run(["transition", "--state", state, "--task", "TASK-42", "--status", status]).status, 0);
   }
-  const handoff = run(["handoff", "--state", state, "--task", "TASK-42", "--source-coordinator", "qa_coordinator", "--target-coordinator", "security_coordinator", "--question", "Can this close?", "--evidence", "tests pass", "--conflict", "none", "--decision-needed", "release approval", "--verification-need", "run focused tests"]);
+  const handoff = run(["handoff", "--state", state, "--task", "TASK-42", "--source-coordinator", "qa_coordinator", "--target-coordinator", "ui_coordinator", "--question", "Can this close?", "--evidence", "tests pass", "--conflict", "none", "--decision-needed", "release approval", "--verification-need", "run focused tests"]);
   assert.equal(handoff.status, 0, handoff.stderr);
   const report = run(["attach-report", "--state", state, "--task", "TASK-42", "--report-id", "TASK-42-core-coordinator.md"]);
   assert.equal(report.status, 0, report.stderr);
@@ -79,7 +79,7 @@ test("rejects worker-to-worker handoffs and does not persist local paths or toke
   assert.notEqual(forbidden.status, 0);
   assert.match(forbidden.stderr, /coordinator/);
   assert.equal(path.isAbsolute(privatePath), true);
-  const accepted = run(["handoff", "--state", state, "--task", "TASK-44", "--source-coordinator", "qa_coordinator", "--target-coordinator", "security_coordinator", "--question", `See ${privatePath}`, "--evidence", "token=abc123"]);
+  const accepted = run(["handoff", "--state", state, "--task", "TASK-44", "--source-coordinator", "qa_coordinator", "--target-coordinator", "ui_coordinator", "--question", `See ${privatePath}`, "--evidence", "token=abc123"]);
   assert.equal(accepted.status, 0, accepted.stderr);
   const saved = fs.readFileSync(state, "utf8");
   assert.doesNotMatch(saved, new RegExp(`${privatePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}|abc123`, "i"));

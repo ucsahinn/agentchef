@@ -3,7 +3,6 @@ name: prompt-architect
 description: "Read-only prompt and instruction designer for reliable task briefs, mode contracts, and reusable agent workflows."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Prompt Architect

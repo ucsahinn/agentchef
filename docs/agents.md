@@ -5,7 +5,7 @@
 An agent is the **who** in a Codex workflow: a focused role with a clear job,
 boundaries, and evidence to return.
 
-AgentChef includes 11 coordination roles and 21 specialist worker roles. They
+AgentChef includes 7 coordination roles and 21 specialist worker roles. They
 are not background services and they do not all run on every task. A role can
 guide the main session without being spawned. Delegation is useful when work can
 run independently, noisy output should stay out of the main thread, or you
@@ -33,14 +33,10 @@ level.
 | `Engineering Lead`, `Leadership Coordinator`, `Delivery Lead` | `leadership_coordinator` |
 | `Product Lead`, `Product Coordinator`, `Scope Lead` | `product_coordinator` |
 | `Backend Lead`, `Backend Coordinator`, `Integration Lead` | `backend_coordinator` |
-| `Data Lead`, `Data Coordinator`, `Information Lead` | `data_coordinator` |
-| `Frontend Lead`, `Frontend Coordinator`, `UI Evidence Lead` | `frontend_coordinator` |
 | `DevOps Lead`, `DevOps Coordinator`, `Operations Lead` | `devops_coordinator` |
-| `Security Lead`, `Security Coordinator`, `Risk Lead` | `security_coordinator` |
 | `QA Lead`, `QA Coordinator`, `Assurance Lead` | `qa_coordinator` |
-| `Design Lead`, `Design Coordinator`, `UX Review Lead` | `design_coordinator` |
+| `UI Lead`, `UI Coordinator`, `UX Evidence Lead` | `ui_coordinator` |
 | `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
-| `Support Lead`, `Support Coordinator`, `Customer Care Lead` | `support_coordinator` |
 
 The main session remains the decision and permission boundary. A coordinator
 correlates evidence; it does not silently publish, deploy, broaden permissions,
@@ -120,18 +116,19 @@ the task becomes done.
 5. The active user profile remains authoritative; AgentChef role files do not
    pin every agent to one model.
 
-The routing board includes a narrow data-documentation route: `data_coordinator`
+The routing board includes a narrow data-documentation route: `backend_coordinator`
 with `docs_researcher` correlates read-only lineage, catalog, quality, and source
 evidence. It does not claim data-engineering, database-performance, security, or
-operations expertise. Application implementation, database access, and database
-performance needs return a concise parent-routed handoff to `backend_coordinator`
-with the question, inspected evidence, conflict, decision needed, and open
-verification need. Customer support/onboarding (`support_coordinator` with `devex_auditor`) is
-also advisory. Neither route grants database, customer-account, or production access.
+operations expertise. Database performance measurement, runtime health, and
+operational diagnostics needs return a concise parent-routed handoff to
+`devops_coordinator` with the question, inspected evidence, conflict, decision
+needed, and open verification need. Customer support/onboarding (`devops_coordinator`
+with `devex_auditor`) is also advisory. Neither route grants database,
+customer-account, or production access.
 
 ### The same roles in Claude Code
 
-The Claude Code target ships the same 32 roles as plugin subagents named
+The Claude Code target ships the same 28 roles as plugin subagents named
 `agentchef:<role>` (for example `agentchef:code-mapper`). They are generated
 from the catalog by `npm run render:targets`: read-only Codex roles become
 subagents with `Read`, `Grep`, and `Glob` tools and `Write`, `Edit`,
@@ -146,21 +143,21 @@ AgentChef never writes `~/.claude/agents/` and never emits
 | --- | --- |
 | `leadership_coordinator` | `context_architect`, `engineering_planner`, `code_reviewer`, `release_verifier` |
 | `product_coordinator` | `prompt_architect`, `product_strategist`, `spec_author` |
-| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger` |
-| `data_coordinator` | `docs_researcher` |
-| `frontend_coordinator` | `frontend_verifier` |
-| `devops_coordinator` | `performance_auditor`, `codex_doctor` |
-| `security_coordinator` | `security_auditor` |
-| `qa_coordinator` | `qa_lead`, `test_verifier` |
-| `design_coordinator` | `design_reviewer` |
+| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger`, `docs_researcher` |
+| `devops_coordinator` | `performance_auditor`, `codex_doctor`, `devex_auditor` |
+| `qa_coordinator` | `qa_lead`, `test_verifier`, `security_auditor` |
+| `ui_coordinator` | `frontend_verifier`, `design_reviewer` |
 | `marketing_coordinator` | `google_seo_auditor`, `docs_author` |
-| `support_coordinator` | `devex_auditor` |
 
-The eleven installed coordinators own work: leadership, product, backend, data,
-frontend, DevOps, security, QA, design, marketing, and customer support. The 21
-AgentChef specialists remain narrow task workers. \`catalog/agents.json\` records
-the complete 11-to-21 ownership map. A coordinator may select only its cataloged
+The seven installed coordinators own work: leadership, product, backend, DevOps,
+QA, UI, and marketing. The 21 AgentChef specialists remain narrow task workers.
+\`catalog/agents.json\` records the complete 7-to-21 ownership map. A coordinator may select only its cataloged
 worker group (at most four workers), and workers do not delegate further.
+
+Starting with 1.3.0, upgrading from a 1.2 install retires the five removed
+coordinator role files (`data_coordinator`, `frontend_coordinator`,
+`design_coordinator`, `security_coordinator`, and `support_coordinator`); the
+installer migration handles this, so no manual cleanup is needed.
 
 Cross-domain coordination is a concise, parent-routed handoff rather than direct
 peer spawning: the primary coordinator returns its question, evidence, conflict,

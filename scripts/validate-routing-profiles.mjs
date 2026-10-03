@@ -227,7 +227,7 @@ for (const profile of routing.profiles || []) {
   if (profile.id === "data-systems") {
     const handoffs = profile.crossDomainHandoffs;
     if (!Array.isArray(handoffs) || handoffs.length !== 1
-      || handoffs[0]?.toCoordinator !== "backend_coordinator"
+      || handoffs[0]?.toCoordinator !== "devops_coordinator"
       || handoffs[0]?.via !== "parent-routed-handoff"
       || typeof handoffs[0]?.when !== "string" || handoffs[0].when.length < 24
       || typeof handoffs[0]?.action !== "string" || handoffs[0].action.length < 48) {

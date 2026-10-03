@@ -101,3 +101,11 @@ safer, reversible boundary.
   documented token-audit layer names.
 - Future changes to the three spawn criteria, config ownership boundary, or
   capacity policy require a new ADR that supersedes this one.
+
+## Update (2026-10-03)
+
+The role counts in the Context section describe the package when this ADR was
+accepted. AgentChef 1.3.0 consolidates the coordinators from eleven to seven
+(`leadership`, `product`, `backend`, `devops`, `qa`, `ui`, `marketing`), keeping
+21 specialist workers for 28 role files in total. The routing and config
+ownership decisions above are unchanged.

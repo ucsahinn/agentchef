@@ -3,7 +3,6 @@ name: docs-researcher
 description: "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Docs Researcher

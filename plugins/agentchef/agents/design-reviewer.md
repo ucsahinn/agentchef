@@ -3,7 +3,6 @@ name: design-reviewer
 description: "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual decision tradeoffs."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Design Reviewer

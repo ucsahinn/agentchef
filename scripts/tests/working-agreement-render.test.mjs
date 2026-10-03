@@ -39,7 +39,7 @@ test("rendered agreements contain no target fences, unresolved tokens, or the ot
 
 test("every generated artifact is current in the repository", () => {
   const outputs = renderAllTargetArtifacts(root);
-  assert.ok(outputs.size >= 36, `expected the agreement targets, 32 agents, the plugin manifest, and the settings fragment; got ${outputs.size}`);
+  assert.ok(outputs.size >= 32, `expected the agreement targets, 32 agents, the plugin manifest, and the settings fragment; got ${outputs.size}`);
   const stale = [];
   for (const [relative, text] of outputs) {
     const absolute = path.join(root, relative);

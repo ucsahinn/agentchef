@@ -3,7 +3,6 @@ name: frontend-verifier
 description: "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7, mcp__playwright, mcp__chrome-devtools
 disallowedTools: NotebookEdit
-permissionMode: default
 ---
 
 # Frontend Verifier

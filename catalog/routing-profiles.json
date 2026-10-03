@@ -163,13 +163,13 @@
       "mcpMode": "use-when-available-and-approved",
       "evidence": ["The handoff records documentation, lineage, catalog, and quality evidence with source, scope, and uncertainty.", "Data-quality findings distinguish observed facts, inferences, unresolved gaps, and the next read-only verification step."],
       "boundary": "Do not access production data, private datasets, credentials, databases, or mutate schemas without explicit task-scoped approval.",
-      "owner": "data_coordinator with docs_researcher",
+      "owner": "backend_coordinator with docs_researcher",
       "primarySurface": "read-only data documentation, lineage records, catalog entries, quality evidence, and source records",
       "durability": "Per-task evidence; durable data documentation updates only after scoped review.",
       "privilegeDelta": "read-only evidence by default; private-data, database, and schema-write access stay explicitly gated.",
       "validationGate": "The handoff names source, scope, lineage, uncertainty, and the read-only evidence inspected.",
       "rollback": "Discard unverified conclusions or revert only the scoped documentation change.",
-      "crossDomainHandoffs": [{ "when": "The task needs application implementation, database access, or database performance work.", "toCoordinator": "backend_coordinator", "via": "parent-routed-handoff", "action": "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for backend_coordinator routing." }]
+      "crossDomainHandoffs": [{ "when": "The task needs database performance measurement, runtime health, or operational diagnostics.", "toCoordinator": "devops_coordinator", "via": "parent-routed-handoff", "action": "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for devops_coordinator routing." }]
     },
     {
       "id": "frontend-ui",
@@ -290,7 +290,7 @@
       "mcpMode": "none",
       "evidence": ["The onboarding handoff identifies prerequisites, the first successful outcome, user-visible friction, and recovery guidance.", "Support findings distinguish reproduced evidence from assumptions and name the next verification step."],
       "boundary": "Do not perform account operations, access customer data, send support communications, or change production state.",
-      "owner": "support_coordinator with devex_auditor",
+      "owner": "devops_coordinator with devex_auditor",
       "primarySurface": "onboarding steps, setup diagnostics, first-run output, recovery guidance, and support-flow findings",
       "durability": "Durable documentation or workflow changes only after scoped review and verification.",
       "privilegeDelta": "workspace inspection and scoped docs edits only; account and production actions stay gated.",

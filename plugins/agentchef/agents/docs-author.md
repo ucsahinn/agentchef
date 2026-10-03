@@ -3,7 +3,6 @@ name: docs-author
 description: "Documentation author for Diataxis coverage, stale docs, release docs, and missing guide generation."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__context7
 disallowedTools: NotebookEdit
-permissionMode: default
 ---
 
 # Docs Author

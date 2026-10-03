@@ -3,7 +3,6 @@ name: google-seo-auditor
 description: "Google SEO auditor for crawlability, indexing, metadata, structured data, and Search Console-ready fixes; Core Web Vitals measurement and regression work belongs to performance_auditor."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Google SEO Auditor

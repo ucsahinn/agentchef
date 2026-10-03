@@ -3,7 +3,6 @@ name: qa-lead
 description: "QA lead for end-to-end bug finding, regression coverage, and re-verification plans."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
-permissionMode: default
 ---
 
 # QA Lead

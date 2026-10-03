@@ -3,7 +3,6 @@ name: marketing-coordinator
 description: "Marketing coordinator that correlates discoverability and content evidence."
 tools: Read, Grep, Glob, Agent(agentchef:google-seo-auditor, agentchef:docs-author)
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Marketing Lead

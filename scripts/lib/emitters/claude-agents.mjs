@@ -78,7 +78,6 @@ export function emitWorkerAgent(agent, roleToml, { pluginName }) {
     `description: ${yamlString(agent.templateDescription || agent.description)}`,
     `tools: ${tools.join(", ")}`,
     `disallowedTools: ${disallowed.join(", ")}`,
-    "permissionMode: default",
     "---"
   ];
   const body = [
@@ -109,7 +108,6 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName }) {
     `description: ${yamlString(coordinator.description)}`,
     `tools: ${readOnlyTools.join(", ")}, Agent(${coordinator.workers.map((worker) => `${pluginName}:${kebab(worker)}`).join(", ")})`,
     "disallowedTools: Write, Edit, NotebookEdit, Bash",
-    "permissionMode: default",
     "---"
   ];
   const body = [

@@ -439,3 +439,24 @@ test("a pinned direct copy is retired once the plugin source carries that skill"
   assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName, "skills", "systematic-debugging", "SKILL.md")), "the plugin copy stays");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("coordinator role files 1.3.0 no longer ships are retired only when AgentChef wrote them", () => {
+  const state = legacyFixture({ withClaude: false });
+  const agentsDir = path.join(state.codexHome, "agents");
+  fs.mkdirSync(agentsDir, { recursive: true });
+  const shipped = fs.readFileSync(path.join(root, "scripts", "tests", "fixtures", "data_coordinator-1.2.2.toml"), "utf8");
+  // A Windows checkout writes the template with CRLF; the digest still matches.
+  fs.writeFileSync(path.join(agentsDir, "data_coordinator.toml"), shipped.replace(/\n/g, "\r\n"));
+  fs.writeFileSync(path.join(agentsDir, "security_coordinator.toml"), "name = \"security_coordinator\"\n# edited by the user\n");
+  const plan = run(state, ["--dry-run"]);
+  const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
+  assert.equal(decision("retired-file:agents/data_coordinator.toml"), "retire");
+  assert.equal(decision("retired-file:agents/security_coordinator.toml"), "foreign");
+  assert.equal(decision("retired-file:agents/support_coordinator.toml"), "absent");
+  run(state, ["--apply"]);
+  assert.ok(!fs.existsSync(path.join(agentsDir, "data_coordinator.toml")), "the shipped role file is retired");
+  assert.ok(fs.existsSync(path.join(agentsDir, "security_coordinator.toml")), "an edited role file stays");
+  const again = run(state, ["--dry-run"]);
+  assert.equal(again.steps.find((step) => step.id === "retired-file:agents/data_coordinator.toml")?.decision, "absent");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

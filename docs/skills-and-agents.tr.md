@@ -35,12 +35,12 @@ edebilirsin.
 
 ## Koordinatörler ve Uzman Agent'lar
 
-On bir çağrılabilir koordinatör işi sahiplenip kanıtı birleştirir; 21 dar uzman
+Yedi çağrılabilir koordinatör işi sahiplenip kanıtı birleştirir; 21 dar uzman
 worker araştırma, repo haritalama, review veya doğrulama gerektiğinde devreye
 girer. Bir rolün işe uygun olması, her küçük görevde yeni bir subagent açılması
 gerektiği anlamına gelmez.
 
-- [11 koordinatörü ve 21 uzman worker'ın tamamını gör](agents.tr.md)
+- [7 koordinatörü ve 21 uzman worker'ın tamamını gör](agents.tr.md)
 - [Makine tarafından okunan agent kataloğunu aç](../catalog/agents.json)
 - [Resmî Codex subagents rehberini oku](https://developers.openai.com/codex/subagents)
 

@@ -3,7 +3,6 @@ name: devex-auditor
 description: "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
-permissionMode: default
 ---
 
 # DevEx Auditor
