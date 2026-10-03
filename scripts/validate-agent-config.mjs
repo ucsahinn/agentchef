@@ -217,7 +217,7 @@ if (!fs.existsSync(catalogPath)) {
     const roleAssignments = new Map();
     const rolesById = new Map();
     for (const role of catalog.coordinatorDomains || []) {
-      if (!/^(backend|data|devops|frontend|leadership|product|qa|design|security|marketing|support)$/.test(role.id || "")) {
+      if (!/^(backend|devops|leadership|product|qa|ui|marketing)$/.test(role.id || "")) {
         fail(`Unsupported AgentSpace role id: ${role.id}`);
       }
       if (rolesById.has(role.id)) fail(`Duplicate AgentSpace role id: ${role.id}`);

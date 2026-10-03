@@ -89,6 +89,17 @@ function main(argv) {
       fs.writeFileSync(absolute, text, "utf8");
     }
   }
+  // A role removed from the catalog leaves its rendered file behind; Claude
+  // would still load it, so a leftover is drift in both modes.
+  const agentsDirectory = path.join(root, agentsOutputDirectory);
+  const orphans = fs.existsSync(agentsDirectory)
+    ? fs.readdirSync(agentsDirectory).filter((name) => name.endsWith(".md") && !outputs.has(`${agentsOutputDirectory}/${name}`))
+    : [];
+  if (orphans.length > 0) {
+    console.error("Rendered agent files no longer in the catalog; remove them with `git rm`:");
+    for (const name of orphans) console.error(`- ${agentsOutputDirectory}/${name}`);
+    process.exit(1);
+  }
   if (check && !write && drifted.length > 0) {
     console.error("Generated target artifacts are out of date; run `npm run render:targets`:");
     for (const relative of drifted) console.error(`- ${relative}`);

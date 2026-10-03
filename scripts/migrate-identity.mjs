@@ -324,6 +324,26 @@ export function planIdentityMigration(options) {
     }
   }
 
+  // 3c. Codex role files a release no longer ships (1.3.0 retired five
+  // coordinators). A file goes only when its content is a version AgentChef
+  // wrote; an edited file stays and is reported.
+  if (withCodex) {
+    const retiredFiles = readJson(path.join(repoRoot, "templates", "codex", "retired-files.json"), { files: {} }).files || {};
+    for (const [relative, digests] of Object.entries(retiredFiles)) {
+      const target = path.join(codexHome, ...relative.split("/"));
+      const stat = lstatOrNull(target);
+      let decision = "absent";
+      if (stat) {
+        decision = "foreign";
+        if (stat.isFile() && !stat.isSymbolicLink()) {
+          const normalized = fs.readFileSync(target, "utf8").replace(/\r\n/g, "\n");
+          if (digests.includes(sha256(Buffer.from(normalized, "utf8")))) decision = "retire";
+        }
+      }
+      note(`retired-file:${relative}`, "retire-file", target, decision);
+    }
+  }
+
   // 4. Git hook that still carries a legacy template.
   const hookPath = path.join(home, ".githooks", "pre-commit");
   const hookStat = lstatOrNull(hookPath);
@@ -487,7 +507,7 @@ export function applyIdentityMigration(options, plan) {
         record(step.id, "retired");
         continue;
       }
-      if (step.kind === "retire-direct-copy") {
+      if (step.kind === "retire-direct-copy" || step.kind === "retire-file") {
         const backup = backupInto(backupRoot, homeRoots, step.target);
         journal.recordBackup(backup);
         journal.prepareMutation({ target: step.target, backup });

@@ -280,7 +280,7 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
     assertIncludes(config, '[agents.code_mapper]', `${label} config`);
     assertIncludes(config, '[agents.codex_doctor]', `${label} config`);
     assertIncludes(config, '[agents.leadership_coordinator]', `${label} config`);
-    assertIncludes(config, '[agents.support_coordinator]', `${label} config`);
+    assertIncludes(config, '[agents.ui_coordinator]', `${label} config`);
     assertRootAssignment(config, "approval_policy", '"on-request"', `${label} config`);
     assertRootAssignment(config, "sandbox_mode", '"workspace-write"', `${label} config`);
     assertRootAssignment(config, "model_reasoning_effort", '"medium"', `${label} config`);

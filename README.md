@@ -48,7 +48,7 @@ credentials, sessions, or local memory.
 
 | Explore | What you will find |
 | --- | --- |
-| [🤖 See 11 coordinators + 21 specialists](docs/agents.md) | The coordination roles, specialist workers, and when delegation is actually useful. |
+| [🤖 See 7 coordinators + 21 specialists](docs/agents.md) | The coordination roles, specialist workers, and when delegation is actually useful. |
 | [🧩 Browse the skill catalog](docs/skills.md) | Ten bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
 | [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The two-server Codex default (plus Context7 on Claude Code), optional local capabilities, eight gated connectors, and their process/access boundaries. |
 | [📜 Read the installed working agreement](templates/codex/AGENTS.md) | The user-wide defaults installed as `~/.codex/AGENTS.md`; a repository-local `AGENTS.md` still has precedence. |

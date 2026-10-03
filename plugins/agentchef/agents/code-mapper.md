@@ -3,7 +3,6 @@ name: code-mapper
 description: "Read-only explorer that maps relevant files, call paths, ownership boundaries, and existing patterns before implementation."
 tools: Read, Grep, Glob, mcp__context7, mcp__serena__get_current_config, mcp__serena__initial_instructions, mcp__serena__list_memories, mcp__serena__read_memory, mcp__serena__search_for_pattern, mcp__serena__find_symbol, mcp__serena__find_declaration, mcp__serena__find_implementations, mcp__serena__find_referencing_symbols, mcp__serena__get_symbols_overview, mcp__serena__get_diagnostics_for_file
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Code Mapper

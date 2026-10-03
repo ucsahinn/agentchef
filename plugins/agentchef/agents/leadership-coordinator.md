@@ -3,7 +3,6 @@ name: leadership-coordinator
 description: "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence."
 tools: Read, Grep, Glob, Agent(agentchef:context-architect, agentchef:engineering-planner, agentchef:code-reviewer, agentchef:release-verifier)
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: default
 ---
 
 # Engineering Lead

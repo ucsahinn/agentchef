@@ -123,20 +123,12 @@ description = "Setup diagnostician for starter health, catalog drift, install-pl
 config_file = "agents/codex_doctor.toml"
 
 [agents.backend_coordinator]
-description = "Backend coordinator that correlates bounded implementation, integration, and debugging evidence."
+description = "Backend coordinator that correlates bounded implementation, integration, debugging, and source-documentation evidence."
 config_file = "agents/backend_coordinator.toml"
 
-[agents.data_coordinator]
-description = "Data coordinator that correlates read-only data documentation, lineage, catalog, quality, and source-evidence findings."
-config_file = "agents/data_coordinator.toml"
-
 [agents.devops_coordinator]
-description = "DevOps coordinator that correlates operational performance, runtime health, and setup diagnostics."
+description = "DevOps coordinator that correlates operational performance, runtime health, setup diagnostics, and onboarding friction."
 config_file = "agents/devops_coordinator.toml"
-
-[agents.frontend_coordinator]
-description = "Frontend coordinator that correlates rendered UI verification evidence."
-config_file = "agents/frontend_coordinator.toml"
 
 [agents.leadership_coordinator]
 description = "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence."
@@ -147,24 +139,16 @@ description = "Product coordinator that correlates prompts, product framing, and
 config_file = "agents/product_coordinator.toml"
 
 [agents.qa_coordinator]
-description = "QA coordinator that correlates quality and verification evidence."
+description = "QA coordinator that correlates quality, verification, and security evidence."
 config_file = "agents/qa_coordinator.toml"
 
-[agents.design_coordinator]
-description = "Design coordinator that correlates product design review evidence."
-config_file = "agents/design_coordinator.toml"
-
-[agents.security_coordinator]
-description = "Security coordinator that correlates security evidence and remediation gates."
-config_file = "agents/security_coordinator.toml"
+[agents.ui_coordinator]
+description = "UI coordinator that correlates rendered UI verification and product design review evidence."
+config_file = "agents/ui_coordinator.toml"
 
 [agents.marketing_coordinator]
 description = "Marketing coordinator that correlates discoverability and content evidence."
 config_file = "agents/marketing_coordinator.toml"
-
-[agents.support_coordinator]
-description = "Customer-support coordinator that correlates onboarding and support-flow evidence."
-config_file = "agents/support_coordinator.toml"
 
 [sandbox_workspace_write]
 network_access = false

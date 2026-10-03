@@ -23,15 +23,12 @@
     "./agents/code-reviewer.md",
     "./agents/codex-doctor.md",
     "./agents/context-architect.md",
-    "./agents/data-coordinator.md",
-    "./agents/design-coordinator.md",
     "./agents/design-reviewer.md",
     "./agents/devex-auditor.md",
     "./agents/devops-coordinator.md",
     "./agents/docs-author.md",
     "./agents/docs-researcher.md",
     "./agents/engineering-planner.md",
-    "./agents/frontend-coordinator.md",
     "./agents/frontend-verifier.md",
     "./agents/google-seo-auditor.md",
     "./agents/leadership-coordinator.md",
@@ -46,9 +43,8 @@
     "./agents/release-verifier.md",
     "./agents/root-cause-debugger.md",
     "./agents/security-auditor.md",
-    "./agents/security-coordinator.md",
     "./agents/spec-author.md",
-    "./agents/support-coordinator.md",
-    "./agents/test-verifier.md"
+    "./agents/test-verifier.md",
+    "./agents/ui-coordinator.md"
   ]
 }

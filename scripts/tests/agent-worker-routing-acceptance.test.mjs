@@ -25,7 +25,7 @@ test("all 21 specialists expose AgentSpace ownership, knowledge, and safe worker
   });
 
   for (const agent of agents.agents) {
-    assert.match(owners.get(agent.name), /^(backend|data|devops|frontend|leadership|product|qa|design|security|marketing|support)$/);
+    assert.match(owners.get(agent.name), /^(backend|devops|leadership|product|qa|ui|marketing)$/);
     assert.ok(corpusNames.has(agent.name));
 
     const template = fs.readFileSync(path.join(root, "templates", "codex", agent.configFile), "utf8");
@@ -35,9 +35,9 @@ test("all 21 specialists expose AgentSpace ownership, knowledge, and safe worker
   }
 });
 
-test("eleven installed coordinators own bounded worker groups and peer consultation stays parent-routed", () => {
+test("seven installed coordinators own bounded worker groups and peer consultation stays parent-routed", () => {
   assert.equal(agents.agents.length, 21);
-  assert.equal(agents.coordinators.length, 11);
+  assert.equal(agents.coordinators.length, 7);
   assert.equal(agents.coordinationPolicy.maxDelegationDepth, 2);
   assert.equal(agents.coordinationPolicy.maxWorkersPerCoordinator, 4);
   assert.equal(agents.coordinationPolicy.peerCommunication, "parent-routed-handoff");
@@ -109,18 +109,18 @@ test("real routing CLI returns selected specialist knowledge without private con
   assert.doesNotMatch(output, /\.agentspace[\\/]|MEMORY\.md|auth\.json|sessions[\\/]/i);
 });
 
-test("data and support task shapes select their callable coordinators", () => {
+test("data and support task shapes select the coordinators that own their workers", () => {
   const cases = [
     {
       task: "data quality source lineage data catalog schema",
       profile: "data-systems",
-      coordinator: "data_coordinator",
+      coordinator: "backend_coordinator",
       worker: "docs_researcher"
     },
     {
       task: "customer support onboarding first run setup friction",
       profile: "onboarding-support",
-      coordinator: "support_coordinator",
+      coordinator: "devops_coordinator",
       worker: "devex_auditor"
     }
   ];
@@ -147,9 +147,9 @@ test("data evidence route exposes a parent-routed handoff instead of a fabricate
   const report = JSON.parse(output);
   const dataProfile = report.profiles.find((profile) => profile.id === "data-systems");
 
-  assert.equal(report.coordination.primaryCoordinator.name, "data_coordinator");
+  assert.equal(report.coordination.primaryCoordinator.name, "backend_coordinator");
   assert.deepEqual(dataProfile.workers.map((worker) => worker.name), ["docs_researcher"]);
-  assert.equal(dataProfile.crossDomainHandoffs[0].toCoordinator, "backend_coordinator");
+  assert.equal(dataProfile.crossDomainHandoffs[0].toCoordinator, "devops_coordinator");
   assert.equal(dataProfile.crossDomainHandoffs[0].via, "parent-routed-handoff");
   assert.match(dataProfile.crossDomainHandoffs[0].action, /question, inspected evidence, conflict, decision needed, and open verification need/);
 });

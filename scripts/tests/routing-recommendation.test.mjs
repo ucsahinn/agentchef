@@ -36,21 +36,21 @@ test("data systems and onboarding support tasks select their primary coordinator
   const support = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
 
   assert.equal(data.taskRecommendation.recommendations[0].id, "data-systems");
-  assert.equal(data.coordination.primaryCoordinator.name, "data_coordinator");
+  assert.equal(data.coordination.primaryCoordinator.name, "backend_coordinator");
   assert.equal(support.taskRecommendation.recommendations[0].id, "onboarding-support");
-  assert.equal(support.coordination.primaryCoordinator.name, "support_coordinator");
+  assert.equal(support.coordination.primaryCoordinator.name, "devops_coordinator");
 });
 
 test("data evidence work keeps its coordinator primary and exposes parent-routed cross-domain handoffs", () => {
   const data = run("--task", "read-only data lineage catalog data quality evidence", "--json");
 
-  assert.equal(data.coordination.primaryCoordinator.name, "data_coordinator");
+  assert.equal(data.coordination.primaryCoordinator.name, "backend_coordinator");
   assert.deepEqual(data.profiles.find((profile) => profile.id === "data-systems").crossDomainHandoffs, [
     {
-      when: "The task needs application implementation, database access, or database performance work.",
-      toCoordinator: "backend_coordinator",
+      when: "The task needs database performance measurement, runtime health, or operational diagnostics.",
+      toCoordinator: "devops_coordinator",
       via: "parent-routed-handoff",
-      action: "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for backend_coordinator routing."
+      action: "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for devops_coordinator routing."
     }
   ]);
 });
@@ -59,7 +59,7 @@ test("equal worker-count routing preserves the first recommended profile's owner
   const report = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
   const repeated = run("--task", "onboarding support setup diagnostics recovery guidance", "--json");
 
-  assert.equal(report.coordination.primaryCoordinator.name, "support_coordinator");
+  assert.equal(report.coordination.primaryCoordinator.name, "devops_coordinator");
   assert.deepEqual(report.coordination, repeated.coordination);
 });
 

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "agentchef.retired-config-files.v1",
+  "description": "Files under CODEX_HOME that an earlier AgentChef release installed and the current one no longer ships. Each lists the sha256 of every version AgentChef wrote (CRLF normalized to LF). --migrate-identity backs up and removes a file only when its content matches one of these digests.",
+  "files": {
+    "agents/data_coordinator.toml": [
+      "0b015105d0aba8c38bbdb017aabb95799d2d77b78c44d803de3ba7eb4f6a9ebe",
+      "146f2590b634aa426e33b58d082135574551036a3813e3736a4f9c539be8d6b5",
+      "ed78c7aea29d3c336427b3420fe34d7f3481c204d14c610bfa2656b8d7b00306"
+    ],
+    "agents/design_coordinator.toml": [
+      "3fa2b77f880be39d8491cfb4a4a74c25cc6face4cc88ed4cc87aa16682751d66",
+      "905c289a5651ce40fea0eb2864813efaa8202322184e9f08151c3f0acf8d02d7",
+      "e7eedadd554bb4fa27099a44c0dddb0b49474ff4a0ca783fa99c99df5aa662e8"
+    ],
+    "agents/frontend_coordinator.toml": [
+      "19113aabf67d0c93b9a6e668a5336e21f4e762d36d7a174d1d53e1944a3cfe83",
+      "788cbf427b9ee15583a5637c648385b7ead96d0f618aa3d5f07192bfcf059d37",
+      "a79acf7be8c8299dd7bb29a539d8f9364b7c0727f1bb0146fe411ec8edc67425"
+    ],
+    "agents/security_coordinator.toml": [
+      "0a1a5100bc6cbb027f18e1fd41d6b8e6f3df63ba80d4a33c4b95780e30fadae9",
+      "4fea05502a6dfd660e055e4980279079390fad240ef2c21b56ba2aef3c1b383e",
+      "f95cf2c0ed5d662d750de6c1642ebba837a760759175bd222ee97f68110b5722"
+    ],
+    "agents/support_coordinator.toml": [
+      "495096f67640d9bae57e2a1ca9158ac94a11c3cb94f596fb288badb4c382404c",
+      "c607e616084494744b0772c9b3f66d28f50a0cddea0c70440a312936cfb4d1e6",
+      "fb3544cd55570024d8b354b14e542c3131555ebae2ecdb12bb88b6f8715bcbc5"
+    ]
+  }
+}

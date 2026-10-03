@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Coordinators go from eleven to seven, so the plugin ships 28 roles instead
+  of 32:
+  - The new `ui_coordinator` owns `frontend_verifier` and `design_reviewer`.
+  - `docs_researcher` moves to `backend_coordinator`, `devex_auditor` to
+    `devops_coordinator`, and `security_auditor` to `qa_coordinator`.
+  - The data, frontend, design, security, and support coordinators are gone.
+    `-Update` drops their `[agents.*]` tables when they are exactly what
+    AgentChef wrote (`templates/codex/retired-tables.json`).
+    `--migrate-identity` backs up and removes their role files under
+    `CODEX_HOME/agents` when the content matches a shipped version
+    (`templates/codex/retired-files.json`); an edited file stays.
+  - The `data-systems` route is owned by `backend_coordinator` and hands
+    database performance and runtime health to `devops_coordinator`;
+    `onboarding-support` is owned by `devops_coordinator`.
+- Claude agent files no longer carry `permissionMode`, which Claude ignores
+  on plugin agents. The renderer check now fails on a rendered agent file
+  the catalog no longer lists.
+- The adaptive-routing reference lists `data-systems` and `onboarding-support`
+  once each.
+
 - Every AgentChef skill now reaches both CLIs only through the plugin, so each
   one is listed once instead of twice:
   - The bundled skills ship inside the plugin.

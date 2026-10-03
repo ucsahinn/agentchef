@@ -27,7 +27,7 @@ test("every catalog role becomes a namespaced Claude subagent without permission
   const agents = emitClaudeAgents({ catalog, roleDirectory, pluginName: "agentchef" });
   const expected = catalog.agents.length + (catalog.coordinators || []).length;
   assert.equal(agents.size, expected);
-  assert.equal(expected, 32);
+  assert.equal(expected, 28);
   // A bare mcp__serena grants a user's own Serena entry's write tools too.
   for (const [fileName, text] of agents) {
     const toolsLine = text.split("\n").find((line) => line.startsWith("tools:")) || "";
@@ -44,7 +44,10 @@ test("every catalog role becomes a namespaced Claude subagent without permission
     assert.equal(`${fields.name}.md`, fileName);
     assert.ok(fields.description.length > 10, `${fileName} description`);
     assert.doesNotMatch(text, /bypassPermissions|dontAsk|disableAllHooks/);
-    assert.notEqual(fields.permissionMode, "bypassPermissions");
+    // Claude ignores these keys on plugin agents, so emitting them would only mislead.
+    for (const ignored of ["permissionMode", "hooks", "mcpServers", "initialPrompt"]) {
+      assert.equal(fields[ignored], undefined, `${fileName} must not carry ${ignored}`);
+    }
     if (coordinatorNames.has(fields.name)) {
       assert.match(fields.tools || "", /Agent\(agentchef:[a-z0-9-]+/, `${fileName} delegates through the plugin namespace`);
     } else {

@@ -3,7 +3,6 @@ name: root-cause-debugger
 description: "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
 disallowedTools: NotebookEdit
-permissionMode: default
 ---
 
 # Root Cause Debugger

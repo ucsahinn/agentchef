@@ -5,7 +5,7 @@
 Agent, Codex workflow'undaki **kim** sorusunun cevabıdır: görevi, sınırı ve
 döndüreceği kanıt belli olan uzman bir rol.
 
-AgentChef 11 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
+AgentChef 7 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
 planda sürekli çalışan servisler değildir ve her görevde topluca açılmaz. Bir
 rol, subagent başlatılmadan da ana oturuma yol gösterebilir. Delegasyon; işler
 bağımsız ilerleyebiliyorsa, gürültülü çıktıyı ana thread'den ayırmak gerekiyorsa
@@ -33,14 +33,10 @@ seviyesi oluşturmazlar.
 | `Engineering Lead`, `Leadership Coordinator`, `Delivery Lead` | `leadership_coordinator` |
 | `Product Lead`, `Product Coordinator`, `Scope Lead` | `product_coordinator` |
 | `Backend Lead`, `Backend Coordinator`, `Integration Lead` | `backend_coordinator` |
-| `Data Lead`, `Data Coordinator`, `Information Lead` | `data_coordinator` |
-| `Frontend Lead`, `Frontend Coordinator`, `UI Evidence Lead` | `frontend_coordinator` |
 | `DevOps Lead`, `DevOps Coordinator`, `Operations Lead` | `devops_coordinator` |
-| `Security Lead`, `Security Coordinator`, `Risk Lead` | `security_coordinator` |
 | `QA Lead`, `QA Coordinator`, `Assurance Lead` | `qa_coordinator` |
-| `Design Lead`, `Design Coordinator`, `UX Review Lead` | `design_coordinator` |
+| `UI Lead`, `UI Coordinator`, `UX Evidence Lead` | `ui_coordinator` |
 | `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
-| `Support Lead`, `Support Coordinator`, `Customer Care Lead` | `support_coordinator` |
 
 Karar ve izin sınırı ana oturumda kalır. Koordinatör kanıtı korele eder; sessizce
 publish/deploy yapmaz, yetki genişletmez veya ilgisiz işi devralmaz. CLI'da bir
@@ -112,17 +108,18 @@ gerekip gerekmediğine ana oturum karar verir.
 5. Aktif kullanıcı profili yetkili kalır; AgentChef rol dosyaları her agent'ı
    tek bir modele sabitlemez.
 
-Veri rotası dardır: `data_coordinator`, `docs_researcher` ile salt-okunur lineage,
-katalog, kalite ve kaynak kanıtını birleştirir. Data engineering, veritabanı
-performansı, güvenlik veya operasyon uzmanlığı iddia etmez. Uygulama geliştirme,
-veritabanı erişimi ve veritabanı performansı ihtiyaçları soru, incelenen kanıt,
-çatışma, gereken karar ve açık doğrulama ihtiyacını içeren kısa bir parent-routed
-handoff ile `backend_coordinator` için ana oturuma döner. Customer support/onboarding rotası da
+Veri rotası dardır: `backend_coordinator`, `docs_researcher` ile salt-okunur
+lineage, katalog, kalite ve kaynak kanıtını birleştirir. Data engineering,
+veritabanı performansı, güvenlik veya operasyon uzmanlığı iddia etmez. Veritabanı
+performans ölçümü, runtime sağlığı ve operasyonel tanılama ihtiyaçları soru,
+incelenen kanıt, çatışma, gereken karar ve açık doğrulama ihtiyacını içeren kısa
+bir parent-routed handoff ile `devops_coordinator` için ana oturuma döner.
+Customer support/onboarding rotası (`devops_coordinator` ile `devex_auditor`) da
 advisory'dir. Bu rotalar veritabanı, customer-account veya production erişimi vermez.
 
 ### Aynı roller Claude Code'da
 
-Claude Code hedefi aynı 32 rolü `agentchef:<rol>` adlı plugin subagent'ları
+Claude Code hedefi aynı 28 rolü `agentchef:<rol>` adlı plugin subagent'ları
 olarak taşır (örneğin `agentchef:code-mapper`). `npm run render:targets`
 katalogdan üretir: salt-okunur Codex rolleri `Read`, `Grep`, `Glob` araçlı
 ve `Write`, `Edit`, `Bash` yasaklı subagent'lara dönüşür; workspace-write
@@ -136,21 +133,22 @@ worker'larını `Agent(agentchef:<worker>)` ile başlatabilir. AgentChef
 | --- | --- |
 | `leadership_coordinator` | `context_architect`, `engineering_planner`, `code_reviewer`, `release_verifier` |
 | `product_coordinator` | `prompt_architect`, `product_strategist`, `spec_author` |
-| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger` |
-| `data_coordinator` | `docs_researcher` |
-| `frontend_coordinator` | `frontend_verifier` |
-| `devops_coordinator` | `performance_auditor`, `codex_doctor` |
-| `security_coordinator` | `security_auditor` |
-| `qa_coordinator` | `qa_lead`, `test_verifier` |
-| `design_coordinator` | `design_reviewer` |
+| `backend_coordinator` | `code_mapper`, `mcp_integrator`, `root_cause_debugger`, `docs_researcher` |
+| `devops_coordinator` | `performance_auditor`, `codex_doctor`, `devex_auditor` |
+| `qa_coordinator` | `qa_lead`, `test_verifier`, `security_auditor` |
+| `ui_coordinator` | `frontend_verifier`, `design_reviewer` |
 | `marketing_coordinator` | `google_seo_auditor`, `docs_author` |
-| `support_coordinator` | `devex_auditor` |
 
-Kurulumda çalışan on bir koordinatör vardır: leadership, product, backend, data,
-frontend, DevOps, security, QA, design, marketing ve customer support. 21 AgentChef
-uzmanı dar görev worker'ı olarak kalır. \`catalog/agents.json\` eksiksiz
-11→21 sahiplik eşlemesini tutar. Bir koordinatör yalnızca katalogdaki worker
-grubunu (en çok dört worker) seçebilir; worker daha fazla delege etmez.
+Kurulumda çalışan yedi koordinatör vardır: leadership, product, backend, DevOps,
+QA, UI ve marketing. 21 AgentChef uzmanı dar görev worker'ı olarak kalır.
+\`catalog/agents.json\` eksiksiz 7→21 sahiplik eşlemesini tutar. Bir koordinatör
+yalnızca katalogdaki worker grubunu (en çok dört worker) seçebilir; worker daha
+fazla delege etmez.
+
+1.3.0 ile birlikte, 1.2 kurulumundan yapılan yükseltme kaldırılan beş koordinatör
+rol dosyasını (`data_coordinator`, `frontend_coordinator`, `design_coordinator`,
+`security_coordinator` ve `support_coordinator`) emekliye ayırır; bunu installer
+migration'ı yapar, elle temizlik gerekmez.
 
 Alanlar arası koordinasyon doğrudan peer spawn değil, ana oturum üzerinden giden
 kısa bir handoff'tur: birincil koordinatör soruyu, kanıtı, çatışmayı, kararı ve
