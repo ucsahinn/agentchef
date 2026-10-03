@@ -119,6 +119,17 @@ export function planCodexRemoval(options) {
     targets: "codex"
   });
   const items = [];
+  // Before 1.3.0 each bundled skill was also copied into AGENTS_HOME/skills
+  // with an ownership marker. Those copies are still AgentChef's to remove;
+  // the same marker rule as before decides.
+  const bundledSkills = JSON.parse(fs.readFileSync(path.join(repoRoot, "catalog", "skills.json"), "utf8")).skills.filter((skill) => skill.directInstall === true);
+  for (const skill of bundledSkills) {
+    const sourceRoot = path.join(repoRoot, "plugins", "agentchef", "skills", skill.name);
+    const destination = path.join(agentsHome, "skills", skill.name);
+    const plan = directoryPlan(sourceRoot, destination, { requireMarker: [...managedMarkerNames] });
+    if (plan.decision === "absent") continue;
+    items.push({ id: `${skill.name}-direct-skill`, kind: "directory", target: destination, decision: plan.decision, files: plan.files, extras: plan.extras || [] });
+  }
   for (const action of contract.operations) {
     if (action.kind === "copy-file") {
       const sourceBuffer = fs.readFileSync(path.join(repoRoot, action.source));
@@ -165,18 +176,25 @@ export function planCodexRemoval(options) {
       continue;
     }
     if (action.kind === "skill-install") {
-      const provenance = path.join(action.destination, pinnedSkillProvenanceFileName);
-      let decision = "absent";
-      if (lstatOrNull(action.destination)) {
-        decision = "foreign";
-        try {
-          const record = JSON.parse(fs.readFileSync(provenance, "utf8"));
-          if (record?.schemaVersion === pinnedSkillSchemaVersion) decision = "remove";
-        } catch {
+      // The plugin-source copy (1.3.0 on) and a direct copy an earlier release
+      // left under AGENTS_HOME/skills are both AgentChef's when they carry
+      // its provenance record.
+      for (const [suffix, target] of [["", action.destination], [":legacy", action.legacyDestination]]) {
+        if (!target) continue;
+        const provenance = path.join(target, pinnedSkillProvenanceFileName);
+        let decision = "absent";
+        if (lstatOrNull(target)) {
           decision = "foreign";
+          try {
+            const record = JSON.parse(fs.readFileSync(provenance, "utf8"));
+            if (record?.schemaVersion === pinnedSkillSchemaVersion) decision = "remove";
+          } catch {
+            decision = "foreign";
+          }
         }
+        if (suffix && decision === "absent") continue;
+        items.push({ id: `${action.id}${suffix}`, kind: "curated-skill", target, decision });
       }
-      items.push({ id: action.id, kind: "curated-skill", target: action.destination, decision });
       continue;
     }
     if (action.kind === "git-config" || action.kind === "chmod") continue;

@@ -654,28 +654,16 @@ function repairManagedFiles(contract) {
     }
   }
 
-  // Direct-skill directory actions must account for every nested source file.
-  // Keep this invariant explicit so a platform-specific contract expansion can
-  // never leave a managed support file behind while still writing the marker.
-  for (const directSkill of directSkills) {
-    const sourceRoot = path.join(root, "plugins", "agentchef", "skills", directSkill.name);
-    const targetRoot = path.join(options.agentsHome, "skills", directSkill.name);
-    for (const relativePath of listFilesRecursive(sourceRoot, { rejectLinks: true })) {
-      const sourcePath = path.join(sourceRoot, relativePath);
-      const targetPath = path.join(targetRoot, relativePath);
-      if (!fileEquals(sourcePath, targetPath)) {
-        expected += 1;
-        account(repairFile(
-          toPosix(path.join("plugins/agentchef/skills", directSkill.name, relativePath)),
-          targetPath,
-          `direct-skill-reconcile:${directSkill.name}:${relativePath}`
-        ));
-      }
-    }
-  }
+  const pinnedSkillNames = new Set(readJson("catalog/skills.json").skills.filter((skill) => skill.install === true).map((skill) => skill.skill || skill.name));
+  const isPinnedSkillFile = (mirrorRoot, file) => {
+    const [top, name] = toPosix(file).split("/");
+    return top === "skills" && pinnedSkillNames.has(name)
+      && [identity.sourceMarker, identity.legacySourceMarker].some((marker) => fs.existsSync(path.join(mirrorRoot, "skills", name, marker)));
+  };
   const extraPluginFiles = pluginMirrors.flatMap((mirror) =>
     listFilesRecursive(mirror.root, { rejectLinks: true })
       .filter((file) => !mirror.sourceFiles.has(file))
+      .filter((file) => !isPinnedSkillFile(mirror.root, file))
       .map((file) => ({ mirror: mirror.id, path: path.join(mirror.root, file), root: mirror.root }))
   );
   const pruned = [];
@@ -966,25 +954,37 @@ function inspectSkills() {
       .filter((skill) => skill.directInstall === true)
       .map((skill) => skill.name)
   );
+  // Harness skills live in the plugin source since 1.3.0; the plain skill
+  // folders hold the user's own skills and, until the migration runs, the
+  // direct copies an earlier release left behind.
+  const pluginSkillsRoot = path.join(options.agentsHome, "plugins", "sources", "agentchef", "skills");
   const roots = [
     path.join(options.codexHome, "skills"),
     path.join(options.agentsHome, "skills")
   ];
+  const listDirectories = (skillRoot) => (fs.existsSync(skillRoot)
+    ? fs.readdirSync(skillRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory() && !entry.name.startsWith(".")).map((entry) => entry.name)
+    : []);
+  const inPlugin = new Set(listDirectories(pluginSkillsRoot));
   const locations = new Map();
 
   for (const skillRoot of roots) {
-    if (!fs.existsSync(skillRoot)) continue;
-    for (const entry of fs.readdirSync(skillRoot, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-      const current = locations.get(entry.name) || [];
+    for (const name of listDirectories(skillRoot)) {
+      const current = locations.get(name) || [];
       current.push(skillRoot);
-      locations.set(entry.name, current);
+      locations.set(name, current);
     }
   }
 
-  const installed = [...locations.keys()].sort();
-  const missing = expected.filter((skill) => !locations.has(skill));
-  const extra = installed.filter((skill) => !expectedSet.has(skill) && !managedDirectSet.has(skill));
+  const installed = [...new Set([...inPlugin, ...locations.keys()])].sort();
+  // Pinned skills arrive only with -All / --install-skills, so only the
+  // bundled ones are required to be in the plugin.
+  const missing = [...managedDirectSet].filter((skill) => !inPlugin.has(skill)).sort();
+  const extra = [...locations.keys()].filter((skill) => !expectedSet.has(skill) && !managedDirectSet.has(skill)).sort();
+  const pendingMigration = [...locations.keys()].filter((skill) => expectedSet.has(skill)).sort();
+  if (pendingMigration.length > 0) {
+    warnings.push(`${pendingMigration.length} harness skill(s) still have a direct copy outside the plugin (${pendingMigration.join(", ")}); npm run chef -- --migrate-identity --target both --apply retires them.`);
+  }
   const duplicates = [...locations.entries()]
     .filter(([, skillRoots]) => skillRoots.length > 1)
     .map(([name, skillRoots]) => ({ name, roots: skillRoots.map(redact) }));
@@ -1098,28 +1098,6 @@ try {
       })
     : null;
   assertNoBackupCreationOnly(repairContract.preflightTargets, noBackupPluginRefresh);
-  for (const directSkill of directSkills) {
-    const source = path.join(root, "plugins", "agentchef", "skills", directSkill.name);
-    const target = path.join(options.agentsHome, "skills", directSkill.name);
-    const alternateTarget = path.join(options.codexHome, "skills", directSkill.name);
-    if (
-      path.resolve(alternateTarget) !== path.resolve(target)
-      && pathEntryExists(alternateTarget)
-    ) {
-      throw new Error(
-        `Duplicate direct skill root detected; move or explicitly reconcile the existing CODEX_HOME copy before repair: ${redact(alternateTarget)}`
-      );
-    }
-    const state = inspectDirectSkillTarget(source, target);
-    if (
-      !state.safeToSync
-      && !(shouldAdoptDirectSkill(directSkill) && isDirectSkillStateAdoptable(state))
-    ) {
-      throw new Error(
-        `Refusing to overwrite user-owned ${directSkill.display} skill without ${directSkill.adoptFlag}: ${redact(target)}`
-      );
-    }
-  }
   const marketplacePath = path.join(options.agentsHome, "plugins", "marketplace.json");
   const marketplacePluginTarget = path.join(options.agentsHome, "plugins", "sources", "agentchef");
   inspectMarketplaceEntry(marketplacePath, marketplacePluginTarget);

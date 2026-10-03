@@ -22,14 +22,14 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 | Runtime MCP profilleri (`full`, `multi-session`, `offline`, `token-safe`, ...) | üretilen `*.config.toml` profilleri | profil kavramı yok | **eşlenmiyor** |
 | Uzman ajanlar | `~/.codex/agents/*.toml` (32 rol dosyası) | `plugins/agentchef/agents/*.md` altında `agentchef:<role>` plugin subagent'ları; `~/.claude/agents/` dokunulmaz | eşleniyor, ad-alanlı |
 | Koordinatörden worker'a zorlama | rol config'inde kataloğa bağlı worker listeleri | koordinatör subagent'ları `Agent(agentchef:<worker>, ...)` araç allowlist'i bildirir; zorlama katalogla değil araç izniyle olur | kısmi |
-| Bundled workflow skill'leri | `~/.agents/skills/<name>` altında doğrudan kopyalar artı plugin | `~/.claude/skills/<name>` dizin bağlantıları aynı yönetilen `~/.agents/skills/<name>` ağacına işaret eder, artı plugin | eşleniyor, tek yönetilen kopya |
-| Küratörlü commit-pinned skill'ler | provenance marker'lı `~/.agents/skills/<name>` | aynı ağaç, aynı dizin bağlantılarıyla Claude'a açılır | eşleniyor |
-| Plugin dağıtımı | `~/.codex/plugins/agentchef` kopyası artı AgentChef'in yazdığı `~/.agents/plugins/marketplace.json` | AgentChef'in yazdığı `~/.agents/plugins/.claude-plugin/marketplace.json`; kurulum yalnız `claude plugin marketplace add` ve `claude plugin install` ile; Claude'un kendi plugin cache'i asla elle yazılmaz | kısmi: farklı sahiplik modeli |
+| Bundled workflow skill'leri | `~/.agents/plugins/sources/agentchef/skills/<name>` kaynağından `$agentchef:<skill>` plugin skill'leri; `~/.agents/skills` altında doğrudan kopya yok | aynı plugin kaynağından `/agentchef:<skill>` plugin skill'leri; `~/.claude/skills` altına hiçbir şey bağlanmaz | eşleniyor, tek kaynak plugin |
+| Küratörlü commit-pinned skill'ler | provenance kaydıyla `~/.agents/plugins/sources/agentchef/skills/<name>` altına yazılır | aynı plugin kaynağı; Claude'a da plugin üzerinden ulaşır | eşleniyor |
+| Plugin dağıtımı | `~/.codex/plugins/agentchef` kopyası artı AgentChef'in yazdığı `~/.agents/plugins/marketplace.json` | AgentChef'in yazdığı `~/.agents/plugins/.claude-plugin/marketplace.json`; kurulum yalnız `claude plugin marketplace add` ve `claude plugin install --scope user` ile (cache'teki kopya kaynaktan farklıysa yeniden kurulur); Claude'un kendi plugin cache'i asla elle yazılmaz | kısmi: farklı sahiplik modeli |
 | Onay kuralları | `~/.codex/rules/default.rules` prefix kuralları (`allow` / `prompt`) | aynı dosyadan üretilen `permissions.allow` ve `permissions.ask` kuralları (`Bash(...)`, `PowerShell(...)`); hiçbir şey `deny` olarak üretilmez | eşleniyor (allow, prompt); taşınmayanlar için aşağıya bakın |
 | Oturum sonu süreç hijyeni hook'u | Codex'in güvendiği plugin hook'u `hooks/process-hygiene.json` | bu sürümde yayınlanmaz (Claude Code oturum sonunda kendi MCP alt süreçlerini bitirir) | henüz **eşlenmedi** |
 | Global Git guard'ları | paylaşımlı `~/.githooks/pre-commit`, `~/.gitignore_global`, `core.hooksPath`, `core.excludesfile` | aynı dosyalar; iki hedef için bir kez sahiplenilen tek global slot | eşleniyor, paylaşımlı |
 | Yedekler, journal, kilit | journal ve kilit dizinleriyle `~/.codex/backups/<prefix>-*` | aynı journal biçimiyle `~/.claude/agentchef/backups/agentchef-*`; kilit `~/.claude` ve `~/.agents` üzerinde | eşleniyor |
-| Runtime doğrulama | `codex doctor`, `codex mcp list`, kurulu dosya drift'i | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt doğrulaması, bağlantı doğrulaması | eşleniyor |
+| Runtime doğrulama | `codex doctor`, `codex mcp list`, kurulu dosya drift'i | `claude --version`, `claude plugin validate`, `claude mcp list`, receipt doğrulaması, plugin kaynağındaki skill doğrulaması | eşleniyor |
 
 ## İzin ve sandbox semantiği
 
@@ -63,9 +63,10 @@ Kontrol tarihi: 2026-09-18 (Codex CLI 0.154, Claude Code 2.1.276).
 
 - `bypassPermissions`, `dontAsk`, geniş `allow` joker karakterleri, HTTP
   hook'ları veya `disableAllHooks` yazmak.
-- `~/.claude/skills/` altındaki yabancı bir gerçek dizini bağlantıyla
-  değiştirmek; yalnızca AgentChef marker'lı kopyalar benimsenir, o da yalnız
-  `--adopt-skill-links` ile.
+- `~/.claude/skills/` ya da `~/.agents/skills/` altında sana ait bir şeyi
+  yazmak, bağlamak veya kaldırmak; yalnızca AgentChef'in 1.0–1.2'de
+  oluşturduğunu kanıtlayabildiği bağlantı ve kopyalar emekli edilir (bkz.
+  [Claude skill bağlantıları](../kb/claude-skill-links.tr.md)).
 - `~/.claude/CLAUDE.md`, `~/.claude/agents/`, OAuth durumu, proje geçmişi veya
   `.claude.json` içinde `mcpServers` dışındaki herhangi bir anahtarı
   düzenlemek.

@@ -17,14 +17,13 @@ Targets: codex
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 23 | 1 | InstallSkills
-default | 22 | 0 | none
+all | 13 | 1 | InstallSkills
+default | 12 | 0 | none
 ```
 
 Varsayılan hedef `codex`'tir. Claude Code işlemlerini dahil etmek için
-`--target claude` veya `--target both` ekleyin; paylaşılan işlemler (direct
-skill'ler, plugin kaynak ağacı, Git guard'ları, curated skill'ler) bir kez
-sayılır:
+`--target claude` veya `--target both` ekleyin; paylaşılan işlemler (her skill'i taşıyan
+plugin kaynak ağacı, Git guard'ları, curated skill'ler) bir kez sayılır:
 
 ```text
 AgentChef install profiles
@@ -34,8 +33,8 @@ Targets: codex, claude
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 30 | 3 | InstallSkills
-default | 29 | 2 | none
+all | 19 | 3 | InstallSkills
+default | 18 | 2 | none
 ```
 
 ```text

@@ -309,7 +309,10 @@ npm run verify:install:runtime -- --expect-skills
 ```
 
 Use `--expect-skills` only when the real install included `-All` or
-`-InstallSkills`. The verifier checks managed files for source drift, runs
+`-InstallSkills`. It looks for the skills inside the plugin source
+(`AGENTS_HOME/plugins/sources/agentchef/skills`) and warns, without failing,
+when a skill still has a direct copy outside the plugin, naming the migration
+command that retires it. The verifier checks managed files for source drift, runs
 Codex CLI checks with `CODEX_HOME` explicitly set to the installed target,
 reports ambient sandbox/offline home drift as a warning, and fails only when
 the installed target itself cannot be verified.
@@ -322,7 +325,8 @@ source-drift validation.
 
 For the Claude Code target, add `--target claude` (or `both`). The verifier
 then reads the install receipt under `~/.claude/agentchef/`, checks every
-managed file hash, every skill link, and every merge receipt entry, and probes
+managed file hash, every skill link a 1.0–1.2 install still records, and every
+merge receipt entry, and probes
 `claude --version`, `claude plugin validate --strict`, and `claude mcp list`
 when the CLI is available:
 

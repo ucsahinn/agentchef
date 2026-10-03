@@ -540,17 +540,22 @@ if (optionalIndexes.some((index) => index < 0)
   fail("Manifest optional operation order must keep Git guards and curated skills before terminal cache refresh");
 }
 
+// Bundled skills ship inside the AgentChef plugin and reach both CLIs only as
+// plugin skills; a separate direct copy would list each one twice.
 for (const skill of skillsCatalog?.skills?.filter((entry) => entry.directInstall === true) || []) {
-  const operationId = `${skill.name}-direct-skill`;
-  const operation = manifest.operations?.find((entry) => entry.id === operationId);
-  if (!operation) {
-    fail(`Install plan is missing cataloged direct-skill operation: ${operationId}`);
-    continue;
+  if (!fs.existsSync(path.join(root, "plugins", "agentchef", "skills", skill.name, "SKILL.md"))) {
+    fail(`Bundled skill ${skill.name} must live in plugins/agentchef/skills/${skill.name}`);
   }
-  for (const profileName of ["default", "all"]) {
-    if (!manifest.profiles?.[profileName]?.includes(operationId)) {
-      fail(`Install plan ${profileName} profile is missing direct-skill operation: ${operationId}`);
-    }
+  if (manifest.operations?.some((entry) => entry.id === `${skill.name}-direct-skill`)) {
+    fail(`Bundled skill ${skill.name} must not also be installed as a direct copy`);
+  }
+}
+if (manifest.operations?.some((entry) => entry.kind === "link-directory")) {
+  fail("Skills reach Claude Code through the plugin; the install plan must not link skill folders into the Claude home");
+}
+for (const profileName of ["default", "all"]) {
+  if (!manifest.profiles?.[profileName]?.includes("codex-plugin-marketplace-source")) {
+    fail(`Install plan ${profileName} profile must sync the plugin marketplace source that carries every skill`);
   }
 }
 

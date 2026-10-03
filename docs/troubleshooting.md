@@ -156,8 +156,12 @@ claude mcp list
 ```
 
 Start a new session; Claude Code reads rules, plugins, and skills at startup.
-A `foreign` skill link decision means a real directory of your own sits at
-`~/.claude/skills/<name>`; AgentChef never replaces it. A `user-changed`
+AgentChef skills come only from the `agentchef` plugin (`/agentchef:<skill>`).
+If a skill is listed twice, a 1.0–1.2 copy or link is still in place; run
+`npm run chef -- --migrate-identity --target both` (preview, then `--apply`).
+A `foreign` decision for a legacy skill link means the path an older install
+recorded is no longer AgentChef's link (for example a real directory of your
+own at `~/.claude/skills/<name>`); AgentChef leaves it alone. A `user-changed`
 receipt entry means you edited something AgentChef added; it is kept as your
 content. See [Claude skill links](../kb/claude-skill-links.md),
 [Claude settings merge](../kb/claude-settings-merge.md), and

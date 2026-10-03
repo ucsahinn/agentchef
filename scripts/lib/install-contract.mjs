@@ -184,7 +184,11 @@ function expandCuratedSkills(operation, options, profileName) {
       : `node scripts/install-pinned-skill.mjs --package ${skill.package} --commit ${skill.commit} --skill ${skill.skill} --cli-version ${catalog.skillsCliVersion}`,
     source: skill.source,
     sourceUrl: skill.sourceUrl,
-    destination: joinTargetPath(options.platform, options.agentsHome, "skills", skill.name)
+    // Pinned skills live inside the plugin's marketplace source since 1.3.0; the
+    // installers pass this root as --skills-root next to the locked command.
+    skillsRoot: joinTargetPath(options.platform, options.agentsHome, "plugins", "sources", "agentchef", "skills"),
+    destination: joinTargetPath(options.platform, options.agentsHome, "plugins", "sources", "agentchef", "skills", skill.name),
+    legacyDestination: joinTargetPath(options.platform, options.agentsHome, "skills", skill.name)
   }));
 }
 

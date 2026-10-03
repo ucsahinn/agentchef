@@ -13,23 +13,12 @@
       "codex-mcp-profiles",
       "codex-plugin",
       "codex-plugin-marketplace-source",
-      "agentchef-operator-direct-skill",
-      "context-budget-planner-direct-skill",
-      "adaptive-agent-routing-direct-skill",
-      "external-review-workflow-direct-skill",
-      "gptpro-direct-skill",
-      "gptpro-handoff-direct-skill",
-      "fetch-direct-skill",
-      "seo-direct-skill",
-      "evidence-research-direct-skill",
-      "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
       "installed-plugin-cache-refresh",
       "claude-working-agreement",
       "claude-serena-pool",
       "claude-settings-merge",
       "claude-mcp-merge",
-      "claude-skill-links",
       "claude-plugin-marketplace",
       "claude-plugin-register"
     ],
@@ -44,16 +33,6 @@
       "codex-mcp-profiles",
       "codex-plugin",
       "codex-plugin-marketplace-source",
-      "agentchef-operator-direct-skill",
-      "context-budget-planner-direct-skill",
-      "adaptive-agent-routing-direct-skill",
-      "external-review-workflow-direct-skill",
-      "gptpro-direct-skill",
-      "gptpro-handoff-direct-skill",
-      "fetch-direct-skill",
-      "seo-direct-skill",
-      "evidence-research-direct-skill",
-      "offline-diagram-triplet-direct-skill",
       "plugin-marketplace",
       "curated-skills",
       "installed-plugin-cache-refresh",
@@ -61,7 +40,6 @@
       "claude-serena-pool",
       "claude-settings-merge",
       "claude-mcp-merge",
-      "claude-skill-links",
       "claude-plugin-marketplace",
       "claude-plugin-register"
     ]
@@ -225,176 +203,6 @@
       "conflictPolicy": "Managed plugin files are refreshed after backup while extra files are preserved by default; destructive pruning requires an explicit repair flag, and Codex hook trust remains a separate exact-source user review."
     },
     {
-      "id": "agentchef-operator-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the AgentChef operator workflow for direct routing-profile invocation.",
-      "source": "plugins/agentchef/skills/agentchef-operator",
-      "destination": "${AGENTS_HOME}/skills/agentchef-operator",
-      "ownershipMarker": "${AGENTS_HOME}/skills/agentchef-operator/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The operator skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "context-budget-planner-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the context budget planner required by the global operating contract.",
-      "source": "plugins/agentchef/skills/context-budget-planner",
-      "destination": "${AGENTS_HOME}/skills/context-budget-planner",
-      "ownershipMarker": "${AGENTS_HOME}/skills/context-budget-planner/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The context planner is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "adaptive-agent-routing-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the adaptive routing workflow required by the global operating contract.",
-      "source": "plugins/agentchef/skills/adaptive-agent-routing",
-      "destination": "${AGENTS_HOME}/skills/adaptive-agent-routing",
-      "ownershipMarker": "${AGENTS_HOME}/skills/adaptive-agent-routing/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The routing skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "external-review-workflow-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the secret-safe external review workflow for direct invocation.",
-      "source": "plugins/agentchef/skills/external-review-workflow",
-      "destination": "${AGENTS_HOME}/skills/external-review-workflow",
-      "ownershipMarker": "${AGENTS_HOME}/skills/external-review-workflow/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The external review workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "gptpro-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the GPT Pro Project context workflow for direct invocation.",
-      "source": "plugins/agentchef/skills/gptpro",
-      "destination": "${AGENTS_HOME}/skills/gptpro",
-      "ownershipMarker": "${AGENTS_HOME}/skills/gptpro/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The GPT Pro context workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "gptpro-handoff-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the manifest-bound GPT Pro handoff workflow for direct invocation.",
-      "source": "plugins/agentchef/skills/gptpro-handoff",
-      "destination": "${AGENTS_HOME}/skills/gptpro-handoff",
-      "ownershipMarker": "${AGENTS_HOME}/skills/gptpro-handoff/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The GPT Pro handoff workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
-      "id": "fetch-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the explicit-only Fetch workflow for direct $fetch invocation.",
-      "source": "plugins/agentchef/skills/fetch",
-      "destination": "${AGENTS_HOME}/skills/fetch",
-      "ownershipMarker": "${AGENTS_HOME}/skills/fetch/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the same canonical source as the plugin-bundled version only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact target is explicitly adopted; implicit invocation remains disabled."
-    },
-    {
-      "id": "seo-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the evidence-backed SEO workflow for direct $seo invocation.",
-      "source": "plugins/agentchef/skills/seo",
-      "destination": "${AGENTS_HOME}/skills/seo",
-      "ownershipMarker": "${AGENTS_HOME}/skills/seo/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact SEO target is explicitly adopted."
-    },
-    {
-      "id": "evidence-research-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the source-traceable research workflow for direct $evidence-research invocation.",
-      "source": "plugins/agentchef/skills/evidence-research",
-      "destination": "${AGENTS_HOME}/skills/evidence-research",
-      "ownershipMarker": "${AGENTS_HOME}/skills/evidence-research/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The direct skill is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless the exact evidence-research target is explicitly adopted."
-    },
-    {
-      "id": "offline-diagram-triplet-direct-skill",
-      "kind": "copy-directory",
-      "target": "shared",
-      "summary": "Install the offline diagram workflow for direct invocation.",
-      "source": "plugins/agentchef/skills/offline-diagram-triplet",
-      "destination": "${AGENTS_HOME}/skills/offline-diagram-triplet",
-      "ownershipMarker": "${AGENTS_HOME}/skills/offline-diagram-triplet/.agentchef-managed.json",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "sync-only-when-owned-or-exact-legacy-match-explicit-adoption-required-otherwise",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "The offline diagram workflow is synchronized from the canonical plugin source only when the target is absent, marked as AgentChef-managed, or an exact legacy match. A foreign collision fails before any write unless that exact target is explicitly adopted."
-    },
-    {
       "id": "codex-plugin-marketplace-source",
       "kind": "copy-directory",
       "target": "shared",
@@ -522,7 +330,7 @@
       "id": "curated-skills",
       "kind": "skill-install",
       "target": "shared",
-      "summary": "Optionally install curated global Codex skills from the locked catalog.",
+      "summary": "Install the pinned upstream skills into the AgentChef plugin marketplace source, so both CLIs list them with the bundled skills under one plugin.",
       "catalog": "catalog/skills.json",
       "lock": "catalog/skills-lock.json",
       "requiresFlag": "InstallSkills",
@@ -615,22 +423,6 @@
       "backup": true,
       "risk": "high",
       "conflictPolicy": "A server that already exists under the same name is left exactly as the user has it. No other .claude.json key is read or written; only the entries listed in the receipt are removed on --remove."
-    },
-    {
-      "id": "claude-skill-links",
-      "kind": "link-directory",
-      "target": "claude",
-      "summary": "Expose every AgentChef-managed skill to Claude Code through a directory link.",
-      "source": "${AGENTS_HOME}/skills",
-      "destination": "${CLAUDE_HOME}/skills",
-      "platforms": [
-        "windows",
-        "unix"
-      ],
-      "collision": "create-link-or-adopt-marked-copy",
-      "backup": true,
-      "risk": "medium",
-      "conflictPolicy": "A real directory carrying an AgentChef marker is replaced by a link only with --adopt-skill-links after a backup. Foreign directories and links elsewhere are never touched."
     },
     {
       "id": "claude-plugin-marketplace",

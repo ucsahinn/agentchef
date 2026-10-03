@@ -57,12 +57,11 @@ test("claude-only contract keeps shared operations once and resolves the Claude 
   assert.equal(agreement.selectedBy, "--target claude");
   const mcp = contract.operations.find((action) => action.id === "claude-mcp-merge");
   assert.equal(mcp.destination, path.win32.join("C:\\Claude", ".claude.json"));
-  const links = contract.operations.find((action) => action.id === "claude-skill-links");
-  assert.equal(links.source, path.win32.join("C:\\Agents", "skills"));
-  assert.equal(links.destination, path.win32.join("C:\\Claude", "skills"));
+  // Skills reach Claude through the plugin; no skill folder is linked.
+  assert.ok(!contract.operations.some((action) => action.id === "claude-skill-links"));
   const register = contract.operations.find((action) => action.id === "claude-plugin-register");
   assert.match(register.command, /^claude\.cmd plugin marketplace add .*\\plugins && claude\.cmd plugin install agentchef@agentchef --scope user$/);
-  assert.ok(!contract.preflightTargets.includes(links.destination), "link roots are not preflight write targets");
+  assert.ok(!contract.preflightTargets.includes(path.win32.join("C:\\Claude", "skills")), "the Claude skills folder is not a write target");
 });
 
 test("both-target contract is the union of both selections in manifest order", () => {

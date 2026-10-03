@@ -188,8 +188,8 @@ This repo follows that split:
   `license`, `risk`, and `lastChecked` fields.
 - The local plugin exposes ten workflows, including GPT Pro context and
   manifest-bound handoff, the enterprise operator, zero-network offline diagram
-  triplet, explicit-only Fetch, evidence-backed `$seo`, traceable
-  `$evidence-research`, and context budget planning.
+  triplet, explicit-only Fetch, evidence-backed `$agentchef:seo`, traceable
+  `$agentchef:evidence-research`, and context budget planning.
 - One exact `SessionEnd` process-hygiene hook is separately reviewed and
   trust-gated. Other plugin hooks, MCP servers, and apps remain absent.
 

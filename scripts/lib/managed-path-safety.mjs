@@ -41,7 +41,7 @@ function inspectManagedRootPath(base) {
   return { safe: true };
 }
 
-function canonicalizeWithMissingTail(targetPath) {
+export function canonicalizeWithMissingTail(targetPath) {
   let current = path.resolve(targetPath);
   const missing = [];
   while (!lstatOrNull(current)) {

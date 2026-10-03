@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
+import { assertManagedTargetPath, canonicalizeWithMissingTail, isPathInside } from "./lib/managed-path-safety.mjs";
 import {
   activatePinnedSkill,
   compensatePinnedSkillInstall
@@ -38,7 +38,8 @@ const options = {
   adoptExisting: false,
   verifyOnly: false,
   json: false,
-  rollbackReceipt: ""
+  rollbackReceipt: "",
+  skillsRoot: ""
 };
 
 const PINNED_SOURCE_RECEIPT = ".agentchef-pinned-source.json";
@@ -50,13 +51,14 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--adopt-existing") options.adoptExisting = true;
   else if (arg === "--verify-only") options.verifyOnly = true;
   else if (arg === "--json") options.json = true;
-  else if (["--package", "--commit", "--skill", "--cli-version", "--rollback-receipt"].includes(arg)) {
+  else if (["--package", "--commit", "--skill", "--cli-version", "--rollback-receipt", "--skills-root"].includes(arg)) {
     const key = {
       "--package": "package",
       "--commit": "commit",
       "--skill": "skill",
       "--cli-version": "cliVersion",
-      "--rollback-receipt": "rollbackReceipt"
+      "--rollback-receipt": "rollbackReceipt",
+      "--skills-root": "skillsRoot"
     }[arg];
     options[key] = requireCliValue(args, index, arg);
     index += 1;
@@ -317,7 +319,21 @@ try {
     );
   } else {
     const agentsHome = path.resolve(process.env.AGENTS_HOME || path.join(os.homedir(), ".agents"));
-    const target = path.join(agentsHome, "skills", options.skill);
+    // The installers place pinned skills inside the AgentChef plugin's
+    // marketplace source, so both CLIs list them with the bundled ones. The
+    // root must stay inside AGENTS_HOME.
+    // The two paths can name one folder in different spellings (a Windows
+    // 8.3 short name in AGENTS_HOME, the long name from PowerShell), so the
+    // root is re-expressed under AGENTS_HOME through their canonical forms.
+    let skillsRoot = path.join(agentsHome, "skills");
+    if (options.skillsRoot) {
+      const canonicalHome = canonicalizeWithMissingTail(agentsHome);
+      const canonicalRoot = canonicalizeWithMissingTail(options.skillsRoot);
+      skillsRoot = isPathInside(canonicalRoot, canonicalHome)
+        ? path.join(agentsHome, path.relative(canonicalHome, canonicalRoot))
+        : path.resolve(options.skillsRoot);
+    }
+    const target = path.join(skillsRoot, options.skill);
     const backupRoot = path.join(
       codexHome,
       "backups",

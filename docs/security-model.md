@@ -293,13 +293,19 @@ themselves, and the installer also drops inherited Git location variables
 (`GIT_DIR`, `GIT_WORK_TREE`, …). `--no-backup` only creates missing files;
 a rollback never deletes a replaced file that has no backup.
 
-The managed installer synchronizes all ten canonical local workflow
-directories to `AGENTS_HOME/skills/<name>`, so direct invocation does not
-depend on plugin installation. A durable per-skill ownership marker
-distinguishes Chef-managed or exact legacy content from a foreign collision.
-Foreign content fails before any managed write unless that exact target is
-explicitly adopted. Updates are backup-backed and unrelated skill directories
-and extra files are preserved. Fetch keeps `allow_implicit_invocation: false`;
+Since 1.3.0 every AgentChef skill reaches both CLIs only through the plugin.
+The ten bundled skills ship inside the plugin source
+`AGENTS_HOME/plugins/sources/agentchef/skills/<name>`, and pinned skills are
+written into the same folder with their `.agentchef-source.json` provenance
+record. The installer writes nothing into `AGENTS_HOME/skills` and creates no
+links under `~/.claude/skills`, so user skills there are never a collision
+target. The `-Adopt*Skill` and `--adopt-skill-links` flags have no effect.
+Direct copies left by a 1.0–1.2 install are retired only by the explicit
+`--migrate-identity` command (backup first, and only for copies whose marker
+or provenance proves they are AgentChef's and whose skill the plugin source
+already holds); foreign directories and links are never touched. The Claude
+installer retires links its previous receipt recorded only after the plugin
+registered successfully. Fetch keeps `allow_implicit_invocation: false`;
 SEO and Evidence Research allow implicit activation only when their
 descriptions unambiguously match.
 
@@ -308,8 +314,8 @@ The marketplace entry points to a managed mirror under
 the marketplace root required by the current Codex schema. This registration
 makes the plugin discoverable, not installed or enabled; namespaced plugin use
 requires an explicit plugin install and a new session. Marketplace JSON, the
-platform launcher, `serena-pool.mjs`, copied/generated profiles, direct-skill
-ownership, every selected source, and every existing target path component are
+platform launcher, `serena-pool.mjs`, copied/generated profiles, every
+selected source, and every existing target path component are
 preflighted before installers write any managed file. Linked or junctioned
 descendants that escape the configured homes fail closed.
 
@@ -344,7 +350,9 @@ skill names are cleanup candidates because they can pressure Codex's initial
 skill-list budget, but they may have been installed intentionally. Deleting
 extra files inside the managed AgentChef plugin directory requires the
 explicit `--prune-managed-plugin-extras` flag and still stays scoped to that
-single managed plugin target after backup.
+single managed plugin target after backup. Pinned skills in the plugin source
+that carry their provenance record are not extra files, even with that flag.
+Repair no longer reconciles direct skill copies.
 
 ## Update Mode
 

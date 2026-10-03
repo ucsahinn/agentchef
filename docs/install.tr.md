@@ -37,8 +37,8 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 
 | Seçim | Yönetilen yüzey |
 | --- | --- |
-| `codex` (varsayılan) | `~/.codex` dosyaları, paylaşılan `~/.agents` skill ve plugin ağaçları, isteğe bağlı Git guard'ları |
-| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri ve `.claude.json` MCP girdileri, skill bağlantıları, Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı |
+| `codex` (varsayılan) | `~/.codex` dosyaları, paylaşılan `~/.agents` plugin kaynağı ve marketplace'i (AgentChef'in tüm skill'leri plugin kaynağında durur), isteğe bağlı Git guard'ları |
+| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri ve `.claude.json` MCP girdileri, Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı |
 | `both` | yukarıdakilerin tamamı; paylaşılan işlemler bir kez koşar |
 
 `npm run chef -- --install`, `PATH` üzerindeki CLI'ları algılar, bir hedef
@@ -54,6 +54,14 @@ npm run chef -- --install --target both
 ```bash
 ./scripts/install.sh --all --target=claude --dry-run
 ```
+
+Claude hedefinde installer plugin'i `claude plugin marketplace add` ve
+`claude plugin install agentchef@agentchef --scope user` ile kaydeder. Claude
+Code bir plugin'i sürüm başına cache'ler; bu yüzden cache'teki kopya kaynaktan
+farklıysa (örneğin pinned skill'ler kaynağa yeni yazıldığında) installer
+plugin'i yeniden kurar (önce uninstall, sonra install). Codex tarafında ise
+cache sapması denetimi, cache kaynaktan farklı olduğunda plugin'i yeniden
+ekler.
 
 Claude tarafının ayrıntıları, sahipliği ve kaldırılması
 [Claude Code yüzeyleri](claude-surfaces.tr.md) sayfasında; iki hedef arasındaki
@@ -86,8 +94,8 @@ target'lari, opsiyonel global Git degisikliklerini, curated skill komutlarini,
 collision policy'yi, backup davranisini ve risk seviyesini listeler.
 Seçilen manifest profili, planlayıcı ile installer'ların uyguladığı normatif
 operasyon sözleşmesidir. Sıralı operasyonlar; kopyalanan dosyaların yanı sıra
-üretilen `full`/`multi-session`/`offline` profillerini, direct-skill sahiplik
-işaretlerini, kurulu plugin cache yenilemesini ve Unix hook izin adımını da
+üretilen `full`/`multi-session`/`offline` profillerini, AgentChef'in tüm
+skill'lerini taşıyan plugin kaynağını, kurulu plugin cache yenilemesini ve Unix hook izin adımını da
 açıkça kapsar; bu değişiklikler belgelenmemiş installer davranışı olarak kalmaz.
 Profile operasyonu `development.config.toml`, `review.config.toml`,
 `ci.config.toml`, `token-safe.config.toml`, `full.config.toml` ve
@@ -131,7 +139,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair modu, zaten Codex setup'i olan makineler icindir. AgentChef'in
 yonettigi global guidance, rule, agent/profile dosyalari, bundled plugin,
-on yönetilen direct lokal workflow, `serena-pool.mjs`, eksik config bloklari ve local plugin
+plugin'in on bundled skill'i, `serena-pool.mjs`, eksik config bloklari ve local plugin
 marketplace kaydi icin once no-write plan verir, sonra istenirse backup alarak
 onarir. Launcher, Serena köprüsü, üretilen/kopyalanan profiller, sahiplik
 işaretleri, marketplace ve seçilen diğer tüm kaynaklarla hedefler ilk yönetilen
@@ -296,14 +304,19 @@ Kullanışlı parametreler:
 - `-All`: Codex template'lerini, yerel AgentChef plugin'ini, uzman ajanları,
   profilleri, kuralları ve doğrulanmış public/first-party skill'leri kurar.
   Global Git config'i değiştirmez.
-- Her varsayılan yönetilen kurulum, on lokal workflow'un canonical
-  kaynaklarını `AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
-  `$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
-  <hedef>` ve `$evidence-research <soru>` gibi çağrılar plugin kurulmadan
-  doğrudan kullanılabilir. Fetch implicit invocation'ı kapalı tutar; SEO ile
-  Evidence Research yalnız açıkça eşleşen isteklerde implicit seçilebilir.
-  Exact direct hedefte kullanıcıya ait farklı bir skill varsa installer hiçbir
-  managed dosya yazmadan durur.
+- 1.3.0'dan beri AgentChef'in her skill'i iki CLI'ya da yalnızca plugin
+  skill'i olarak ulaşır. On bundled skill plugin'in içinde gelir ve
+  `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` marketplace kaynağına
+  kurulur. Installer bunları artık `AGENTS_HOME/skills` altına kopyalamaz ve
+  `~/.claude/skills` altına hiçbir bağlantı kurmaz; böylece her skill CLI
+  başına bir kez listelenir. Codex'te `$agentchef:<skill>` (örneğin `$seo`
+  workflow'u `$agentchef:seo`, `$evidence-research` ise
+  `$agentchef:evidence-research` olur), Claude Code'da
+  `/agentchef:<skill>` ile çağrılır (başka bir komut aynı adı taşımıyorsa
+  Claude Code'da yalın `/<skill>` da çalışır). Fetch implicit invocation'ı
+  kapalı tutar; SEO ile Evidence Research yalnız açıkça eşleşen isteklerde
+  implicit seçilebilir. 1.0–1.2 kurulumunda doğrudan kopyalar hâlâ durur;
+  geçiş için [Yükseltme](upgrade.tr.md) sayfasına bak.
 - Kişisel marketplace kaydı `agentchef` plugin'ini yalnızca
   keşfedilebilir yapar; kurmaz veya etkinleştirmez.
   `$agentchef:<skill-adı>` çağrıları için `codex plugin add
@@ -317,22 +330,20 @@ Kullanışlı parametreler:
   hedefidir; aktif Codex host'unun bu marketplace'i keşfettiğinin kanıtı
   değildir. Default dışı root'u `codex plugin marketplace add <root>` ile
   kaydet ve `codex plugin marketplace list --json` ile doğrula.
-- `-AdoptFetchSkill`: yalnızca foreign-collision preflight'ından sonra
-  `AGENTS_HOME/skills/fetch` exact hedefini açıkça sahiplenir. Bash karşılığı
-  `--adopt-fetch-skill` olur. Normal install ve repair bu yetkiyi varsaymaz.
-- `-AdoptSeoSkill`: yalnızca incelenmiş foreign collision sonrasında
-  `AGENTS_HOME/skills/seo` hedefini sahiplenir. Bash karşılığı
-  `--adopt-seo-skill` olur.
-- `-AdoptEvidenceResearchSkill`: yalnızca
-  `AGENTS_HOME/skills/evidence-research` hedefini sahiplenir. Bash karşılığı
-  `--adopt-evidence-research-skill` olur.
-- `-AdoptDirectSkill <ad>`: katalogdaki başka bir foreign direct skill hedefini
-  açıkça sahiplenir. Bash karşılığı `--adopt-direct-skill=<ad>` olur.
+- `-AdoptFetchSkill`, `-AdoptSeoSkill`, `-AdoptEvidenceResearchSkill`,
+  `-AdoptDirectSkill <ad>` ve `-AdoptSkillLinks` (Bash:
+  `--adopt-fetch-skill`, `--adopt-seo-skill`,
+  `--adopt-evidence-research-skill`, `--adopt-direct-skill=<ad>`,
+  `--adopt-skill-links`): eski betikler çalışmaya devam etsin diye kabul
+  edilir, ama 1.3.0'dan beri etkisizdir ve bir uyarı basar. Sahiplenilecek
+  doğrudan skill hedefi ya da skill bağlantısı artık yoktur.
 - `-InstallSkills`: `catalog/skills.json` içinde `install: true` olan,
   `owner/repo` formatında doğrulanmış `package`, tam commit SHA ve eşleşen
   `skill` adı taşıyan kayıtları kurar. Installer exact commit'i fetch eder,
-  seçilen skill'i doğrular, native copy'yi stage edip hash'ler ve atomik olarak
-  etkinleştirir. Fetch edilen repo kodunu veya registry kaynaklı bir installer'ı
+  seçilen skill'i doğrular, native copy'yi stage edip hash'ler ve plugin
+  kaynağı içinde (`AGENTS_HOME/plugins/sources/agentchef/skills/<ad>`)
+  `.agentchef-source.json` provenance kaydıyla birlikte atomik olarak
+  etkinleştirir; böylece bundled skill'lerle aynı plugin altında listelenir. Fetch edilen repo kodunu veya registry kaynaklı bir installer'ı
   çalıştırmaz. Eşleşen geçerli AgentChef provenance marker'ı backup alan
   managed upgrade'e izin verir. Unmarked, foreign veya lokal olarak drift etmiş
   aynı adlı hedef korunur ve atlandı olarak raporlanır. `--adopt-existing`
@@ -392,11 +403,10 @@ Kullanışlı flagler:
 
 - `--all`: global Git config'i değiştirmeyen önerilen tam AgentChef kurulumu.
 - `--install-skills`
-- `--adopt-fetch-skill`, `--adopt-seo-skill` ve
-  `--adopt-evidence-research-skill`: yalnız adı verilen foreign direct hedefi
-  inceleme sonrasında sahiplenir; normal install ve repair fail-closed kalır.
-- `--adopt-direct-skill=<ad>`: katalogdaki başka bir foreign direct hedefi
-  inceleme sonrasında sahiplenir.
+- `--adopt-fetch-skill`, `--adopt-seo-skill`,
+  `--adopt-evidence-research-skill`, `--adopt-direct-skill=<ad>` ve
+  `--adopt-skill-links`: eski betikler için kabul edilir, 1.3.0'dan beri
+  etkisizdir (bir uyarı basılır).
 - `--install-git-guards`: global Git ignore ve hook ayarlarına ayrıca opt-in.
 - `--adopt-git-ignore`, `--adopt-git-hook`,
   `--adopt-git-excludes-file` ve `--adopt-git-hooks-path`: tam olarak bir
@@ -481,7 +491,6 @@ Installer şu managed target'ları replace etmeden önce yedekler:
 - `CODEX_HOME` içindeki managed profile dosyaları
 - kişisel plugin marketplace dosyası
 - iki managed plugin aynası
-- bütün managed direct-skill dizinleri ve ownership marker'ları
 
 Yönetilen dizin güncellemeleri yalnızca kaynakta sahip olunan girdileri
 senkronlar ve ilgisiz ek dosyaları korur. Yıkıcı bir budama işlemi ayrı, açık ve
@@ -568,7 +577,7 @@ claude mcp list
 
 Claude Code içinde `/context` AgentChef kural dosyasını memory dosyaları
 altında listeler, `/plugin` `agentchef` marketplace'ini gösterir ve
-`/skills` bağlantılı skill'leri listeler.
+`/skills` plugin skill'lerini birer kez listeler.
 
 ## Gerçek Kuruluma Dokunmadan Test
 

@@ -298,24 +298,18 @@ try {
   if (
     catalogEntry?.install !== false
     || catalogEntry?.directInstall !== true
-    || catalogEntry?.directTarget !== "${AGENTS_HOME}/skills/fetch"
+    || catalogEntry?.directTarget !== "${AGENTS_HOME}/plugins/sources/agentchef/skills/fetch"
   ) {
-    fail("Fetch catalog metadata must keep plugin install disabled and the managed direct target at ${AGENTS_HOME}/skills/fetch.");
+    fail("Fetch catalog metadata must mark it bundled and point at its folder in the plugin source.");
   }
 
   const installPlan = JSON.parse(fs.readFileSync(path.join(root, "manifests", "install-plan.json"), "utf8"));
-  const directOperation = installPlan.operations?.find((operation) => operation.id === "fetch-direct-skill");
   const marketplaceSourceOperation = installPlan.operations?.find(
     (operation) => operation.id === "codex-plugin-marketplace-source"
   );
-  if (
-    directOperation?.kind !== "copy-directory"
-    || directOperation?.source !== "plugins/agentchef/skills/fetch"
-    || directOperation?.destination !== "${AGENTS_HOME}/skills/fetch"
-    || !installPlan.profiles?.default?.includes("fetch-direct-skill")
-    || !installPlan.profiles?.all?.includes("fetch-direct-skill")
-  ) {
-    fail("Install plan must synchronize the canonical Fetch source for direct $fetch invocation in default and all profiles.");
+  // Fetch reaches both CLIs as a plugin skill ($agentchef:fetch, /agentchef:fetch).
+  if (installPlan.operations?.some((operation) => operation.id === "fetch-direct-skill")) {
+    fail("Fetch must not also be installed as a direct copy; it comes from the plugin.");
   }
   if (
     marketplaceSourceOperation?.kind !== "copy-directory"

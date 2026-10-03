@@ -548,14 +548,14 @@ validatePlan(claudePlan, "Claude target plan", {
 });
 if (claudePlan) {
   const kinds = new Set(claudePlan.operations.map((operation) => operation.kind));
-  for (const kind of ["json-merge", "link-directory", "write-claude-marketplace", "claude-plugin-register"]) {
+  for (const kind of ["json-merge", "write-claude-marketplace", "claude-plugin-register"]) {
     if (!kinds.has(kind)) fail(`Claude target plan must include a ${kind} operation`);
   }
   if (claudePlan.operations.some((operation) => operation.target === "codex")) {
     fail("Claude target plan must not include codex-only operations");
   }
-  if (!claudePlan.operations.some((operation) => operation.kind === "write-ownership-marker")) {
-    fail("Claude target plan must still include the shared direct-skill ownership markers");
+  if (claudePlan.operations.some((operation) => operation.kind === "link-directory" || operation.kind === "write-ownership-marker")) {
+    fail("Claude target plan must not link or mark direct skill copies; skills come from the plugin");
   }
   if (JSON.stringify(claudePlan.target.targets) !== JSON.stringify(["claude"])) {
     fail("Claude target plan must report targets=[claude]");
@@ -585,8 +585,8 @@ if (semanticPlan) {
   if (!semanticPlan.operations.some((operation) => operation.id === "codex-profile-launcher")) {
     fail("Semantic side-effect plan must include the codex-profile launcher");
   }
-  if (!semanticPlan.operations.some((operation) => operation.kind === "write-ownership-marker")) {
-    fail("Semantic side-effect plan must include direct-skill ownership marker writes");
+  if (semanticPlan.operations.some((operation) => operation.kind === "write-ownership-marker")) {
+    fail("Semantic side-effect plan must not write direct-skill ownership markers; skills come from the plugin");
   }
   const marketplace = semanticPlan.operations.find((operation) => operation.id === "plugin-marketplace");
   if (!marketplace?.pluginTarget?.includes("/plugins/sources/agentchef")) {

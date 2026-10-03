@@ -16,13 +16,14 @@ Resmi Codex kaynağı: [Skill oluşturma](https://developers.openai.com/codex/sk
 
 ## 🍱 Repo İle Gelen On Workflow
 
-Bu skill'ler AgentChef plugin'inin içindedir ve repo ile birlikte gelir.
-Installer on workflow'un tamamını aynı canonical kaynaktan
-`AGENTS_HOME/skills/<ad>` hedeflerine senkronize eder. Böylece
-`$adaptive-agent-routing`, `$context-budget-planner`, `$fetch <url>`, `$seo
-<hedef>` ve `$evidence-research <soru>` gibi çağrılar doğrudan çalışır. Fetch
-yalnız explicit çağrıyla çalışır; SEO ile Evidence Research ise istek
-açıklamalarıyla açıkça eşleştiğinde otomatik de seçilebilir.
+Bu skill'ler `agentchef` plugin'inin içindedir ve repo ile birlikte gelir.
+Installer onları `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` plugin
+kaynağına yerleştirir; 1.3.0'dan beri `AGENTS_HOME/skills` altına kopyalamaz,
+böylece her skill CLI başına bir kez listelenir. Örneğin `$fetch`, `$seo` ve
+`$evidence-research` workflow'ları Codex'te `$agentchef:fetch <url>`,
+`$agentchef:seo <hedef>` ve `$agentchef:evidence-research <soru>`, Claude
+Code'da `/agentchef:<skill>` diye çağrılır. Fetch yalnız explicit çağrıyla çalışır; SEO ile Evidence
+Research ise istek açıklamalarıyla açıkça eşleştiğinde otomatik de seçilebilir.
 
 Kişisel marketplace kaydı plugin'i yalnızca keşfedilebilir yapar; kurmaz veya
 etkinleştirmez. `$agentchef:fetch` gibi namespace'li çağrılar için
@@ -46,7 +47,9 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 
 Bu kayıtlar katalogda `install: true` taşır. Full install profili için
 uygundurlar; package/skill çifti katalogda sabitlenir ve online doğrulama bu
-çiftin hâlâ çözüldüğünü kontrol eder.
+çiftin hâlâ çözüldüğünü kontrol eder. Installer her birini bundled skill'lerle
+aynı plugin kaynağına, `.agentchef-source.json` provenance kaydıyla yazar;
+böylece bunlar da plugin altında görünür.
 
 | Skill | Ne ekler? | Kaynak |
 | --- | --- | --- |
@@ -105,17 +108,18 @@ listesini kalabalıklaştırmamak için opt-in tutulan özel upstream seçenekle
 ## “Katalogda Var” Ne Demek?
 
 - Katalog kaydı incelenmiş metadata'dır; skill'in kurulu olduğunu kanıtlamaz.
-- Bundled skill bu repodaki plugin'in içinde yaşar. On bundled workflow'un
-  tamamı, repoda ikinci bir canonical kaynak oluşturmadan yönetilen direct
-  skill olarak da senkronize edilir.
+- Bundled skill bu repodaki plugin'in içinde yaşar. Codex'e ve Claude Code'a
+  yalnızca o plugin üzerinden ulaşır; ikinci bir doğrudan kopya yoktur.
 - `install: true` kaydı full install profiline uygun demektir.
 - Manuel referans, varsayılan bir skill ile çakışabilir veya credential, vendor
   kurulumu ya da daha özel bir görev gerektirebilir.
 - Skill'ler kendi kendine çalışmaz. Codex, görev eşleştiğinde veya sen açıkça
   çağırdığında skill'i seçer.
-- Claude Code aynı yönetilen ağacı dizin bağlantıları (`~/.claude/skills/<ad>`
-  → `~/.agents/skills/<ad>`) ve plugin üzerinden görür; skill başına yine tek
-  kanonik kopya vardır. Orada bir skill'i `/<ad>` ile çağırırsın. Bkz.
+- Claude Code aynı plugin kaynağını `claude plugin install` ile yükler;
+  `~/.claude/skills` altına hiçbir bağlantı kurulmaz, bu yüzden her skill bir
+  kez listelenir. Orada bir skill'i `/agentchef:<ad>` ile, başka bir komut
+  aynı adı taşımıyorsa yalın `/<ad>` ile çağırırsın. 1.0–1.2 kurulumundan
+  kalan bağlantılar için bkz.
   [Claude skill bağlantıları](../kb/claude-skill-links.tr.md).
 
 Makine tarafından okunan kaynak

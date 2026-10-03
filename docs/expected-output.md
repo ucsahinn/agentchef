@@ -16,13 +16,13 @@ Targets: codex
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 23 | 1 | InstallSkills
-default | 22 | 0 | none
+all | 13 | 1 | InstallSkills
+default | 12 | 0 | none
 ```
 
 The default target is `codex`. Add `--target claude` or `--target both` to
-include the Claude Code operations; shared operations (direct skills, the
-plugin source tree, Git guards, curated skills) are counted once:
+include the Claude Code operations; shared operations (the plugin source tree
+that carries every skill, Git guards, curated skills) are counted once:
 
 ```text
 AgentChef install profiles
@@ -32,8 +32,8 @@ Targets: codex, claude
 
 Profile | Operations | High risk | Optional flags
 --- | ---: | ---: | ---
-all | 30 | 3 | InstallSkills
-default | 29 | 2 | none
+all | 19 | 3 | InstallSkills
+default | 18 | 2 | none
 ```
 
 ```text

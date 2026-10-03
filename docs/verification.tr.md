@@ -314,7 +314,8 @@ npm run verify:install:runtime -- --expect-skills
 
 Claude Code hedefi için `--target claude` (veya `both`) ekle. Doğrulayıcı bu
 durumda `~/.claude/agentchef/` altındaki kurulum makbuzunu okur, her yönetilen
-dosyanın hash'ini, her skill bağlantısını ve her birleştirme makbuzu girdisini
+dosyanın hash'ini, 1.0–1.2 kurulumunun hâlâ kayıtlı tuttuğu her skill
+bağlantısını ve her birleştirme makbuzu girdisini
 kontrol eder; CLI varsa `claude --version`, `claude plugin validate --strict`
 ve `claude mcp list` problarını çalıştırır:
 
@@ -324,7 +325,10 @@ npm run codex:status -- --target both
 ```
 
 `--expect-skills` flag'ini sadece gerçek kurulumda `-All` veya `-InstallSkills`
-kullandıysan ver. Verifier managed dosyalarda source drift olup olmadığını
+kullandıysan ver. Skill'leri plugin kaynağının içinde
+(`AGENTS_HOME/plugins/sources/agentchef/skills`) arar; bir skill'in plugin
+dışında hâlâ doğrudan bir kopyası varsa başarısız olmadan uyarır ve onu emekli
+eden göç komutunu gösterir. Verifier managed dosyalarda source drift olup olmadığını
 kontrol eder, Codex CLI kontrollerini `CODEX_HOME` açıkça kurulu hedefe
 ayarlanmış şekilde çalıştırır, ambient sandbox/offline home drift'ini warning
 olarak raporlar ve yalnızca kurulu hedefin kendisi doğrulanamazsa fail eder.

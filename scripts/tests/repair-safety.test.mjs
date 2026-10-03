@@ -105,13 +105,13 @@ test("no-backup repair remains available for a fully creation-only install", () 
   assert.equal(fs.existsSync(path.join(target.codexHome, "serena-pool.mjs")), true);
 });
 
-test("repair restores nested support files for a managed direct skill", () => {
+test("repair restores nested support files for a bundled plugin skill", () => {
   const target = fixture("direct-skill-support-files");
 
   const result = runRepair(target, ["--apply"]);
   const payload = report(result);
   const source = path.join(root, "plugins", "agentchef", "skills", "seo", "agents", "openai.yaml");
-  const installed = path.join(target.agentsHome, "skills", "seo", "agents", "openai.yaml");
+  const installed = path.join(target.agentsHome, "plugins", "sources", "agentchef", "skills", "seo", "agents", "openai.yaml");
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.notEqual(payload.status, "fail");
