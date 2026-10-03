@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { claudeSessionEndHooks } from "./render-target-artifacts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -204,10 +205,23 @@ const forbiddenStatePatterns = [
 for (const file of files) {
   const rel = posix(path.relative(root, file));
   const text = fs.readFileSync(file, "utf8");
+  // The Claude manifest counts as reviewed only while its hooks are exactly the
+  // one SessionEnd hygiene hook the renderer emits; anything else fails below.
+  const claudeManifestHooksReviewed = rel === "plugins/agentchef/.claude-plugin/plugin.json"
+    && (() => {
+      try {
+        return JSON.stringify(JSON.parse(text).hooks) === JSON.stringify(claudeSessionEndHooks);
+      } catch {
+        return false;
+      }
+    })();
   const reviewedProcessHygieneSurface = [
     "plugins/agentchef/hooks/process-hygiene.json",
     "plugins/agentchef/scripts/codex-process-hygiene.mjs"
-  ].includes(rel);
+  ].includes(rel) || claudeManifestHooksReviewed;
+  if (rel === "plugins/agentchef/.claude-plugin/plugin.json" && /"hooks"/.test(text) && !claudeManifestHooksReviewed) {
+    failures.push(`Claude plugin manifest hooks must be exactly the reviewed SessionEnd process-hygiene hook: ${rel}`);
+  }
 
   if (isHookSurfacePath(rel)) {
     failures.push(`Codex lifecycle hook runtime must not be introduced without explicit review: ${rel}`);

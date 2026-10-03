@@ -261,7 +261,9 @@ present.
 The bundled plugin also installs one reviewed `SessionEnd` process-hygiene
 hook. Start a new Codex session after install or refresh, open `/hooks`, inspect
 the exact source/hash, and trust it only when it matches this repository. Hook
-trust is intentionally not bypassed by the installer. See
+trust is intentionally not bypassed by the installer. Claude Code gets the same
+hook from the `agentchef` plugin manifest and runs it once the plugin is
+enabled; inspect it with `/hooks`. See
 [multi-session process hygiene](process-hygiene.md) for profiles, audit fields,
 the 45-second grace period, and the separately gated cleanup command.
 

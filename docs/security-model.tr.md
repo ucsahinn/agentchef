@@ -307,7 +307,8 @@ olmadığı Claude dosyaları (`settings.json`, `.claude.json`) eklemeli birleş
 her girdi `~/.claude/agentchef/receipts/` altındaki yan makbuza yazılır;
 onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdilere
 dokunur. Claude plugin önbelleği `claude plugin` CLI'sına aittir ve asla elle
-yazılmaz. Süreç hijyeni hook'u bu sürümde Claude Code'a yayınlanmaz.
+yazılmaz. Süreç hijyeni hook'u Claude Code'a yalnızca plugin manifesti
+üzerinden ulaşır; `settings.json` içine hook ile ilgili hiçbir şey yazılmaz.
 
 Installer'lar yalniz `agentchef` marketplace kaydini upsert eder.
 Tum marketplace dosyasini bastan yazmaz; mevcut marketplace dosyasi invalid,
@@ -464,6 +465,14 @@ object inspection'i kapsar. Sunlari prompt'a baglar:
 - git commit, push, reset, checkout ve restore
 - repair apply ve managed plugin pruning
 - exact allowlist dışındaki ad-hoc `npx` package execution
+- bir ajanın pinned bir npx MCP paketini elle başlatması (`npx -y <pkg@ver>`,
+  `npx.cmd` veya `cmd.exe /c npx ...`); Codex etkin MCP sunucularını bu
+  kuralların dışında kendisi başlatır
+- uzak bir depoya bağlanan ve transport ya da credential helper çalıştırabilen
+  `git ls-remote`
+- `--require` / `--import` modüllerini yine de yükleyen `node --check`
+- ilk argüman olarak `rg --pre` ve `rg --pre-glob` (önek kuralı sonrasını
+  görmez; Claude Code kuralları `--pre` için her konumda sorar)
 
 Resmi kaynak: https://developers.openai.com/codex/rules
 
@@ -471,11 +480,21 @@ Resmi kaynak: https://developers.openai.com/codex/rules
 
 Hooks lifecycle kontrolü için faydalıdır ama primary security boundary değildir.
 Codex, plugin hook'u çalışmadan önce tam kaynak hash'iyle incelenmesini ve
-güvenilir olarak işaretlenmesini ister.
+güvenilir olarak işaretlenmesini ister. Claude Code'da böyle bir adım yoktur:
+plugin etkinleştirildiğinde hook'larını çalıştırır.
 
-Lokal plugin süreç hijyeni için dar kapsamlı tek bir `SessionEnd` hook'u
-tanımlar. Prompt veya transcript metni okumaz ve context eklemez. Normal oturum
-sonunda yalnız tam Codex sahibinin lokal MCP alt süreçlerini yakalar, detached
+Lokal plugin süreç hijyeni için her CLI'a bir tane olmak üzere dar kapsamlı tek
+bir `SessionEnd` hook'u tanımlar. Codex onu kendi manifesti üzerinden
+`hooks/process-hygiene.json` dosyasından okur. Claude Code onu
+`plugins/agentchef/.claude-plugin/plugin.json` içinde satır içi alır (exec
+biçimi,
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --runtime claude`,
+15 sn timeout, matcher yok); Claude'un kendiliğinden yükleyeceği
+`hooks/hooks.json` kullanılmaz ve iki CLI de diğerinin hook'unu yüklemez.
+Claude manifesti `scripts/render-target-artifacts.mjs` ile üretilir; commit
+edilen kopya saparsa `npm run check` başarısız olur. Hook prompt veya
+transcript metni okumaz ve context eklemez. Normal oturum sonunda yalnız tam
+Codex ya da Claude Code sahibinin lokal MCP alt süreçlerini yakalar, detached
 taramada 45 saniye bekler ve sahip zinciri gittikten sonra yalnız PID ile
 oluşturulma zamanı hâlâ eşleşen yakalanmış süreçleri durdurur. Subagent lifecycle
 olayları `SessionEnd` hook'unu çağırmaz. Eksik süreç metadata bilgisi, canlı
@@ -492,7 +511,8 @@ template veya plugin bundle'ları açık review olmadan yeni hook eklerse fail
 eder. Hook dosya silmez, credential okumaz ve ilgisiz Node/Python süreçlerini
 temizlik adayı saymaz.
 
-Resmi kaynak: https://developers.openai.com/codex/hooks
+Resmi kaynaklar: https://developers.openai.com/codex/hooks ve
+https://code.claude.com/docs/en/hooks
 
 Operasyon sözleşmesi:
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md).

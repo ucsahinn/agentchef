@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- Approval rules (`templates/codex/rules/default.rules`):
+  - An agent starting a pinned npx MCP package by hand (`npx -y <pkg@ver>`,
+    `npx.cmd`, `cmd.exe /c npx ...`) is now `prompt` for every bundled
+    package; Chrome DevTools, sequential-thinking, and Playwright were
+    `allow`. Codex still starts enabled MCP servers itself, outside these
+    rules.
+  - `git ls-remote` is now `prompt`: it contacts a remote and can run a
+    transport or credential helper.
+  - `node --check` is now `prompt`: it still loads `--require` / `--import`
+    modules.
+  - New `prompt` rules for `rg --pre` and `rg --pre-glob`. A prefix rule sees
+    them only as the first argument; the Claude Code rules ask on `--pre`
+    anywhere.
+  - `gh pr check`, which is not a gh subcommand, is corrected to
+    `gh pr checks` (`allow`) on both targets.
+  - `validate-approval-harmony` confirms each decision with the real
+    `codex execpolicy check`.
+
+- Claude Code now gets the process-hygiene `SessionEnd` hook, declared inline
+  in `plugins/agentchef/.claude-plugin/plugin.json` (exec form,
+  `node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --runtime claude`,
+  timeout 15 s, no matcher). It is not in `hooks/hooks.json`, which Claude
+  would load on its own, and Codex keeps `hooks/process-hygiene.json` from its
+  own manifest, so neither CLI loads the other's hook. With the exec form
+  node's parent is the Claude process, so the owner lookup ends at its first
+  step; the detached sweep stops only the MCP trees that session started,
+  after it exits, with the same identity rechecks as the Codex side.
+
 - MCP servers:
   - The `memory` and `filesystem` servers are removed everywhere; the catalog
     now lists 14 servers. `-Update` drops their Codex config tables when they
