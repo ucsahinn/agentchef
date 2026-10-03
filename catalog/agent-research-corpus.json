@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dateChecked": "2026-09-18",
+  "dateChecked": "2026-10-03",
   "minimumSourceBackedItems": 100,
   "minimumDistinctSourceMarkers": 20,
   "requiredGuardrailBlocks": ["Source refresh protocol:", "Cross-repo transfer protocol:", "Research synthesis protocol:", "Adversarial validation protocol:", "Source currency protocol:", "Corpus expansion protocol:", "Expert calibration protocol:"],

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The agent research corpus was re-dated after re-checking the four supplemental
+  sources on a 14-day cadence (ECC, gstack, and the Codex issue tracker are live
+  and unarchived; the Skills CLI search entry stays a dated snapshot).
 - Status, CLI, process-hygiene, and Serena fixes from a second bug hunt:
   - The SessionEnd cleanup never stopped anything on Windows: `taskkill`
     without `/F` cannot stop a hidden Node process, and reading the whole
