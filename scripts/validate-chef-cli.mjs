@@ -181,7 +181,7 @@ function createCuratedSkillFixture(rootPath, { invalid = [] } = {}) {
   }
   const directRoot = path.join(rootPath, ".agents", "skills");
   for (const skill of bundled) {
-    const source = path.join(root, "plugins", "agentchef-workflows", "skills", skill.name);
+    const source = path.join(root, "plugins", "agentchef", "skills", skill.name);
     const target = path.join(directRoot, skill.name);
     if (invalid.includes(skill.name)) {
       fs.mkdirSync(target, { recursive: true });
@@ -1191,7 +1191,7 @@ if (!exists(cliPath)) {
     "--logs",
     "--apply",
     "tmp/chef-cli/logs",
-    "CODEX_HOME/plugins/agentchef-workflows",
+    "CODEX_HOME/plugins/agentchef",
     "codex-status.mjs",
     "codex-doctor.mjs",
     "plan-install.mjs",
@@ -1310,7 +1310,7 @@ if (!exists(cliPath)) {
   if (cli.includes('runBash("update-install", "scripts/install.sh", ["--force"')) {
     fail(`${cliPath} Bash update-install must not use broad --force config replacement`);
   }
-  if (cli.includes("AGENTS_HOME/plugins/agentchef-workflows")) {
+  if (cli.includes("AGENTS_HOME/plugins/agentchef")) {
     fail(`${cliPath} must describe the AgentChef plugin target under CODEX_HOME, not AGENTS_HOME`);
   }
 

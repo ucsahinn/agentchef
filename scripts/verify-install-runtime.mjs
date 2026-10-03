@@ -366,7 +366,7 @@ function inspectInstalledFiles(failures) {
     failures.push(`Installed marketplace plugin source is missing: ${redact(marketplacePluginPath)}`);
   }
   for (const skill of directSkills) {
-    const source = path.join(root, "plugins", "agentchef-workflows", "skills", skill.name);
+    const source = path.join(root, "plugins", "agentchef", "skills", skill.name);
     const target = path.join(options.agentsHome, "skills", skill.name);
     try {
       const state = inspectDirectSkillTarget(source, target);
@@ -799,14 +799,14 @@ function inspectPluginRuntime(failures, warnings) {
       ...(Array.isArray(parsed.installed) ? parsed.installed : []),
       ...(Array.isArray(parsed.available) ? parsed.available : [])
     ];
-    const entry = entries.find((plugin) => plugin?.name === "agentchef-workflows");
+    const entry = entries.find((plugin) => plugin?.name === "agentchef");
     if (!entry) {
       warnings.push(
         "AgentChef plugin is neither installed nor discoverable in the active marketplace set; managed direct skills remain the guaranteed invocation path."
       );
       return { inspected: true, found: false, installed: false, enabled: false };
     }
-    const expectedVersion = readJson("plugins/agentchef-workflows/.codex-plugin/plugin.json").version;
+    const expectedVersion = readJson("plugins/agentchef/.codex-plugin/plugin.json").version;
     if (entry.installed !== true) {
       warnings.push(
         "AgentChef plugin is discoverable but not installed; namespaced plugin calls require explicit installation and a new session."
@@ -1069,21 +1069,21 @@ function inspectClaudeRuntime(failures, warnings) {
     cli.pluginCache = cache;
     for (const entry of cache.stale || []) {
       warnings.push(
-        `the Claude plugin cache copy ${entry.version} differs from the managed source in ${entry.differing} of ${entry.total} agent and skill files, so sessions load stale definitions; refresh it with: claude plugin uninstall agentchef-workflows@agentchef && claude plugin install agentchef-workflows@agentchef --scope user`
+        `the Claude plugin cache copy ${entry.version} differs from the managed source in ${entry.differing} of ${entry.total} agent and skill files, so sessions load stale definitions; refresh it with: claude plugin uninstall agentchef@agentchef && claude plugin install agentchef@agentchef --scope user`
       );
     }
     if (cache.versionMismatch) {
       warnings.push(
-        `Claude Code still loads AgentChef plugin ${cache.versionMismatch.registered}, but the managed source is ${cache.versionMismatch.expected}; update it with: claude plugin marketplace update agentchef && claude plugin update agentchef-workflows@agentchef, then restart Claude Code`
+        `Claude Code still loads AgentChef plugin ${cache.versionMismatch.registered}, but the managed source is ${cache.versionMismatch.expected}; update it with: claude plugin marketplace update agentchef && claude plugin update agentchef@agentchef, then restart Claude Code`
       );
     }
     // An install made while the claude CLI was missing skips registration;
     // installing Claude Code later left a verified-looking target with no
     // AgentChef agents or skills in any session.
     if (!readRegisteredClaudePluginVersion(claudeHome)) {
-      warnings.push("The AgentChef plugin is not registered in Claude Code, so sessions load none of its agents or skills; register it with: claude plugin marketplace add <AGENTS_HOME>/plugins && claude plugin install agentchef-workflows@agentchef --scope user");
+      warnings.push("The AgentChef plugin is not registered in Claude Code, so sessions load none of its agents or skills; register it with: claude plugin marketplace add <AGENTS_HOME>/plugins && claude plugin install agentchef@agentchef --scope user");
     }
-    const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef-workflows");
+    const pluginSource = path.join(options.agentsHome, "plugins", "sources", "agentchef");
     const validate = runProbe("claude plugin validate", claude, ["plugin", "validate", "--strict", pluginSource], { timeout: options.probeTimeoutMs, env: claudeCliEnv(claudeHome, { home: os.homedir() }) });
     cli.pluginValidate = validate.error ? "error" : validate.status === 0 ? "ok" : "fail";
     if (cli.pluginValidate !== "ok") (options.requireLiveRuntime ? failures : warnings).push(`claude plugin validate --strict reported problems for ${redact(pluginSource)}.`);

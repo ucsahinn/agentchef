@@ -394,7 +394,7 @@ for (const operation of manifest.operations || []) {
   }
 
   if (operation.kind === "claude-plugin-register") {
-    if (operation.pluginId !== "agentchef-workflows@agentchef") fail(`Operation ${operation.id} must declare the AgentChef Claude plugin id`);
+    if (operation.pluginId !== "agentchef@agentchef") fail(`Operation ${operation.id} must declare the AgentChef Claude plugin id`);
     if (operation.backup !== false) fail(`Operation ${operation.id} is CLI-owned and must not claim a file backup`);
   }
 
@@ -422,7 +422,7 @@ for (const operation of manifest.operations || []) {
   if (operation.kind === "refresh-plugin-cache") {
     validateDestinationPath(operation, "source", operation.source);
     validateDestinationPath(operation, "destination", operation.destination);
-    if (operation.pluginId !== "agentchef-workflows@agentchef") {
+    if (operation.pluginId !== "agentchef@agentchef") {
       fail(`Operation ${operation.id} must declare the managed AgentChef plugin id`);
     }
   }
@@ -494,7 +494,7 @@ if (generatedProfiles?.kind !== "generate-mcp-profile"
 }
 
 const marketplaceOperation = manifest.operations?.find((operation) => operation.id === "plugin-marketplace");
-if (marketplaceOperation?.pluginTarget !== "${AGENTS_HOME}/plugins/sources/agentchef-workflows") {
+if (marketplaceOperation?.pluginTarget !== "${AGENTS_HOME}/plugins/sources/agentchef") {
   fail("plugin-marketplace pluginTarget must stay under AGENTS_HOME marketplace sources");
 }
 

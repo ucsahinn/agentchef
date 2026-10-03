@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { acceptsSchema, identity, managedMarkerNames, schemaId } from "./lib/identity.mjs";
+import { acceptsSchema, identity, managedMarkerNames, schemaId, retiredPluginNames } from "./lib/identity.mjs";
 
 export const markerFileName = identity.managedMarker;
 export const legacyMarkerFileName = identity.legacyManagedMarker;
@@ -41,7 +41,7 @@ function markerContractFor(sourceRoot, targetRoot) {
     manager: "agentchef",
     component: "direct-skill",
     name,
-    source: `plugins/agentchef-workflows/skills/${name}`
+    source: `plugins/agentchef/skills/${name}`
   });
 }
 
@@ -54,8 +54,9 @@ function markerMatchesContract(marker, contract) {
   const legacyName = contract.name === identity.operatorSkill ? identity.legacyOperatorSkill : contract.name;
   if (marker.component !== contract.component || ![contract.name, legacyName].includes(marker.name)) return false;
   const legacySkill = contract.name === identity.operatorSkill ? identity.legacyOperatorSkill : contract.name;
-  const legacySource = `plugins/${identity.legacyPluginName}/skills/${legacySkill}`;
-  return marker.source === contract.source || marker.source === legacySource;
+  // Markers written under any earlier plugin folder name still prove ownership.
+  const earlierSources = retiredPluginNames.flatMap((name) => [`plugins/${name}/skills/${legacySkill}`, `plugins/${name}/skills/${contract.name}`]);
+  return marker.source === contract.source || earlierSources.includes(marker.source);
 }
 
 function stableJson(value) {

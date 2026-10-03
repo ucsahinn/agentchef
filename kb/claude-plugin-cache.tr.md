@@ -9,7 +9,7 @@ göstermiyorsa ya da plugin listeleniyor ama stale ise bu makaleyi kullan.
   manifesti `~/.agents/plugins/.claude-plugin/marketplace.json`.
 - Onu kaydeden iki CLI çağrısı: `claude plugin marketplace add
   <AGENTS_HOME>/plugins` ve `claude plugin install
-  agentchef-workflows@agentchef --scope user`.
+  agentchef@agentchef --scope user`.
 
 AgentChef, Claude Code'un kendi plugin önbelleğini
 (`~/.claude/plugins/known_marketplaces.json`, `installed_plugins.json`,
@@ -21,7 +21,7 @@ biçim değiştirir.
 ```bash
 claude --version
 claude plugin list
-claude plugin validate "$AGENTS_HOME/plugins/sources/agentchef-workflows"
+claude plugin validate "$AGENTS_HOME/plugins/sources/agentchef"
 node scripts/install-claude-target.mjs --json --redact-paths
 ```
 
@@ -30,7 +30,7 @@ node scripts/install-claude-target.mjs --json --redact-paths
 1. `claude` `PATH` üzerinde yoksa installer kaydı atlar ve tam komutları basar;
    Claude Code'u kurduktan sonra bunları çalıştır.
 2. Marketplace kayıtlı ama plugin stale ise
-   `claude plugin update agentchef-workflows@agentchef` çalıştır.
+   `claude plugin update agentchef@agentchef` çalıştır.
 3. `/plugin` bir skill'in ikinci kopyasını gösteriyorsa (örneğin hem `/seo`
    hem `/agentchef:seo`), bu beklenen durumdur: nitelenmemiş ad için doğrudan
    skill bağlantısı kazanır, plugin ise ad-alanlı olanı korur.
@@ -55,8 +55,8 @@ Warning: the Claude plugin cache copy 1.0.0 differs from the managed source in
 Plugin'i yeniden kurarak tazele, sonra yeni bir oturum başlat:
 
 ```bash
-claude plugin uninstall agentchef-workflows@agentchef
-claude plugin install agentchef-workflows@agentchef --scope user
+claude plugin uninstall agentchef@agentchef
+claude plugin install agentchef@agentchef --scope user
 ```
 
 Cache altında kalan eski sürüm dizinleri sunulmaz ve raporlanmaz. Yalnızca

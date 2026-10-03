@@ -17,7 +17,7 @@ söyleyebilirsin.
 - [Resmî Codex skills rehberini oku](https://developers.openai.com/codex/skills)
 
 AgentChef'e ait hazır akışlar
-[`plugins/agentchef-workflows/skills`](../plugins/agentchef-workflows/skills)
+[`plugins/agentchef/skills`](../plugins/agentchef/skills)
 altında durur. Public katalog isteğe bağlı seçenekleri de gösterir; katalogda
 yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
@@ -26,9 +26,9 @@ yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 Yerel plugin, AgentChef'e ait akışları birlikte kurup güncelleyebilmek için
 paketler:
 
-- [Plugin manifesti](../plugins/agentchef-workflows/.codex-plugin/plugin.json)
+- [Plugin manifesti](../plugins/agentchef/.codex-plugin/plugin.json)
 - [Marketplace kaydı](../.agents/plugins/marketplace.json)
-- [Hazır workflow kaynakları](../plugins/agentchef-workflows/skills)
+- [Hazır workflow kaynakları](../plugins/agentchef/skills)
 
 Plugin'i kurduktan sonra Codex'i yeniden başlatıp `/plugins` üzerinden kontrol
 edebilirsin.

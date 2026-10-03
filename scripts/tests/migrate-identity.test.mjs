@@ -264,7 +264,7 @@ test("the Codex config keeps every foreign entry while AgentChef's own banners a
   const after = fs.readFileSync(configPath, "utf8");
   assert.ok(after.includes("# Windows-first AgentChef."), "template banner rewritten");
   assert.ok(after.includes("# AgentChef merged config blocks."), "merge banner rewritten");
-  assert.ok(after.includes('[hooks.state."agentchef-workflows@agentchef:hooks/process-hygiene.json:session_end:0:0"]'), "our hook-state key rewritten");
+  assert.ok(after.includes('[hooks.state."agentchef@agentchef:hooks/process-hygiene.json:session_end:0:0"]'), "our hook-state key rewritten");
   assert.ok(after.includes('trusted_hash = "sha256:abc"'), "the recorded hash moves with the key");
   assert.ok(after.includes('[hooks.state."codex-chef-kitchen@codex-chef-kitchen:hooks/hooks.json:session_end:0:0"]'), "another product's hook state is untouched");
   assert.ok(after.includes("[projects.'d:\\projects\\demo\\codex-chef']"), "project trust paths are untouched");
@@ -333,5 +333,90 @@ test("identity migration finishes when the current operator name is already link
   assert.ok(fs.existsSync(path.join(state.claudeHome, "skills", identity.operatorSkill, "SKILL.md")), "the current link still resolves");
   const again = run(state, ["--apply", "--target", "both"]);
   assert.ok(again.outcome.results.every((result) => !["relinked", "renamed", "rewritten"].includes(result.status)), "a rerun changes nothing");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});
+
+// A home exactly as 1.0.0 through 1.2.x left it: current markers and
+// marketplace name, but the plugin still called agentchef-workflows.
+function previousFixture() {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-migrate-12-"));
+  const codexHome = path.join(home, ".codex");
+  const agentsHome = path.join(home, ".agents");
+  const claudeHome = path.join(home, ".claude");
+  const pluginSource = path.join(root, "plugins", identity.pluginName);
+  const previous = identity.previousPluginName;
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, "config.toml"), [
+    "# Windows-first AgentChef.",
+    "",
+    `[plugins."${identity.previousPluginId}"]`,
+    "enabled = true",
+    "",
+    `[hooks.state."${identity.previousPluginId}:hooks/process-hygiene.json:session_end:0:0"]`,
+    'trusted_hash = "sha256:abc"',
+    "",
+    '[plugins."other@elsewhere"]',
+    "enabled = true",
+    ""
+  ].join("\n"));
+  copyTree(pluginSource, path.join(codexHome, "plugins", previous));
+  copyTree(pluginSource, path.join(agentsHome, "plugins", "sources", previous));
+  const fetchSkill = path.join(agentsHome, "skills", "fetch");
+  copyTree(path.join(pluginSource, "skills", "fetch"), fetchSkill);
+  fs.writeFileSync(path.join(fetchSkill, identity.managedMarker), `${JSON.stringify({
+    schemaVersion: "agentchef.managed-direct-skill.v1",
+    manager: "agentchef",
+    component: "direct-skill",
+    name: "fetch",
+    source: `plugins/${previous}/skills/fetch`
+  }, null, 2)}\n`);
+  fs.mkdirSync(path.join(agentsHome, "plugins", ".claude-plugin"), { recursive: true });
+  fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({
+    name: identity.marketplaceName,
+    plugins: [
+      { name: "other-plugin", source: { source: "local", path: "./sources/other" }, policy: { installation: "AVAILABLE", authentication: "ON_USE" } },
+      { name: previous, source: { source: "local", path: `./sources/${previous}` }, policy: { installation: "AVAILABLE", authentication: "ON_USE" } }
+    ]
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(agentsHome, "plugins", ".claude-plugin", "marketplace.json"), `${JSON.stringify({
+    name: identity.marketplaceName,
+    owner: { name: "AgentChef" },
+    plugins: [{ name: previous, description: "AgentChef workflows", source: `./sources/${previous}` }]
+  }, null, 2)}\n`);
+  fs.mkdirSync(path.join(claudeHome, "plugins"), { recursive: true });
+  fs.writeFileSync(path.join(claudeHome, "plugins", "installed_plugins.json"), `${JSON.stringify({ version: 2, plugins: { [identity.previousPluginId]: [{ scope: "user", version: "1.2.2" }] } }, null, 2)}\n`);
+  return { home, codexHome, agentsHome, claudeHome, fetchSkill };
+}
+
+test("a 1.2 home moves from agentchef-workflows to agentchef", () => {
+  const state = previousFixture();
+  const plan = run(state, ["--dry-run", "--target", "both"]);
+  const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
+  const previous = identity.previousPluginName;
+  assert.equal(decision(`codex-plugin-directory:${previous}`), "rename");
+  assert.equal(decision(`marketplace-source-directory:${previous}`), "rename");
+  assert.equal(decision("marketplace"), "rewrite");
+  assert.equal(decision("claude-marketplace"), "rewrite");
+  assert.equal(decision("codex-plugin-cache"), "cli");
+  assert.deepEqual(plan.steps.find((step) => step.id === "codex-plugin-cache").commands, [`codex plugin remove ${identity.previousPluginId}`, `codex plugin add ${identity.pluginId}`]);
+  assert.deepEqual(plan.steps.find((step) => step.id === "claude-plugin-cache").commands, [`claude plugin uninstall ${identity.previousPluginId}`, `claude plugin install ${identity.pluginId} --scope user`]);
+  assert.equal(decision("codex-config"), "rewrite");
+
+  run(state, ["--apply", "--target", "both"]);
+  assert.ok(fs.existsSync(path.join(state.codexHome, "plugins", identity.pluginName, ".codex-plugin", "plugin.json")));
+  assert.ok(!fs.existsSync(path.join(state.codexHome, "plugins", previous)));
+  assert.ok(fs.existsSync(path.join(state.agentsHome, "plugins", "sources", identity.pluginName)));
+  const config = fs.readFileSync(path.join(state.codexHome, "config.toml"), "utf8");
+  assert.match(config, new RegExp(`\\[plugins\\."${identity.pluginId}"\\]`));
+  assert.match(config, new RegExp(`\\[hooks\\.state\\."${identity.pluginId}:hooks`));
+  assert.doesNotMatch(config, new RegExp(identity.previousPluginId));
+  assert.match(config, /\[plugins\."other@elsewhere"\]/, "another product's table stays");
+  const marketplace = readJson(path.join(state.agentsHome, "plugins", "marketplace.json"));
+  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.name).sort(), [identity.pluginName, "other-plugin"].sort());
+  const claudeMarketplace = readJson(path.join(state.agentsHome, "plugins", ".claude-plugin", "marketplace.json"));
+  assert.deepEqual(claudeMarketplace.plugins.map((plugin) => [plugin.name, plugin.source]), [[identity.pluginName, `./sources/${identity.pluginName}`]]);
+  // A direct-skill marker written under the old folder name still proves ownership.
+  const fetchState = inspectDirectSkillTarget(path.join(root, "plugins", identity.pluginName, "skills", "fetch"), state.fetchSkill);
+  assert.equal(fetchState.status.startsWith("managed"), true, fetchState.status);
   fs.rmSync(state.home, { recursive: true, force: true });
 });

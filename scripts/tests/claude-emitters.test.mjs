@@ -116,7 +116,7 @@ test("allow rules that can run code or write files carry an ask guard, or are as
 test("the Claude plugin manifest mirrors the Codex manifest version and lists every agent file", () => {
   const agents = emitClaudeAgents({ catalog, roleDirectory, pluginName: "agentchef" });
   const manifest = renderClaudePluginManifest(root, [...agents.keys()]);
-  const codexManifest = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef-workflows", ".codex-plugin", "plugin.json"), "utf8"));
+  const codexManifest = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef", ".codex-plugin", "plugin.json"), "utf8"));
   assert.equal(manifest.name, codexManifest.name);
   assert.equal(manifest.version, codexManifest.version);
   assert.equal(manifest.agents.length, agents.size);

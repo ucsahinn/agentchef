@@ -41,7 +41,7 @@ const routingFiles = [
   "templates/codex/AGENTS.md",
   "scripts/codex-routing-board.mjs",
   "scripts/validate-routing-profiles.mjs",
-  "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md"
+  "plugins/agentchef/skills/adaptive-agent-routing/references/global-working-agreements.md"
 ];
 
 function routingFixture(t, mutate) {

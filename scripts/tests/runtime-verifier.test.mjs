@@ -346,8 +346,8 @@ test("the Claude plugin cache check covers skills as well as roles, and ignores 
   try {
     const agentsHome = path.join(root, "agents");
     const claudeHome = path.join(root, "claude");
-    const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
-    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0");
+    const source = path.join(agentsHome, "plugins", "sources", "agentchef");
+    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef", "1.0.0");
     const write = (base, relative, text) => {
       fs.mkdirSync(path.dirname(path.join(base, relative)), { recursive: true });
       fs.writeFileSync(path.join(base, relative), text);
@@ -376,15 +376,15 @@ test("the Claude plugin cache check reports a registered version older than the 
   try {
     const agentsHome = path.join(root, "agents");
     const claudeHome = path.join(root, "claude");
-    const source = path.join(agentsHome, "plugins", "sources", "agentchef-workflows");
-    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0");
+    const source = path.join(agentsHome, "plugins", "sources", "agentchef");
+    const cache = path.join(claudeHome, "plugins", "cache", "agentchef", "agentchef", "1.0.0");
     const write = (base, relative, text) => {
       fs.mkdirSync(path.dirname(path.join(base, relative)), { recursive: true });
       fs.writeFileSync(path.join(base, relative), text);
     };
     write(source, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.1.0" }));
     for (const base of [source, cache]) write(base, "agents/code-mapper.md", "role\n");
-    const registry = (version) => write(claudeHome, "plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins: { "agentchef-workflows@agentchef": [{ scope: "user", version }] } }));
+    const registry = (version) => write(claudeHome, "plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins: { "agentchef@agentchef": [{ scope: "user", version }] } }));
 
     assert.equal(readRegisteredClaudePluginVersion(claudeHome), null, "an unregistered plugin reads as null, which the verifier reports");
     registry("1.0.0");

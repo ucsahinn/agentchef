@@ -5,6 +5,7 @@
 // the subagent system prompt. Model pins are never emitted.
 import fs from "node:fs";
 import path from "node:path";
+import { identity } from "../identity.mjs";
 
 const readOnlyTools = ["Read", "Grep", "Glob"];
 const writeTools = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"];
@@ -125,7 +126,9 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName }) {
   return `${frontmatter.join("\n")}\n\n${body.join("\n").trimEnd()}\n`;
 }
 
-export function emitClaudeAgents({ catalog, roleDirectory, pluginName = "agentchef" }) {
+// Claude Code names plugin agents <plugin>:<agent>; a coordinator's Agent(...)
+// allowlist must use the plugin's real name or it matches no worker.
+export function emitClaudeAgents({ catalog, roleDirectory, pluginName = identity.pluginName }) {
   const outputs = new Map();
   for (const agent of catalog.agents || []) {
     const roleToml = fs.readFileSync(path.join(roleDirectory, `${agent.name}.toml`), "utf8");

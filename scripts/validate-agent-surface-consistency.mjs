@@ -86,7 +86,7 @@ const collisionPhrases = [
 // is a name the catalogs already explain, so a missing profile cannot hide
 // behind an id shape this check did not anticipate.
 {
-  const reference = path.join(root, "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md");
+  const reference = path.join(root, "plugins/agentchef/skills/adaptive-agent-routing/references/global-working-agreements.md");
   if (fs.existsSync(reference)) {
     const referenceText = fs.readFileSync(reference, "utf8");
     const skillCatalog = readJson("catalog/skills.json");
@@ -117,7 +117,7 @@ const collisionPhrases = [
 // 4. A rendered Claude role that cannot run commands must say so, because its
 // instruction body still asks for command output.
 {
-  const agentsDir = path.join(root, "plugins/agentchef-workflows/agents");
+  const agentsDir = path.join(root, "plugins/agentchef/agents");
   const commandEvidence = /\bgit diff\b|\bsecret-scan output\b|\brun the test suite\b/i;
   const caveat = /cannot run commands/i;
   for (const file of fs.existsSync(agentsDir) ? fs.readdirSync(agentsDir).filter((name) => name.endsWith(".md")) : []) {
@@ -133,7 +133,7 @@ const collisionPhrases = [
 // 5. A bundled skill ships to both targets, so its description must not name
 // one harness as the actor performing the work.
 {
-  const skillsDir = path.join(root, "plugins/agentchef-workflows/skills");
+  const skillsDir = path.join(root, "plugins/agentchef/skills");
   // The harness named as the actor performing the work, rather than as the
   // object being maintained: "Codex work", "when Codex should", "Codex agent".
   const harnessActor = /\b(?:Codex|Claude Code)\s+(?:work|agent|session|should|must|will|needs? to)\b|\b(?:when|before|after)\s+(?:Codex|Claude Code)\b/;
@@ -156,7 +156,7 @@ const collisionPhrases = [
 // to the bug class this exists for: naming this product's own tooling by a
 // command that does not exist, or a package script that was never defined.
 {
-  const skillsDir = path.join(root, "plugins/agentchef-workflows/skills");
+  const skillsDir = path.join(root, "plugins/agentchef/skills");
   const packageScripts = new Set(Object.keys(readJson("package.json").scripts || {}));
   // Names a reader could mistake for an installed entry point of this product.
   const ourBinaries = /^(chef|agentchef|codex-chef)\b/;

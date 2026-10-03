@@ -26,11 +26,11 @@ function fixture() {
   copyTemplate("templates/codex/rules/default.rules", path.join(codexHome, "rules", "default.rules"));
   fs.appendFileSync(path.join(codexHome, "rules", "default.rules"), "\n# user addition\n");
   fs.writeFileSync(path.join(codexHome, "config.toml"), "# user config\nmodel = \"x\"\n");
-  const pluginTarget = path.join(codexHome, "plugins", "agentchef-workflows");
-  copyTemplate("plugins/agentchef-workflows/.codex-plugin/plugin.json", path.join(pluginTarget, ".codex-plugin", "plugin.json"));
+  const pluginTarget = path.join(codexHome, "plugins", "agentchef");
+  copyTemplate("plugins/agentchef/.codex-plugin/plugin.json", path.join(pluginTarget, ".codex-plugin", "plugin.json"));
   fs.writeFileSync(path.join(pluginTarget, "extra.txt"), "user extra\n");
   const directSkill = path.join(agentsHome, "skills", "context-budget-planner");
-  copyTemplate("plugins/agentchef-workflows/skills/context-budget-planner/SKILL.md", path.join(directSkill, "SKILL.md"));
+  copyTemplate("plugins/agentchef/skills/context-budget-planner/SKILL.md", path.join(directSkill, "SKILL.md"));
   fs.writeFileSync(path.join(directSkill, ".agentchef-managed.json"), "{}\n");
   const foreignDirect = path.join(agentsHome, "skills", "fetch");
   fs.mkdirSync(foreignDirect, { recursive: true });
@@ -43,7 +43,7 @@ function fixture() {
   fs.mkdirSync(userSkill, { recursive: true });
   fs.writeFileSync(path.join(userSkill, "SKILL.md"), "mine\n");
   fs.mkdirSync(path.join(agentsHome, "plugins"), { recursive: true });
-  fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({ name: "agentchef", plugins: [{ name: "other-plugin" }, { name: "agentchef-workflows" }] }, null, 2)}\n`);
+  fs.writeFileSync(path.join(agentsHome, "plugins", "marketplace.json"), `${JSON.stringify({ name: "agentchef", plugins: [{ name: "other-plugin" }, { name: "agentchef" }] }, null, 2)}\n`);
   return { home, codexHome, agentsHome, pluginTarget, directSkill, foreignDirect, curated, userSkill };
 }
 
@@ -84,7 +84,7 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
   assert.equal(statuses["curated-skills:systematic-debugging"], "removed");
   assert.equal(statuses["curated-skills:webapp-testing"], "foreign");
   assert.equal(statuses["installed-plugin-cache-refresh"], "absent", "the plugin was never added to Codex");
-  fs.mkdirSync(path.join(state.codexHome, "plugins", "cache", "agentchef", "agentchef-workflows", "1.0.0"), { recursive: true });
+  fs.mkdirSync(path.join(state.codexHome, "plugins", "cache", "agentchef", "agentchef", "1.0.0"), { recursive: true });
   assert.equal(run(state, ["--dry-run"]).items.find((item) => item.id === "installed-plugin-cache-refresh")?.decision, "absent", "an emptied cache tree left by `codex plugin remove` is not an installed plugin");
   assert.ok(!fs.existsSync(path.join(state.codexHome, "AGENTS.md")));
   assert.ok(fs.existsSync(path.join(state.codexHome, "rules", "default.rules")), "user-changed file kept");
@@ -111,7 +111,7 @@ test("Codex removal previews ownership decisions and removes only AgentChef-owne
 test("Codex removal recognizes a direct skill that still carries the legacy ownership marker", () => {
   const state = fixture();
   const legacyDirect = path.join(state.agentsHome, "skills", "adaptive-agent-routing");
-  copyTemplate("plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md", path.join(legacyDirect, "SKILL.md"));
+  copyTemplate("plugins/agentchef/skills/adaptive-agent-routing/SKILL.md", path.join(legacyDirect, "SKILL.md"));
   fs.writeFileSync(path.join(legacyDirect, ".codex-chef-managed.json"), "{}\n");
   const plan = run(state, ["--dry-run"]);
   assert.equal(plan.items.find((item) => item.id === "adaptive-agent-routing-direct-skill")?.decision, "remove-owned");
@@ -124,7 +124,7 @@ test("Codex removal recognizes a direct skill that still carries the legacy owne
 test("Codex removal removes both marker spellings from a partially migrated direct skill", () => {
   const state = fixture();
   const direct = path.join(state.agentsHome, "skills", "adaptive-agent-routing");
-  copyTemplate("plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md", path.join(direct, "SKILL.md"));
+  copyTemplate("plugins/agentchef/skills/adaptive-agent-routing/SKILL.md", path.join(direct, "SKILL.md"));
   fs.writeFileSync(path.join(direct, ".agentchef-managed.json"), "{}\n");
   fs.writeFileSync(path.join(direct, ".codex-chef-managed.json"), "{}\n");
   const plan = run(state, ["--dry-run"]);
@@ -139,9 +139,9 @@ test("Codex removal removes both marker spellings from a partially migrated dire
 
 test("Codex removal asks the Codex CLI only for an installed plugin and drops AgentChef's own source cache", () => {
   const state = fixture();
-  fs.appendFileSync(path.join(state.codexHome, "config.toml"), '\n[plugins."agentchef-workflows@agentchef"]\nenabled = true\n');
+  fs.appendFileSync(path.join(state.codexHome, "config.toml"), '\n[plugins."agentchef@agentchef"]\nenabled = true\n');
   const marketplacePath = path.join(state.agentsHome, "plugins", "marketplace.json");
-  fs.writeFileSync(marketplacePath, `${JSON.stringify({ name: "agentchef", plugins: [{ name: "agentchef-workflows" }] }, null, 2)}\n`);
+  fs.writeFileSync(marketplacePath, `${JSON.stringify({ name: "agentchef", plugins: [{ name: "agentchef" }] }, null, 2)}\n`);
   const cacheRoot = path.join(state.codexHome, "cache", "pinned-skill-sources");
   // Named the way install-pinned-skill names them: sha256 of package@commit:depth.
   const cacheKey = (source) => crypto.createHash("sha256").update(`${source.package}@${source.commit}:${source.fullDepth ? "full" : "shallow"}`).digest("hex");
@@ -191,7 +191,7 @@ test("Codex removal never deletes a template-identical file reached through a li
   // editing; those files are byte-identical to the template by construction.
   const state = fixture();
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-remove-outside-"));
-  const sourceReferences = path.join(root, "plugins", "agentchef-workflows", "skills", "context-budget-planner", "references");
+  const sourceReferences = path.join(root, "plugins", "agentchef", "skills", "context-budget-planner", "references");
   fs.cpSync(sourceReferences, outside, { recursive: true });
   const linked = path.join(state.directSkill, "references");
   fs.symlinkSync(outside, linked, process.platform === "win32" ? "junction" : "dir");

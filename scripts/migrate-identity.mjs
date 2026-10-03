@@ -14,7 +14,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { CliUsageError, emitCliError, requireCliValue } from "./lib/cli-error-contract.mjs";
-import { acceptsSchema, identity, isLegacySchema, legacyProductName, modernSchema } from "./lib/identity.mjs";
+import { acceptsSchema, identity, isLegacySchema, legacyProductName, modernSchema, retiredPluginIds, retiredPluginNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { acquireOperationLockSet } from "./lib/operation-lock.mjs";
 import { createOperationJournal, rollbackAfterFailure } from "./lib/operation-journal.mjs";
@@ -82,7 +82,7 @@ const codexConfigBanners = Object.freeze([
 
 // A TOML table header on its own line, e.g. `[hooks.state."<plugin id>:…"]`.
 // Deliberately strict so an array value spanning lines is never mistaken for one.
-const tomlTableHeader = /^\s*\[\[?[^\]]+\]\]?\s*$/;
+const tomlTableHeader = /^\s*\[\[?[^\]]+\]\]?\s*(?:#.*)?$/;
 
 // Rewrites only what AgentChef itself wrote. Banner comments are plain
 // replacements. Table headers carrying the legacy plugin id are renamed, unless
@@ -109,8 +109,10 @@ export function planCodexConfigRewrite(input) {
   for (const line of lines) {
     if (tomlTableHeader.test(line)) {
       dropping = false;
-      if (line.includes(identity.legacyPluginId)) {
-        const renamedHeader = line.split(identity.legacyPluginId).join(identity.pluginId);
+      // A plugin table quotes the bare id; a hook-state table quotes id:path.
+      const retiredId = retiredPluginIds.find((id) => line.includes(`"${id}"`) || line.includes(`"${id}:`));
+      if (retiredId) {
+        const renamedHeader = line.split(retiredId).join(identity.pluginId);
         if (headers.has(renamedHeader.trim())) {
           dropping = true;
           dropped += 1;
@@ -207,10 +209,12 @@ export function planIdentityMigration(options) {
   }
 
   // 3. Plugin directories and the personal marketplace.
-  const pluginDirectories = [
-    ...(withCodex ? [["codex-plugin-directory", path.join(codexHome, "plugins", identity.legacyPluginName), path.join(codexHome, "plugins", identity.pluginName)]] : []),
-    ["marketplace-source-directory", path.join(agentsHome, "plugins", "sources", identity.legacyPluginName), path.join(agentsHome, "plugins", "sources", identity.pluginName)]
-  ];
+  // The pre-1.0 name keeps the original step ids; the 1.0 to 1.2 name gets a suffix.
+  const generationSuffix = (name) => (name === identity.legacyPluginName ? "" : `:${name}`);
+  const pluginDirectories = retiredPluginNames.flatMap((name) => [
+    ...(withCodex ? [[`codex-plugin-directory${generationSuffix(name)}`, path.join(codexHome, "plugins", name), path.join(codexHome, "plugins", identity.pluginName)]] : []),
+    [`marketplace-source-directory${generationSuffix(name)}`, path.join(agentsHome, "plugins", "sources", name), path.join(agentsHome, "plugins", "sources", identity.pluginName)]
+  ]);
   for (const [id, legacy, current] of pluginDirectories) {
     if (!isRealDirectory(legacy)) {
       note(id, "rename-directory", legacy, "absent", { destination: current });
@@ -224,7 +228,7 @@ export function planIdentityMigration(options) {
     if (!marketplace) {
       note("marketplace", "rewrite-marketplace", marketplacePath, "absent");
     } else {
-      const hasLegacyEntry = (marketplace.plugins || []).some((plugin) => plugin?.name === identity.legacyPluginName);
+      const hasLegacyEntry = (marketplace.plugins || []).some((plugin) => retiredPluginNames.includes(plugin?.name));
       const legacyName = marketplace.name === identity.legacyMarketplaceName;
       note("marketplace", "rewrite-marketplace", marketplacePath, hasLegacyEntry || legacyName ? "rewrite" : "current", { legacyEntry: hasLegacyEntry, legacyName });
     }
@@ -234,12 +238,18 @@ export function planIdentityMigration(options) {
     const configText = (() => { try { return fs.readFileSync(path.join(codexHome, "config.toml"), "utf8"); } catch { return ""; } })();
     // `codex plugin remove` leaves an emptied directory tree behind, so only a
     // cache that still holds files counts as an installed plugin.
-    const legacyCacheRoot = path.join(codexHome, "plugins", "cache", identity.legacyMarketplaceName);
-    const legacyCodexPlugin = configText.includes(`[plugins."${identity.legacyPluginId}"]`)
-      || (isRealDirectory(legacyCacheRoot) && listFilesRecursive(legacyCacheRoot) > 0);
+    const cacheRootFor = (id) => {
+      const [name, marketplaceName] = id.split("@");
+      return id === identity.legacyPluginId
+        ? path.join(codexHome, "plugins", "cache", marketplaceName)
+        : path.join(codexHome, "plugins", "cache", marketplaceName, name);
+    };
+    const installedRetiredIds = retiredPluginIds.filter((id) => configText.includes(`[plugins."${id}"]`)
+      || (isRealDirectory(cacheRootFor(id)) && listFilesRecursive(cacheRootFor(id)) > 0));
+    const legacyCodexPlugin = installedRetiredIds.length > 0;
     note("codex-plugin-cache", "codex-plugin-cli", codexHome, legacyCodexPlugin ? "cli" : "absent", {
       commands: [
-        `codex plugin remove ${identity.legacyPluginId}`,
+        ...(installedRetiredIds.length > 0 ? installedRetiredIds : [identity.legacyPluginId]).map((id) => `codex plugin remove ${id}`),
         `codex plugin add ${identity.pluginId}`
       ]
     });
@@ -260,6 +270,12 @@ export function planIdentityMigration(options) {
 
     // `codex plugin remove` clears the legacy marketplace's cache but leaves the
     // directory tree behind; remove it only while it holds no files at all.
+    const previousCache = cacheRootFor(identity.previousPluginId);
+    const previousCacheStat = lstatOrNull(previousCache);
+    if (previousCacheStat?.isDirectory() && !previousCacheStat.isSymbolicLink()) {
+      const files = listFilesRecursive(previousCache);
+      note(`codex-legacy-plugin-cache:${identity.previousPluginName}`, "remove-empty-directory", previousCache, files === 0 || installedRetiredIds.includes(identity.previousPluginId) ? "remove-legacy" : "foreign", { files });
+    }
     const legacyCache = path.join(codexHome, "plugins", "cache", identity.legacyMarketplaceName);
     const legacyCacheStat = lstatOrNull(legacyCache);
     if (legacyCacheStat?.isDirectory() && !legacyCacheStat.isSymbolicLink()) {
@@ -300,13 +316,14 @@ export function planIdentityMigration(options) {
     }
     const claudeMarketplacePath = path.join(agentsHome, "plugins", ".claude-plugin", "marketplace.json");
     const claudeMarketplace = readJson(claudeMarketplacePath);
-    note("claude-marketplace", "rewrite-marketplace", claudeMarketplacePath, !claudeMarketplace ? "absent" : (claudeMarketplace.plugins || []).some((plugin) => plugin?.name === identity.legacyPluginName) ? "rewrite" : "current");
+    note("claude-marketplace", "rewrite-marketplace", claudeMarketplacePath, !claudeMarketplace ? "absent" : (claudeMarketplace.plugins || []).some((plugin) => retiredPluginNames.includes(plugin?.name)) ? "rewrite" : "current");
     // Same for Claude: swap only a plugin registered under the legacy name.
     const installedPlugins = (() => { try { return fs.readFileSync(path.join(claudeHome, "plugins", "installed_plugins.json"), "utf8"); } catch { return ""; } })();
-    const legacyClaudePlugin = installedPlugins.includes(`"${identity.legacyPluginName}@${identity.marketplaceName}"`);
+    const installedClaudeIds = retiredPluginNames.map((name) => `${name}@${identity.marketplaceName}`).filter((id) => installedPlugins.includes(`"${id}"`));
+    const legacyClaudePlugin = installedClaudeIds.length > 0;
     note("claude-plugin-cache", "claude-plugin-cli", claudeHome, legacyClaudePlugin ? "cli" : "absent", {
       commands: [
-        `claude plugin uninstall ${identity.legacyPluginName}@${identity.marketplaceName}`,
+        ...(installedClaudeIds.length > 0 ? installedClaudeIds : [`${identity.legacyPluginName}@${identity.marketplaceName}`]).map((id) => `claude plugin uninstall ${id}`),
         `claude plugin install ${identity.pluginId} --scope user`
       ]
     });
@@ -434,7 +451,7 @@ export function applyIdentityMigration(options, plan) {
         if (rewritten.manager === legacyProductName) rewritten.manager = "agentchef";
         if (typeof rewritten.source === "string") {
           rewritten.source = rewritten.source
-            .replace(`plugins/${identity.legacyPluginName}/`, `plugins/${identity.pluginName}/`)
+            .replace(new RegExp(`^plugins/(?:${retiredPluginNames.join("|")})/`), `plugins/${identity.pluginName}/`)
             .replace(`/skills/${identity.legacyOperatorSkill}`, `/skills/${identity.operatorSkill}`);
         }
         if (currentName === identity.managedMarker && rewritten.name === identity.legacyOperatorSkill) rewritten.name = identity.operatorSkill;
@@ -450,7 +467,7 @@ export function applyIdentityMigration(options, plan) {
           continue;
         }
         if (step.id === "marketplace") {
-          document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== identity.legacyPluginName);
+          document.plugins = (document.plugins || []).filter((plugin) => !retiredPluginNames.includes(plugin?.name));
           if (document.name === identity.legacyMarketplaceName) document.name = identity.marketplaceName;
           const pluginTarget = path.join(agentsHome, "plugins", "sources", identity.pluginName);
           let entry = "plugin source directory missing; rerun the installer";
@@ -460,9 +477,14 @@ export function applyIdentityMigration(options, plan) {
           });
           record(step.id, "rewritten", { entry });
         } else {
-          document.plugins = (document.plugins || []).map((plugin) => plugin?.name === identity.legacyPluginName
-            ? { ...plugin, name: identity.pluginName, source: `./sources/${identity.pluginName}` }
-            : plugin);
+          // One current entry: a retired entry is renamed unless the current one is already listed.
+          const hasCurrent = (document.plugins || []).some((plugin) => plugin?.name === identity.pluginName);
+          document.plugins = (document.plugins || [])
+            .filter((plugin) => !(hasCurrent && retiredPluginNames.includes(plugin?.name)))
+            .map((plugin) => retiredPluginNames.includes(plugin?.name)
+              ? { ...plugin, name: identity.pluginName, source: `./sources/${identity.pluginName}` }
+              : plugin);
+          document.plugins = document.plugins.filter((plugin, index, all) => plugin?.name !== identity.pluginName || all.findIndex((other) => other?.name === identity.pluginName) === index);
           mutateFile(step.target, () => writeJson(step.target, document));
           record(step.id, "rewritten");
         }

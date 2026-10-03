@@ -213,8 +213,8 @@
       "kind": "copy-directory",
       "target": "codex",
       "summary": "Install the local workflow plugin bundle and its reviewed SessionEnd process-hygiene hook.",
-      "source": "plugins/agentchef-workflows",
-      "destination": "${CODEX_HOME}/plugins/agentchef-workflows",
+      "source": "plugins/agentchef",
+      "destination": "${CODEX_HOME}/plugins/agentchef",
       "platforms": [
         "windows",
         "unix"
@@ -229,7 +229,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the AgentChef operator workflow for direct routing-profile invocation.",
-      "source": "plugins/agentchef-workflows/skills/agentchef-operator",
+      "source": "plugins/agentchef/skills/agentchef-operator",
       "destination": "${AGENTS_HOME}/skills/agentchef-operator",
       "ownershipMarker": "${AGENTS_HOME}/skills/agentchef-operator/.agentchef-managed.json",
       "platforms": [
@@ -246,7 +246,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the context budget planner required by the global operating contract.",
-      "source": "plugins/agentchef-workflows/skills/context-budget-planner",
+      "source": "plugins/agentchef/skills/context-budget-planner",
       "destination": "${AGENTS_HOME}/skills/context-budget-planner",
       "ownershipMarker": "${AGENTS_HOME}/skills/context-budget-planner/.agentchef-managed.json",
       "platforms": [
@@ -263,7 +263,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the adaptive routing workflow required by the global operating contract.",
-      "source": "plugins/agentchef-workflows/skills/adaptive-agent-routing",
+      "source": "plugins/agentchef/skills/adaptive-agent-routing",
       "destination": "${AGENTS_HOME}/skills/adaptive-agent-routing",
       "ownershipMarker": "${AGENTS_HOME}/skills/adaptive-agent-routing/.agentchef-managed.json",
       "platforms": [
@@ -280,7 +280,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the secret-safe external review workflow for direct invocation.",
-      "source": "plugins/agentchef-workflows/skills/external-review-workflow",
+      "source": "plugins/agentchef/skills/external-review-workflow",
       "destination": "${AGENTS_HOME}/skills/external-review-workflow",
       "ownershipMarker": "${AGENTS_HOME}/skills/external-review-workflow/.agentchef-managed.json",
       "platforms": [
@@ -297,7 +297,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the GPT Pro Project context workflow for direct invocation.",
-      "source": "plugins/agentchef-workflows/skills/gptpro",
+      "source": "plugins/agentchef/skills/gptpro",
       "destination": "${AGENTS_HOME}/skills/gptpro",
       "ownershipMarker": "${AGENTS_HOME}/skills/gptpro/.agentchef-managed.json",
       "platforms": [
@@ -314,7 +314,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the manifest-bound GPT Pro handoff workflow for direct invocation.",
-      "source": "plugins/agentchef-workflows/skills/gptpro-handoff",
+      "source": "plugins/agentchef/skills/gptpro-handoff",
       "destination": "${AGENTS_HOME}/skills/gptpro-handoff",
       "ownershipMarker": "${AGENTS_HOME}/skills/gptpro-handoff/.agentchef-managed.json",
       "platforms": [
@@ -331,7 +331,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the explicit-only Fetch workflow for direct $fetch invocation.",
-      "source": "plugins/agentchef-workflows/skills/fetch",
+      "source": "plugins/agentchef/skills/fetch",
       "destination": "${AGENTS_HOME}/skills/fetch",
       "ownershipMarker": "${AGENTS_HOME}/skills/fetch/.agentchef-managed.json",
       "platforms": [
@@ -348,7 +348,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the evidence-backed SEO workflow for direct $seo invocation.",
-      "source": "plugins/agentchef-workflows/skills/seo",
+      "source": "plugins/agentchef/skills/seo",
       "destination": "${AGENTS_HOME}/skills/seo",
       "ownershipMarker": "${AGENTS_HOME}/skills/seo/.agentchef-managed.json",
       "platforms": [
@@ -365,7 +365,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the source-traceable research workflow for direct $evidence-research invocation.",
-      "source": "plugins/agentchef-workflows/skills/evidence-research",
+      "source": "plugins/agentchef/skills/evidence-research",
       "destination": "${AGENTS_HOME}/skills/evidence-research",
       "ownershipMarker": "${AGENTS_HOME}/skills/evidence-research/.agentchef-managed.json",
       "platforms": [
@@ -382,7 +382,7 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Install the offline diagram workflow for direct invocation.",
-      "source": "plugins/agentchef-workflows/skills/offline-diagram-triplet",
+      "source": "plugins/agentchef/skills/offline-diagram-triplet",
       "destination": "${AGENTS_HOME}/skills/offline-diagram-triplet",
       "ownershipMarker": "${AGENTS_HOME}/skills/offline-diagram-triplet/.agentchef-managed.json",
       "platforms": [
@@ -399,8 +399,8 @@
       "kind": "copy-directory",
       "target": "shared",
       "summary": "Mirror the local workflow plugin inside the personal marketplace root.",
-      "source": "plugins/agentchef-workflows",
-      "destination": "${AGENTS_HOME}/plugins/sources/agentchef-workflows",
+      "source": "plugins/agentchef",
+      "destination": "${AGENTS_HOME}/plugins/sources/agentchef",
       "platforms": [
         "windows",
         "unix"
@@ -416,7 +416,7 @@
       "target": "codex",
       "summary": "Register the local workflow plugin in the personal marketplace file.",
       "destination": "${AGENTS_HOME}/plugins/marketplace.json",
-      "pluginTarget": "${AGENTS_HOME}/plugins/sources/agentchef-workflows",
+      "pluginTarget": "${AGENTS_HOME}/plugins/sources/agentchef",
       "platforms": [
         "windows",
         "unix"
@@ -540,9 +540,9 @@
       "kind": "refresh-plugin-cache",
       "target": "codex",
       "summary": "Refresh an already-installed AgentChef plugin cache when its version is stale.",
-      "source": "${CODEX_HOME}/plugins/agentchef-workflows",
+      "source": "${CODEX_HOME}/plugins/agentchef",
       "destination": "${CODEX_HOME}/plugins/cache",
-      "pluginId": "agentchef-workflows@agentchef",
+      "pluginId": "agentchef@agentchef",
       "platforms": [
         "windows",
         "unix"
@@ -638,7 +638,7 @@
       "target": "claude",
       "summary": "Write the Claude Code marketplace manifest next to the shared plugin source tree.",
       "destination": "${AGENTS_HOME}/plugins/.claude-plugin/marketplace.json",
-      "pluginTarget": "${AGENTS_HOME}/plugins/sources/agentchef-workflows",
+      "pluginTarget": "${AGENTS_HOME}/plugins/sources/agentchef",
       "platforms": [
         "windows",
         "unix"
@@ -653,7 +653,7 @@
       "kind": "claude-plugin-register",
       "target": "claude",
       "summary": "Register the marketplace and install the plugin through the claude plugin CLI.",
-      "pluginId": "agentchef-workflows@agentchef",
+      "pluginId": "agentchef@agentchef",
       "platforms": [
         "windows",
         "unix"

@@ -304,15 +304,15 @@ Kullanışlı parametreler:
   Evidence Research yalnız açıkça eşleşen isteklerde implicit seçilebilir.
   Exact direct hedefte kullanıcıya ait farklı bir skill varsa installer hiçbir
   managed dosya yazmadan durur.
-- Kişisel marketplace kaydı `agentchef-workflows` plugin'ini yalnızca
+- Kişisel marketplace kaydı `agentchef` plugin'ini yalnızca
   keşfedilebilir yapar; kurmaz veya etkinleştirmez.
-  `$agentchef-workflows:<skill-adı>` çağrıları için `codex plugin add
-  agentchef-workflows@agentchef --json` komutunu (veya `/plugins` yüzeyini)
+  `$agentchef:<skill-adı>` çağrıları için `codex plugin add
+  agentchef@agentchef --json` komutunu (veya `/plugins` yüzeyini)
   kullanıp yeni bir Codex oturumu başlat. Bu açık ilk kurulumdan sonra
   installer, update ve repair apply akışları eski versioned plugin cache'ini
   yerinde yeniler ve aktif sürümü doğrular; ilk opt-in öncesinde plugin kurmaz.
 - Kişisel marketplace plugin aynasını
-  `AGENTS_HOME/plugins/sources/agentchef-workflows` altından marketplace
+  `AGENTS_HOME/plugins/sources/agentchef` altından marketplace
   root'una göre relative bir path ile okur. Custom `AGENTS_HOME` bir installer
   hedefidir; aktif Codex host'unun bu marketplace'i keşfettiğinin kanıtı
   değildir. Default dışı root'u `codex plugin marketplace add <root>` ile

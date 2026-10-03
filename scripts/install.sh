@@ -234,7 +234,7 @@ any_managed_target_exists() {
   [ -e "$CODEX_HOME_DIR/AGENTS.md" ] ||
   [ -e "$CODEX_HOME_DIR/config.toml" ] ||
   [ -e "$CODEX_HOME_DIR/rules/default.rules" ] ||
-  [ -e "$CODEX_HOME_DIR/plugins/agentchef-workflows" ] ||
+  [ -e "$CODEX_HOME_DIR/plugins/agentchef" ] ||
   [ -e "$AGENTS_HOME_DIR/plugins/marketplace.json" ]
 }
 
@@ -270,7 +270,7 @@ preflight_install_targets() {
     exit 1
   fi
 
-  local plugin_source="$REPO_ROOT/plugins/agentchef-workflows"
+  local plugin_source="$REPO_ROOT/plugins/agentchef"
   local direct_helper="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
   local direct_name direct_display direct_adopt direct_flag direct_source direct_target
   while IFS= read -r direct_name; do
@@ -325,7 +325,7 @@ preflight_install_targets() {
 
   if [ "$INSTALL_CODEX" -ne 1 ]; then return; fi
   local marketplace_path="$AGENTS_HOME_DIR/plugins/marketplace.json"
-  local marketplace_plugin_target="$AGENTS_HOME_DIR/plugins/sources/agentchef-workflows"
+  local marketplace_plugin_target="$AGENTS_HOME_DIR/plugins/sources/agentchef"
   local marketplace_helper="$REPO_ROOT/scripts/upsert-marketplace-entry.mjs"
   if node "$marketplace_helper" "$marketplace_path" "$marketplace_plugin_target" --check; then
     :
@@ -896,7 +896,7 @@ acquire_operation_lock
 start_operation_journal
 
 TEMPLATE_ROOT="$REPO_ROOT/templates/codex"
-PLUGIN_SOURCE="$REPO_ROOT/plugins/agentchef-workflows"
+PLUGIN_SOURCE="$REPO_ROOT/plugins/agentchef"
 
 if [ "$INSTALL_CODEX" -eq 1 ]; then
   section "Managed Codex files"
@@ -925,13 +925,13 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
     esac
   done
 
-  PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/agentchef-workflows"
+  PLUGIN_TARGET="$CODEX_HOME_DIR/plugins/agentchef"
   install_directory "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
 fi
 
 section "Shared agent surfaces"
 ensure_dir "$AGENTS_HOME_DIR"
-MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/agentchef-workflows"
+MARKETPLACE_PLUGIN_TARGET="$AGENTS_HOME_DIR/plugins/sources/agentchef"
 install_directory "$PLUGIN_SOURCE" "$MARKETPLACE_PLUGIN_TARGET"
 DIRECT_SKILL_HELPER="$REPO_ROOT/scripts/manage-direct-skill-target.mjs"
 while IFS= read -r DIRECT_SKILL_NAME; do
@@ -1205,7 +1205,7 @@ const agentCatalog = readJson("catalog/agents.json");
 const mcpCatalog = readJson("catalog/mcp-servers.json");
 const skillCatalog = readJson("catalog/skills.json");
 const routingCatalog = readJson("catalog/routing-profiles.json");
-const pluginSkillRoot = path.join(root, "plugins/agentchef-workflows/skills");
+const pluginSkillRoot = path.join(root, "plugins/agentchef/skills");
 
 const agents = [
   ...agentCatalog.agents.map((agent) => agent.name),

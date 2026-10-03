@@ -13,7 +13,7 @@ targets include:
 - `~/.codex/*.config.toml`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/default.rules`
-- `~/.codex/plugins/agentchef-workflows`
+- `~/.codex/plugins/agentchef`
 - `~/.agents/plugins/marketplace.json`
 
 ## Repair Without Guessing

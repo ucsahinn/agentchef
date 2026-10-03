@@ -2,10 +2,10 @@
   "name": "agentchef",
   "plugins": [
     {
-      "name": "agentchef-workflows",
+      "name": "agentchef",
       "source": {
         "source": "local",
-        "path": "./plugins/agentchef-workflows"
+        "path": "./plugins/agentchef"
       },
       "policy": {
         "installation": "AVAILABLE",

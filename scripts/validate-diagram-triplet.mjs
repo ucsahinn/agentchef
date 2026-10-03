@@ -6,8 +6,8 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(process.cwd());
 const failures = [];
-const renderer = path.join(root, "plugins", "agentchef-workflows", "skills", "offline-diagram-triplet", "scripts", "render-diagram-triplet.mjs");
-const skill = path.join(root, "plugins", "agentchef-workflows", "skills", "offline-diagram-triplet", "SKILL.md");
+const renderer = path.join(root, "plugins", "agentchef", "skills", "offline-diagram-triplet", "scripts", "render-diagram-triplet.mjs");
+const skill = path.join(root, "plugins", "agentchef", "skills", "offline-diagram-triplet", "SKILL.md");
 let tempRoot = null;
 
 function fail(message) {

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "..");
 const sourceMarketplacePath = path.join(repoRoot, ".agents", "plugins", "marketplace.json");
-const pluginName = "agentchef-workflows";
+const pluginName = "agentchef";
 const allowedInstallPolicies = new Set(["NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"]);
 const allowedAuthenticationPolicies = new Set(["ON_INSTALL", "ON_USE"]);
 

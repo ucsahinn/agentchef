@@ -143,7 +143,7 @@ export function planCodexRemoval(options) {
       if (fs.existsSync(action.destination)) {
         try {
           const document = JSON.parse(fs.readFileSync(action.destination, "utf8").replace(/^\uFEFF/, ""));
-          decision = (document.plugins || []).some((plugin) => plugin?.name === "agentchef-workflows") ? "remove-entry" : "no-entry";
+          decision = (document.plugins || []).some((plugin) => plugin?.name === "agentchef") ? "remove-entry" : "no-entry";
         } catch {
           decision = "foreign";
         }
@@ -320,7 +320,7 @@ export function applyCodexRemoval(options, plan) {
           continue;
         }
         const document = JSON.parse(fs.readFileSync(item.target, "utf8").replace(/^\uFEFF/, ""));
-        document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== "agentchef-workflows");
+        document.plugins = (document.plugins || []).filter((plugin) => plugin?.name !== "agentchef");
         const backup = backupInto(backupRoot, roots, item.target);
         journal.recordBackup(backup);
         journal.prepareMutation({ target: item.target, backup });

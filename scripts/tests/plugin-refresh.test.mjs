@@ -19,7 +19,7 @@ function listResult(installed = []) {
 function installedPlugin(version) {
   return {
     pluginId: PLUGIN_ID,
-    name: "agentchef-workflows",
+    name: "agentchef",
     version,
     installed: true,
     enabled: true
@@ -179,8 +179,8 @@ test("a same-version cache whose files differ from the local source is refreshed
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-plugin-drift-"));
   try {
     const codexHome = path.join(root, "codex");
-    const source = path.join(root, "agents", "plugins", "sources", "agentchef-workflows");
-    const cache = path.join(codexHome, "plugins", "cache", "agentchef", "agentchef-workflows", expectedVersion);
+    const source = path.join(root, "agents", "plugins", "sources", "agentchef");
+    const cache = path.join(codexHome, "plugins", "cache", "agentchef", "agentchef", expectedVersion);
     for (const directory of [path.join(source, "scripts"), path.join(cache, "scripts")]) fs.mkdirSync(directory, { recursive: true });
     fs.writeFileSync(path.join(source, "scripts", "hygiene.mjs"), "fixed\n");
     fs.writeFileSync(path.join(cache, "scripts", "hygiene.mjs"), "old\n");
@@ -209,7 +209,7 @@ test("a same-version cache whose files differ from the local source is refreshed
 
 test("refreshes a plugin still listed under the legacy marketplace with that id", () => {
   const calls = [];
-  const legacyId = "agentchef-workflows@codex-chef";
+  const legacyId = "agentchef@codex-chef";
   const stale = { ...installedPlugin("0.5.57"), pluginId: legacyId, marketplaceName: "codex-chef" };
   const result = refreshInstalledPlugin({
     apply: true,

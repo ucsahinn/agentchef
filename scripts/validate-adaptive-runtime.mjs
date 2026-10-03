@@ -18,9 +18,9 @@ function fail(message) {
 }
 
 const agentsRel = "templates/codex/AGENTS.md";
-const routingSkillRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/SKILL.md";
-const routingReferenceRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/references/global-working-agreements.md";
-const routingOpenAiRel = "plugins/agentchef-workflows/skills/adaptive-agent-routing/agents/openai.yaml";
+const routingSkillRel = "plugins/agentchef/skills/adaptive-agent-routing/SKILL.md";
+const routingReferenceRel = "plugins/agentchef/skills/adaptive-agent-routing/references/global-working-agreements.md";
+const routingOpenAiRel = "plugins/agentchef/skills/adaptive-agent-routing/agents/openai.yaml";
 
 for (const rel of [agentsRel, routingSkillRel, routingReferenceRel, routingOpenAiRel]) {
   if (!exists(rel)) fail(`Missing adaptive routing surface: ${rel}`);
