@@ -99,6 +99,30 @@ function validateSuccessfulTriplet() {
   }
 }
 
+// With --markdown outside --out-dir, the snippet must still link to the
+// rendered files.
+function validateMarkdownElsewhere() {
+  const inputPath = path.join(tempRoot, "elsewhere.mmd");
+  const outDir = path.join(tempRoot, "elsewhere-out");
+  const markdown = path.join(tempRoot, "docs", "elsewhere.md");
+  fs.mkdirSync(path.dirname(markdown), { recursive: true });
+  fs.writeFileSync(inputPath, "flowchart LR\n  A[Start] --> B[End]\n", "utf8");
+  const result = spawnSync(process.execPath, [renderer, "--mermaid", inputPath, "--out-dir", outDir, "--name", "elsewhere", "--markdown", markdown], {
+    cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 60000, windowsHide: true
+  });
+  if (result.status !== 0) {
+    fail(`Diagram renderer with --markdown elsewhere exited ${result.status}: ${(result.stderr || result.stdout).trim()}`);
+    return;
+  }
+  const text = fs.readFileSync(markdown, "utf8");
+  for (const target of ["elsewhere.svg", "elsewhere.png", "elsewhere.excalidraw"]) {
+    const link = new RegExp(`\\]\\(([^)]*${target.replace(".", "\\.")})\\)`).exec(text)?.[1];
+    if (!link || !fs.existsSync(path.resolve(path.dirname(markdown), link))) {
+      fail(`Markdown snippet link to ${target} does not resolve from the snippet's folder: ${link || "missing"}`);
+    }
+  }
+}
+
 function expectRendererFailure(name, source, expectedMessage) {
   const result = runRenderer(source, name, 10000);
   if (result.error) {
@@ -139,6 +163,7 @@ try {
   tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-diagram-triplet-"));
   if (failures.length === 0) {
     validateSuccessfulTriplet();
+    validateMarkdownElsewhere();
     validateFailureCases();
   }
 } finally {

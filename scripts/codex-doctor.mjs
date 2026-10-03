@@ -287,11 +287,13 @@ function inspectGlobalTargets() {
   }
 
   const home = os.homedir();
+  const codexHome = path.resolve(process.env.CODEX_HOME || path.join(home, ".codex"));
+  const agentsHome = path.resolve(process.env.AGENTS_HOME || path.join(home, ".agents"));
   const targets = [
-    path.join(home, ".codex", "AGENTS.md"),
-    path.join(home, ".codex", "config.toml"),
-    path.join(home, ".codex", "rules", "default.rules"),
-    path.join(home, ".agents", "plugins", "marketplace.json"),
+    path.join(codexHome, "AGENTS.md"),
+    path.join(codexHome, "config.toml"),
+    path.join(codexHome, "rules", "default.rules"),
+    path.join(agentsHome, "plugins", "marketplace.json"),
     path.join(home, ".gitignore_global"),
     path.join(home, ".githooks", "pre-commit")
   ];

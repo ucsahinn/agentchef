@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { MAX_ENTRIES as MAX_ZIP_ENTRIES } from "./zip-archive.mjs";
 
 const MAX_BUNDLES = 38;
 const MAX_BUNDLE_BYTES = 4_000_000;
@@ -289,6 +290,17 @@ function buildPlan(options) {
   const specs = loadSpecs(options.config, files);
   const selected = selectBundles(specs, files, !options.config);
   const bundles = splitLargeBundles(selected, options.maxBundleBytes);
+  // Each bundle also becomes a subsystem ZIP; check its limits here so preview
+  // fails, not --apply after the plan looked fine.
+  for (const bundle of bundles) {
+    if (bundle.files.length > MAX_ZIP_ENTRIES) fail(`Bundle ${bundle.name} has ${bundle.files.length} files; a subsystem archive holds at most ${MAX_ZIP_ENTRIES}. Split it with gptpro-bundles.json.`);
+    const seen = new Map();
+    for (const file of bundle.files) {
+      const key = file.path.toLowerCase();
+      if (seen.has(key)) fail(`Bundle ${bundle.name} holds ${seen.get(key)} and ${file.path}, which differ only by letter case; an archive cannot hold both. Put them in different bundles.`);
+      seen.set(key, file.path);
+    }
+  }
   if (bundles.length > options.maxBundles) fail(`Export would create ${bundles.length} text bundles; the Project-safe maximum is ${options.maxBundles}. Use gptpro-bundles.json to merge the architecture.`);
   const prefix = options.prefix || path.basename(target);
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(prefix)) fail("Prefix contains unsupported characters.");

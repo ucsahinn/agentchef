@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import zlib from "node:zlib";
 
-const MAX_ENTRIES = 2_000;
+export const MAX_ENTRIES = 2_000;
 const MAX_UNCOMPRESSED_BYTES = 450_000_000;
 const MAX_ARCHIVE_BYTES = 500_000_000;
 const CRC_TABLE = (() => {

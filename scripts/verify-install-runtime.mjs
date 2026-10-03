@@ -961,11 +961,13 @@ function inspectGitGuards(failures) {
 function inspectSupabaseScope(failures) {
   let config;
   try { config = readText(path.join(options.codexHome, "config.toml")); } catch { return { inspected: false }; }
-  const start = config.search(/^\[mcp_servers\.supabase\]\s*$/m);
+  const start = config.search(/^\[mcp_servers\.supabase\]\s*(?:#.*)?$/m);
   if (start < 0) return { inspected: true, configured: false };
   const rest = config.slice(start).split(/\r?\n/);
   const block = [rest[0], ...rest.slice(1).filter((_, index, lines) => !lines.slice(0, index + 1).some((line) => /^\[/.test(line)))].join("\n");
-  const enabled = /^\s*enabled\s*=\s*true\b/m.test(block);
+  // Codex treats a server table with no enabled key as enabled (`codex mcp
+  // add` writes none), so only an explicit false counts as off.
+  const enabled = !/^\s*enabled\s*=\s*false\b/m.test(block);
   const url = (/^\s*url\s*=\s*"([^"]*)"/m.exec(block) || [])[1] || "";
   const scoped = /[?&]project_ref=[^&]+/.test(url);
   if (enabled && !scoped) failures.push("The Supabase MCP connector is enabled without a project_ref, so it can reach every project in the account; add project_ref=<project> to its url or set enabled = false.");

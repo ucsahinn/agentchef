@@ -68,7 +68,7 @@ function main() {
     fs.writeFileSync(excalidrawPath, JSON.stringify(toExcalidraw(layout), null, 2), "utf8");
     fs.writeFileSync(svgPath, toSvg(layout), "utf8");
     fs.writeFileSync(pngPath, toPng(layout));
-    fs.writeFileSync(mdPath, toMarkdown(baseName, normalized, svgPath, pngPath, excalidrawPath), "utf8");
+    fs.writeFileSync(mdPath, toMarkdown(baseName, normalized, svgPath, pngPath, excalidrawPath, path.dirname(mdPath)), "utf8");
 
     console.log(JSON.stringify({
       schemaVersion: "agentchef.diagram-triplet.v1",
@@ -693,7 +693,10 @@ function chunk(type, data) {
   return Buffer.concat([u32(data.length), body, u32(crc32(body))]);
 }
 
-function toMarkdown(title, mermaid, svgPath, pngPath, excalidrawPath) {
+// Links are relative to the Markdown file: with --markdown outside --out-dir a
+// bare file name pointed at nothing.
+function toMarkdown(title, mermaid, svgPath, pngPath, excalidrawPath, markdownDir = path.dirname(svgPath)) {
+  const link = (target) => path.relative(markdownDir, target).split(path.sep).join("/");
   return [
     `# ${title}`,
     "",
@@ -701,9 +704,9 @@ function toMarkdown(title, mermaid, svgPath, pngPath, excalidrawPath) {
     mermaid.trim(),
     "```",
     "",
-    `- SVG: [${path.basename(svgPath)}](${path.basename(svgPath)})`,
-    `- PNG: [${path.basename(pngPath)}](${path.basename(pngPath)})`,
-    `- Editable Excalidraw: [${path.basename(excalidrawPath)}](${path.basename(excalidrawPath)})`,
+    `- SVG: [${path.basename(svgPath)}](${link(svgPath)})`,
+    `- PNG: [${path.basename(pngPath)}](${link(pngPath)})`,
+    `- Editable Excalidraw: [${path.basename(excalidrawPath)}](${link(excalidrawPath)})`,
     ""
   ].join("\n");
 }

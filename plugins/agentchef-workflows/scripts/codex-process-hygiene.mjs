@@ -519,6 +519,95 @@ export function buildOwnedCleanupPlan(processes, snapshot) {
   return plan.sort((left, right) => left.rootPid - right.rootPid);
 }
 
+// The SessionEnd hook records only its session owner (pid and start time);
+// reading the whole process table takes seconds on Windows, longer than Codex
+// lets a SessionEnd hook run. After the owner has exited, the sweep reads the
+// table and keeps only MCP trees the owner started: a direct child of the
+// owner's pid with a signature, created after the owner started, and older
+// than any process that later reused the owner's pid.
+export function buildOwnerExitPlan(processes, owner) {
+  const ownerPid = Number(owner?.pid);
+  const ownerCreatedAt = normalizeCreatedAt(owner?.createdAt);
+  if (!Number.isInteger(ownerPid) || ownerPid <= 0 || !ownerCreatedAt) return [];
+  const normalized = normalizedSnapshot(processes);
+  const { byPid, children } = processMaps(normalized);
+  const live = byPid.get(ownerPid);
+  if (sameProcessIdentity(live, { pid: ownerPid, createdAt: ownerCreatedAt })) return [];
+  const ownerTime = Date.parse(ownerCreatedAt);
+  const reusedTime = live?.createdAt ? Date.parse(live.createdAt) : null;
+  const plan = [];
+  for (const root of normalized) {
+    if (root.parentPid !== ownerPid || !root.createdAt || isControlProcess(root)) continue;
+    const server = mcpServerFor(root);
+    if (!server) continue;
+    const created = Date.parse(root.createdAt);
+    if (!(created >= ownerTime)) continue;
+    if (reusedTime !== null && !(created < reusedTime)) continue;
+    const members = [root, ...descendantsOf(root.pid, children)
+      .filter((entry) => mcpServerFor(entry) === server && entry.createdAt)];
+    plan.push({
+      rootPid: root.pid,
+      rootCreatedAt: root.createdAt,
+      server,
+      processCount: members.length,
+      ownershipReceipt: {
+        schemaVersion: 1,
+        ownerPid,
+        ownerChain: [{ pid: ownerPid, createdAt: ownerCreatedAt }],
+        rootPid: root.pid,
+        rootCreatedAt: root.createdAt,
+        server,
+        processes: members.map((entry) => ({ pid: entry.pid, parentPid: entry.parentPid, server, createdAt: entry.createdAt }))
+      }
+    });
+  }
+  return plan.sort((left, right) => left.rootPid - right.rootPid);
+}
+
+// "pid:startMs:name" entries, nearest first, as the Windows hook wrapper
+// passes them. The first Codex or Claude entry is the owner.
+export function ownerFromChain(chainText) {
+  for (const part of String(chainText || "").split(",")) {
+    const match = /^(\d+):(\d+):(.+)$/.exec(part.trim());
+    if (!match) continue;
+    const entry = { pid: Number(match[1]), name: match[3], commandLine: "" };
+    if (isCodexProcess(entry) || isClaudeProcess(entry)) {
+      return { pid: entry.pid, createdAt: new Date(Number(match[2])).toISOString() };
+    }
+  }
+  return null;
+}
+
+function lookupProcess(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  if (process.platform === "win32") {
+    const command = `$ErrorActionPreference = 'Stop'; Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}' | Select-Object ProcessId,ParentProcessId,Name,CommandLine,CreationDate | ConvertTo-Json -Compress`;
+    const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { encoding: "utf8", windowsHide: true, timeout: 5_000 });
+    if (result.error || result.status !== 0 || !String(result.stdout || "").trim()) return null;
+    try {
+      return parsePowerShellSnapshot(result.stdout)[0] || null;
+    } catch {
+      return null;
+    }
+  }
+  const result = spawnSync("ps", ["-o", "pid=,ppid=,rss=,lstart=,comm=,args=", "-p", String(pid)], { encoding: "utf8", timeout: 5_000, env: { ...process.env, LC_ALL: "C" } });
+  if (result.error || result.status !== 0) return null;
+  return parseUnixProcessLines(result.stdout)[0] || null;
+}
+
+// The nearest Codex or Claude process above the hook, at most three levels up
+// (a shell may sit in between).
+function resolveSessionOwner(startPid) {
+  let pid = Number(startPid);
+  for (let level = 0; level < 3 && pid > 0; level += 1) {
+    const entry = lookupProcess(pid);
+    if (!entry) return null;
+    if ((isCodexProcess(entry) || isClaudeProcess(entry)) && entry.createdAt) return { pid: entry.pid, createdAt: entry.createdAt };
+    pid = entry.parentPid;
+  }
+  return null;
+}
+
 function receiptMatchesPlan(item, byPid) {
   const receipt = item?.ownershipReceipt;
   if (!receipt || receipt.schemaVersion !== 1 || !Array.isArray(receipt.processes)) return null;
@@ -590,21 +679,9 @@ function collectWindowsSnapshot() {
   return parsePowerShellSnapshot(result.stdout);
 }
 
-function collectUnixSnapshot() {
-  const result = spawnSync(
-    "ps",
-    ["-axo", "pid=,ppid=,rss=,lstart=,comm=,args="],
-    {
-      encoding: "utf8",
-      timeout: 30_000,
-      maxBuffer: MAX_BUFFER
-    }
-  );
-  if (result.error || result.status !== 0) {
-    throw new Error(result.error?.message || String(result.stderr || result.stdout || `exit ${result.status}`).trim());
-  }
+function parseUnixProcessLines(stdout) {
   const processes = [];
-  for (const line of String(result.stdout || "").split(/\r?\n/)) {
+  for (const line of String(stdout || "").split(/\r?\n/)) {
     const match = line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\S+)\s+(\d{4})\s+(\S+)\s+(.*)$/);
     if (!match) continue;
     processes.push(normalizeProcessEntry({
@@ -617,6 +694,25 @@ function collectUnixSnapshot() {
     }));
   }
   return processes;
+}
+
+function collectUnixSnapshot() {
+  // lstart is locale-formatted; under a non-English locale Date.parse fails,
+  // every process loses its start time, and nothing is ever eligible.
+  const result = spawnSync(
+    "ps",
+    ["-axo", "pid=,ppid=,rss=,lstart=,comm=,args="],
+    {
+      encoding: "utf8",
+      timeout: 30_000,
+      maxBuffer: MAX_BUFFER,
+      env: { ...process.env, LC_ALL: "C" }
+    }
+  );
+  if (result.error || result.status !== 0) {
+    throw new Error(result.error?.message || String(result.stderr || result.stdout || `exit ${result.status}`).trim());
+  }
+  return parseUnixProcessLines(result.stdout);
 }
 
 export function collectProcessSnapshot() {
@@ -742,7 +838,7 @@ export function terminateCleanupPlan(plan, options = {}) {
     const command = platform === "win32" ? "taskkill.exe" : "kill";
     const commandResults = targets.map((targetPid) => run(
       command,
-      platform === "win32" ? ["/PID", String(targetPid), "/T"] : ["-TERM", String(targetPid)],
+      platform === "win32" ? ["/PID", String(targetPid), "/T", "/F"] : ["-TERM", String(targetPid)],
       {
         encoding: "utf8",
         windowsHide: true,
@@ -760,6 +856,60 @@ export function terminateCleanupPlan(plan, options = {}) {
     });
   }
   return results;
+}
+
+// A manual --cleanup-stale --apply. The audit's candidates carry no session
+// receipt, so each one is checked again against a fresh process table right
+// before the stop: same pid and start time, still without any live Codex,
+// Claude Code, or Serena pool owner, and still past the grace period. Only
+// then is the tree stopped.
+export function terminateStaleCandidates(candidates, options = {}) {
+  const list = Array.isArray(candidates) ? candidates : [];
+  const fresh = Array.isArray(options.processes)
+    ? { ok: true, processes: normalizedSnapshot(options.processes), error: null }
+    : collectProcessSnapshot();
+  if (!fresh.ok) {
+    return list.map((item) => ({ rootPid: Number(item?.rootPid), server: item?.server, ok: false, stopped: false, exitCode: null, error: `Process identity recheck unavailable: ${fresh.error}` }));
+  }
+  const again = analyzeProcessSnapshot(fresh.processes, { now: options.now, orphanGraceMs: options.orphanGraceMs ?? DEFAULT_ORPHAN_GRACE_MS });
+  const confirmed = new Set(again.cleanupCandidates.map((item) => `${item.rootPid}|${item.rootCreatedAt}`));
+  const { children } = processMaps(fresh.processes);
+  const platform = options.platform || process.platform;
+  const run = options.spawnSync || spawnSync;
+  const results = [];
+  for (const item of list) {
+    const pid = Number(item?.rootPid);
+    if (!Number.isInteger(pid) || pid <= 0 || pid === process.pid) continue;
+    if (!confirmed.has(`${pid}|${item?.rootCreatedAt}`)) {
+      results.push({ rootPid: pid, server: item?.server, ok: true, stopped: false, exitCode: null, error: null, skippedReason: "No longer a stale candidate on recheck: it exited, changed identity, or gained a live owner." });
+      continue;
+    }
+    const targets = platform === "win32"
+      ? [pid]
+      : [...descendantsOf(pid, children).map((entry) => entry.pid).reverse(), pid];
+    const commandResults = targets.map((targetPid) => run(
+      platform === "win32" ? "taskkill.exe" : "kill",
+      platform === "win32" ? ["/PID", String(targetPid), "/T", "/F"] : ["-TERM", String(targetPid)],
+      { encoding: "utf8", windowsHide: true, timeout: Number(options.timeoutMs || 15_000) }
+    ));
+    const failed = commandResults.find((entry) => entry.error || entry.status !== 0);
+    results.push({
+      rootPid: pid,
+      server: item.server,
+      ok: !failed,
+      stopped: !failed,
+      exitCode: (failed || commandResults.at(-1)).status,
+      error: failed ? (failed.error?.message || String(failed.stderr || failed.stdout || "").trim()) : null
+    });
+  }
+  return results;
+}
+
+// Applied with candidates but nothing stopped is not a success.
+export function staleCleanupExitCode(candidates, results) {
+  if (results.some((item) => !item.ok)) return 1;
+  if ((candidates || []).length > 0 && !results.some((item) => item.stopped)) return 1;
+  return 0;
 }
 
 function parsePositiveInteger(value, fallback) {
@@ -806,7 +956,7 @@ function recordOwnedSweepOutcome(snapshot, results, error = null) {
     const outcome = {
       schemaVersion: "agentchef.session-end-outcome.v1",
       recordedAt: new Date().toISOString(),
-      ownerPid: snapshot?.ownerPid || null,
+      ownerPid: snapshot?.ownerPid || snapshot?.owner?.pid || null,
       resultCount: results.length,
       failedCount: results.filter((item) => !item.ok).length,
       results: results.map((item) => ({ pid: item.rootPid, server: item.server, ok: item.ok, exitCode: item.exitCode ?? null })),
@@ -819,6 +969,11 @@ function recordOwnedSweepOutcome(snapshot, results, error = null) {
 }
 
 function scheduleOwnedSweep(snapshot, delayMs) {
+  // Tests read what would be scheduled instead of starting a real sweep.
+  if (process.env.AGENTCHEF_TEST_MODE === "1" && process.env.AGENTCHEF_TEST_HYGIENE_RECORD) {
+    fs.writeFileSync(process.env.AGENTCHEF_TEST_HYGIENE_RECORD, JSON.stringify({ snapshot, delayMs }));
+    return;
+  }
   const statePath = createOwnedSweepState(snapshot);
   const child = spawn(
     process.execPath,
@@ -832,15 +987,15 @@ function scheduleOwnedSweep(snapshot, delayMs) {
   child.unref();
 }
 
-async function runSessionEndHook(delayMs) {
+async function runSessionEndHook(delayMs, ownerChain) {
   const rawInput = await readStdin();
   const input = JSON.parse(rawInput || "{}");
   if (input.hook_event_name !== "SessionEnd") return 0;
-  const collected = collectProcessSnapshot();
-  if (!collected.ok) return 0;
-  const snapshot = captureSessionOwnedSnapshot(collected.processes, process.pid);
-  if (!snapshot || snapshot.processes.length === 0) return 0;
-  scheduleOwnedSweep(snapshot, delayMs);
+  // An owner chain that was passed but names no Codex or Claude process means
+  // the wrapper could not read it: no sweep, rather than a guess.
+  const owner = ownerChain !== null ? ownerFromChain(ownerChain) : resolveSessionOwner(process.ppid);
+  if (!owner) return 0;
+  scheduleOwnedSweep({ schemaVersion: 2, owner }, delayMs);
   return 0;
 }
 
@@ -873,8 +1028,14 @@ export async function runProcessHygieneCli(argv) {
   let ownedSweepState = null;
   let delayMs = DEFAULT_SESSION_END_DELAY_MS;
   let orphanGraceMs = DEFAULT_ORPHAN_GRACE_MS;
+  let ownerChain = null;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    // One argument so an empty value survives Windows PowerShell 5.1, which
+    // drops empty strings it passes to native commands.
+    if (arg.startsWith("--owner-chain=")) { ownerChain = arg.slice("--owner-chain=".length); continue; }
+    // Which agent runs the hook; the owner lookup already tells them apart.
+    if (arg === "--runtime") { index += 1; continue; }
     if (arg === "--json") json = true;
     else if (arg === "--apply") apply = true;
     else if (arg === "--cleanup-stale") cleanupStale = true;
@@ -886,7 +1047,7 @@ export async function runProcessHygieneCli(argv) {
     else throw new Error(`Unknown option: ${arg}`);
   }
 
-  if (sessionEnd) return runSessionEndHook(delayMs);
+  if (sessionEnd) return runSessionEndHook(delayMs, ownerChain);
   if (ownedSweep) {
     throw new Error("--owned-sweep no longer accepts serialized snapshots.");
   }
@@ -899,7 +1060,10 @@ export async function runProcessHygieneCli(argv) {
       recordOwnedSweepOutcome(snapshot, [], collected.error || new Error("Process snapshot unavailable."));
       return 0;
     }
-    const results = terminateCleanupPlan(buildOwnedCleanupPlan(collected.processes, snapshot));
+    const plan = snapshot?.schemaVersion === 2
+      ? buildOwnerExitPlan(collected.processes, snapshot.owner)
+      : buildOwnedCleanupPlan(collected.processes, snapshot);
+    const results = terminateCleanupPlan(plan, { processes: collected.processes });
     recordOwnedSweepOutcome(snapshot, results);
     return 0;
   }
@@ -908,12 +1072,12 @@ export async function runProcessHygieneCli(argv) {
   const report = buildProcessAudit({ orphanGraceMs });
   let cleanupResults = [];
   if (cleanupStale && apply && report.detailAvailable) {
-    cleanupResults = terminateCleanupPlan(report.cleanupCandidates);
+    cleanupResults = terminateStaleCandidates(report.cleanupCandidates, { orphanGraceMs });
   }
   const output = cleanupResults.length > 0 ? { ...report, cleanupResults } : report;
   if (json) console.log(JSON.stringify(output, null, 2));
   else printHumanAudit(output);
-  return cleanupResults.some((item) => !item.ok) ? 1 : 0;
+  return cleanupStale && apply ? staleCleanupExitCode(report.cleanupCandidates, cleanupResults) : 0;
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(scriptPath);

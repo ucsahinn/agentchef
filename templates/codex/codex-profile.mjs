@@ -40,11 +40,35 @@ if (overrides.length === 0) {
   process.exit(2);
 }
 
-const command = process.platform === "win32" ? "codex.cmd" : "codex";
+// A native install ships codex.exe with no codex.cmd shim, so the first PATH
+// entry that holds either wins, the way a shell resolves it. This file is
+// installed on its own and cannot import the repository's helpers.
+function resolveWindowsCodex() {
+  const extensions = [".exe", ".cmd"];
+  for (const directory of String(process.env.PATH || "").split(path.delimiter).filter(Boolean)) {
+    for (const extension of extensions) {
+      const candidate = path.join(directory.replace(/^"|"$/g, ""), `codex${extension}`);
+      try {
+        if (fs.statSync(candidate).isFile()) return candidate;
+      } catch {
+        // not in this directory
+      }
+    }
+  }
+  return null;
+}
+
 const commandArgs = [...overrides, ...codexArgs];
-const result = process.platform === "win32"
-  ? spawnSync("cmd.exe", ["/d", "/s", "/c", command, ...commandArgs], { stdio: "inherit", windowsHide: true })
-  : spawnSync(command, commandArgs, { stdio: "inherit" });
+let result;
+if (process.platform === "win32") {
+  const resolved = resolveWindowsCodex();
+  result = resolved && resolved.toLowerCase().endsWith(".exe")
+    ? spawnSync(resolved, commandArgs, { stdio: "inherit", windowsHide: true })
+    // The npm shim goes through cmd.exe by name, as before.
+    : spawnSync("cmd.exe", ["/d", "/s", "/c", "codex.cmd", ...commandArgs], { stdio: "inherit", windowsHide: true });
+} else {
+  result = spawnSync("codex", commandArgs, { stdio: "inherit" });
+}
 if (result.error) {
   console.error(result.error.message);
   process.exit(1);

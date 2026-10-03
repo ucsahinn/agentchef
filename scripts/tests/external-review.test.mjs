@@ -709,16 +709,16 @@ test("handoff refuses a manifest stored inside the target repository", () => {
   assert.match(JSON.parse(result.stdout).error.message, /outside the target repository/);
 });
 
-test("tracked missing and linked sources fail closed", (context) => {
+test("a tracked source deleted in the worktree is listed as excluded; a linked one fails closed", (context) => {
+  // A deleted file leaks nothing: the pack lists it as excluded and records
+  // the dirty tree, so a dirty worktree no longer aborts the whole pack.
   const missingFixture = fixture();
   const missingPath = path.join(missingFixture.repo, "tracked-missing.txt");
   fs.writeFileSync(missingPath, "tracked\n", "utf8");
   git(missingFixture.repo, ["add", "tracked-missing.txt"]);
   fs.unlinkSync(missingPath);
-  assert.throws(
-    () => buildPackPlan({ target: missingFixture.repo, out: missingFixture.out }),
-    /tracked source is missing/i
-  );
+  const missingPlan = buildPackPlan({ target: missingFixture.repo, out: missingFixture.out });
+  assert.ok(missingPlan.manifest.excluded.some((file) => file.path === "tracked-missing.txt" && file.reason === "deleted"));
 
   const linkedFixture = fixture();
   const outsideFile = path.join(linkedFixture.root, "outside.txt");
@@ -840,4 +840,38 @@ test("the exporter's sensitive-path deny-list stays identical to review pack's",
   };
   const exporter = path.resolve(path.dirname(cliPath), "..", "plugins", "agentchef-workflows", "skills", "gptpro", "scripts", "project-export-legacy.mjs");
   assert.equal(extract(exporter), extract(cliPath), "keep the two deny-lists aligned clause by clause");
+});
+
+test("a tracked file deleted but not yet staged is excluded from the pack instead of failing it", () => {
+  const { repo, out } = fixture();
+  fs.writeFileSync(path.join(repo, "gone.js"), "export const gone = true;\n");
+  git(repo, ["add", "gone.js"]);
+  git(repo, ["-c", "user.name=AgentChef", "-c", "user.email=chef@example.invalid", "commit", "-qm", "add gone"]);
+  fs.rmSync(path.join(repo, "gone.js"));
+  const plan = buildPackPlan({ target: repo, out });
+  assert.ok(plan.manifest.excluded.some((file) => file.path === "gone.js" && file.reason === "deleted"));
+  assert.ok(plan.manifest.files.some((file) => file.path === "app.js"));
+});
+
+test("review verify reads a report saved with a byte-order mark", () => {
+  // Windows PowerShell 5.1 Set-Content -Encoding UTF8 writes one.
+  const { repo, out } = fixture();
+  const plan = buildPackPlan({ target: repo, out });
+  const manifestPath = applyPack(plan);
+  const reportPath = path.join(out, "bom-report.json");
+  const report = {
+    schemaVersion: "1.1.0",
+    reviewId: plan.manifest.reviewId,
+    snapshotCommit: plan.manifest.snapshot.commit,
+    snapshotContentSha256: plan.manifest.snapshot.contentSha256,
+    summary: "Fixture summary",
+    findings: []
+  };
+  fs.writeFileSync(reportPath, `\uFEFF${JSON.stringify(report, null, 2)}\n`, "utf8");
+  const result = spawnSync(process.execPath, [
+    cliPath, "verify", "--target", repo, "--manifest", manifestPath, "--report", reportPath, "--json"
+  ], { cwd: repo, encoding: "utf8", windowsHide: true, timeout: 15000 });
+  const parsed = JSON.parse(result.stdout);
+  assert.ok(!(parsed.reportFailures || []).some((failure) => /JSON|Unexpected token/i.test(failure)), "the BOM does not break the parse");
+  assert.doesNotMatch(result.stderr, /Unexpected token/);
 });

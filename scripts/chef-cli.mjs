@@ -25,7 +25,8 @@ import { acquireOperationLock } from "./lib/operation-lock.mjs";
 import { acceptsSchema, backupKind, identity, journalFileNames, legacyProductName } from "./lib/identity.mjs";
 import {
   buildProcessAudit,
-  terminateCleanupPlan
+  staleCleanupExitCode,
+  terminateStaleCandidates
 } from "./codex-process-hygiene.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -1315,6 +1316,8 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
   });
 
   const output = redactSensitiveOutput([result.stdout, result.stderr].filter(Boolean).join("\n"));
+  // Kept apart for callers that parse a JSON report: stderr must not break it.
+  const stdout = redactSensitiveOutput(result.stdout || "");
   const failed = Boolean(result.error) || result.status !== 0;
   if (output.trim() && !extra.captureOnly && (!extra.quiet || failed)) {
     process.stdout.write(output.endsWith("\n") ? output : `${output}\n`);
@@ -1328,7 +1331,7 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
   if (result.error) {
     if (!options.json) console.error(`${ICONS.warn} [!!!!!!!!!!] 100% FAILED   ${action} (${Date.now() - startedMs} ms)`);
     if (!extra.captureOnly) console.error(`${ICONS.warn} ${result.error.message}`);
-    return { ok: false, status: null, signal: result.signal || null, logPath, error: result.error.message, output, elapsedMs: Date.now() - startedMs };
+    return { ok: false, status: null, signal: result.signal || null, logPath, error: result.error.message, output, stdout, elapsedMs: Date.now() - startedMs };
   }
   if (result.status !== 0) {
     if (!options.json) console.error(`${ICONS.warn} [!!!!!!!!!!] 100% FAILED   ${action} (${Date.now() - startedMs} ms)`);
@@ -1337,12 +1340,12 @@ function runLoggedCommand(action, command, commandArgs, extra = {}) {
     if (!extra.captureOnly) {
       console.error(`${ICONS.warn} Command failed with exit ${result.status}.${signalNote}${logNote}`);
     }
-    return { ok: false, status: result.status, signal: result.signal || null, logPath, output, elapsedMs: Date.now() - startedMs };
+    return { ok: false, status: result.status, signal: result.signal || null, logPath, output, stdout, elapsedMs: Date.now() - startedMs };
   }
   if (!options.json && !extra.quiet) console.log(`${ICONS.ok} [##########] 100% DONE     ${action} (${Date.now() - startedMs} ms)`);
   if (logPath && !options.json && !extra.quiet) console.log(`${ICONS.ok} Log: ${toPosix(path.relative(root, logPath))}`);
   else if (!options.json && !extra.quiet) console.log(`${ICONS.ok} ${localText("Log disabled by --no-log", "Log --no-log ile kapalı")}`);
-  return { ok: true, status: result.status, signal: result.signal || null, logPath, output, elapsedMs: Date.now() - startedMs };
+  return { ok: true, status: result.status, signal: result.signal || null, logPath, output, stdout, elapsedMs: Date.now() - startedMs };
 }
 
 function runNode(action, script, scriptArgs = [], extra = {}) {
@@ -1631,7 +1634,7 @@ function runDoctor() {
 
     const parseReport = (result) => {
       try {
-        return JSON.parse(result.output || "{}");
+        return JSON.parse(result.stdout ?? result.output ?? "");
       } catch {
         return null;
       }
@@ -1642,9 +1645,12 @@ function runDoctor() {
       || !runtime.ok
       || repoReport?.status === "fail"
       || runtimeReport?.status === "fail";
+    // A report that could not be read is not a clean bill of health.
     const attention = !failed && (
       repoReport?.status === "attention"
       || runtimeReport?.status === "attention"
+      || repoReport === null
+      || runtimeReport === null
     );
     const report = {
       schemaVersion: "agentchef.doctor-bundle.v1",
@@ -4885,7 +4891,7 @@ function processAuditPayload() {
   if (options.cleanupStale && options.apply && payload.detailAvailable) {
     return {
       ...payload,
-      cleanupResults: terminateCleanupPlan(payload.cleanupCandidates)
+      cleanupResults: terminateStaleCandidates(payload.cleanupCandidates)
     };
   }
   return payload;
@@ -4898,7 +4904,7 @@ function runProcesses() {
   const cleanupBlocked = Boolean(options.cleanupStale && options.apply && payload.detailAvailable === false);
   if (options.json) {
     console.log(JSON.stringify(payload, null, 2));
-    return { ok: !cleanupBlocked && !payload.cleanupResults?.some((item) => !item.ok) };
+    return { ok: !cleanupBlocked && staleCleanupExitCode(options.cleanupStale && options.apply ? payload.cleanupCandidates : [], payload.cleanupResults || []) === 0 };
   }
 
   printSurfaceHeader(
@@ -4967,7 +4973,7 @@ function runProcesses() {
       "Temizlik çalışmadı: ayrıntılı süreç denetimi kullanılamadığı için güvenli bir temizlik planı yok."
     )}`);
   }
-  return { ok: !cleanupBlocked && !payload.cleanupResults?.some((item) => !item.ok) };
+  return { ok: !cleanupBlocked && staleCleanupExitCode(options.cleanupStale && options.apply ? payload.cleanupCandidates : [], payload.cleanupResults || []) === 0 };
 }
 
 function runDiagnostics() {

@@ -69,8 +69,13 @@ function toPosix(value) {
 function runGit(target, args) {
   const result = spawnSync("git", ["-C", target, ...args], {
     encoding: "utf8",
-    windowsHide: true
+    windowsHide: true,
+    // A large repository's file list passes Node's 1 MiB default.
+    maxBuffer: 64 * 1024 * 1024
   });
+  if (result.error?.code === "ENOBUFS") {
+    fail(`git ${args.join(" ")} output exceeded 64 MiB`, "GIT_ERROR");
+  }
   if (result.status !== 0) {
     fail((result.stderr || result.stdout || `git ${args.join(" ")} failed`).trim(), "GIT_ERROR");
   }
@@ -345,6 +350,13 @@ export function buildPackPlan({ target, out, maxPartBytes = DEFAULT_PART_BYTES }
       continue;
     }
     const absolute = path.resolve(resolvedTarget, relativeRaw);
+    // Deleted in the working tree but not yet staged: nothing to package.
+    let present = true;
+    try { fs.lstatSync(absolute); } catch { present = false; }
+    if (!present) {
+      excluded.push({ path: relative, reason: "deleted" });
+      continue;
+    }
     const stat = assertSafeSourcePath(resolvedTarget, absolute, relative);
     if (!stat.isFile()) {
       excluded.push({ path: relative, reason: "not-a-file" });
@@ -451,7 +463,7 @@ function readManifest(manifestPath) {
   if (!stat || !stat.isFile() || stat.isSymbolicLink()) {
     fail("External review manifest must be a regular non-linked file.", "UNSAFE_MANIFEST");
   }
-  const manifest = JSON.parse(fs.readFileSync(resolved, "utf8"));
+  const manifest = JSON.parse(fs.readFileSync(resolved, "utf8").replace(/^\uFEFF/, ""));
   if (validateManifest(manifest).length > 0) {
     fail("Unsupported or invalid external review manifest.");
   }
@@ -845,7 +857,7 @@ export async function runExternalReviewCli(argv = process.argv.slice(2)) {
       const { resolved, manifest } = readManifest(options.manifest);
       const freshness = checkFreshness(options.target, manifest);
       const bundleIntegrity = checkBundleIntegrity(resolved, manifest);
-      const report = JSON.parse(fs.readFileSync(path.resolve(options.report), "utf8"));
+      const report = JSON.parse(fs.readFileSync(path.resolve(options.report), "utf8").replace(/^\uFEFF/, ""));
       const failures = validateReport(report, manifest);
       const result = {
         verified: freshness.fresh && bundleIntegrity.ok && failures.length === 0,

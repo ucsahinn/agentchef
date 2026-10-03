@@ -186,3 +186,33 @@ test("refuses --out through a junction and --out aliased into the worktree", () 
     assert.equal(fs.existsSync(path.join(target, "gp")), false);
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
+
+test("preview refuses a bundle with more files than one subsystem archive holds", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-entries-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    const paths = Array.from({ length: 2001 }, (_, index) => `src/f${String(index).padStart(4, "0")}.md`);
+    for (const relative of paths) write(target, relative, "x\n");
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, paths, "20260809T120000Z-entries"), null, 2)}\n`);
+    const output = path.join(temp, "gptpro-project");
+    const preview = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", output], { encoding: "utf8" });
+    assert.notEqual(preview.status, 0, "preview must fail, not --apply later");
+    assert.match(preview.stderr, /at most 2000/);
+    assert.equal(fs.existsSync(output), false);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("preview refuses two paths that differ only by letter case in one bundle", { skip: process.platform === "win32" || process.platform === "darwin" }, () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "gptpro-project-case-"));
+  try {
+    const target = path.join(temp, "repo"); fs.mkdirSync(target);
+    const paths = ["src/Makefile.md", "src/makefile.md"];
+    for (const relative of paths) write(target, relative, `${relative}\n`);
+    const reviewManifest = path.join(temp, "external-review-manifest.json");
+    fs.writeFileSync(reviewManifest, `${JSON.stringify(manifestFor(target, paths, "20260809T120000Z-case"), null, 2)}\n`);
+    const preview = spawnSync(process.execPath, [exporter, "--target", target, "--manifest", reviewManifest, "--out", path.join(temp, "gptpro-project")], { encoding: "utf8" });
+    assert.notEqual(preview.status, 0);
+    assert.match(preview.stderr, /differ only by letter case/);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});

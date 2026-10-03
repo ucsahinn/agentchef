@@ -192,10 +192,10 @@ const secretPatterns = [
 ];
 
 const forbiddenStatePatterns = [
-  { name: "non-placeholder drive user path", pattern: /[A-Za-z]:[\\/]Users[\\/](?!user\b|username\b|you\b|yourname\b|yourusername\b)[A-Za-z0-9._-]+/i },
-  { name: "non-placeholder Windows user path", pattern: /C:\\Users\\(?!user\b|username\b|you\b|yourname\b|yourusername\b)[A-Za-z0-9._-]+/i },
-  { name: "non-placeholder macOS user path", pattern: /\/Users\/(?!user\b|username\b|you\b|yourname\b|yourusername\b)[A-Za-z0-9._-]+/i },
-  { name: "non-placeholder Linux home path", pattern: /\/home\/(?!user\b|username\b|you\b|yourname\b|yourusername\b|runner\b)[A-Za-z0-9._-]+/i },
+  { name: "non-placeholder drive user path", pattern: /[A-Za-z]:[\\/]Users[\\/](?!user\b|username\b|you\b|yourname\b|yourusername\b)[^\\/\s"'`<>|$%{}*]+/iu },
+  { name: "non-placeholder Windows user path", pattern: /C:\\Users\\(?!user\b|username\b|you\b|yourname\b|yourusername\b)[^\\/\s"'`<>|$%{}*]+/iu },
+  { name: "non-placeholder macOS user path", pattern: /\/Users\/(?!user\b|username\b|you\b|yourname\b|yourusername\b)[^\\/\s"'`<>|$%{}*]+/iu },
+  { name: "non-placeholder Linux home path", pattern: /\/home\/(?!user\b|username\b|you\b|yourname\b|yourusername\b|runner\b)[^\\/\s"'`<>|$%{}*]+/iu },
   { name: "Codex sessions", pattern: /(?:^|[\\/])\.codex[\\/]sessions[\\/]/i },
   { name: "Codex memories", pattern: /(?:^|[\\/])\.codex[\\/]memories[\\/]/i },
   { name: "auth file", pattern: /(?:^|[\\/])(?:auth|credentials|cookies)\.(?:json|toml|txt)$/i }
@@ -463,11 +463,11 @@ for (const operation of installPlan.operations || []) {
 }
 
 if (fs.existsSync(path.join(root, ".git"))) {
-  const result = spawnSync("git", ["ls-files"], { cwd: root, encoding: "utf8", windowsHide: true });
+  const result = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0) {
     warnings.push(`Could not inspect tracked files under ignored directories: ${result.stderr || result.stdout || "git ls-files failed"}`);
   } else {
-    for (const file of result.stdout.split(/\r?\n/).filter(Boolean)) {
+    for (const file of result.stdout.split("\0").filter(Boolean)) {
       const firstPart = file.split("/")[0];
       if (ignoredSourceDirs.has(firstPart)) {
         failures.push(`Tracked file must not live under ignored source/output directory: ${file}`);
