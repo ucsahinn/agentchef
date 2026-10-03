@@ -14,8 +14,9 @@ bilmen gerekiyorsa bu makaleyi kullan.
   araçlarını kapsar). Bir `deny` kuralı yalnızca eklenir; mevcut `deny`
   kuralları asla kaldırılmaz.
 - `settings.json` içinde başka hiçbir şey: `hooks`, `env` ve diğer tüm
-  anahtarlar senin yazdığın gibi kalır. Bu sürümde Claude Code için hook
-  kurulmaz.
+  anahtarlar senin yazdığın gibi kalır. Claude Code için tek hook (`SessionEnd`
+  anında süreç hijyeni) `settings.json` içinde değil, `agentchef` plugin
+  manifestinde gelir.
 - `.claude.json` içine (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun
   içinde) AgentChef 1.3.0'dan beri MCP girdisi yazmaz; çünkü `context7`,
   `playwright` ve `serena` sunucularını plugin getirir. Yalnızca önceki bir

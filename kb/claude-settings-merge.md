@@ -13,7 +13,8 @@ entries AgentChef added.
   `browser_evaluate`, and `browser_file_upload`). A `deny` rule is only ever
   added; existing `deny` rules are never removed.
 - Nothing else in `settings.json`: `hooks`, `env`, and every other key stay as
-  you wrote them. No hook is installed for Claude Code in this release.
+  you wrote them. The one Claude Code hook (process hygiene at `SessionEnd`)
+  ships in the `agentchef` plugin manifest, not in `settings.json`.
 - In `.claude.json` (`~/.claude.json`, or `$CLAUDE_CONFIG_DIR/.claude.json`
   when that variable is set) AgentChef writes no MCP entry since 1.3.0, because
   the plugin ships `context7`, `playwright`, and `serena`. It only retires the

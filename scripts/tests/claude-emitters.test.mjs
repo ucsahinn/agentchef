@@ -126,5 +126,13 @@ test("the Claude plugin manifest mirrors the Codex manifest version and lists ev
   assert.deepEqual(manifest.agents, [...manifest.agents].sort());
   assert.ok(manifest.agents.every((entry) => entry.startsWith("./agents/") && entry.endsWith(".md")));
   assert.equal(manifest.skills, "./skills/");
-  assert.ok(!Object.hasOwn(manifest, "hooks"), "the Codex-only process-hygiene hook is not published to Claude yet");
+  // One inline SessionEnd hook, in exec form, running the plugin's own script.
+  assert.deepEqual(Object.keys(manifest.hooks), ["SessionEnd"]);
+  const [hook] = manifest.hooks.SessionEnd.flatMap((group) => group.hooks);
+  assert.equal(manifest.hooks.SessionEnd.flatMap((group) => group.hooks).length, 1);
+  assert.equal(hook.command, "node");
+  assert.deepEqual(hook.args, ["${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs", "--session-end", "--runtime", "claude"]);
+  assert.ok(hook.timeout <= 60);
+  // Neither CLI may pick up the other's hook file.
+  assert.ok(!fs.existsSync(path.join(root, "plugins", "agentchef", "hooks", "hooks.json")), "Claude would auto-load hooks/hooks.json");
 });

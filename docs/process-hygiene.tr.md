@@ -64,7 +64,10 @@ biçimde durur. Aday varken hiçbiri durdurulamadıysa komut sıfırdan farklı 
 
 ## Oturum Sonu Taraması
 
-Bundled plugin tek bir incelenmiş `SessionEnd` hook'u kaydeder. Normal bir oturum
+Bundled plugin her CLI için incelenmiş tek bir `SessionEnd` hook'u kaydeder:
+Codex onu `hooks/process-hygiene.json` dosyasından, Claude Code kendi
+manifestinden okur ([Claude Code oturum sonu](#claude-code-oturum-sonu)
+bölümüne bak). Normal bir oturum
 sonunda yalnızca oturum sahibini kaydeder: hook'un üstündeki en yakın Codex ya da
 Claude Code süreci, PID'i ve oluşturulma zamanıyla. Ardından ayrık 45 saniyelik
 bir bekleme başlatır. Sahip kapandıktan sonra tarama süreç tablosunu okur ve
@@ -92,6 +95,37 @@ Resmî kaynaklar:
 - [Codex config ve profiller](https://developers.openai.com/codex/config-reference)
 - [Codex MCP config](https://developers.openai.com/codex/mcp)
 
+## Claude Code Oturum Sonu
+
+Claude Code plugin manifesti (`plugins/agentchef/.claude-plugin/plugin.json`)
+aynı taramayı matcher'sız ve 15 saniyelik timeout'lu bir `SessionEnd` hook'u
+olarak satır içinde tanımlar:
+
+```text
+node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --runtime claude
+```
+
+- Hook `hooks/hooks.json` içinde değil manifestte durur: Claude Code bir
+  `hooks/hooks.json` dosyasını kendiliğinden yükler, Codex ise hook'unu kendi
+  manifesti üzerinden `hooks/process-hygiene.json` dosyasından okur. İki CLI
+  de diğerinin hook'unu yüklemez.
+- Hook exec biçimini kullanır (`command` artı `args`, kabuk yok); bu yüzden
+  `node` sürecinin üstü doğrudan Claude Code sürecidir ve sahip araması ilk
+  adımda biter.
+- Ayrık tarama Codex'in kullandığıyla aynıdır: 45 saniye bekler, ardından
+  yalnızca o Claude oturumunun başlattığı MCP ağaçlarını ve yalnızca o süreç
+  kapandıktan sonra durdurur. PID, oluşturulma zamanı ve MCP imzası yeniden
+  doğrulamaları Codex tarafıyla aynıdır.
+- Claude Code `/clear` için de `SessionEnd` tetikler. Claude süreci o anda
+  hâlâ çalıştığı için tarama canlı bir sahip bulur ve hiçbir şeyi durdurmaz.
+- Claude Code'da hash başına hook güven adımı yoktur. Hook, `agentchef`
+  plugin'i etkinleştirildiğinde çalışır; `/hooks` ile incele. Manifest
+  `scripts/render-target-artifacts.mjs` ile üretilir ve commit edilen kopya
+  saparsa `npm run check` başarısız olur.
+
+Resmî kaynak:
+[Claude Code hooks](https://code.claude.com/docs/en/hooks).
+
 ## Operasyon Notları
 
 - Yeni profil varsayılanları yeni oturumları etkiler; zaten çalışan MCP
@@ -113,5 +147,6 @@ Resmî kaynaklar:
   üst süreci `serena-pool.mjs manager` olan bir backend asla temizlik adayı
   olmaz. Öncesinde çalışan bir havuz Serena backend'i (burada 22 süreç, yaklaşık
   1 GB) yetim olarak listeleniyordu.
-- Oturum sonu hook'u hâlâ yalnızca Codex plugin manifestinde yayınlanır. Claude
-  Code oturum bitince kendi MCP alt süreçlerini kendisi durdurur.
+- Oturum sonu hook'u iki plugin manifestinde de yayınlanır. Claude Code oturum
+  bitince normalde kendi MCP alt süreçlerini kendisi durdurur; hook bundan
+  sonra hayatta kalan ağaçları yakalar.

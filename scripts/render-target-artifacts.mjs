@@ -7,8 +7,9 @@
 //   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
 //   catalog/mcp-servers.json (claudeSource: plugin) -> plugins/agentchef/mcp/claude.mcp.json
 //   templates/codex/serena-pool.mjs -> plugins/agentchef/scripts/serena-pool.mjs
-// The Claude manifest declares no hooks: the SessionEnd process-hygiene hook
-// stays Codex-only until the Claude owner-detection branch ships.
+// The Claude manifest carries its SessionEnd process-hygiene hook inline.
+// Claude would also load a hooks/hooks.json on its own, and Codex reads its
+// hook from hooks/process-hygiene.json, so neither CLI loads the other's.
 // `--check` (used by npm run check) fails when a committed artifact drifts.
 import fs from "node:fs";
 import path from "node:path";
@@ -55,9 +56,28 @@ export function renderClaudePluginManifest(repoRoot, agentFileNames) {
     skills: "./skills/",
     agents: [...agentFileNames].sort().map((fileName) => `./agents/${fileName}`),
     // Not the root .mcp.json: Claude would load that one on its own as well.
-    mcpServers: "./mcp/claude.mcp.json"
+    mcpServers: "./mcp/claude.mcp.json",
+    hooks: claudeSessionEndHooks
   };
 }
+
+// Exec form (command + args, no shell): node's parent is then the Claude
+// process itself, so the owner lookup ends at its first step. The sweep it
+// schedules stops only the MCP trees that session started, once it has exited.
+export const claudeSessionEndHooks = Object.freeze({
+  SessionEnd: [
+    {
+      hooks: [
+        {
+          type: "command",
+          command: "node",
+          args: ["${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs", "--session-end", "--runtime", "claude"],
+          timeout: 15
+        }
+      ]
+    }
+  ]
+});
 
 // The MCP servers Claude Code gets from the plugin. Every entry runs through
 // node, the one command both platforms resolve the same way; npx packages go

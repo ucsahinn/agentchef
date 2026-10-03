@@ -47,5 +47,24 @@
     "./agents/test-verifier.md",
     "./agents/ui-coordinator.md"
   ],
-  "mcpServers": "./mcp/claude.mcp.json"
+  "mcpServers": "./mcp/claude.mcp.json",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs",
+              "--session-end",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
 }

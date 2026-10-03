@@ -23,7 +23,7 @@ Resmi kaynaklar:
 | `config.toml` | Model, sandbox, approval, MCP, feature ve profile ayarlari | Workspace-write sandbox ve on-request approval | `npm run validate:mcp` |
 | Rules | Dar komut approval varsayilanlari | Sadece dogrulama komutlari; destructive/publish aksiyonlari gated | `npm run validate:content` |
 | Skills | Progressive disclosure ile yeniden kullanilabilir workflow'lar | Commit-pinned curated kurulumlar ve GPT Pro context/handoff, yetkili reconstruction, kanıta dayalı SEO, izlenebilir deep research dahil on yerel plugin skill'i | `npm run verify:skills` |
-| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; Codex manifest'inde bundled MCP/app yok (Claude Code manifest'i `context7`, `playwright` ve `serena` getirir) | `npm run validate` |
+| Plugins | Paylasilabilir skill ve incelenmis lifecycle yuzeyi | On skill ve tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal plugin; Codex manifest'inde bundled MCP/app yok (Claude Code manifest'i `context7`, `playwright` ve `serena` sunucularını, ayrıca aynı SessionEnd hook'unu satır içi getirir) | `npm run validate` |
 | MCP/connectors | Canli docs, browser, code navigation ve dis sistemler | Dengeli üç varsayılan (OpenAI Docs, Playwright, Serena); Context7, diğer lokal stdio yardımcıları ve auth isteyen connector'lar ihtiyaç olana kadar kapalı | `npm run validate:mcp` |
 | Subagents | Evidence-heavy uzman delegasyonu | Sandbox'li role dosyalariyla 21 incelenmis uzman ajan | `npm run validate:agents` |
 | Doctor/status | No-write saglik ve drift ozeti | Default repo-only; opsiyonel global varlik kontrolu | `npm run codex:doctor` |
@@ -214,8 +214,8 @@ Bu starter gelecekte ayri review ve dokumantasyon olmadan sunlari import etmez:
 - Geniş veya kanıtsız cleanup, push, release, publish veya deploy otomasyonu.
 
 Tek cleanup istisnası fail-closed ve sahiplik kapsamlıdır: SessionEnd taraması
-yalnız biten Codex sahibinden yakalanmış tam lokal MCP alt süreçlerini 45
-saniyelik beklemeden sonra durdurabilir. Ayrıntı için
+yalnız biten Codex ya da Claude Code sahibinden yakalanmış tam lokal MCP alt
+süreçlerini 45 saniyelik beklemeden sonra durdurabilir. Ayrıntı için
 [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
 
 ## Dogrulama

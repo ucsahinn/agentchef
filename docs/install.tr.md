@@ -257,7 +257,9 @@ verilmediği sürece yalnız ön izleme yapar.
 Bundled plugin ayrıca incelenmiş tek bir `SessionEnd` süreç hijyeni hook'u
 kurar. Kurulum veya yenilemeden sonra yeni Codex oturumu aç, `/hooks` ekranında
 tam kaynak/hash bilgisini incele ve yalnız bu repoyla eşleşiyorsa güven.
-Installer hook trust kontrolünü bilerek bypass etmez. Profiller, denetim
+Installer hook trust kontrolünü bilerek bypass etmez. Claude Code aynı hook'u
+`agentchef` plugin manifestinden alır ve plugin etkinleştirildiğinde çalıştırır;
+`/hooks` ile incele. Profiller, denetim
 alanları, 45 saniyelik bekleme ve ayrıca onaylı temizlik komutu için
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md) sayfasına bak.
 
