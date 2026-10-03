@@ -193,8 +193,8 @@ const collisionPhrases = [
 // give.
 {
   const catalogued = new Set((readJson("catalog/mcp-servers.json").servers || []).map((server) => server.name));
-  // Kept in step with claudeDefaultServers in lib/claude-mcp-merge.mjs.
-  const installedForClaude = new Set(["context7", "serena"]);
+  // The servers the agentchef plugin ships for Claude Code (claudeSource: plugin).
+  const installedForClaude = new Set((readJson("catalog/mcp-servers.json").servers || []).filter((server) => server.claudeSource === "plugin").map((server) => server.name));
   // Local, account-free browser servers a user adds to Claude Code from the
   // catalog. A role whose instructions say to use them needs the grant, or the
   // allowlist filters them out even after the user adds them; until then the

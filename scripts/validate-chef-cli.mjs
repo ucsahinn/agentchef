@@ -16,6 +16,7 @@ import { scaledTimeout } from "./lib/test-timeouts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
+const mcpServerCount = JSON.parse(fs.readFileSync(path.join(root, "catalog", "mcp-servers.json"), "utf8")).servers.length;
 const failures = [];
 const skillCatalog = JSON.parse(read("catalog/skills.json"));
 const skillCounts = {
@@ -1470,7 +1471,7 @@ runCliSmoke("forced-color", ["--help", "--no-log"], [
 });
 runCliSmoke("mcp", ["--mcp", "--details", "--plain", "--no-log"], [
   "MCP connectors",
-  "16 connectors",
+  `${mcpServerCount} connectors`,
   "Credential need",
   "Disabled by default",
   "Timeouts and per-tool exposure live in templates/codex/config.windows.toml",
@@ -1478,7 +1479,7 @@ runCliSmoke("mcp", ["--mcp", "--details", "--plain", "--no-log"], [
 ], { forbidAnsi: true });
 runCliSmoke("mcp-tr", ["--mcp", "--details", "--tr", "--plain", "--no-log"], [
   "MCP bağlayıcıları",
-  "16 bağlayıcı",
+  `${mcpServerCount} bağlayıcı`,
   "Kimlik bilgisi veya ek girdi gerekmez.",
   "İlk çalışmada npm/npx ağ erişimi gerekir",
   "GitHub/Copilot hesap yetkilendirmesi gerekir",
@@ -1555,7 +1556,7 @@ try {
   runCliSmoke("mcp-installed-status", ["--mcp", "--details", "--plain", "--no-log"], [
     "Configured and enabled: 1",
     "Configured but disabled: 1",
-    "Cataloged but not configured: 14",
+    `Cataloged but not configured: ${mcpServerCount - 2}`,
     "User-added: 1",
     "custom-local",
     "User-added (enabled)",

@@ -98,7 +98,7 @@ const requiredPublicFiles = [
   ".gitleaks.toml"
 ];
 
-const externalMcpServers = ["github", "figma", "linear", "notion", "sentry", "vercel", "supabase", "filesystem"];
+const externalMcpServers = ["github", "figma", "linear", "notion", "sentry", "vercel", "supabase"];
 
 function posix(filePath) {
   return filePath.split(path.sep).join("/");

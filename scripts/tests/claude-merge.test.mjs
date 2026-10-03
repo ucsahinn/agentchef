@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { planSettingsMerge } from "../lib/claude-settings-merge.mjs";
-import { buildClaudeMcpEntry, claudeDefaultServers, planMcpMerge } from "../lib/claude-mcp-merge.mjs";
+import { buildClaudeMcpEntry, claudeDefaultServers, claudePluginServers, planMcpMerge } from "../lib/claude-mcp-merge.mjs";
 import {
   createReceipt,
   getAtPointer,
@@ -68,19 +68,42 @@ test("containers created by a merge are pruned on removal only while they are em
   assert.deepEqual(partial.kept.map((entry) => entry.reason), ["user-content", "user-content", "user-content"]);
 });
 
-test("MCP merge adds only the Claude defaults and never touches an existing server or other keys", () => {
+test("MCP merge writes no user entry by default and retires only what this install wrote for plugin servers", () => {
+  const options = { platform: "windows", claudeHome: "C:\\Claude" };
+  assert.deepEqual(claudeDefaultServers, []);
+  assert.deepEqual(claudePluginServers(mcpCatalog).sort(), ["context7", "playwright", "serena"]);
+
+  // Nothing to write and nothing recorded: a user's own entry is kept and
+  // reported as shadowing the plugin's server.
   const current = { mcpServers: { context7: { type: "stdio", command: "custom" } }, numStartups: 4 };
-  const plan = planMcpMerge(current, mcpCatalog, { platform: "windows", claudeHome: "C:\\Claude" });
-  assert.deepEqual(claudeDefaultServers, ["context7", "serena"]);
-  assert.deepEqual(plan.next.mcpServers.context7, { type: "stdio", command: "custom" });
-  assert.equal(plan.next.numStartups, 4);
-  assert.deepEqual(plan.next.mcpServers.serena, {
-    type: "stdio",
-    command: "node",
-    args: [path.join("C:\\Claude", "agentchef", "serena-pool.mjs"), "bridge"]
-  });
-  assert.deepEqual(plan.entries.map((entry) => entry.preview), ["serena"]);
-  assert.deepEqual(plan.skipped.map((entry) => entry.reason), ["already-present"]);
+  const plan = planMcpMerge(current, mcpCatalog, options);
+  assert.equal(plan.changed, false);
+  assert.deepEqual(plan.next, current);
+  assert.deepEqual(plan.shadowing.map((entry) => [entry.name, entry.reason]), [["context7", "user-owned"]]);
+
+  // An entry a 1.2 install wrote, still exactly as written, is retired.
+  const written = planMcpMerge({ numStartups: 4 }, mcpCatalog, { ...options, serverNames: ["context7", "serena"] });
+  const recorded = written.entries;
+  const retired = planMcpMerge(written.next, mcpCatalog, { ...options, previousEntries: recorded });
+  assert.equal(retired.changed, true);
+  assert.deepEqual(Object.keys(retired.next.mcpServers), []);
+  assert.deepEqual(retired.retired.map((entry) => entry.pointer).sort(), ["/mcpServers/context7", "/mcpServers/serena"]);
+  assert.equal(retired.next.numStartups, 4);
+
+  // Once edited it is the user's: kept and reported, unless adopted.
+  const edited = structuredClone(written.next);
+  edited.mcpServers.serena.args.push("--verbose");
+  const kept = planMcpMerge(edited, mcpCatalog, { ...options, previousEntries: recorded });
+  assert.ok(kept.next.mcpServers.serena, "an edited entry stays");
+  assert.deepEqual(kept.shadowing.map((entry) => [entry.name, entry.reason]), [["serena", "user-modified"]]);
+  const adopted = planMcpMerge(edited, mcpCatalog, { ...options, previousEntries: recorded, adopt: true });
+  assert.ok(!adopted.next.mcpServers.serena, "--adopt-mcp retires it");
+  assert.deepEqual(adopted.shadowing, []);
+
+  // A server the plugin does not ship is never touched.
+  const other = planMcpMerge({ mcpServers: { github: { type: "http", url: "https://example.test" } } }, mcpCatalog, { ...options, adopt: true });
+  assert.equal(other.changed, false);
+  assert.ok(other.next.mcpServers.github);
 });
 
 test("MCP entries use the Windows cmd wrapper and the plain npx form on unix", () => {
@@ -96,7 +119,7 @@ test("MCP entries use the Windows cmd wrapper and the plain npx form on unix", (
 
 test("receipts round-trip and only remove the entries they recorded", () => {
   const original = { mcpServers: { user: { type: "http", url: "https://example.test" } }, permissions: { allow: ["Bash(ls *)"] } };
-  const mcpPlan = planMcpMerge(original, mcpCatalog, { platform: "unix", claudeHome: "/opt/agentchef-home/.claude" });
+  const mcpPlan = planMcpMerge(original, mcpCatalog, { platform: "unix", claudeHome: "/opt/agentchef-home/.claude", serverNames: ["context7", "serena"] });
   const settingsPlan = planSettingsMerge(mcpPlan.next, { permissions: { allow: ["Bash(git status *)"] } });
   const merged = settingsPlan.next;
   const entries = [...mcpPlan.entries, ...settingsPlan.entries];

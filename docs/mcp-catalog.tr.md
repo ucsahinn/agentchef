@@ -6,19 +6,31 @@ MCP'ler Codex'e ek araç veya canlı bağlam verir: güncel dokümantasyon, brow
 kanıtı, semantic code navigation, özel hesap verileri ya da veritabanı erişimi
 gibi. Bu yüzden çok kullanışlılar ama her birinin sınırı açık olmalı.
 
-AgentChef toplam 16 MCP tanıyor. Dengeli starter iki sunucuyu açar: uzak
-`openaiDeveloperDocs` ile lokal lazy `serena` bridge. Context7 dahil altı ek lokal stdio
-yardımcısı tanımlı ama kapalı kalır; yetenek kaybolmaz, her eşzamanlı oturumda
-Node/Python ağaçları gereksiz yere başlamaz. Hesap, veritabanı veya geniş dosya
-sistemi erişimi isteyen diğer sekiz connector ise gerçekten ihtiyacın olana
-kadar kapalı kalır.
+AgentChef toplam 14 MCP tanıyor. Dengeli Codex starter'ı üç sunucuyu açar:
+uzak `openaiDeveloperDocs`, lokal lazy `serena` bridge ve browser kanıtı için
+`playwright`. Context7 dahil dört ek lokal stdio yardımcısı tanımlı ama kapalı
+kalır; yetenek kaybolmaz, her eşzamanlı oturumda Node/Python ağaçları gereksiz
+yere başlamaz. Hesap veya veritabanı erişimi isteyen yedi connector ise
+gerçekten ihtiyacın olana kadar kapalı kalır. Eski `memory` ve `filesystem`
+girdileri 1.3.0'da kaldırıldı; mevcut bir config'in nasıl temizlendiği için
+[Yükseltme](upgrade.tr.md) sayfasına bak.
 
-Claude Code hedefinde AgentChef, `.claude.json` içindeki kullanıcı kapsamlı
-`mcpServers` alanına yalnızca `context7` ve lazy `serena` bridge'ini ekler,
-ikisini de makbuza yazar ve zaten tanımladığın sunuculara dokunmaz: zaten bir
-`context7` ya da `serena` girdin varsa seninki geçerli kalır ve
-`verify-install-runtime --target claude` bunu söyler. Codex'e özgü
-`openaiDeveloperDocs` girdisi oraya eklenmez. Kataloğun diğer sunucularını
+Claude Code hedefinde `context7`, `playwright` ve `serena` sunucularını
+`agentchef` plugin'i kendisi getirir
+([plugins/agentchef/mcp/claude.mcp.json](../plugins/agentchef/mcp/claude.mcp.json),
+plugin manifest'indeki `mcpServers` alanından bağlanır). npx sunucuları
+`plugins/agentchef/scripts/mcp-launch.mjs` üzerinden başlar; bu başlatıcı
+yalnızca tam sabitlenmiş sürüm kabul eder. Serena, paylaşılan havuz
+bridge'inin plugin içindeki kopyasıyla `--project-root ${CLAUDE_PROJECT_DIR}`
+argümanıyla çalışır. Araç adları `mcp__plugin_agentchef_<server>__<tool>`
+biçimindedir. Kurucu bu sunucuları artık `.claude.json` içine yazmaz:
+AgentChef 1.0–1.2'nin oraya yazdığı girdi kaldırılır, çünkü kullanıcı
+kapsamlı bir girdi plugin sunucusunun önüne geçer. Aynı adla kendi eklediğin
+girdi korunur ve plugin'i gölgelediği bildirilir; `-AdoptMcp` /
+`--adopt-mcp` için [Kurulum](install.tr.md) sayfasına bak. Claude Code tek bir
+plugin MCP sunucusunu ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm
+sunucuları kapatır); bu yüzden `playwright` her Claude Code oturumunda açıktır.
+Codex'e özgü `openaiDeveloperDocs` girdisi oraya eklenmez. Kataloğun diğer sunucularını
 [catalog/mcp-servers.json](../catalog/mcp-servers.json) içindeki komut ve
 argümanlarla `claude mcp add --scope user` kullanarak kendin ekle. GitHub'ın
 uzak MCP ucu OAuth dinamik istemci kaydını desteklemez; bu yüzden onun için
@@ -37,21 +49,20 @@ uzak MCP ucu OAuth dinamik istemci kaydını desteklemez; bu yüzden onun için
 
 ## Dengeli Lokal Varsayılanlar
 
-| MCP | Ana config | Ne için kullanıyorum? | Neye ihtiyaç duyuyor? |
-| --- | --- | --- | --- |
-| [`openaiDeveloperDocs`](https://developers.openai.com/mcp) | Açık | Güncel OpenAI geliştirici dokümantasyonu | Ek bir şeye ihtiyaç duymaz |
-| [`context7`](https://github.com/upstash/context7) | Kapalı | İsteğe bağlı güncel kütüphane ve framework dokümantasyonu | Node/npx ve ilk açılışta internet |
-| [`serena`](https://github.com/oraios/serena) | Açık | Bilmediğin repoda sembol seviyesinde kod gezintisi | `uvx` ve sabitlenmiş Serena kaynağı |
-| [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Kapalı | Karmaşık işi anlaşılır adımlara ayırmak | Node/npx ve ilk açılışta internet |
-| [`playwright`](https://github.com/microsoft/playwright-mcp) | Kapalı | İzole, kalıcı olmayan profilde browser snapshot, screenshot, console ve prompt-gated network kanıtı | Node/npx ve yerel browser kontrolü |
-| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Kapalı | Chrome incelemesi ve UI teşhisi | Node/npx ve izole Chrome köprüsü |
-| [`memory`](https://github.com/modelcontextprotocol/servers) | Kapalı | Küçük ve gizli olmayan yerel hafıza grafiği | Node/npx; secret saklama |
-| [`codebase-memory`](https://github.com/DeusData/codebase-memory-mcp) | Kapalı | Mimari, graph search, akış ve değişiklik etkisi | Node/npx; index ve admin araçları kontrollü kalır |
+| MCP | Codex ana config | Claude plugin | Ne için kullanıyorum? | Neye ihtiyaç duyuyor? |
+| --- | --- | --- | --- | --- |
+| [`openaiDeveloperDocs`](https://developers.openai.com/mcp) | Açık | Hayır | Güncel OpenAI geliştirici dokümantasyonu | Ek bir şeye ihtiyaç duymaz |
+| [`context7`](https://github.com/upstash/context7) | Kapalı | Evet | İsteğe bağlı güncel kütüphane ve framework dokümantasyonu | Node/npx ve ilk açılışta internet |
+| [`serena`](https://github.com/oraios/serena) | Açık | Evet | Bilmediğin repoda sembol seviyesinde kod gezintisi | `uvx` ve sabitlenmiş Serena kaynağı |
+| [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Kapalı | Hayır | Karmaşık işi anlaşılır adımlara ayırmak | Node/npx ve ilk açılışta internet |
+| [`playwright`](https://github.com/microsoft/playwright-mcp) | Açık | Evet | İzole, kalıcı olmayan profilde browser snapshot, screenshot, console ve prompt-gated network kanıtı | Node/npx ve yerel browser kontrolü |
+| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Kapalı | Hayır | Chrome incelemesi ve UI teşhisi | Node/npx ve izole Chrome köprüsü |
+| [`codebase-memory`](https://github.com/DeusData/codebase-memory-mcp) | Kapalı | Hayır | Mimari, graph search, akış ve değişiklik etkisi | Node/npx; index ve admin araçları kontrollü kalır |
 
 Tüm bundled lokal MCP'lere ihtiyaç duyan tek ana oturumda
 `codex --profile full` kullan. Eşzamanlı ikincil pencereleri
 `codex --profile multi-session` ile başlat; bu profil lazy Serena bridge'ini
-açık tutup diğer altı lokal stdio sunucuyu kapatır; agent, skill, uzak OpenAI docs, built-in memory, hook ve
+açık tutup Playwright dahil diğer beş lokal stdio sunucuyu kapatır; agent, skill, uzak OpenAI docs, built-in memory, hook ve
 app yüzeylerini korur. Profil ana config üzerine katmanlandığı için kapatmak
 sunucu tanımını silmez.
 
@@ -60,10 +71,14 @@ taşıyıcılarını bilerek kapatmak istediğinde kullan. Bu, azaltılmış bir
 varsayılan değil, isteğe bağlı bir yedek profildir: ajanları, skill'leri, shell
 izinlerini, browser izinlerini veya web arama ağını değiştirmez.
 
-Bir MCP'nin açık olması browser etkileşimi, memory write, indexleme veya sembol
+Bir MCP'nin açık olması browser etkileşimi, indexleme veya sembol
 düzenleme gibi bütün araçlarının sessizce onaylandığı anlamına gelmez.
 Template'ler incelenmiş okuma araçlarını sınırlar; daha geniş işlemleri onaya
-bırakır veya kapalı tutar.
+bırakır veya kapalı tutar. Claude Code aynı kararları katalogdan üretilen
+izin kuralları olarak alır: Codex'in onayladığı araç `allow`, onaya bağlı araç
+`ask`; codebase-memory'nin dört yönetim aracı ile Playwright'ın
+`browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
+araçları `deny` olur.
 
 Makinede `uvx` yoksa köprü yine başlar ve yalnızca ilk Serena aracı çağrısını
 kullanılamaz olarak bildirir. Bu yerel bir ön koşuldur; kurulumun geri kalanını
@@ -74,7 +89,6 @@ Serena'yı o zamana kadar kapatabilirsin.
 
 | MCP | Neye erişebilir? | Neden kapalı başlıyor? |
 | --- | --- | --- |
-| [`filesystem`](https://github.com/modelcontextprotocol/servers) | Yerel bir klasör ağacı | İzin verilen kökü bilinçli seçmek gerekir |
 | [`github`](https://docs.github.com/en/copilot) | Repo, issue ve PR bağlamı | GitHub/Copilot hesap onayı gerekir |
 | [`figma`](https://help.figma.com) | Özel tasarım dosyaları ve workspace bağlamı | Figma hesap onayı gerekir |
 | [`linear`](https://linear.app/docs) | Özel issue ve projeler | Linear workspace onayı gerekir |
@@ -90,19 +104,6 @@ Sadece işin gerçekten istediği connector'ı aç. Örneğin:
 enabled = true
 default_tools_approval_mode = "prompt"
 ```
-
-Filesystem için erişilecek yeri mümkün olan en dar workspace olarak belirle:
-
-```toml
-[mcp_servers.filesystem]
-enabled = true
-args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "<DAR_MUTLAK_PATH>"]
-default_tools_approval_mode = "prompt"
-```
-
-Connector'ı açmadan önce `<DAR_MUTLAK_PATH>` değerini değiştir. `.` işaretini
-kopyala-yapıştır varsayılanı olarak kullanma; Codex işleminin tüm çalışma
-klasörünü erişime açar.
 
 Supabase resmi hosted OAuth server'ını kullanır. Etkinleştirmeden önce exact
 proje referansını ekle, read-only modu koru ve yalnız görevin ihtiyaç duyduğu
@@ -135,11 +136,11 @@ listesiyle karşılaştırılarak doğrulandı.
 
 ## Koruduğum Sınır
 
-- Uzak dokümantasyon ile bir kütüphane-doc ve bir semantic-code yardımcısı
-  dengeli varsayılanı oluşturur; örtüşen lokal yardımcılar bir profil uzağındadır.
-- Browser etkileşimi, memory write, kod düzenleme ve graph indexleme onaylı ya
+- Uzak dokümantasyon, browser kanıtı ve bir semantic-code yardımcısı dengeli
+  Codex varsayılanını oluşturur; örtüşen lokal yardımcılar bir profil uzağındadır.
+- Browser etkileşimi, kod düzenleme ve graph indexleme onaylı ya
   da dar allowlist'li kalır.
-- Hesap, veritabanı, production ve geniş dosya sistemi erişimi; görev gerçekten
+- Hesap, veritabanı ve production erişimi; görev gerçekten
   isteyip kullanıcı onay verene kadar kapalıdır.
 - Credential'lar commit edilen config'e değil, environment variable'a veya
   connector'ın kendi OAuth akışına gider.

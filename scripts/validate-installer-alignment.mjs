@@ -752,11 +752,10 @@ function validatePortabilityContracts() {
 
   const windowsConfig = fs.readFileSync(path.join(root, "templates", "codex", "config.windows.toml"), "utf8");
   const unixConfig = fs.readFileSync(path.join(root, "templates", "codex", "config.unix.toml"), "utf8");
-  if (!/server-filesystem@[^\"]+",\s*"\."\]/.test(windowsConfig)) {
-    fail("Windows filesystem MCP must use the portable current-workspace root.");
-  }
-  if (!/server-filesystem@[^\"]+",\s*"\."\]/.test(unixConfig)) {
-    fail("Unix filesystem MCP must use the portable current-workspace root.");
+  // 1.3.0 dropped the memory and filesystem servers; Claude Code and Codex
+  // already read and write files natively.
+  if (/^\[mcp_servers\.(?:memory|filesystem)[\].]/m.test(`${windowsConfig}\n${unixConfig}`)) {
+    fail("Config templates must not ship the retired memory or filesystem MCP servers.");
   }
   if (/(?:%USERPROFILE%|\$HOME)[\\/]+Desktop/.test(`${windowsConfig}\n${unixConfig}`)) {
     fail("MCP templates must not assume a user Desktop directory.");

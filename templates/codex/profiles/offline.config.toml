@@ -13,11 +13,7 @@ enabled = false
 enabled = false
 [mcp_servers.serena]
 enabled = false
-[mcp_servers.memory]
-enabled = false
 [mcp_servers.codebase-memory]
-enabled = false
-[mcp_servers.filesystem]
 enabled = false
 [mcp_servers.github]
 enabled = false

@@ -7,8 +7,8 @@ import { spawnSync } from "node:child_process";
 const [profile, ...codexArgs] = process.argv.slice(2);
 const allowedProfiles = new Set(["full", "multi-session", "offline"]);
 const allowedMcpServers = new Set([
-  "openaiDeveloperDocs", "context7", "sequential-thinking", "playwright", "chrome-devtools", "serena", "memory", "codebase-memory",
-  "filesystem", "github", "figma", "linear", "notion", "sentry", "vercel", "supabase"
+  "openaiDeveloperDocs", "context7", "sequential-thinking", "playwright", "chrome-devtools", "serena", "codebase-memory",
+  "github", "figma", "linear", "notion", "sentry", "vercel", "supabase"
 ]);
 if (!profile || codexArgs.length === 0 || !allowedProfiles.has(profile)) {
   console.error("Usage: node codex-profile.mjs <profile-name> <codex arguments...>");

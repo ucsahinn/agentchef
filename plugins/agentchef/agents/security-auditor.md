@@ -1,7 +1,7 @@
 ---
 name: security-auditor
 description: "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths."
-tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7
+tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

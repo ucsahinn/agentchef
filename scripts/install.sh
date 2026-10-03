@@ -22,6 +22,7 @@ INTERACTIVE=0
 TARGET="codex"
 CLAUDE_HOME_DIR=""
 ADOPT_SKILL_LINKS=0
+ADOPT_MCP=0
 SKIP_CLAUDE_PLUGIN_REGISTER=0
 SKIPPED_EXISTING_COUNT=0
 
@@ -65,6 +66,7 @@ for arg in "$@"; do
       ;;
     --claude-home=*) CLAUDE_HOME_DIR="${arg#*=}" ;;
     --adopt-skill-links) ADOPT_SKILL_LINKS=1 ;;
+    --adopt-mcp) ADOPT_MCP=1 ;;
     --skip-claude-plugin-register) SKIP_CLAUDE_PLUGIN_REGISTER=1 ;;
     *)
       echo "Unknown argument: $arg" >&2
@@ -88,8 +90,8 @@ case "$TARGET" in
   claude) INSTALL_CLAUDE=1 ;;
   both) INSTALL_CODEX=1; INSTALL_CLAUDE=1 ;;
 esac
-if { [ "$ADOPT_SKILL_LINKS" -eq 1 ] || [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; } && [ "$INSTALL_CLAUDE" -ne 1 ]; then
-  echo "--adopt-skill-links and --skip-claude-plugin-register require --target=claude or --target=both." >&2
+if { [ "$ADOPT_SKILL_LINKS" -eq 1 ] || [ "$ADOPT_MCP" -eq 1 ] || [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; } && [ "$INSTALL_CLAUDE" -ne 1 ]; then
+  echo "--adopt-skill-links, --adopt-mcp, and --skip-claude-plugin-register require --target=claude or --target=both." >&2
   exit 2
 fi
 if [ "$REPAIR" -eq 1 ] && [ "$INSTALL_CLAUDE" -eq 1 ]; then
@@ -1092,6 +1094,7 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
   if [ "$NO_BACKUP" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--no-backup"); fi
   if [ "$UPDATE" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--refresh-managed"); fi
   if [ "$ADOPT_SKILL_LINKS" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--adopt-skill-links"); fi
+  if [ "$ADOPT_MCP" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--adopt-mcp"); fi
   if [ "$SKIP_CLAUDE_PLUGIN_REGISTER" -eq 1 ]; then CLAUDE_TARGET_ARGS+=("--skip-plugin-register"); fi
   if ! node "${CLAUDE_TARGET_ARGS[@]}"; then
     echo "Claude Code target install failed; the helper rolled back its own changes." >&2
@@ -1139,10 +1142,10 @@ const routingProfiles = routingCatalog.profiles.map((profile) => profile.id);
 
 for (const [label, names] of [
   ["Agents ready", agents],
-  // The Codex lines describe config.toml; the Claude target adds its own
-  // defaults to .claude.json (kept in step with claudeDefaultServers).
+  // The Codex lines describe config.toml; Claude Code gets its default
+  // servers from the agentchef plugin (catalog claudeSource: plugin).
   ...(installCodex ? [["MCP ready by default", readyMcps], ["MCP opt-in / disabled by default", optInMcps]] : []),
-  ...(installClaude ? [["Claude Code MCP added by default", ["context7", "serena"]]] : []),
+  ...(installClaude ? [["Claude Code MCP from the plugin", mcpCatalog.servers.filter((server) => server.claudeSource === "plugin").map((server) => server.name)]] : []),
   ["MCP setup notes", mcpSetupNotes],
   ["Local plugin skills", pluginSkills],
   ["Reviewed global skills", reviewedSkills],

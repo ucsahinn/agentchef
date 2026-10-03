@@ -49,9 +49,15 @@ dokümantasyon helper'ı gibi değil, güçlü connector boundary'leri gibi ele 
 
 Bu starter'ın kuralları:
 
-- OpenAI Docs ve lazy Serena semantic bridge varsayılan olarak açıktır.
-  Context7 ek bir Node süreci başlatabildiği ve ilk çalışmada network
-  gerektirebildiği için opt-in bir kütüphane dokümantasyonu yardımcısıdır.
+- Codex ana config'inde OpenAI Docs, Playwright ve lazy Serena semantic bridge
+  varsayılan olarak açıktır; `multi-session` ve `offline` profilleri
+  Playwright'ı kapalı tutar. Context7, Codex'te ek bir Node süreci
+  başlatabildiği ve ilk çalışmada network gerektirebildiği için opt-in bir
+  kütüphane dokümantasyonu yardımcısıdır.
+- Eski `memory` ve `filesystem` sunucuları artık katalogda yok. Codex
+  `-Update`, bunların config tablolarını yalnızca AgentChef'in yazdığıyla bayt
+  bayt aynıysa kaldırır (`templates/codex/retired-tables.json`); düzenlenmiş bir
+  tablo kalır ve raporlanır.
 - Serena köprüsü yöneticisini ve pinli Serena alt süreçlerini `127.0.0.1`'e
   bağlar ve ajana yalnızca incelenmiş okuma/gezinme araçlarını açar. Alt süreç
   kendi loopback portunda pool token'ı olmadan dinlediği için, AgentChef onu
@@ -76,8 +82,33 @@ Bu starter'ın kuralları:
   `default_tools_approval_mode = "prompt"` ile calisir; evidence, navigation ve
   read-only graph query tool'lari `enabled_tools` allowlist'iyle acilir.
   Browser request/response detail, browser interaction, symbol edit, graph
-  indexing, memory write, filesystem, account, database, production, deploy,
-  publish ve mutating tool'lar `"prompt"` kullanmali ya da disabled kalmalidir.
+  indexing, account, database, production, deploy, publish ve mutating
+  tool'lar `"prompt"` kullanmali ya da disabled kalmalidir.
+- Claude Code'da `context7`, `playwright` ve `serena` sunucularını `agentchef`
+  plugin'i getirir (`plugins/agentchef/mcp/claude.mcp.json`). npx sunucuları
+  `plugins/agentchef/scripts/mcp-launch.mjs` üzerinden başlar; bu başlatıcı tam
+  bir `ad@x.y.z` pini dışındaki her şeyi (aralık ya da etiket, registry'nin o
+  gün sunduğu sürümü başlatırdı) ve shell sözdizimi içeren her argümanı
+  reddeder; Windows'ta `NoDefaultCurrentDirectoryInExePath=1` ile
+  `cmd.exe /d /s /c npx.cmd` üzerinden çalışır. Serena, paylaşılan havuz
+  bridge'inin plugin içindeki kopyasıyla `--project-root ${CLAUDE_PROJECT_DIR}`
+  argümanıyla çalışır; böylece iki CLI proje başına tek bir salt-okunur
+  backend'i paylaşır.
+- Kullanıcı kapsamlı bir `.claude.json` girdisi aynı adlı plugin sunucusunun
+  önüne geçer. Bu yüzden kurucu, 1.0–1.2 kurulumunun oraya yazdığı `context7`
+  ve `serena` girdilerini kaldırır; ama yalnızca değer MCP makbuzundaki hash ile
+  hâlâ eşleşiyorsa. Aynı adlı başka her girdi kullanıcınındır: korunur ve
+  plugin'i gölgelediği bildirilir; onu yalnızca `-AdoptMcp` / `--adopt-mcp`,
+  `.claude.json` yedeklendikten sonra kaldırır.
+- Claude Code'da sunucu başına araç izin listesi yoktur; bu yüzden Codex
+  kararları katalogdan üretilen izin kurallarına dönüşür: `approve` → `allow`,
+  `prompt` → `ask`; codebase-memory'nin `delete_project`, `index_repository`,
+  `ingest_traces` ve `manage_adr` araçları ile Playwright'ın
+  `browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
+  araçları için `deny`. Claude Code tek bir plugin MCP sunucusunu ayrı
+  kapatamaz (yalnızca `--strict-mcp-config` tüm sunucuları kapatır); bu yüzden
+  Playwright her Claude Code oturumunda açıktır ve en riskli araçlarını bu deny
+  kuralları kapalı tutar.
 - Browser network listing yerel QA için approved olabilir. Playwright
   `browser_network_request` ve Chrome DevTools `get_network_request` gibi
   request/response detail tool'ları prompt-gated veya disabled kalır; header,
@@ -258,13 +289,16 @@ etkileşimli onayla seçilir. Claude tarafındaki işlemler yalnızca `CLAUDE_HO
 (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun içinde) ve
 paylaşılan `AGENTS_HOME/plugins` ağacına yazabilir; `${HOME}/.claude` gibi
 sabit bir hedef reddedilmeye devam eder. AgentChef'in sahibi olmadığı Claude
-Bir güncelleme, daha önce kendi yazdığı MCP girdisini yenileyebilir; ama yalnızca
-`.claude.json` içindeki değer makbuzdaki hash ile eşleşmeye devam ettiği sürece.
-Düzenlenmiş ya da AgentChef'in hiç yazmadığı bir girdi raporlanır ve olduğu gibi
-bırakılır. İzin kuralları varsayılan olarak
+1.3.0'dan beri kurucu `.claude.json` içine MCP girdisi yazmaz; yalnızca önceki
+bir sürümün yazdığı girdileri kaldırır, o da değer makbuzdaki hash ile
+eşleşmeye devam ettiği sürece. Düzenlenmiş ya da AgentChef'in hiç yazmadığı bir
+girdi raporlanır ve olduğu gibi bırakılır; `-AdoptMcp` / `--adopt-mcp`
+verilirse dosya önce yedeklenip girdi kaldırılır. İzin kuralları varsayılan olarak
 eklemelidir. Güncelleme, aynı sahiplik kanıtıyla, fragment artık istemediğinde daha
 önce eklediği bir kuralı geri de alabilir; böylece taşınan bir paket pini eski
-allow kuralını sonsuza kadar geride bırakmaz. `deny` listesi hiç değiştirilmez. AgentChef'in sahibi
+allow kuralını sonsuza kadar geride bırakmaz. `deny` kuralları (üretilen MCP
+yasakları) yalnızca eklenir, asla geri alınmaz; mevcut olanlar hiç
+değiştirilmez. AgentChef'in sahibi
 olmadığı Claude dosyaları (`settings.json`, `.claude.json`) eklemeli birleştirilir ve eklenen
 her girdi `~/.claude/agentchef/receipts/` altındaki yan makbuza yazılır;
 onarım, durum ve kaldırma yalnızca güncel değeri makbuzla eşleşen girdilere

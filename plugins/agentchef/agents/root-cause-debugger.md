@@ -1,7 +1,7 @@
 ---
 name: root-cause-debugger
 description: "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes."
-tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
 disallowedTools: NotebookEdit
 ---
 

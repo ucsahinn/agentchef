@@ -9,6 +9,7 @@ const fixtureCodexHome = path.resolve("tmp/nonexistent-codex-status-codex-home")
 const fixtureAgentsHome = path.resolve("tmp/nonexistent-codex-status-agents-home");
 const outputFixtureDir = path.resolve("tmp/validate-codex-status-output");
 const statusSource = fs.readFileSync("scripts/codex-status.mjs", "utf8");
+const mcpCatalogServerCount = JSON.parse(fs.readFileSync("catalog/mcp-servers.json", "utf8")).servers.length;
 
 function fail(message) {
   failures.push(message);
@@ -309,8 +310,8 @@ if (report) {
   if (!report.routingBoard?.boundary?.includes("graph-indexing")) {
     fail("codex status routing board must include graph-indexing in the approval boundary.");
   }
-  if (!report.mcpSetupBoard || report.mcpSetupBoard.serverCount !== 16) {
-    fail("codex status must include the MCP setup board with all 16 servers.");
+  if (!report.mcpSetupBoard || report.mcpSetupBoard.serverCount !== mcpCatalogServerCount) {
+    fail(`codex status must include the MCP setup board with every cataloged server (${mcpCatalogServerCount}).`);
   }
   if (!Array.isArray(report.mcpSetupBoard.servers) || !report.mcpSetupBoard.servers.some((server) => server.name === "supabase" && server.setupKind === "oauth" && String(server.setupHint || "").includes("project_ref") && String(server.setupHint || "").includes("read_only=true"))) {
     fail("codex status MCP setup board must explain project-scoped, read-only Supabase OAuth setup.");

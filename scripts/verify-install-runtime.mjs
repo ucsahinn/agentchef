@@ -15,7 +15,7 @@ import { managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { cacheContentDrift } from "./refresh-installed-plugin.mjs";
-import { buildClaudeMcpEntry, claudeDefaultServers } from "./lib/claude-mcp-merge.mjs";
+import { claudePluginServers } from "./lib/claude-mcp-merge.mjs";
 import { inspectClaudePluginCache, readRegisteredClaudePluginVersion } from "./lib/claude-plugin-cache.mjs";
 import {
   inspectPinnedSkillTarget,
@@ -976,23 +976,13 @@ function inspectShadowedClaudeMcp(warnings) {
   } catch {
     return [];
   }
-  const recordedPointers = new Set();
-  const receiptPath = path.join(options.claudeHome, "agentchef", "receipts", "claude-mcp-merge-receipt.json");
-  const mcpReceipt = fs.existsSync(receiptPath) ? readReceipt(receiptPath) : null;
-  for (const entry of mcpReceipt?.entries || []) if (entry.pointer) recordedPointers.add(entry.pointer);
-  const catalog = readJson("catalog/mcp-servers.json");
-  const shadowed = [];
-  for (const name of claudeDefaultServers) {
-    const current = document?.mcpServers?.[name];
-    if (!current || recordedPointers.has(`/mcpServers/${name}`)) continue;
-    const server = (catalog.servers || []).find((entry) => entry.name === name);
-    if (!server) continue;
-    const desired = buildClaudeMcpEntry(server, { platform: process.platform === "win32" ? "windows" : "unix", claudeHome: options.claudeHome });
-    if (JSON.stringify(current) === JSON.stringify(desired)) continue;
-    shadowed.push(name);
-  }
+  // Since 1.3.0 the plugin ships these servers, and a user-scope entry of the
+  // same name outranks the plugin's. The installer retires the entries it
+  // wrote itself; one still here belongs to the user.
+  const shadowed = claudePluginServers(readJson("catalog/mcp-servers.json"))
+    .filter((name) => document?.mcpServers && Object.hasOwn(document.mcpServers, name));
   if (shadowed.length > 0) {
-    warnings.push(`Claude MCP ${shadowed.join(", ")}: your own definition in ${redact(options.claudeJson)} is used instead of AgentChef's (AgentChef never overwrites a user entry). For serena this means each Claude session starts its own Serena rather than the shared read-only pool.`);
+    warnings.push(`Claude MCP ${shadowed.join(", ")}: your own definition in ${redact(options.claudeJson)} is used instead of the one the agentchef plugin ships (a user entry outranks a plugin's). Rerun the installer with -AdoptMcp / --adopt-mcp to retire it with a backup. For serena this means each Claude session starts its own Serena rather than the shared read-only pool.`);
   }
   return shadowed;
 }

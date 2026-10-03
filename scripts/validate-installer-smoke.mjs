@@ -185,7 +185,6 @@ function assertBundledMcpProfiles(codexHome, label) {
     "playwright",
     "chrome-devtools",
     "serena",
-    "memory",
     "codebase-memory"
   ];
   for (const [profileName, enabled] of [["full", true], ["multi-session", false]]) {
@@ -289,6 +288,9 @@ function assertInstalledBaseline(codexHome, agentsHome, label) {
     assertIncludes(config, "[mcp_servers.sequential-thinking]", `${label} config`);
     assertIncludes(config, "[mcp_servers.serena]", `${label} config`);
     assertIncludes(config, "[mcp_servers.codebase-memory]", `${label} config`);
+    if (/^\[mcp_servers\.(?:memory|filesystem)\]/m.test(config)) {
+      fail(`${label} config must not carry the retired memory or filesystem MCP servers.`);
+    }
     assertIncludes(config, "[mcp_servers.supabase]", `${label} config`);
     assertIncludes(config, 'url = "https://mcp.supabase.com/mcp?read_only=true&features=database,docs"', `${label} config`);
     if (/SUPABASE_DB_URL|@modelcontextprotocol\/server-postgres/.test(config)) {

@@ -18,8 +18,18 @@ const webTools = ["WebSearch", "WebFetch"];
 // name, limited to the pool's own read allowlist.
 const { TOOL_NAMES: serenaReadTools } = await import(new URL("../../../templates/codex/serena-pool.mjs", import.meta.url));
 
+// Since 1.3.0 the plugin ships context7, playwright, and Serena, and Claude
+// names a plugin server's tools mcp__plugin_<plugin>_<server>__<tool>. The
+// plain name is granted too, so a role keeps working while a user entry of the
+// same name shadows the plugin's (user scope outranks plugin scope).
+const mcpCatalog = JSON.parse(fs.readFileSync(new URL("../../../catalog/mcp-servers.json", import.meta.url), "utf8"));
+const pluginMcpServers = new Set(mcpCatalog.servers.filter((server) => server.claudeSource === "plugin").map((server) => server.name));
+
 function mcpGrants(server) {
-  return server === "serena" ? serenaReadTools.map((tool) => `mcp__serena__${tool}`) : [`mcp__${server}`];
+  const prefixes = pluginMcpServers.has(server) ? [`mcp__plugin_${identity.pluginName}_${server}`, `mcp__${server}`] : [`mcp__${server}`];
+  return server === "serena"
+    ? prefixes.flatMap((prefix) => serenaReadTools.map((tool) => `${prefix}__${tool}`))
+    : prefixes;
 }
 
 function parseRoleToml(text) {

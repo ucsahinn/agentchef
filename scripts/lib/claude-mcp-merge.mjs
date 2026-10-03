@@ -5,12 +5,22 @@
 // to what AgentChef recorded in its own receipt, the entry is AgentChef's to
 // update, so a catalog version bump can reach an installed home. An entry the
 // user has edited never matches that hash and is always left alone.
+//
+// Since 1.3.0 the default servers (catalog `claudeSource: "plugin"`) come from
+// the agentchef plugin instead. A user-scope entry of the same name outranks
+// the plugin's, so the user entries AgentChef wrote before are retired here:
+// only when the value still hashes to what the receipt records, or, for an
+// entry somebody else owns, only with `adopt`. Otherwise it is reported as
+// shadowing the plugin's server and kept.
 import path from "node:path";
 import { pointerFor, valueSha256 } from "./json-merge-receipt.mjs";
 
-// Claude Code has no per-target enable flag, so only the servers the catalog
-// marks as Claude defaults are written; everything else stays documented.
-export const claudeDefaultServers = Object.freeze(["context7", "serena"]);
+// Written to .claude.json by default. Empty since 1.3.0: the plugin ships them.
+export const claudeDefaultServers = Object.freeze([]);
+
+export function claudePluginServers(catalog) {
+  return (catalog.servers || []).filter((server) => server.claudeSource === "plugin").map((server) => server.name);
+}
 
 function npxLaunch(pkg, platform) {
   if (platform === "windows") {
@@ -36,13 +46,15 @@ export function buildClaudeMcpEntry(server, { platform, claudeHome }) {
   throw new Error(`Cannot build a Claude Code MCP entry for ${server.name}`);
 }
 
-export function planMcpMerge(current, catalog, { platform, claudeHome, serverNames = claudeDefaultServers, previousEntries = [], refresh = false }) {
+export function planMcpMerge(current, catalog, { platform, claudeHome, serverNames = claudeDefaultServers, previousEntries = [], refresh = false, adopt = false }) {
   const next = structuredClone(current);
   if (next.mcpServers !== undefined && next.mcpServers !== null && (typeof next.mcpServers !== "object" || Array.isArray(next.mcpServers))) {
     throw new Error(".claude.json mcpServers must be an object to merge into it");
   }
   const entries = [];
   const skipped = [];
+  const retired = [];
+  const shadowing = [];
   // What AgentChef wrote last time, by pointer, so ownership can be proven.
   const recorded = new Map(previousEntries
     .filter((entry) => entry.kind === "object-key")
@@ -78,5 +90,17 @@ export function planMcpMerge(current, catalog, { platform, claudeHome, serverNam
     next.mcpServers[name] = entry;
     entries.push({ kind: "object-key", pointer, valueSha256: valueSha256(entry), preview: name });
   }
-  return { next, entries, skipped, changed: entries.length > 0 };
+  for (const name of claudePluginServers(catalog)) {
+    if (serverNames.includes(name) || !next.mcpServers || !(name in next.mcpServers)) continue;
+    const pointer = pointerFor(["mcpServers", name]);
+    const currentSha = valueSha256(next.mcpServers[name]);
+    const owned = recorded.get(pointer) === currentSha;
+    if (owned || adopt) {
+      delete next.mcpServers[name];
+      retired.push({ kind: "object-key", pointer, valueSha256: currentSha, preview: `${name} (${owned ? "retired: the plugin ships it" : "adopted: the plugin ships it"})` });
+    } else {
+      shadowing.push({ name, pointer, reason: recorded.has(pointer) ? "user-modified" : "user-owned" });
+    }
+  }
+  return { next, entries, skipped, retired, shadowing, changed: entries.length > 0 || retired.length > 0 };
 }

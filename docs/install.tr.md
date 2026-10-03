@@ -38,7 +38,7 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 | Seçim | Yönetilen yüzey |
 | --- | --- |
 | `codex` (varsayılan) | `~/.codex` dosyaları, paylaşılan `~/.agents` plugin kaynağı ve marketplace'i (AgentChef'in tüm skill'leri plugin kaynağında durur), isteğe bağlı Git guard'ları |
-| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri ve `.claude.json` MCP girdileri, Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı |
+| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri (shell ve MCP araç kuralları), Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı; `context7`, `playwright` ve `serena` MCP sunucularını plugin getirir, 1.0–1.2 kurulumunun bunlar için `.claude.json` içine yazdığı girdiler kaldırılır |
 | `both` | yukarıdakilerin tamamı; paylaşılan işlemler bir kez koşar |
 
 `npm run chef -- --install`, `PATH` üzerindeki CLI'ları algılar, bir hedef
@@ -337,6 +337,14 @@ Kullanışlı parametreler:
   `--adopt-skill-links`): eski betikler çalışmaya devam etsin diye kabul
   edilir, ama 1.3.0'dan beri etkisizdir ve bir uyarı basar. Sahiplenilecek
   doğrudan skill hedefi ya da skill bağlantısı artık yoktur.
+- `-AdoptMcp` (Bash: `--adopt-mcp`; `-Target claude` ya da `both` ister):
+  plugin'in getirdiği bir sunucunun adıyla (`context7`, `playwright`, `serena`)
+  kendi eklediğin kullanıcı kapsamlı `~/.claude.json` girdisini kaldırır. Dosya
+  önce yedeklenir. Bu anahtar olmadan böyle bir girdi korunur, plugin
+  sunucusunu gölgelediği bildirilir ve onun yerine o kullanılır; çünkü
+  kullanıcı kapsamlı girdi plugin sunucusunun önüne geçer. AgentChef 1.0–1.2'nin
+  yazdığı girdiler (MCP makbuzundaki hash ile kanıtlanır) bu anahtar olmadan da
+  kaldırılır.
 - `-InstallSkills`: `catalog/skills.json` içinde `install: true` olan,
   `owner/repo` formatında doğrulanmış `package`, tam commit SHA ve eşleşen
   `skill` adı taşıyan kayıtları kurar. Installer exact commit'i fetch eder,
@@ -407,6 +415,9 @@ Kullanışlı flagler:
   `--adopt-evidence-research-skill`, `--adopt-direct-skill=<ad>` ve
   `--adopt-skill-links`: eski betikler için kabul edilir, 1.3.0'dan beri
   etkisizdir (bir uyarı basılır).
+- `--adopt-mcp`: `context7`, `playwright` ya da `serena` için kendi
+  `~/.claude.json` girdini yedekledikten sonra kaldırır; böylece plugin'in
+  sunucusu devreye girer (`--target=claude` ya da `--target=both` ister).
 - `--install-git-guards`: global Git ignore ve hook ayarlarına ayrıca opt-in.
 - `--adopt-git-ignore`, `--adopt-git-hook`,
   `--adopt-git-excludes-file` ve `--adopt-git-hooks-path`: tam olarak bir
@@ -432,8 +443,8 @@ Kullanışlı flagler:
 İki installer da en sonda capability board basar: specialist agent'lar,
 varsayılan hazır MCP server'ları, disabled/opt-in MCP connector'ları, bundled
 plugin skill'leri, reviewed global skill'ler, enterprise routing profile'lari
-ve MCP setup notlari. Bu notlar local tooling, OAuth authorization, filesystem
-path secimi, broad/destructive graph-indexing ve Supabase proje/read-only
+ve MCP setup notlari. Bu notlar local tooling, OAuth authorization,
+broad/destructive graph-indexing ve Supabase proje/read-only
 gereksinimlerini connector'a ihtiyac duymadan once gosterir. Account, database,
 production, genis filesystem ve broad/destructive graph-indexing connector'lari
 sen acikca enable edene kadar kapali kalir. Lokal codebase graph okumalari
@@ -578,6 +589,22 @@ claude mcp list
 Claude Code içinde `/context` AgentChef kural dosyasını memory dosyaları
 altında listeler, `/plugin` `agentchef` marketplace'ini gösterir ve
 `/skills` plugin skill'lerini birer kez listeler.
+
+Claude Code MCP sunucularını `.claude.json` üzerinden değil `agentchef`
+plugin'inden alır: plugin manifest'i `mcp/claude.mcp.json` dosyasını gösterir;
+bu dosya `context7` ve `playwright` sunucularını `scripts/mcp-launch.mjs`
+üzerinden (yalnızca tam sabitlenmiş sürüm; Windows'ta
+`NoDefaultCurrentDirectoryInExePath` ile `cmd.exe` ve `npx.cmd` üzerinden),
+Serena'yı ise paylaşılan havuz bridge'inin plugin içindeki kopyasıyla
+`--project-root ${CLAUDE_PROJECT_DIR}` argümanıyla başlatır. `/mcp` ve
+`claude mcp list` bunları plugin sunucusu olarak gösterir; araç adları
+`mcp__plugin_agentchef_<server>__<tool>` biçimindedir. Claude Code tek bir
+plugin sunucusunu ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm
+sunucuları kapatır); bu yüzden `playwright` her Claude Code oturumunda
+kullanılabilir, en riskli araçları ise üretilen izin kurallarında reddedilir.
+`verify-install-runtime --target claude` kendi `.claude.json` girdinin bir
+plugin sunucusunu gölgelediği uyarısını verirse kurucuyu `-AdoptMcp` /
+`--adopt-mcp` ile yeniden çalıştırarak girdiyi yedekli biçimde kaldır.
 
 ## Gerçek Kuruluma Dokunmadan Test
 

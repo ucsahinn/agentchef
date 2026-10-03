@@ -179,9 +179,9 @@ startup_timeout_sec = 20
 tool_timeout_sec = 120
 
 [mcp_servers.playwright]
-enabled = false
+enabled = true
 command = "npx"
-args = ["-y", "@playwright/mcp@0.0.82", "--isolated", "--block-service-workers"]
+args = ["-y", "@playwright/mcp@0.0.83", "--isolated", "--block-service-workers"]
 default_tools_approval_mode = "prompt"
 enabled_tools = ["browser_snapshot", "browser_take_screenshot", "browser_console_messages", "browser_network_requests", "browser_wait_for", "browser_resize", "browser_navigate", "browser_navigate_back", "browser_close", "browser_tabs"]
 startup_timeout_sec = 20
@@ -221,7 +221,7 @@ approval_mode = "prompt"
 [mcp_servers.chrome-devtools]
 enabled = false
 command = "npx"
-args = ["-y", "chrome-devtools-mcp@1.9.0", "--isolated", "--no-usage-statistics", "--redactNetworkHeaders", "--viewport", "1366x900"]
+args = ["-y", "chrome-devtools-mcp@1.10.1", "--isolated", "--no-usage-statistics", "--redactNetworkHeaders", "--viewport", "1366x900"]
 default_tools_approval_mode = "prompt"
 enabled_tools = ["list_pages", "select_page", "take_snapshot", "take_screenshot", "list_console_messages", "get_console_message", "list_network_requests", "wait_for", "resize_page", "navigate_page", "close_page"]
 startup_timeout_sec = 20
@@ -302,25 +302,6 @@ approval_mode = "approve"
 [mcp_servers.serena.tools.get_diagnostics_for_file]
 approval_mode = "approve"
 
-[mcp_servers.memory]
-enabled = false
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-memory@2026.8.31"]
-default_tools_approval_mode = "prompt"
-startup_timeout_sec = 20
-tool_timeout_sec = 60
-
-[mcp_servers.memory.tools.read_graph]
-approval_mode = "approve"
-
-[mcp_servers.memory.tools.search_nodes]
-approval_mode = "approve"
-
-[mcp_servers.memory.tools.open_nodes]
-approval_mode = "approve"
-
-# Optional graph-backed code intelligence for broad repo mapping and impact analysis.
-# Enable only when a task needs local repository indexing.
 [mcp_servers.codebase-memory]
 enabled = false
 command = "sh"
@@ -360,17 +341,6 @@ approval_mode = "approve"
 
 [mcp_servers.codebase-memory.tools.search_code]
 approval_mode = "approve"
-
-# Disabled by default because it grants local filesystem tool access.
-# "." resolves to the Codex process working directory. Replace it with a
-# narrower absolute workspace only when a task explicitly needs one.
-[mcp_servers.filesystem]
-enabled = false
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "."]
-default_tools_approval_mode = "prompt"
-startup_timeout_sec = 20
-tool_timeout_sec = 60
 
 [mcp_servers.github]
 enabled = false

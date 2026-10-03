@@ -177,6 +177,42 @@ onları yalnızca Codex ve Claude Code, plugin üzerinden görür.
 kaynağının içinde denetler; bir skill'in plugin dışında hâlâ doğrudan bir
 kopyası varsa başarısız olmadan uyarır ve göç komutunu gösterir.
 
+### 1.3.0'daki MCP değişiklikleri
+
+Kendiliğinden kaldırılanlar:
+
+- Codex: `memory` ve `filesystem` sunucuları artık katalogda yok. Güncelleme
+  (`-Update` / `--update`), `[mcp_servers.memory*]` ve
+  `[mcp_servers.filesystem]` tablolarını AgentChef'in yazdığıyla bayt bayt
+  aynıysa kaldırır (`templates/codex/retired-tables.json`). Playwright artık
+  Codex ana config'inde açıktır (pin `@playwright/mcp@0.0.83`); Chrome
+  DevTools `chrome-devtools-mcp@1.10.1` sürümüne geçer.
+- Claude Code: `context7`, `playwright` ve `serena` sunucularını artık
+  `agentchef` plugin'i getirir. 1.0–1.2 kurulumunun `~/.claude.json` içine
+  yazdığı `context7` ve `serena` girdileri, değerleri MCP makbuzundaki hash ile
+  hâlâ eşleşiyorsa kaldırılır; çünkü kullanıcı kapsamlı bir girdi plugin
+  sunucusunun önüne geçerdi. Plugin araçlarının adı
+  `mcp__plugin_agentchef_<server>__<tool>` biçimindedir; üretilen izin
+  kuralları ve ajan yetkileri bu adı kullanır.
+
+Yalnızca bildirilen, kendiliğinden asla kaldırılmayanlar:
+
+- Düzenlediğin bir Codex `memory` ya da `filesystem` tablosu `config.toml`
+  içinde kalır ve güncelleme onu adıyla bildirir. Artık istemiyorsan kendin
+  sil.
+- AgentChef'in yazmadığı ya da sonradan düzenlenmiş `context7`, `playwright`
+  veya `serena` adlı bir `.claude.json` girdisi kalır ve plugin sunucusunu
+  gölgelediği bildirilir (kurucu planı da
+  `verify-install-runtime --target claude` da bunu söyler). Kaldırmak için
+  Claude kurulumunu `-AdoptMcp` / `--adopt-mcp` ile yeniden çalıştır;
+  `.claude.json` önce yedeklenir.
+
+Claude Code tek bir plugin MCP sunucusunu ayrı kapatamaz (yalnızca
+`--strict-mcp-config` tüm sunucuları kapatır); bu yüzden yükseltmeden sonra
+Playwright her Claude Code oturumunda kullanılabilir. `browser_run_code_unsafe`,
+`browser_evaluate` ve `browser_file_upload` araçları izin kurallarında
+reddedilir.
+
 ## Güvenli Upgrade Akışı
 
 1. Repo güncellemesini çek.

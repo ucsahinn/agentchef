@@ -1,7 +1,7 @@
 ---
 name: frontend-verifier
 description: "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows."
-tools: Read, Grep, Glob, Edit, Write, Bash, mcp__context7, mcp__playwright, mcp__chrome-devtools
+tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7, mcp__plugin_agentchef_playwright, mcp__playwright, mcp__chrome-devtools
 disallowedTools: NotebookEdit
 ---
 

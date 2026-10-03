@@ -19,6 +19,7 @@ param(
   [ValidateSet("codex", "claude", "both")][string]$Target = "codex",
   [string]$ClaudeHome,
   [switch]$AdoptSkillLinks,
+  [switch]$AdoptMcp,
   [switch]$SkipClaudePluginRegister,
   [switch]$PlainOutput
 )
@@ -55,8 +56,8 @@ $InstallClaude = $Target -in @("claude", "both")
 if (-not $ClaudeHome) {
   $ClaudeHome = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME ".claude" }
 }
-if (($AdoptSkillLinks -or $SkipClaudePluginRegister) -and -not $InstallClaude) {
-  throw "-AdoptSkillLinks and -SkipClaudePluginRegister require -Target claude or both."
+if (($AdoptSkillLinks -or $AdoptMcp -or $SkipClaudePluginRegister) -and -not $InstallClaude) {
+  throw "-AdoptSkillLinks, -AdoptMcp, and -SkipClaudePluginRegister require -Target claude or both."
 }
 if ($Repair -and $InstallClaude) {
   throw "-Repair reconciles the Codex surface only; rerun the installer with -Target claude to repair Claude Code files (the Claude target is idempotent)."
@@ -1094,6 +1095,7 @@ if ($InstallClaude) {
   if ($NoBackup) { $ClaudeArgs += "--no-backup" }
   if ($Update) { $ClaudeArgs += "--refresh-managed" }
   if ($AdoptSkillLinks) { $ClaudeArgs += "--adopt-skill-links" }
+  if ($AdoptMcp) { $ClaudeArgs += "--adopt-mcp" }
   if ($SkipClaudePluginRegister) { $ClaudeArgs += "--skip-plugin-register" }
   & node @ClaudeArgs
   if ($LASTEXITCODE -ne 0) {
@@ -1116,14 +1118,14 @@ try {
   $ReviewedSkills = @($SkillCatalog.skills | Where-Object { $_.install -eq $true } | ForEach-Object { $_.name })
   $RoutingProfiles = @($RoutingCatalog.profiles | ForEach-Object { $_.id })
   Write-NameList -Label "Agents ready" -Names $AgentNames -Color "White"
-  # The Codex lines describe config.toml; the Claude target adds its own
-  # defaults to .claude.json (kept in step with claudeDefaultServers).
+  # The Codex lines describe config.toml; Claude Code gets its default
+  # servers from the agentchef plugin (catalog claudeSource: plugin).
   if ($InstallCodex) {
     Write-NameList -Label "MCP ready by default" -Names $McpReady -Color "White"
     Write-NameList -Label "MCP opt-in / disabled by default" -Names $McpOptIn -Color "DarkYellow"
   }
   if ($InstallClaude) {
-    Write-NameList -Label "Claude Code MCP added by default" -Names @("context7", "serena") -Color "White"
+    Write-NameList -Label "Claude Code MCP from the plugin" -Names @($McpCatalog.servers | Where-Object { $_.claudeSource -eq "plugin" } | ForEach-Object { $_.name }) -Color "White"
   }
   Write-NameList -Label "MCP setup notes" -Names $McpSetupNotes -Color "DarkYellow"
   Write-NameList -Label "Local plugin skills" -Names $PluginSkills -Color "White"

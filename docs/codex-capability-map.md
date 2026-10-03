@@ -23,8 +23,8 @@ Official references:
 | `config.toml` | Models, sandbox, approvals, MCP, features, profiles | Conservative workspace-write sandbox and on-request approvals | `npm run validate:mcp` |
 | Rules | Narrow command approval defaults | Verification commands only; destructive/publish actions stay gated | `npm run validate:content` |
 | Skills | Reusable workflows with progressive disclosure | Commit-pinned curated installs plus ten local plugin skills, including GPT Pro context/handoff, authorized reconstruction, evidence-backed SEO, and traceable deep research | `npm run verify:skills` |
-| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with ten skills and one exact, trust-gated SessionEnd process hook; no bundled MCP/apps | `npm run validate` |
-| MCP/connectors | Live docs, browser, code navigation, external systems | Two balanced defaults; Context7, other local stdio helpers, and authenticated connectors disabled until needed | `npm run validate:mcp` |
+| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with ten skills and one exact, trust-gated SessionEnd process hook; the Codex manifest bundles no MCP/apps (the Claude Code manifest ships `context7`, `playwright`, and `serena`) | `npm run validate` |
+| MCP/connectors | Live docs, browser, code navigation, external systems | Three balanced defaults (OpenAI Docs, Playwright, Serena); Context7, other local stdio helpers, and authenticated connectors disabled until needed | `npm run validate:mcp` |
 | Subagents | Delegated evidence-heavy specialist work | Twenty-one reviewed specialist agents with sandboxed role files | `npm run validate:agents` |
 | Doctor/status | No-write health and drift summary | Repo-only by default; optional global existence checks | `npm run codex:doctor` |
 
@@ -168,7 +168,7 @@ capability boundaries. This starter follows four rules:
 
 - Prefer official or high-signal servers.
 - Pin local package versions or git source refs.
-- Keep account, filesystem, database, production, and billing-adjacent
+- Keep account, database, production, and billing-adjacent
   connectors disabled until a task needs them.
 - Use prompt-based approval and narrow tool exposure for anything that can
   access private data or take action.
@@ -191,7 +191,8 @@ This repo follows that split:
   triplet, explicit-only Fetch, evidence-backed `$agentchef:seo`, traceable
   `$agentchef:evidence-research`, and context budget planning.
 - One exact `SessionEnd` process-hygiene hook is separately reviewed and
-  trust-gated. Other plugin hooks, MCP servers, and apps remain absent.
+  trust-gated. Other plugin hooks, MCP servers, and apps remain absent from the
+  Codex manifest; Codex MCP servers live in `config.toml`.
 
 Run the local diagram renderer directly when you need `/diagram`-style output:
 
