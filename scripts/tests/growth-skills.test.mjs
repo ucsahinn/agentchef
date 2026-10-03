@@ -1326,3 +1326,47 @@ test("complete evidence research reports cannot retain unresolved gaps", () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test("pinned installer accepts a plugin skills root spelled differently from AGENTS_HOME", {
+  skip: process.platform !== "win32" && "8.3 short names exist only on Windows"
+}, (t) => {
+  // CI hands AGENTS_HOME over as a Windows 8.3 short path while PowerShell
+  // passes the long one; both name the same folder.
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-pinned-skills-root-"));
+  try {
+    const fixture = pinnedSourceFixture(tempRoot);
+    const longAgentsHome = path.join(tempRoot, "agents-home-with-a-long-name");
+    fs.mkdirSync(longAgentsHome, { recursive: true });
+    const shortName = spawnSync("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${longAgentsHome.replace(/'/g, "''")}').ShortPath`
+    ], { encoding: "utf8", windowsHide: true, timeout: 30000 });
+    const shortAgentsHome = String(shortName.stdout || "").trim();
+    if (!shortAgentsHome || shortAgentsHome.toLowerCase() === longAgentsHome.toLowerCase()) {
+      t.skip("8.3 short names are disabled on this volume");
+      return;
+    }
+    const skillsRoot = path.join(longAgentsHome, "plugins", "sources", "agentchef", "skills");
+    const installed = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome: shortAgentsHome,
+      extraArgs: ["--skills-root", skillsRoot, "--json"]
+    });
+    assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+    assert.equal(fs.existsSync(path.join(skillsRoot, "example-skill", "SKILL.md")), true);
+
+    const outside = runPinnedInstaller({
+      tempRoot,
+      ...fixture,
+      agentsHome: shortAgentsHome,
+      extraArgs: ["--skills-root", path.join(tempRoot, "elsewhere", "skills"), "--json"]
+    });
+    assert.notEqual(outside.status, 0, "a skills root outside AGENTS_HOME stays refused");
+    assert.match(`${outside.stdout}${outside.stderr}`, /outside configured homes/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

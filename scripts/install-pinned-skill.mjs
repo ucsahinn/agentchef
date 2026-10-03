@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
+import { assertManagedTargetPath, canonicalizeWithMissingTail, isPathInside } from "./lib/managed-path-safety.mjs";
 import {
   activatePinnedSkill,
   compensatePinnedSkillInstall
@@ -322,7 +322,17 @@ try {
     // The installers place pinned skills inside the AgentChef plugin's
     // marketplace source, so both CLIs list them with the bundled ones. The
     // root must stay inside AGENTS_HOME.
-    const skillsRoot = options.skillsRoot ? path.resolve(options.skillsRoot) : path.join(agentsHome, "skills");
+    // The two paths can name one folder in different spellings (a Windows
+    // 8.3 short name in AGENTS_HOME, the long name from PowerShell), so the
+    // root is re-expressed under AGENTS_HOME through their canonical forms.
+    let skillsRoot = path.join(agentsHome, "skills");
+    if (options.skillsRoot) {
+      const canonicalHome = canonicalizeWithMissingTail(agentsHome);
+      const canonicalRoot = canonicalizeWithMissingTail(options.skillsRoot);
+      skillsRoot = isPathInside(canonicalRoot, canonicalHome)
+        ? path.join(agentsHome, path.relative(canonicalHome, canonicalRoot))
+        : path.resolve(options.skillsRoot);
+    }
     const target = path.join(skillsRoot, options.skill);
     const backupRoot = path.join(
       codexHome,
