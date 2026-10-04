@@ -33,8 +33,8 @@ hesapladığı için ikisi birbirinden farklı çıkamaz.
 | Koordinatör roller | 7 | `catalog/agents.json`, `coordinators` |
 | Toplam agent rolü | 28 | uzmanlar + koordinatörler |
 | MCP sunucuları | 14 | `catalog/mcp-servers.json` |
-| Codex'te varsayılan açık MCP sunucuları | 3 | `defaultEnabled: true` (`openaiDeveloperDocs`, `playwright`, `serena`) |
-| Claude Code plugin'inin getirdiği MCP sunucuları | 3 | `claudeSource: "plugin"` (`context7`, `playwright`, `serena`) |
+| Codex'te varsayılan açık MCP sunucuları | 2 | `defaultEnabled: true` (`openaiDeveloperDocs`, `serena`) |
+| Claude Code plugin'inin getirdiği MCP sunucuları | 2 | `claudeSource: "plugin"` (`context7`, `serena`); Playwright ve Chrome DevTools proje başına eklenir |
 
 ## Her Bileşen Nereden Gelir
 
@@ -45,7 +45,7 @@ Home dizinleri `CODEX_HOME`, `AGENTS_HOME` ve `CLAUDE_CONFIG_DIR` değerlerinden
 | --- | --- | --- |
 | Skill'ler | plugin kaynağı, `~/.agents/plugins/sources/agentchef/skills/<name>` | aynı plugin kaynağı, Claude Code'un plugin cache'inden yüklenir |
 | Agent rolleri | `~/.codex/agents/<name>.toml` | plugin'in `agents/<name>.md` dosyaları |
-| MCP sunucuları | `~/.codex/config.toml` içinde `[mcp_servers.<name>]`; üçü açık, diğerleri mevcut ama kapalı | plugin'in `mcp/claude.mcp.json` dosyası üçünü getirir; diğer katalog sunucuları yalnız sen `~/.claude.json` içine eklersen yapılandırılmış olur |
+| MCP sunucuları | `~/.codex/config.toml` içinde `[mcp_servers.<name>]`; ikisi açık, diğerleri mevcut ama kapalı | plugin'in `mcp/claude.mcp.json` dosyası ikisini getirir; diğer katalog sunucuları yalnız sen `~/.claude.json` içine eklersen yapılandırılmış olur |
 
 Envanter ayrıca bir kopyanın plugin'in önüne geçebileceği yerleri de tarar:
 `~/.agents/skills`, `~/.codex/skills`, `~/.claude/skills`, `~/.claude/agents`

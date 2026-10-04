@@ -109,3 +109,16 @@ test("a missing harness role makes the inventory incomplete", () => {
     fs.rmSync(home, { recursive: true, force: true });
   }
 });
+
+test("the harness map's count table matches the counts computed from the catalog", () => {
+  const report = buildHarnessInventory({ repoRoot: root, homes: { codexHome: "-", agentsHome: "-", claudeHome: "-", claudeJson: "-" }, targets: ["codex"] });
+  const e = report.expected;
+  const expectedRows = [
+    e.bundledSkills, e.pinnedSkills, e.skills, e.specialists, e.coordinators, e.agents, e.mcp, e.codexMcpDefault, e.claudePluginMcp
+  ];
+  for (const file of ["harness-map.md", "harness-map.tr.md"]) {
+    const text = fs.readFileSync(path.join(root, "docs", file), "utf8");
+    const counts = [...text.matchAll(/^\|[^|\n]+\|\s*(\d+)\s*\|/gm)].map((match) => Number(match[1]));
+    assert.deepEqual(counts, expectedRows, `${file} counts must follow the catalog`);
+  }
+});

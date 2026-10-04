@@ -32,8 +32,8 @@ from the same files, so they cannot disagree.
 | Coordinator roles | 7 | `catalog/agents.json`, `coordinators` |
 | Agent roles in total | 28 | specialists + coordinators |
 | MCP servers | 14 | `catalog/mcp-servers.json` |
-| Codex default-enabled MCP servers | 3 | `defaultEnabled: true` (`openaiDeveloperDocs`, `playwright`, `serena`) |
-| MCP servers the Claude Code plugin ships | 3 | `claudeSource: "plugin"` (`context7`, `playwright`, `serena`) |
+| Codex default-enabled MCP servers | 2 | `defaultEnabled: true` (`openaiDeveloperDocs`, `serena`) |
+| MCP servers the Claude Code plugin ships | 2 | `claudeSource: "plugin"` (`context7`, `serena`); Playwright and Chrome DevTools are added per project |
 
 ## Where Each Component Comes From
 
@@ -44,7 +44,7 @@ Homes resolve from `CODEX_HOME`, `AGENTS_HOME`, and `CLAUDE_CONFIG_DIR`, with
 | --- | --- | --- |
 | Skills | the plugin source, `~/.agents/plugins/sources/agentchef/skills/<name>` | the same plugin source, loaded from Claude Code's plugin cache |
 | Agent roles | `~/.codex/agents/<name>.toml` | the plugin's `agents/<name>.md` |
-| MCP servers | `[mcp_servers.<name>]` in `~/.codex/config.toml`; three enabled, the rest present but disabled | the plugin's `mcp/claude.mcp.json` ships three; the other catalog servers are configured only if you add them to `~/.claude.json` |
+| MCP servers | `[mcp_servers.<name>]` in `~/.codex/config.toml`; two enabled, the rest present but disabled | the plugin's `mcp/claude.mcp.json` ships two; the other catalog servers are configured only if you add them to `~/.claude.json` |
 
 The inventory also scans the places where a copy can outrank the plugin:
 `~/.agents/skills`, `~/.codex/skills`, `~/.claude/skills`, `~/.claude/agents`,
