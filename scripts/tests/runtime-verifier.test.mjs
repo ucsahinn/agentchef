@@ -460,6 +460,83 @@ test("--redact-paths also redacts the paths inside error messages", () => {
   }
 });
 
+function writeSkillCopy(skillDir, marker = null) {
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, "SKILL.md"), "---\nname: fixture\ndescription: fixture copy\n---\n", "utf8");
+  if (marker) fs.writeFileSync(path.join(skillDir, marker), JSON.stringify({ fixture: true }), "utf8");
+}
+
+test("a pinned skill in the plugin mirror is an extra only when it carries no provenance marker", () => {
+  // 1.3.1: the installer writes the pinned skills (catalog install:true) into
+  // the plugin's marketplace source with a provenance marker; 1.3.0 reported
+  // every one of their files as an extra local file (hundreds of warnings live).
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-pinned-mirror-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    installFixture(codexHome, agentsHome);
+    const mirrorSkills = path.join(agentsHome, "plugins", "sources", "agentchef", "skills");
+    writeSkillCopy(path.join(mirrorSkills, "systematic-debugging"), ".agentchef-source.json");
+    writeSkillCopy(path.join(mirrorSkills, "test-driven-development"), ".codex-chef-source.json");
+    writeSkillCopy(path.join(mirrorSkills, "dependency-upgrade"));
+    writeSkillCopy(path.join(mirrorSkills, "not-a-catalog-skill"), ".agentchef-source.json");
+
+    const result = verifyOffline(codexHome, agentsHome);
+    const report = JSON.parse(result.stdout);
+    const extras = report.warnings
+      .filter((warning) => warning.startsWith("Installed managed plugin mirror preserves an extra local file"))
+      .map((warning) => warning.replaceAll("\\", "/"));
+    const extraFor = (name) => extras.filter((warning) => warning.includes(`/skills/${name}/`));
+    assert.deepEqual(extraFor("systematic-debugging"), [], "a pinned skill with the current source marker is not an extra");
+    assert.deepEqual(extraFor("test-driven-development"), [], "a pinned skill with the legacy source marker is not an extra");
+    assert.equal(extraFor("dependency-upgrade").length, 1, "a pinned skill without a marker is still an extra");
+    assert.equal(extraFor("not-a-catalog-skill").length, 2, "a marker does not exempt a skill that is not pinned");
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("a direct harness skill copy points to the migration only when AgentChef can prove it wrote it", () => {
+  // 1.3.1: the migration retires only a marked copy, so an unmarked copy is the
+  // user's; 1.3.0 sent both to --migrate-identity.
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-runtime-direct-copy-"));
+  try {
+    const codexHome = path.join(fixtureRoot, ".codex");
+    const agentsHome = path.join(fixtureRoot, ".agents");
+    installFixture(codexHome, agentsHome);
+    writeSkillCopy(path.join(codexHome, "skills", "seo"));
+    writeSkillCopy(path.join(agentsHome, "skills", "fetch"));
+    writeSkillCopy(path.join(codexHome, "skills", "gptpro"), ".agentchef-managed.json");
+    writeSkillCopy(path.join(agentsHome, "skills", "agent-brief"), ".codex-chef-managed.json");
+    writeSkillCopy(path.join(agentsHome, "skills", "evidence-research"), ".agentchef-source.json");
+    writeSkillCopy(path.join(codexHome, "skills", "context-budget-planner"), ".codex-chef-source.json");
+
+    const result = run(process.execPath, [
+      "scripts/verify-install-runtime.mjs",
+      "--json",
+      "--offline",
+      "--expect-skills",
+      "--codex-home", codexHome,
+      "--agents-home", agentsHome
+    ]);
+    const warnings = JSON.parse(result.stdout).warnings;
+    const about = (name) => warnings.filter((warning) => warning.startsWith(`Harness skill ${name} also has `));
+    for (const name of ["seo", "fetch"]) {
+      const found = about(name);
+      assert.equal(found.length, 1, `${name}: one direct-copy warning`);
+      assert.match(found[0], /also has your own copy at .*AgentChef does not remove it/, `${name}: an unmarked copy is the user's`);
+      assert.doesNotMatch(found[0], /--migrate-identity/, `${name}: an unmarked copy is not sent to the migration`);
+    }
+    for (const name of ["gptpro", "agent-brief", "evidence-research", "context-budget-planner"]) {
+      const found = about(name);
+      assert.equal(found.length, 1, `${name}: one direct-copy warning`);
+      assert.match(found[0], /also has a direct copy at .*run npm run chef -- --migrate-identity --target both --apply/, `${name}: a marked copy is sent to the migration`);
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test("an enabled Supabase connector without a project_ref fails verification", () => {
   // project_ref is what narrows the connector to one project; the template
   // only asks for it in a comment.
