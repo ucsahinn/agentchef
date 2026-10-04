@@ -131,7 +131,7 @@ read `$agentchef:<skill>` in Codex, `/agentchef:<skill>` in Claude Code (bare
 `/<skill>` also works there when no other command has that name), and
 `agentchef:<role>` for a role.
 
-Every AgentChef skill now reaches both CLIs only as a plugin skill. The ten
+Every AgentChef skill now reaches both CLIs only as a plugin skill. The eleven
 bundled skills ship inside the plugin, and the eighteen pinned upstream skills
 (`-All`, `-InstallSkills`, `--all`, `--install-skills`) are written into the
 same plugin source, `AGENTS_HOME/plugins/sources/agentchef/skills/<name>`,

@@ -56,6 +56,14 @@
       "reason": "Bundled local plugin skill for safe AgentChef repo maintenance, catalog alignment, installer safety, docs updates, and verification gates, with direct invocation for routing profiles."
     },
     {
+      "name": "agent-brief",
+      "category": "agent-coordination",
+      "install": false,
+      "directInstall": true,
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/agent-brief",
+      "reason": "Bundled local plugin skill for the fixed task brief and handoff contract between agents, checked by coordination-board brief-check."
+    },
+    {
       "name": "context-budget-planner",
       "category": "context-engineering",
       "install": false,

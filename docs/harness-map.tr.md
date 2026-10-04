@@ -26,9 +26,9 @@ hesapladığı için ikisi birbirinden farklı çıkamaz.
 
 | Bileşen | Sayı | Katalog kaynağı |
 | --- | --- | --- |
-| Bundled skill'ler | 10 | `catalog/skills.json`, `directInstall: true` |
+| Bundled skill'ler | 11 | `catalog/skills.json`, `directInstall: true` |
 | Sabitlenmiş (pinned) upstream skill'ler | 18 | `catalog/skills.json`, `install: true` |
-| Toplam harness skill'i | 28 | bundled + pinned |
+| Toplam harness skill'i | 29 | bundled + pinned |
 | Uzman roller | 21 | `catalog/agents.json`, `agents` |
 | Koordinatör roller | 7 | `catalog/agents.json`, `coordinators` |
 | Toplam agent rolü | 28 | uzmanlar + koordinatörler |
@@ -103,9 +103,9 @@ github            mcp    catalog              disabled           user-added
 local-notes       mcp    user                 user (enabled)     -
 serena            mcp    catalog + plugin     enabled            shadowed
 
-Harness: 28 skills (10 bundled + 18 pinned) · 28 agent roles (21 specialists + 7 coordinators) · 14 MCP servers (Codex default 3, Claude plugin 3)
-codex: 27/28 skills · 28/28 roles · 14/14 MCP configured
-claude: 27/28 skills · 28/28 roles · 4/14 MCP configured · cache differs from source in 2 file(s)
+Harness: 29 skills (11 bundled + 18 pinned) · 28 agent roles (21 specialists + 7 coordinators) · 14 MCP servers (Codex default 3, Claude plugin 3)
+codex: 28/29 skills · 28/28 roles · 14/14 MCP configured
+claude: 28/29 skills · 28/28 roles · 4/14 MCP configured · cache differs from source in 2 file(s)
 Issues: missing 2, shadowed 2, migration-pending 1, broken-link 1, drifted 2
 ```
 

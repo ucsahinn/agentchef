@@ -25,9 +25,9 @@ from the same files, so they cannot disagree.
 
 | Component | Count | Catalog source |
 | --- | --- | --- |
-| Bundled skills | 10 | `catalog/skills.json`, `directInstall: true` |
+| Bundled skills | 11 | `catalog/skills.json`, `directInstall: true` |
 | Pinned upstream skills | 18 | `catalog/skills.json`, `install: true` |
-| Harness skills in total | 28 | bundled + pinned |
+| Harness skills in total | 29 | bundled + pinned |
 | Specialist roles | 21 | `catalog/agents.json`, `agents` |
 | Coordinator roles | 7 | `catalog/agents.json`, `coordinators` |
 | Agent roles in total | 28 | specialists + coordinators |
@@ -102,9 +102,9 @@ github            mcp    catalog              disabled           user-added
 local-notes       mcp    user                 user (enabled)     -
 serena            mcp    catalog + plugin     enabled            shadowed
 
-Harness: 28 skills (10 bundled + 18 pinned) · 28 agent roles (21 specialists + 7 coordinators) · 14 MCP servers (Codex default 3, Claude plugin 3)
-codex: 27/28 skills · 28/28 roles · 14/14 MCP configured
-claude: 27/28 skills · 28/28 roles · 4/14 MCP configured · cache differs from source in 2 file(s)
+Harness: 29 skills (11 bundled + 18 pinned) · 28 agent roles (21 specialists + 7 coordinators) · 14 MCP servers (Codex default 3, Claude plugin 3)
+codex: 28/29 skills · 28/28 roles · 14/14 MCP configured
+claude: 28/29 skills · 28/28 roles · 4/14 MCP configured · cache differs from source in 2 file(s)
 Issues: missing 2, shadowed 2, migration-pending 1, broken-link 1, drifted 2
 ```
 

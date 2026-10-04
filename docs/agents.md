@@ -51,6 +51,11 @@ The routing path is:
 Cross-domain work returns a compact handoff to the main session, which decides
 whether another coordinator is needed.
 
+The bundled `agent-brief` skill (`$agentchef:agent-brief` in Codex,
+`/agentchef:agent-brief` in Claude Code) fixes that exchange: the brief a
+worker receives and the handoff it returns (Outcome, Evidence, Changed scope,
+Risk, Open questions, Next verification).
+
 The detailed coordination-board contract is in
 [Skills, Plugins, And Specialist Agents](skills-and-agents.md): work begins
 only with an explicit user-created board task; pane selection, role selection,

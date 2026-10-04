@@ -686,8 +686,10 @@ if (fs.existsSync(bundledSkillsDir)) {
     .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(bundledSkillsDir, entry.name, "SKILL.md")))
     .map((entry) => entry.name)
     .sort();
-  if (bundledSkills.length !== 10) {
-    failures.push(`Public bundled workflow contract expects 10 skills; found ${bundledSkills.length}.`);
+  // The bundled set is whatever the catalog marks directInstall.
+  const catalogBundled = JSON.parse(fs.readFileSync(path.join(root, "catalog", "skills.json"), "utf8")).skills.filter((skill) => skill.directInstall === true).length;
+  if (bundledSkills.length !== catalogBundled) {
+    failures.push(`Public bundled workflow contract expects ${catalogBundled} skills (catalog directInstall); found ${bundledSkills.length}.`);
   }
   for (const doc of ["docs/skills.md", "docs/skills.tr.md"]) {
     if (!fs.existsSync(path.join(root, doc))) continue;

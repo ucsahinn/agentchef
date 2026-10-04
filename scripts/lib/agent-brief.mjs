@@ -40,11 +40,13 @@ function escapeRegExp(text) {
 
 // A field starts on a line that is the label, optionally as a Markdown
 // heading, list item, or bold text, followed by ":" or the end of the line.
+// A bilingual label ("Kapsam / Yazma kapsamı", "Goal / Hedef") counts as its
+// first label.
 function labelPattern(fields) {
   const labels = fields.flatMap((field) => field.labels.map((label) => ({ key: field.key, label })))
     .sort((left, right) => right.label.length - left.label.length);
   const alternatives = labels.map(({ label }) => escapeRegExp(label)).join("|");
-  const pattern = new RegExp(`^\\s*(?:#{1,6}\\s*|[-*]\\s+)?(?:\\*\\*)?(${alternatives})(?:\\*\\*)?\\s*(?:[:：]\\s*(?:\\*\\*)?\\s*(.*))?$`, "iu");
+  const pattern = new RegExp(`^\\s*(?:#{1,6}\\s*|[-*]\\s+)?(?:\\*\\*)?(${alternatives})(?:\\s*/\\s*(?:${alternatives}))*(?:\\*\\*)?\\s*(?:[:：]\\s*(?:\\*\\*)?\\s*(.*))?$`, "iu");
   const keyFor = new Map(labels.map(({ key, label }) => [label.toLocaleLowerCase("tr"), key]));
   return { pattern, keyFor };
 }

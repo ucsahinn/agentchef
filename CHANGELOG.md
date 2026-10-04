@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Agent brief and handoff contract:
+  - New bundled skill `agent-brief` (`$agentchef:agent-brief` in Codex,
+    `/agentchef:agent-brief` in Claude Code) writes the fixed brief an
+    orchestrator hands to another agent (Goal, Evidence, Write scope,
+    Boundaries, Done when, Return format, the user's words verbatim) and
+    checks the handoff that comes back (Outcome, Evidence, Changed scope,
+    Risk, Open questions, Next verification). The bundled set is now 11
+    skills and the harness 29 (11 bundled + 18 pinned).
+  - The working agreement (`templates/shared/working-agreement.md`, rendered
+    into the Codex `AGENTS.md` and the Claude rule) gains explicit
+    "Brief fields" and "Handoff fields" bullets.
+  - `coordination-board brief-check` accepts bilingual labels such as
+    `Kapsam / Yazma kapsamı`.
 - Harness inventory:
   - `npm run chef -- --inventory [--target codex|claude|both] [--json]
     [--details]` is a read-only map of every skill, agent role, and MCP server

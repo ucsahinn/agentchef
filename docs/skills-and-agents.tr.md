@@ -75,7 +75,9 @@ yazabileceğini de kaydeder; iş yalnızca eksiksiz bir brief ile başlar:
   ya da Türkçe etiketli yedi alandan oluşur: Hedef, Kanıt, Yazma kapsamı,
   Sınırlar, Bitti kriteri, Dönüş biçimi ve kullanıcının özgün cümlesi
   (birebir). `brief-check --brief-file brief.md` brief'i göndermeden önce,
-  pano gerekmeden denetler.
+  pano gerekmeden denetler. Bundled `agent-brief` skill'i bu brief'i yazar
+  ve geri dönen handoff'u denetler; `Kapsam / Yazma kapsamı` gibi iki dilli
+  etiketler de ayrıştırılır.
 - İşe başlamak (`in_progress`) eksiksiz brief ister; yazma kapsamı olan görev
   ayrıca canlı bir kira ister: `renew-lease --task <id> --minutes 90` (en çok
   24 saat). Diğer ajanlar kapsamı ve kirayı okuyarak neyin alındığını görür.

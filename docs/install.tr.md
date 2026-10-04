@@ -139,7 +139,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair modu, zaten Codex setup'i olan makineler icindir. AgentChef'in
 yonettigi global guidance, rule, agent/profile dosyalari, bundled plugin,
-plugin'in on bundled skill'i, `serena-pool.mjs`, eksik config bloklari ve local plugin
+plugin'in on bir bundled skill'i, `serena-pool.mjs`, eksik config bloklari ve local plugin
 marketplace kaydi icin once no-write plan verir, sonra istenirse backup alarak
 onarir. Launcher, Serena köprüsü, üretilen/kopyalanan profiller, sahiplik
 işaretleri, marketplace ve seçilen diğer tüm kaynaklarla hedefler ilk yönetilen
@@ -316,7 +316,7 @@ Kullanışlı parametreler:
   profilleri, kuralları ve doğrulanmış public/first-party skill'leri kurar.
   Global Git config'i değiştirmez.
 - 1.3.0'dan beri AgentChef'in her skill'i iki CLI'ya da yalnızca plugin
-  skill'i olarak ulaşır. On bundled skill plugin'in içinde gelir ve
+  skill'i olarak ulaşır. On bir bundled skill plugin'in içinde gelir ve
   `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` marketplace kaynağına
   kurulur. Installer bunları artık `AGENTS_HOME/skills` altına kopyalamaz ve
   `~/.claude/skills` altına hiçbir bağlantı kurmaz; böylece her skill CLI

@@ -14,7 +14,7 @@ ayrı gösterir.
 
 Resmi Codex kaynağı: [Skill oluşturma](https://developers.openai.com/codex/skills)
 
-## 🍱 Repo İle Gelen On Workflow
+## 🍱 Repo İle Gelen On Bir Workflow
 
 Bu skill'ler `agentchef` plugin'inin içindedir ve repo ile birlikte gelir.
 Installer onları `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` plugin
@@ -35,6 +35,7 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Installer veya güvenlik sınırlarını gevşetmeden bu starter'ı bakımlı tutmak için. |
 | [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
 | [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
+| [`agent-brief`](../plugins/agentchef/skills/agent-brief/SKILL.md) | Orkestratörün başka bir ajana verdiği sabit brief'i yazmak ve geri dönen handoff'u `coordination-board brief-check` ile denetlemek için. |
 | [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
 | [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Taze external-review snapshot'ını yükleme yapmadan architecture-aware GPT Pro Project metin bağlamına dönüştürmek için. |
 | [`gptpro-handoff`](../plugins/agentchef/skills/gptpro-handoff/SKILL.md) | Review-ID-bound GPT Pro prompt'u yazmak ve dönen raporu implementation öncesinde doğrulamak için. |

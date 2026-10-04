@@ -133,7 +133,7 @@ backend'i yeni pin (v1.7.0) için bir kez daha indirilir; bu yüzden ilk semanti
 `/<skill>` da çalışır), bir rol için de `agentchef:<rol>` biçimindedir.
 
 AgentChef'in her skill'i artık iki CLI'ya da yalnızca plugin skill'i olarak
-ulaşır. On bundled skill plugin'in içinde gelir; on sekiz pinned upstream skill
+ulaşır. On bir bundled skill plugin'in içinde gelir; on sekiz pinned upstream skill
 ise (`-All`, `-InstallSkills`, `--all`, `--install-skills`) aynı plugin
 kaynağına, `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` altına, her
 biri kendi `.agentchef-source.json` provenance kaydıyla yazılır. Installer

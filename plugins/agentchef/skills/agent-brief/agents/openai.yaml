@@ -1,0 +1,7 @@
+interface:
+  display_name: "Agent Brief"
+  short_description: "Brief and handoff for delegated work."
+  default_prompt: "Use $agent-brief to write the brief for this delegated task and check the handoff that comes back."
+
+policy:
+  allow_implicit_invocation: true
