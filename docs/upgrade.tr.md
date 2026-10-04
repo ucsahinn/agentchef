@@ -184,10 +184,11 @@ Kendiliğinden kaldırılanlar:
 - Codex: `memory` ve `filesystem` sunucuları artık katalogda yok. Güncelleme
   (`-Update` / `--update`), `[mcp_servers.memory*]` ve
   `[mcp_servers.filesystem]` tablolarını AgentChef'in yazdığıyla bayt bayt
-  aynıysa kaldırır (`templates/codex/retired-tables.json`). Playwright artık
-  Codex ana config'inde açıktır (pin `@playwright/mcp@0.0.83`); Chrome
-  DevTools `chrome-devtools-mcp@1.10.1` sürümüne geçer.
-- Claude Code: `context7`, `playwright` ve `serena` sunucularını artık
+  aynıysa kaldırır (`templates/codex/retired-tables.json`). Playwright
+  `@playwright/mcp@0.0.83`, Chrome DevTools `chrome-devtools-mcp@1.10.1`
+  sürümüne geçer; ikisi de Codex ana config'inde kapalı, `full` profilinde
+  açık kalır.
+- Claude Code: `context7` ve `serena` sunucularını artık
   `agentchef` plugin'i getirir. 1.0–1.2 kurulumunun `~/.claude.json` içine
   yazdığı `context7` ve `serena` girdileri, değerleri MCP makbuzundaki hash ile
   hâlâ eşleşiyorsa kaldırılır; çünkü kullanıcı kapsamlı bir girdi plugin
@@ -200,18 +201,19 @@ Yalnızca bildirilen, kendiliğinden asla kaldırılmayanlar:
 - Düzenlediğin bir Codex `memory` ya da `filesystem` tablosu `config.toml`
   içinde kalır ve güncelleme onu adıyla bildirir. Artık istemiyorsan kendin
   sil.
-- AgentChef'in yazmadığı ya da sonradan düzenlenmiş `context7`, `playwright`
-  veya `serena` adlı bir `.claude.json` girdisi kalır ve plugin sunucusunu
+- AgentChef'in yazmadığı ya da sonradan düzenlenmiş `context7` veya `serena`
+  adlı bir `.claude.json` girdisi kalır ve plugin sunucusunu
   gölgelediği bildirilir (kurucu planı da
   `verify-install-runtime --target claude` da bunu söyler). Kaldırmak için
   Claude kurulumunu `-AdoptMcp` / `--adopt-mcp` ile yeniden çalıştır;
   `.claude.json` önce yedeklenir.
 
 Claude Code tek bir plugin MCP sunucusunu ayrı kapatamaz (yalnızca
-`--strict-mcp-config` tüm sunucuları kapatır); bu yüzden yükseltmeden sonra
-Playwright her Claude Code oturumunda kullanılabilir. `browser_run_code_unsafe`,
-`browser_evaluate` ve `browser_file_upload` araçları izin kurallarında
-reddedilir.
+`--strict-mcp-config` tüm sunucuları kapatır); bu yüzden Playwright ve Chrome
+DevTools plugin'de yoktur. Onları browser kanıtı gereken projeye ekle (bkz.
+[MCP Kataloğu](mcp-catalog.tr.md)); izin kuralları orada Playwright'ın
+`browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
+araçlarını reddeder.
 
 ## Güvenli Upgrade Akışı
 

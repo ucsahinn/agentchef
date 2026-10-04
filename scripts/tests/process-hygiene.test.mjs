@@ -70,8 +70,8 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
   const multiSession = mcpEnabledState(path.join(root, "templates", "codex", "profiles", "multi-session.config.toml"));
   const offline = mcpEnabledState(path.join(root, "templates", "codex", "profiles", "offline.config.toml"));
 
-  // Playwright runs isolated and is on by default since 1.3.0.
-  assert.deepEqual(localMcp.filter((name) => base.get(name)), ["playwright", "serena"]);
+  // Browser servers are added per project when a task needs them.
+  assert.deepEqual(localMcp.filter((name) => base.get(name)), ["serena"]);
   assert.deepEqual(localMcp.filter((name) => full.get(name)), localMcp);
   assert.deepEqual(localMcp.filter((name) => multiSession.get(name)), ["serena"]);
   assert.equal([...offline.values()].every((enabled) => enabled === false), true);

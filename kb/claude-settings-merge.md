@@ -10,14 +10,16 @@ entries AgentChef added.
   `templates/codex/rules/default.rules`, plus MCP tool rules generated from
   `catalog/mcp-servers.json` in `allow`, `ask`, and `deny` (the denials cover
   codebase-memory's admin tools and Playwright's `browser_run_code_unsafe`,
-  `browser_evaluate`, and `browser_file_upload`). A `deny` rule is only ever
-  added; existing `deny` rules are never removed.
+  `browser_evaluate`, and `browser_file_upload`). Playwright's rules use the
+  plain `mcp__playwright__<tool>` names, so they apply once a project adds
+  that server. A `deny` rule is only ever added; existing `deny` rules are
+  never removed.
 - Nothing else in `settings.json`: `hooks`, `env`, and every other key stay as
   you wrote them. The one Claude Code hook (process hygiene at `SessionEnd`)
   ships in the `agentchef` plugin manifest, not in `settings.json`.
 - In `.claude.json` (`~/.claude.json`, or `$CLAUDE_CONFIG_DIR/.claude.json`
   when that variable is set) AgentChef writes no MCP entry since 1.3.0, because
-  the plugin ships `context7`, `playwright`, and `serena`. It only retires the
+  the plugin ships `context7` and `serena`. It only retires the
   `mcpServers.context7` and `mcpServers.serena` entries an earlier release
   wrote, when their value still matches the receipt hash. A same-name entry of
   yours is kept and reported as shadowing the plugin; `-AdoptMcp` /

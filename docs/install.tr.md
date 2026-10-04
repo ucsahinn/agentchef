@@ -38,7 +38,7 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 | Seçim | Yönetilen yüzey |
 | --- | --- |
 | `codex` (varsayılan) | `~/.codex` dosyaları, paylaşılan `~/.agents` plugin kaynağı ve marketplace'i (AgentChef'in tüm skill'leri plugin kaynağında durur), isteğe bağlı Git guard'ları |
-| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri (shell ve MCP araç kuralları), Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı; `context7`, `playwright` ve `serena` MCP sunucularını plugin getirir, 1.0–1.2 kurulumunun bunlar için `.claude.json` içine yazdığı girdiler kaldırılır |
+| `claude` | paylaşılan `~/.agents` ağaçları artı Claude Code yüzeyi: kullanıcı seviyesi kural dosyası, makbuzla kaydedilen eklemeli `settings.json` izinleri (shell ve MCP araç kuralları), Claude plugin marketplace'i ve `claude plugin` CLI üzerinden plugin kaydı; `context7` ve `serena` MCP sunucularını plugin getirir (Playwright ve Chrome DevTools proje başına eklenir, bkz. [MCP Kataloğu](mcp-catalog.tr.md)), 1.0–1.2 kurulumunun bunlar için `.claude.json` içine yazdığı girdiler kaldırılır |
 | `both` | yukarıdakilerin tamamı; paylaşılan işlemler bir kez koşar |
 
 `npm run chef -- --install`, `PATH` üzerindeki CLI'ları algılar, bir hedef
@@ -340,7 +340,7 @@ Kullanışlı parametreler:
   edilir, ama 1.3.0'dan beri etkisizdir ve bir uyarı basar. Sahiplenilecek
   doğrudan skill hedefi ya da skill bağlantısı artık yoktur.
 - `-AdoptMcp` (Bash: `--adopt-mcp`; `-Target claude` ya da `both` ister):
-  plugin'in getirdiği bir sunucunun adıyla (`context7`, `playwright`, `serena`)
+  plugin'in getirdiği bir sunucunun adıyla (`context7`, `serena`)
   kendi eklediğin kullanıcı kapsamlı `~/.claude.json` girdisini kaldırır. Dosya
   önce yedeklenir. Bu anahtar olmadan böyle bir girdi korunur, plugin
   sunucusunu gölgelediği bildirilir ve onun yerine o kullanılır; çünkü
@@ -417,7 +417,7 @@ Kullanışlı flagler:
   `--adopt-evidence-research-skill`, `--adopt-direct-skill=<ad>` ve
   `--adopt-skill-links`: eski betikler için kabul edilir, 1.3.0'dan beri
   etkisizdir (bir uyarı basılır).
-- `--adopt-mcp`: `context7`, `playwright` ya da `serena` için kendi
+- `--adopt-mcp`: `context7` ya da `serena` için kendi
   `~/.claude.json` girdini yedekledikten sonra kaldırır; böylece plugin'in
   sunucusu devreye girer (`--target=claude` ya da `--target=both` ister).
 - `--install-git-guards`: global Git ignore ve hook ayarlarına ayrıca opt-in.
@@ -594,7 +594,7 @@ altında listeler, `/plugin` `agentchef` marketplace'ini gösterir ve
 
 Claude Code MCP sunucularını `.claude.json` üzerinden değil `agentchef`
 plugin'inden alır: plugin manifest'i `mcp/claude.mcp.json` dosyasını gösterir;
-bu dosya `context7` ve `playwright` sunucularını `scripts/mcp-launch.mjs`
+bu dosya `context7` sunucusunu `scripts/mcp-launch.mjs`
 üzerinden (yalnızca tam sabitlenmiş sürüm; Windows'ta
 `NoDefaultCurrentDirectoryInExePath` ile `cmd.exe` ve `npx.cmd` üzerinden),
 Serena'yı ise paylaşılan havuz bridge'inin plugin içindeki kopyasıyla
@@ -602,8 +602,10 @@ Serena'yı ise paylaşılan havuz bridge'inin plugin içindeki kopyasıyla
 `claude mcp list` bunları plugin sunucusu olarak gösterir; araç adları
 `mcp__plugin_agentchef_<server>__<tool>` biçimindedir. Claude Code tek bir
 plugin sunucusunu ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm
-sunucuları kapatır); bu yüzden `playwright` her Claude Code oturumunda
-kullanılabilir, en riskli araçları ise üretilen izin kurallarında reddedilir.
+sunucuları kapatır); bu yüzden plugin `playwright` ve `chrome-devtools`
+getirmez. Onları browser kanıtı gereken projeye ekle
+(`claude mcp add --scope project ...`, bkz. [MCP Kataloğu](mcp-catalog.tr.md));
+orada üretilen izin kuralları Playwright'ın en riskli araçlarını reddeder.
 `verify-install-runtime --target claude` kendi `.claude.json` girdinin bir
 plugin sunucusunu gölgelediği uyarısını verirse kurucuyu `-AdoptMcp` /
 `--adopt-mcp` ile yeniden çalıştırarak girdiyi yedekli biçimde kaldır.

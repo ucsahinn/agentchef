@@ -92,7 +92,7 @@ test("Claude target plan, apply, idempotent re-apply, and receipt-scoped removal
   // disables (codebase-memory admin tools, Playwright code execution).
   const fragmentDeny = readJson(path.join(root, "templates", "claude", "settings.fragment.json")).permissions.deny;
   assert.deepEqual(settings.permissions.deny, ["Bash(gh pr list *)", ...fragmentDeny]);
-  assert.ok(fragmentDeny.includes("mcp__plugin_agentchef_playwright__browser_run_code_unsafe"));
+  assert.ok(fragmentDeny.includes("mcp__playwright__browser_run_code_unsafe"), "Playwright code execution stays denied when a project adds it");
   assert.deepEqual(settings.hooks, state.settings.hooks, "user hooks untouched; no hook is installed for Claude in this release");
   assert.equal(settings.theme, "dark");
   const claudeJson = readJson(path.join(state.home, ".claude.json"));

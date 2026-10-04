@@ -774,7 +774,7 @@ Options:
   --platform <name>           windows or unix (defaults to current platform)
   --adopt-skill-links         No effect since 1.3.0 (skills come from the plugin); accepted for old scripts
   --adopt-mcp                 Also retire a user-scope entry you added under the name of
-                              a server the plugin ships (context7, playwright, serena);
+                              a server the plugin ships (context7, serena);
                               it is backed up first. Without it such an entry is
                               reported as shadowing the plugin and kept
   --agents-lock-held          Internal: the calling installer already holds the AGENTS_HOME operation lock

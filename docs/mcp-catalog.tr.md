@@ -6,16 +6,16 @@ MCP'ler Codex'e ek araç veya canlı bağlam verir: güncel dokümantasyon, brow
 kanıtı, semantic code navigation, özel hesap verileri ya da veritabanı erişimi
 gibi. Bu yüzden çok kullanışlılar ama her birinin sınırı açık olmalı.
 
-AgentChef toplam 14 MCP tanıyor. Dengeli Codex starter'ı üç sunucuyu açar:
-uzak `openaiDeveloperDocs`, lokal lazy `serena` bridge ve browser kanıtı için
-`playwright`. Context7 dahil dört ek lokal stdio yardımcısı tanımlı ama kapalı
-kalır; yetenek kaybolmaz, her eşzamanlı oturumda Node/Python ağaçları gereksiz
+AgentChef toplam 14 MCP tanıyor. Dengeli Codex starter'ı iki sunucuyu açar:
+uzak `openaiDeveloperDocs` ve lokal lazy `serena` bridge. Context7 ile
+`playwright` ve `chrome-devtools` browser sunucuları dahil beş ek lokal stdio
+yardımcısı tanımlı ama kapalı kalır; yetenek kaybolmaz, her eşzamanlı oturumda Node/Python ağaçları gereksiz
 yere başlamaz. Hesap veya veritabanı erişimi isteyen yedi connector ise
 gerçekten ihtiyacın olana kadar kapalı kalır. Eski `memory` ve `filesystem`
 girdileri 1.3.0'da kaldırıldı; mevcut bir config'in nasıl temizlendiği için
 [Yükseltme](upgrade.tr.md) sayfasına bak.
 
-Claude Code hedefinde `context7`, `playwright` ve `serena` sunucularını
+Claude Code hedefinde `context7` ve `serena` sunucularını
 `agentchef` plugin'i kendisi getirir
 ([plugins/agentchef/mcp/claude.mcp.json](../plugins/agentchef/mcp/claude.mcp.json),
 plugin manifest'indeki `mcpServers` alanından bağlanır). npx sunucuları
@@ -29,15 +29,56 @@ biçimindedir. Kurucu bu sunucuları artık `.claude.json` içine yazmaz:
 AgentChef 1.0–1.2'nin oraya yazdığı girdi kaldırılır, çünkü kullanıcı
 kapsamlı bir girdi plugin sunucusunun önüne geçer. Aynı adla kendi eklediğin
 girdi korunur ve plugin'i gölgelediği bildirilir; `-AdoptMcp` /
-`--adopt-mcp` için [Kurulum](install.tr.md) sayfasına bak. Claude Code tek bir
-plugin MCP sunucusunu ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm
-sunucuları kapatır); bu yüzden `playwright` her Claude Code oturumunda açıktır.
-Codex'e özgü `openaiDeveloperDocs` girdisi oraya eklenmez. Kataloğun diğer sunucularını
+`--adopt-mcp` için [Kurulum](install.tr.md) sayfasına bak. Codex'e özgü `openaiDeveloperDocs` girdisi oraya eklenmez. Kataloğun diğer sunucularını
 [catalog/mcp-servers.json](../catalog/mcp-servers.json) içindeki komut ve
 argümanlarla `claude mcp add --scope user` kullanarak kendin ekle. GitHub'ın
 uzak MCP ucu OAuth dinamik istemci kaydını desteklemez; bu yüzden onun için
 `claude mcp add`, `/mcp` girişi yerine kişisel erişim token'ı başlığı ister
 (ölçüldü: "Incompatible auth server").
+
+### Browser sunucuları proje başına eklenir
+
+`playwright` ve `chrome-devtools` iki CLI'da da varsayılan olarak kapalıdır
+(katalogda `scope: "project"`). Bir makinede ölçüldüğünde her Claude Code
+oturumu yapılandırılmış her MCP sunucusunu başlatıyordu: 11 oturum, her
+birinde yaklaşık 41 alt süreç. Yalnızca bazı görevlerin ihtiyaç duyduğu bir
+browser sunucusu her oturumda başlamamalı; Claude Code da tek bir plugin MCP
+sunucusunu ayrı kapatamadığı için (yalnızca `--strict-mcp-config` tüm
+sunucuları kapatır) browser sunucuları plugin'de yer almaz.
+
+Codex'te `codex --profile full` ikisini de açar. Claude Code'da onları browser
+kanıtı gereken projeye ekle:
+
+```bash
+claude mcp add --scope project playwright -- npx -y @playwright/mcp@0.0.83 --isolated --block-service-workers
+claude mcp add --scope project chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1
+```
+
+Windows'ta `npx` önüne `cmd /c` ekle:
+
+```bash
+claude mcp add --scope project playwright -- cmd /c npx -y @playwright/mcp@0.0.83 --isolated --block-service-workers
+claude mcp add --scope project chrome-devtools -- cmd /c npx -y chrome-devtools-mcp@1.10.1
+```
+
+İki komut da projenin `.mcp.json` dosyasına yazar; dosyayı elle de
+yazabilirsin:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.83", "--isolated", "--block-service-workers"]
+    }
+  }
+}
+```
+
+Settings fragment'i Playwright kurallarını zaten düz `mcp__playwright__<tool>`
+adlarıyla taşır; bu yüzden bir proje sunucuyu eklediği anda kurallar geçerli
+olur ve `frontend-verifier` `mcp__playwright` ile `mcp__chrome-devtools`
+yetkilerini korur.
 
 > **Config'de görünmesi çalıştığı anlamına gelmez.** Bir MCP template'te yer
 > aldığı hâlde launcher, ilk açılışta paket indirme, browser, hesap onayı veya
@@ -57,14 +98,14 @@ uzak MCP ucu OAuth dinamik istemci kaydını desteklemez; bu yüzden onun için
 | [`context7`](https://github.com/upstash/context7) | Kapalı | Evet | İsteğe bağlı güncel kütüphane ve framework dokümantasyonu | Node/npx ve ilk açılışta internet |
 | [`serena`](https://github.com/oraios/serena) | Açık | Evet | Bilmediğin repoda sembol seviyesinde kod gezintisi | `uvx` ve sabitlenmiş Serena kaynağı |
 | [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Kapalı | Hayır | Karmaşık işi anlaşılır adımlara ayırmak | Node/npx ve ilk açılışta internet |
-| [`playwright`](https://github.com/microsoft/playwright-mcp) | Açık | Evet | İzole, kalıcı olmayan profilde browser snapshot, screenshot, console ve prompt-gated network kanıtı | Node/npx ve yerel browser kontrolü |
-| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Kapalı | Hayır | Chrome incelemesi ve UI teşhisi | Node/npx ve izole Chrome köprüsü |
+| [`playwright`](https://github.com/microsoft/playwright-mcp) | Kapalı (`full` açar) | Hayır (projeye eklenir) | İzole, kalıcı olmayan profilde browser snapshot, screenshot, console ve prompt-gated network kanıtı | Node/npx ve yerel browser kontrolü |
+| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Kapalı (`full` açar) | Hayır (projeye eklenir) | Chrome incelemesi ve UI teşhisi | Node/npx ve izole Chrome köprüsü |
 | [`codebase-memory`](https://github.com/DeusData/codebase-memory-mcp) | Kapalı | Hayır | Mimari, graph search, akış ve değişiklik etkisi | Node/npx; index ve admin araçları kontrollü kalır |
 
 Tüm bundled lokal MCP'lere ihtiyaç duyan tek ana oturumda
 `codex --profile full` kullan. Eşzamanlı ikincil pencereleri
 `codex --profile multi-session` ile başlat; bu profil lazy Serena bridge'ini
-açık tutup Playwright dahil diğer beş lokal stdio sunucuyu kapatır; agent, skill, uzak OpenAI docs, built-in memory, hook ve
+açık tutup browser sunucuları dahil diğer beş lokal stdio sunucuyu kapalı tutar; agent, skill, uzak OpenAI docs, built-in memory, hook ve
 app yüzeylerini korur. Profil ana config üzerine katmanlandığı için kapatmak
 sunucu tanımını silmez.
 

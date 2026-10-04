@@ -49,9 +49,11 @@ dokümantasyon helper'ı gibi değil, güçlü connector boundary'leri gibi ele 
 
 Bu starter'ın kuralları:
 
-- Codex ana config'inde OpenAI Docs, Playwright ve lazy Serena semantic bridge
-  varsayılan olarak açıktır; `multi-session` ve `offline` profilleri
-  Playwright'ı kapalı tutar. Context7, Codex'te ek bir Node süreci
+- Codex ana config'inde OpenAI Docs ve lazy Serena semantic bridge varsayılan
+  olarak açıktır. Playwright ve Chrome DevTools iki CLI'da da varsayılan olarak
+  kapalıdır: Codex `full` profili onları açar, `multi-session` ve `offline`
+  kapalı tutar; Claude Code'da bir görev browser kanıtı gerektirdiğinde proje
+  onları ekler (katalogda `scope: "project"`). Context7, Codex'te ek bir Node süreci
   başlatabildiği ve ilk çalışmada network gerektirebildiği için opt-in bir
   kütüphane dokümantasyonu yardımcısıdır.
 - Eski `memory` ve `filesystem` sunucuları artık katalogda yok. Codex
@@ -84,8 +86,8 @@ Bu starter'ın kuralları:
   Browser request/response detail, browser interaction, symbol edit, graph
   indexing, account, database, production, deploy, publish ve mutating
   tool'lar `"prompt"` kullanmali ya da disabled kalmalidir.
-- Claude Code'da `context7`, `playwright` ve `serena` sunucularını `agentchef`
-  plugin'i getirir (`plugins/agentchef/mcp/claude.mcp.json`). npx sunucuları
+- Claude Code'da `context7` ve `serena` sunucularını `agentchef` plugin'i
+  getirir (`plugins/agentchef/mcp/claude.mcp.json`). npx sunucuları
   `plugins/agentchef/scripts/mcp-launch.mjs` üzerinden başlar; bu başlatıcı tam
   bir `ad@x.y.z` pini dışındaki her şeyi (aralık ya da etiket, registry'nin o
   gün sunduğu sürümü başlatırdı) ve shell sözdizimi içeren her argümanı
@@ -109,10 +111,11 @@ Bu starter'ın kuralları:
   `prompt` → `ask`; codebase-memory'nin `delete_project`, `index_repository`,
   `ingest_traces` ve `manage_adr` araçları ile Playwright'ın
   `browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
-  araçları için `deny`. Claude Code tek bir plugin MCP sunucusunu ayrı
-  kapatamaz (yalnızca `--strict-mcp-config` tüm sunucuları kapatır); bu yüzden
-  Playwright her Claude Code oturumunda açıktır ve en riskli araçlarını bu deny
-  kuralları kapalı tutar.
+  araçları için `deny`. Playwright kuralları düz `mcp__playwright__<tool>`
+  adlarını kullanır; bir proje sunucuyu eklediği anda bu deny kuralları en
+  riskli araçlarını kapalı tutar. Claude Code tek bir plugin MCP sunucusunu
+  ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm sunucuları kapatır);
+  browser sunucularının plugin'de olmamasının nedeni budur.
 - Browser network listing yerel QA için approved olabilir. Playwright
   `browser_network_request` ve Chrome DevTools `get_network_request` gibi
   request/response detail tool'ları prompt-gated veya disabled kalır; header,

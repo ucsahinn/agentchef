@@ -658,7 +658,7 @@ if (fs.existsSync(mcpCatalog)) {
     .filter((server) => server.defaultEnabled === true)
     .map((server) => server.name)
     .sort();
-  const expectedDefaultEnabledServers = ["openaiDeveloperDocs", "playwright", "serena"];
+  const expectedDefaultEnabledServers = ["openaiDeveloperDocs", "serena"];
   if (JSON.stringify(defaultEnabledServers) !== JSON.stringify(expectedDefaultEnabledServers)) {
     failures.push(`Public MCP catalog default-enabled servers must be exactly: ${expectedDefaultEnabledServers.join(", ")}`);
   }

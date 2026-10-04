@@ -101,15 +101,18 @@ ama onayları, sandbox'ı ve connector auth sınırlarını kaldırmaz.
 
 Varsayılan açık gelenler:
 
-- Resmi OpenAI dokümanları için OpenAI Docs MCP.
-- Güncel kütüphane ve framework dokümanları için Context7.
-- Semantik kod gezintisi için Serena.
+- Resmi OpenAI dokümanları için OpenAI Docs MCP (Codex).
+- Güncel kütüphane ve framework dokümanları için Context7 (Claude Code
+  plugin'i).
+- Semantik kod gezintisi için Serena (ikisi de).
 
 Dengeli ana config'de tanımlı ama kapalı gelenler:
 
+- Codex'te Context7.
 - Parçalama ve düşünce akışı için Sequential Thinking.
-- Tarayıcı doğrulaması için Playwright ve Chrome DevTools.
-- Gizli veri yazmamak şartıyla yerel Memory.
+- Tarayıcı doğrulaması için Playwright ve Chrome DevTools: Codex `full`
+  profili onları açar; Claude Code'da onları browser kanıtı gereken projeye
+  eklersin (bkz. [MCP Kataloğu](mcp-catalog.tr.md)).
 - Graph destekli repo zekâsı için Codebase Memory.
 
 Hesap veya geniş erişim isteyen ve ihtiyaç olana kadar kapalı gelenler:

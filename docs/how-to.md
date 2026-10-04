@@ -99,15 +99,17 @@ workflow, but it keeps approvals, sandboxing, and connector auth intact.
 
 Enabled by default:
 
-- OpenAI Docs MCP for official OpenAI documentation.
-- Context7 for current library and framework docs.
-- Serena for semantic code navigation.
+- OpenAI Docs MCP for official OpenAI documentation (Codex).
+- Context7 for current library and framework docs (Claude Code plugin).
+- Serena for semantic code navigation (both).
 
 Configured but disabled in the balanced base:
 
+- Context7 on Codex.
 - Sequential Thinking for structured decomposition.
-- Playwright and Chrome DevTools for browser verification.
-- Memory for local non-secret recall.
+- Playwright and Chrome DevTools for browser verification: the Codex `full`
+  profile turns them on, and on Claude Code you add them to a project that
+  needs browser evidence (see [MCP Catalog](mcp-catalog.md)).
 - Codebase Memory for graph-backed repository intelligence.
 
 Account or broad-access connectors disabled until needed:
