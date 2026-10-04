@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { headingLevels } from "./lib/markdown-headings.mjs";
 
 const root = path.resolve(process.cwd());
 const docsDir = path.join(root, "docs");
 const failures = [];
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const currentReleaseHeading = `## v${packageJson.version} - `;
+
 
 if (!fs.existsSync(docsDir)) {
   failures.push("Missing docs directory.");
@@ -25,6 +27,19 @@ if (!fs.existsSync(docsDir)) {
   for (const file of turkishDocs) {
     const pair = file.replace(/\.tr\.md$/, ".md");
     if (!fileSet.has(pair)) failures.push(`Turkish doc has no English source pair: docs/${file}`);
+  }
+
+  // A pair carries the same sections: the same number of headings at the same
+  // levels, in order (code fences excluded). A section missing from one
+  // language is how translations drift.
+  for (const file of englishDocs) {
+    const pair = file.replace(/\.md$/, ".tr.md");
+    if (!fileSet.has(pair)) continue;
+    const english = headingLevels(fs.readFileSync(path.join(docsDir, file), "utf8"));
+    const turkish = headingLevels(fs.readFileSync(path.join(docsDir, pair), "utf8"));
+    if (english.join(",") !== turkish.join(",")) {
+      failures.push(`docs/${file} and docs/${pair} differ in heading structure (${english.length} vs ${turkish.length} headings)`);
+    }
   }
 
   for (const file of files) {

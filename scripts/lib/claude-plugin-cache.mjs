@@ -39,9 +39,10 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
   const versionMismatch = registeredVersion && installedVersion && registeredVersion !== installedVersion
     ? { registered: registeredVersion, expected: installedVersion }
     : null;
-  // Compare what a Claude session loads from the plugin: role definitions and
-  // skills. Only comparing agents let a changed skill stay stale unnoticed;
-  // scripts/ holds the Codex-only hook and is not loaded by Claude.
+  // Compare what a Claude session loads from the plugin: role definitions,
+  // skills, the manifest (agents list, SessionEnd hook), the MCP servers it
+  // ships, and the scripts those start. Only comparing agents let a changed
+  // skill stay stale unnoticed.
   if (!fs.existsSync(path.join(source, "agents"))) return { inspected: false };
   const names = [];
   const collect = (relative) => {
@@ -55,6 +56,9 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
   };
   collect("agents");
   collect("skills");
+  collect(".claude-plugin");
+  collect("mcp");
+  collect("scripts");
   const stale = [];
   for (const version of served) {
     // A served copy missing a loaded file differs by that file, so a copy with

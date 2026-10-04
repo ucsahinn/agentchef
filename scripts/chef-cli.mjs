@@ -176,6 +176,7 @@ const ACTION_FLAGS = new Map([
   ["--skills", "skills"],
   ["--mcp", "mcp"],
   ["--routing", "routing"],
+  ["--inventory", "inventory"],
   ["--diagnostics", "diagnostics"],
   ["--diagnose", "diagnostics"],
   ["--processes", "processes"],
@@ -276,10 +277,10 @@ if (options.apply && options.action === "processes" && !options.cleanupStale) {
     "--processes --apply ayrıca --cleanup-stale ister."
   );
 }
-if (options.target && !["install", "preview", "reset", "remove", "migrate-identity", "update", "status"].includes(options.action || "")) {
+if (options.target && !["install", "preview", "reset", "remove", "migrate-identity", "update", "status", "inventory"].includes(options.action || "")) {
   cliError(
-    "--target can only be used with --install, --preview, --reset, --remove, --migrate-identity, --update, or --status.",
-    "--target yalnızca --install, --preview, --reset, --remove, --migrate-identity, --update veya --status ile kullanılabilir."
+    "--target can only be used with --install, --preview, --reset, --remove, --migrate-identity, --update, --status, or --inventory.",
+    "--target yalnızca --install, --preview, --reset, --remove, --migrate-identity, --update, --status veya --inventory ile kullanılabilir."
   );
 }
 if (options.action === "remove" && !options.target) {
@@ -1138,7 +1139,7 @@ Kullanım:
   npm run chef -- --diagnostics
 
 Komut kısayolları:
-  Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
+  Yazmasız ekranlar: --status, --doctor, --preview, --skills, --mcp, --routing, --inventory, --diagnostics, --processes, --auth, --logs
   Onaylı yazan işlemler: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
   Kurulum hedefi: --install/--preview/--reset/--remove/--update/--status ile --target codex|claude|both (varsayılan codex; --update kurulu hedefi algılar; etkileşimli kurulum algılayıp onay ister)
   Süreç temizliği: --processes --cleanup-stale [--apply]; --apply olmadan yalnız önizleme
@@ -1188,7 +1189,7 @@ Usage:
   npm run chef -- --diagnostics
 
 Reference actions:
-  Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --diagnostics, --processes, --auth, --logs
+  Read-only: --status, --doctor, --preview, --skills, --mcp, --routing, --inventory, --diagnostics, --processes, --auth, --logs
   Write gated: --update [--apply], --reset [--apply], --repair [--apply], --install [--apply], --remove --target T [--apply], --migrate-identity [--target T] [--apply], --processes --cleanup-stale --apply
   Install target: --target codex|claude|both with --install/--preview/--reset/--remove/--update/--status (default codex; --update detects the installed target; interactive installs detect and confirm)
   Process cleanup: --processes --cleanup-stale [--apply]; preview-only without --apply
@@ -4574,6 +4575,17 @@ async function runMcp(interaction = {}) {
   return { ok: true };
 }
 
+// The harness map: every skill, agent role, and MCP server with its source
+// and state on each target. Read-only; exits non-zero when a harness item is
+// missing from an install.
+function runInventory() {
+  return runNode("inventory", "scripts/harness-inventory.mjs", [
+    "--target", options.target || "both",
+    ...(options.json ? ["--json"] : []),
+    ...(options.details ? ["--all"] : [])
+  ]);
+}
+
 function runRouting() {
   const profileArgs = options.profile
     ? ["--profile", options.profile]
@@ -5161,6 +5173,8 @@ async function runAction(action, interaction = {}) {
       return runMcp(interaction);
     case "routing":
       return runRouting();
+    case "inventory":
+      return runInventory();
     case "diagnostics":
       return runDiagnostics();
     case "processes":
