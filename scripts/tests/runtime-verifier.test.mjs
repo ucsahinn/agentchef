@@ -341,7 +341,7 @@ test("runtime verifier rejects a linked Serena pool launcher", (context) => {
   }
 });
 
-test("the Claude plugin cache check covers skills as well as roles, and ignores the Codex-only scripts", () => {
+test("the Claude plugin cache check covers roles, skills, the manifest, and the scripts Claude runs", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-claude-cache-"));
   try {
     const agentsHome = path.join(root, "agents");
@@ -357,13 +357,19 @@ test("the Claude plugin cache check covers skills as well as roles, and ignores 
       write(base, "agents/code-mapper.md", "role\n");
       write(base, "skills/seo/SKILL.md", "skill\n");
     }
-    write(source, "scripts/codex-process-hygiene.mjs", "new\n");
+    write(cache, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.0.0" }));
+    assert.deepEqual(inspectClaudePluginCache(claudeHome, agentsHome).stale, [], "an identical cache is current");
+
+    // Since 1.3.0 Claude runs plugin scripts (the SessionEnd hook and the MCP
+    // launcher), so a stale script is drift too.
+    for (const base of [source, cache]) write(base, "scripts/codex-process-hygiene.mjs", "same\n");
     write(cache, "scripts/codex-process-hygiene.mjs", "old\n");
-    assert.deepEqual(inspectClaudePluginCache(claudeHome, agentsHome).stale, [], "a Codex-only script is not something Claude loads");
+    assert.deepEqual(inspectClaudePluginCache(claudeHome, agentsHome).stale, [{ version: "1.0.0", differing: 1, total: 4 }], "a stale hook script is drift");
+    write(cache, "scripts/codex-process-hygiene.mjs", "same\n");
 
     write(cache, "skills/seo/SKILL.md", "stale skill\n");
     const stale = inspectClaudePluginCache(claudeHome, agentsHome).stale;
-    assert.deepEqual(stale, [{ version: "1.0.0", differing: 1, total: 2 }], "a stale skill is drift even when every role matches");
+    assert.deepEqual(stale, [{ version: "1.0.0", differing: 1, total: 4 }], "a stale skill is drift even when every role matches");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -382,8 +388,10 @@ test("the Claude plugin cache check reports a registered version older than the 
       fs.mkdirSync(path.dirname(path.join(base, relative)), { recursive: true });
       fs.writeFileSync(path.join(base, relative), text);
     };
-    write(source, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.1.0" }));
-    for (const base of [source, cache]) write(base, "agents/code-mapper.md", "role\n");
+    for (const base of [source, cache]) {
+      write(base, ".claude-plugin/plugin.json", JSON.stringify({ version: "1.1.0" }));
+      write(base, "agents/code-mapper.md", "role\n");
+    }
     const registry = (version) => write(claudeHome, "plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins: { "agentchef@agentchef": [{ scope: "user", version }] } }));
 
     assert.equal(readRegisteredClaudePluginVersion(claudeHome), null, "an unregistered plugin reads as null, which the verifier reports");
