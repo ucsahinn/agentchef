@@ -44,6 +44,13 @@ reason to open a subagent for every small task.
 Subagents inherit the current approval and sandbox boundaries. They do not get
 extra authority just because the work was delegated.
 
+From 1.3.2, roles run on a cheaper worker model while the
+session you open keeps its own; see [Model Tiers](agents.md#model-tiers).
+Agents do not chat with each other: the main session briefs a coordinator, the
+coordinator briefs at most four of its own workers, and each returns one
+handoff. Codex and Claude Code have no direct tool between them; see
+[How Agents Talk To Each Other](agents.md#how-agents-talk-to-each-other).
+
 ## Explicit Coordination Board Workflow
 
 Creating a task explicitly is the only coordination-state trigger. Opening a

@@ -2,6 +2,7 @@
 name: docs-researcher
 description: "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

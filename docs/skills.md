@@ -80,6 +80,17 @@ The license column records the license measured in the upstream repository at
 the pinned commit; the lock repeats it so a pin change cannot silently change
 the license.
 
+### Known Limits Of Two Pinned Skills
+
+- `improve-codebase-architecture` sets `disable-model-invocation: true` in its
+  upstream `SKILL.md`. Agents never pick it on their own, even when a task
+  matches. Call it explicitly: `$agentchef:improve-codebase-architecture` in
+  Codex, `/agentchef:improve-codebase-architecture` in Claude Code.
+- `git-workflow-and-versioning` describes itself upstream as "Use when making
+  any code change", so an agent may load it for ordinary edits. Loading it
+  grants nothing: the AgentChef working agreement still says never to commit
+  or push unless you ask, and that rule wins over the skill's checklist.
+
 ## 🧰 Other Cataloged Workflows
 
 AgentChef does not install the following names automatically.

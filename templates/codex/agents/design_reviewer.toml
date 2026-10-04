@@ -1,5 +1,6 @@
 name = "design_reviewer"
 description = "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual decision tradeoffs."
+model = "gpt-6-luna"
 nickname_candidates = ["Design Reviewer", "UX Reviewer", "Interface Reviewer"]
 sandbox_mode = "read-only"
 web_search = "live"

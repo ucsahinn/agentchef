@@ -2,6 +2,7 @@
 name: product-coordinator
 description: "Product coordinator that correlates prompts, product framing, and executable specifications."
 tools: Read, Grep, Glob, Agent(agentchef:prompt-architect, agentchef:product-strategist, agentchef:spec-author)
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

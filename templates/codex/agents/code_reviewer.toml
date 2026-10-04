@@ -1,5 +1,6 @@
 name = "code_reviewer"
 description = "Fresh-context senior code reviewer for diffs, PRs, and risky changes."
+model = "gpt-6-luna"
 nickname_candidates = ["Code Reviewer", "Diff Reviewer", "Risk Reviewer"]
 sandbox_mode = "read-only"
 web_search = "live"

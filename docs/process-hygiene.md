@@ -12,12 +12,12 @@ project and starts it only after an allowlisted semantic tool call.
 
 AgentChef keeps the capabilities and changes when they start:
 
-- The balanced base enables remote `openaiDeveloperDocs` plus local `context7`
-  and `serena`.
-- `codex --profile full` enables all seven bundled local stdio MCPs for one
+- The balanced base enables remote `openaiDeveloperDocs` plus the local
+  `serena` bridge.
+- `codex --profile full` enables all six bundled local stdio MCPs for one
   capability-heavy primary session.
 - `codex --profile multi-session` keeps the Serena bridge enabled for a
-  secondary session but disables the other six eager local stdio MCPs. Agents,
+  secondary session but disables the other five local stdio MCPs. Agents,
   skills, remote OpenAI docs, built-in memories, hooks, and apps remain
   available.
 - A Serena manager uses a project key derived from the canonical root and the

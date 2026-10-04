@@ -24,7 +24,7 @@
 
 - Classify non-trivial work against installed agents, skills, MCPs, and profile/config flags, then use the narrowest useful route.
 - Use `adaptive-agent-routing` when routing details, aliases, specialist ownership, or surface placement materially affect the task.
-- Agent role selection is automatic when delegation is useful, but preserve the active profile's model and reasoning choices.
+- Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them.
 - Prefer one subagent and normally use no more than four in a single task; the bundled `agentchef:<role>` subagents are namespaced and never replace your own `~/.claude/agents/` definitions.
 - Spawn agents only when there is independent parallel work, noisy logs or research should be isolated from the main thread, or the user explicitly requests delegation.
 - Do not spawn for trivial, sequential, tightly coupled, or single-file work where delegation adds coordination cost.
@@ -79,7 +79,7 @@
 - Keep large logs, docs, and agent transcripts out of the main thread; return summaries, evidence paths, commands, and blockers.
 - Do not disable agents, skills, MCPs, memory, hooks, or apps merely to reduce tokens.
 - Prefer session knobs such as effort level, `/compact`, and subagent isolation over disabling capabilities.
-- Keep subagent definitions free of model pins so the active session model remains authoritative.
+- Specialist and coordinator subagents run on the catalog worker model (`sonnet`); the session the user opens keeps its own model and does the orchestration.
 - Run `npm.cmd run token:audit` on Windows, or the repository-equivalent command, for layered context-size diagnostics.
 
 ## Implementation Standards

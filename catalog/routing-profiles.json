@@ -15,13 +15,7 @@
     "writeIsolation": "Keep write-heavy implementation in the main thread unless the user explicitly requests non-overlapping write scopes.",
     "coordinationBoard": "Explicit task creation records work state; neither a routing match nor pane selection auto-starts, auto-completes, or infers approval."
   },
-  "agentRuntimePolicy": {
-    "roleSelection": "automatic-when-beneficial",
-    "modelSelection": "inherit-profile-adaptive",
-    "reasoningSelection": "inherit-profile-adaptive",
-    "neverOverrideUserProfile": true,
-    "note": "Agent role files omit model and reasoning pins so the active profile remains authoritative."
-  },
+  "agentRuntimePolicy": {"roleSelection":"automatic-when-beneficial","modelSelection":"worker-tier","reasoningSelection":"inherit-profile-adaptive","neverOverrideUserProfile":true,"note":"Specialist and coordinator roles run on the catalog workerModels (Codex gpt-6-luna, Claude sonnet); the session the user opens keeps its own model and profile."},
   "profiles": [
     {
       "id": "repo-map-before-change",

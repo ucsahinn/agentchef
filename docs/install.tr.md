@@ -460,10 +460,14 @@ gereksinimlerini connector'a ihtiyac duymadan once gosterir. Account, database,
 production, genis filesystem ve broad/destructive graph-indexing connector'lari
 sen acikca enable edene kadar kapali kalir. Lokal codebase graph okumalari
 yalniz destructive/admin graph tool'lari kapaliyken acik olur.
-Agent role dosyalari agent bazli model/reasoning pinlemeden kurulur. Aktif
-profil ve Codex runtime task'a uygun dengeyi secebilir; broad veya uzun islerde
-skill, agent ya da MCP kapatmadan daha dusuk verbosity ve daha dar tool-output
-limitleri icin `token-safe.config.toml` kullan.
+1.3.2 ile her agent rol dosyası katalogdaki worker
+modelini taşır (`~/.codex/agents/*.toml` içinde `model = "gpt-6-luna"`, Claude
+plugin'inin agent dosyalarında `model: sonnet`) ve reasoning effort pinlemez;
+yani model/reasoning ayrımı: worker modeli sabit, effort devralınır.
+Açtığın oturum seçtiğin model ve profili korur; worker modelini değiştirmek
+için bkz. [Model Katmanları](agents.tr.md#model-katmanları). Broad veya uzun
+islerde skill, agent ya da MCP kapatmadan daha dusuk verbosity ve daha dar
+tool-output limitleri icin `token-safe.config.toml` kullan.
 
 AgentChef kendi template'ini canonical managed baseline, makinedeki mevcut
 config'i ise kullaniciya ait overlay olarak ele alir. Normal install ve repair;

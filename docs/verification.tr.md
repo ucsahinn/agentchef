@@ -33,9 +33,9 @@ Bu komut şunları çalıştırır:
   kontrol. Drift preview, backup'li apply, marketplace koruma, config merge,
   skill cleanup raporu ve explicit managed-plugin pruning davranisini kanitlar.
 - `scripts/validate-agent-config.mjs`: Windows ve Unix Codex template'leri icin
-  uzman ajan catalog/config drift kontrolleri; role dosyalari icin otomatik
-  model/reasoning secimini, aktif kullanici profilini override etmeden kontrol
-  eder.
+  uzman ajan catalog/config drift kontrolleri; her rol ve koordinator
+  dosyasinin katalogdaki worker modelini (`workerModels.codex`) reasoning pini
+  olmadan kullandigini kontrol eder.
 - `scripts/validate-adaptive-runtime.mjs`: kosullu spawn politikasini, kisa
   routing gorunurlugunu, `max_threads = 10` kapasitesini, normal bir-dort ajan
   paralelligini, canonical skill alias'larini, kullaniciya ait config overlay'i,
@@ -52,7 +52,7 @@ Bu komut şunları çalıştırır:
   konumu, README kullanım örnekleri ve public-safe GitHub auth sınırı rehberi.
 - `scripts/validate-token-surfaces.mjs`: token audit script'i, `token-safe`
   profil, AGENTS token disiplini, context-budget skill referansi, README komut
-  dokumani ve pinlenmeyen agent model/reasoning sozlesmesi.
+  dokumani ve worker modelli agent sozlesmesi.
 - `scripts/verify-skill-sources.mjs`: offline skill catalog validation ve
   `catalog/skills-lock.json` commit, skill, CLI surumu ve integrity pin drift
   kontrolleri.

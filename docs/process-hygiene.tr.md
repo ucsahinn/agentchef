@@ -10,13 +10,13 @@ araçları kullanmasa bile aynı ağaçları katlar.
 
 AgentChef yetenekleri korur, yalnız ne zaman başlayacaklarını değiştirir:
 
-- Dengeli ana config uzak `openaiDeveloperDocs` ile lokal `context7` ve
-  `serena` sunucularını açar.
-- `codex --profile full`, yetenek ağırlıklı tek ana oturum için yedi bundled
+- Dengeli ana config uzak `openaiDeveloperDocs` ile lokal `serena` bridge'ini
+  açar.
+- `codex --profile full`, yetenek ağırlıklı tek ana oturum için altı bundled
   lokal stdio MCP'nin tamamını açar.
-- `codex --profile multi-session`, ikincil bir oturumda yedi lokal stdio
-  MCP'nin tamamını kapatır. Agent, skill, uzak OpenAI docs, built-in memory,
-  hook ve app yüzeyleri açık kalır.
+- `codex --profile multi-session`, ikincil bir oturumda Serena bridge'ini açık
+  tutar, diğer beş lokal stdio MCP'yi kapatır. Agent, skill, uzak OpenAI docs,
+  built-in memory, hook ve app yüzeyleri açık kalır.
 - Kapalı MCP bloğu config'de kalır. Bir profil veya bilinçli config override ile
   yeniden açılabilir; hiçbir yetenek tanımı silinmez.
 

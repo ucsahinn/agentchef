@@ -29,7 +29,7 @@
 
 - Classify non-trivial work against installed agents, skills, MCPs, and profile/config flags, then use the narrowest useful route.
 - Use {{ROUTING_SKILL}} when routing details, aliases, specialist ownership, or surface placement materially affect the task.
-- Agent role selection is automatic when delegation is useful, but preserve the active profile's model and reasoning choices.
+- Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them.
 <!-- target:codex -->
 - Treat `agents.max_threads = 10` as a capacity ceiling, not a target. Prefer one agent and normally use no more than four in a single task.
 <!-- /target:codex -->
@@ -114,11 +114,11 @@
 - Do not disable agents, skills, MCPs, memory, hooks, or apps merely to reduce tokens.
 <!-- target:codex -->
 - Prefer profile knobs such as verbosity, reasoning effort, compaction thresholds, and tool-output limits.
-- Keep agent role files free of model/reasoning pins so the active user profile remains authoritative.
+- Specialist and coordinator roles run on the catalog worker model (`gpt-6-luna`); the session the user opens keeps its own model and profile, and reasoning effort stays inherited.
 <!-- /target:codex -->
 <!-- target:claude -->
 - Prefer session knobs such as effort level, `/compact`, and subagent isolation over disabling capabilities.
-- Keep subagent definitions free of model pins so the active session model remains authoritative.
+- Specialist and coordinator subagents run on the catalog worker model (`sonnet`); the session the user opens keeps its own model and does the orchestration.
 <!-- /target:claude -->
 - Run `npm.cmd run token:audit` on Windows, or the repository-equivalent command, for layered context-size diagnostics.
 

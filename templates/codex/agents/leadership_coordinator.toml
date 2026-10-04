@@ -1,5 +1,6 @@
 name = "leadership_coordinator"
 description = "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["Engineering Lead", "Leadership Coordinator", "Delivery Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

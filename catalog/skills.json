@@ -101,7 +101,7 @@
       "install": false,
       "directInstall": true,
       "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/adaptive-agent-routing",
-      "reason": "Bundled local plugin skill for conditional delegation, canonical skill ownership, profile-inherited agent model selection, and compact routing visibility, with direct invocation required by the global operating contract."
+      "reason": "Bundled local plugin skill for conditional delegation, canonical skill ownership, worker-tier agent models with inherited reasoning, and compact routing visibility, with direct invocation required by the global operating contract."
     },
     {
       "name": "dependency-upgrade",

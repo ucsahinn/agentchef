@@ -1,5 +1,6 @@
 name = "test_verifier"
 description = "Validation specialist for lint, typecheck, tests, build, smoke checks, and failure evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["Test Verifier", "Build Verifier", "Check Runner"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

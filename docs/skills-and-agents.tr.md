@@ -47,6 +47,14 @@ gerektiği anlamına gelmez.
 Subagent'lar mevcut onay ve sandbox sınırlarını devralır. İşin devredilmesi,
 onlara fazladan yetki vermez.
 
+1.3.2 ile roller daha ucuz bir worker modelinde çalışır,
+açtığın oturum ise kendi modelini korur; bkz.
+[Model Katmanları](agents.tr.md#model-katmanları). Agent'lar birbiriyle
+sohbet etmez: ana oturum bir koordinatöre brief verir, koordinatör kendi
+worker'larından en çok dördüne brief verir ve her biri tek bir handoff döndürür.
+Codex ile Claude Code arasında doğrudan bir araç yoktur; bkz.
+[Agent'lar Birbiriyle Nasıl Konuşur](agents.tr.md#agentlar-birbiriyle-nasıl-konuşur).
+
 ## Acik Koordinasyon Panosu Akisi
 
 Koordinasyon durumu yalnizca kullanicinin acikca olusturdugu gorevle baslar.

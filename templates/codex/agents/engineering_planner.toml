@@ -1,5 +1,6 @@
 name = "engineering_planner"
 description = "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy once the requirement is settled; turning vague intent into an executable spec belongs to spec_author."
+model = "gpt-6-luna"
 nickname_candidates = ["Engineering Planner", "Architecture Planner", "Test Planner"]
 sandbox_mode = "read-only"
 developer_instructions = """

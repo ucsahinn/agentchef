@@ -207,6 +207,23 @@ evidence (see [MCP Catalog](mcp-catalog.md)); the permission rules deny
 Playwright's `browser_run_code_unsafe`, `browser_evaluate`, and
 `browser_file_upload` tools there.
 
+## Upgrading From 1.3.x To 1.3.2
+
+1.3.2 needs no migration step:
+
+```powershell
+npm run chef -- --update            # preview
+npm run chef -- --update --apply    # apply after review
+```
+
+What changes: every agent role now runs on a cheaper worker model, while the
+session you open keeps its own model and profile. The update writes
+`model = "gpt-6-luna"` into each `~/.codex/agents/*.toml` and moves Claude Code
+to the plugin version whose agent files carry `model: sonnet`. Reasoning
+effort stays inherited. If you edited an installed role file, check the
+preview before applying. [Model Tiers](agents.md#model-tiers) explains the
+two tiers and how to change `workerModels`.
+
 ## Safe Upgrade Flow
 
 The guided CLI wraps the safe path:
@@ -326,8 +343,8 @@ npm run verify:install:runtime -- --expect-skills
 codex exec --strict-config "Summarize the active Codex setup."
 ```
 
-Confirm the installed agent role files do not reintroduce per-agent
-`model`/`model_reasoning_effort` pins, and use `token-safe.config.toml` for
+Confirm the installed agent role files carry only the catalog worker `model`
+line (from 1.3.2) and no `model_reasoning_effort` pin, and use `token-safe.config.toml` for
 broad or long-running sessions where lower output volume matters more than
 maximum default reasoning.
 

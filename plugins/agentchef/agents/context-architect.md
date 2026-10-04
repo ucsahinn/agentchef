@@ -2,6 +2,7 @@
 name: context-architect
 description: "Read-only strategist for deciding what belongs in prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

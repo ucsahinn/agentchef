@@ -82,6 +82,11 @@ capacity.
 Rejected because task shape and the user's active profile are better inputs
 than a static role-file default. Pins also make profile changes misleading.
 
+Partly superseded in 1.3.2 (2026-10-04): every role now runs on one
+catalog worker model (`workerModels`: Codex `gpt-6-luna`, Claude `sonnet`) so
+delegated work uses a lower-cost tier while the session the user opens keeps
+its own model. Reasoning effort stays unpinned, as decided here.
+
 ### Replace the entire installed config from the template
 
 Rejected because trust entries and machine-specific controls are user state,

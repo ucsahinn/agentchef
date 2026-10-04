@@ -1,5 +1,6 @@
 name = "product_coordinator"
 description = "Product coordinator that correlates prompts, product framing, and executable specifications."
+model = "gpt-6-luna"
 nickname_candidates = ["Product Lead", "Product Coordinator", "Scope Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

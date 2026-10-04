@@ -1,5 +1,6 @@
 name = "qa_coordinator"
 description = "QA coordinator that correlates quality, verification, and security evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["QA Lead", "QA Coordinator", "Assurance Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

@@ -2,6 +2,7 @@
 name: codex-doctor
 description: "Controlled setup diagnostician for Codex starter health, catalog drift, install-plan coverage, and safe next checks."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: NotebookEdit
 ---
 

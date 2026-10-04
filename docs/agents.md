@@ -118,8 +118,8 @@ the task becomes done.
 3. Spawned agents inherit the current approval and sandbox boundaries.
 4. Parallel write-heavy work stays limited because overlapping edits create
    coordination cost.
-5. The active user profile remains authoritative; AgentChef role files do not
-   pin every agent to one model.
+5. The session you open keeps its own model and profile. Delegated roles run
+   on the cheaper worker model; see [Model Tiers](#model-tiers).
 
 The routing board includes a narrow data-documentation route: `backend_coordinator`
 with `docs_researcher` correlates read-only lineage, catalog, quality, and source
@@ -141,6 +141,99 @@ subagents with `Read`, `Grep`, and `Glob` tools and `Write`, `Edit`,
 only spawn their catalog-bound workers through `Agent(agentchef:<worker>)`.
 AgentChef never writes `~/.claude/agents/` and never emits
 `bypassPermissions`.
+
+## Model Tiers
+
+AgentChef splits the work between two model tiers. This applies from 1.3.2;
+in 1.3.1 and earlier every role runs on the session model.
+
+| Tier | Who runs on it | Model | Where it is set |
+| --- | --- | --- | --- |
+| Orchestrator | The session you open (the main thread) | Your choice; AgentChef never changes it | Codex: `model` in your `config.toml` or the active profile. Claude Code: `/model`, `--model`, or your settings |
+| Worker | All 28 roles: 21 specialists and 7 coordinators | Codex `gpt-6-luna`, Claude Code `sonnet` | `workerModels` in [`catalog/agents.json`](../catalog/agents.json) |
+
+The worker model reaches each CLI as one line per role file:
+`model = "gpt-6-luna"` in every `templates/codex/agents/*.toml` (installed to
+`~/.codex/agents/`), and `model: sonnet` in the frontmatter of every
+`plugins/agentchef/agents/*.md`. Coordinators run on the worker model too, so
+only the session you open plans on its own model.
+
+Reasoning effort is not pinned. No role file sets `model_reasoning_effort`;
+the official Codex subagents guide says a custom agent file that sets only
+`model` keeps the effort already resolved for the spawn. Claude Code's
+frontmatter carries no effort field from AgentChef either.
+
+Which value wins when several are set:
+
+- Codex: a `model` in the custom agent file takes precedence
+  ([Codex subagents](https://developers.openai.com/codex/subagents), checked
+  2026-10-04).
+- Claude Code: a `model` passed on the individual `Agent` call comes first,
+  then the agent's `model:` frontmatter, then the
+  `CLAUDE_CODE_SUBAGENT_MODEL` variable, then the main conversation's model
+  ([Claude Code subagents](https://code.claude.com/docs/en/sub-agents), checked
+  2026-10-04). The environment variable therefore does not override
+  AgentChef's `sonnet`; a per-call `model` does.
+
+Security and review verdicts come from the worker tier too: `security-auditor`,
+`code-reviewer`, and `release-verifier` run on the worker model like every
+other role. For a high-stakes review, run it in the session you opened, or in
+Claude Code pass a stronger `model` on that one `Agent` call.
+
+The worker model has to be available to your account. If spawning a role
+fails with a model error, change the worker model as below.
+
+To change `workerModels` in your checkout:
+
+1. Edit `workerModels.codex` and `workerModels.claude` in
+   `catalog/agents.json`.
+2. Set the same value on the `model = "..."` line of all 28
+   `templates/codex/agents/*.toml` files; `node scripts/validate-agent-config.mjs`
+   fails until every line matches the catalog.
+3. Update the model names in `templates/shared/working-agreement.md` and in
+   `scripts/tests/claude-emitters.test.mjs`, which pins both values.
+4. Run `npm run render:targets` to regenerate the Claude agent files, the
+   Codex `AGENTS.md`, and the Claude rule, then `npm run check`.
+5. Preview and apply with `npm run chef -- --update` and
+   `npm run chef -- --update --apply`.
+
+Editing the `model` line of one installed `~/.codex/agents/<role>.toml` works
+for that machine, but it is a managed file: the next update or repair writes
+the template back (after a backup) and reports the edit as drift.
+
+## How Agents Talk To Each Other
+
+Communication is hierarchical and one-shot, not a continuous conversation:
+
+`main session -> coordinator -> specialist`
+
+- The depth stops at two levels (`max_depth = 2` in the Codex config). A
+  coordinator selects at most four of its own cataloged workers, and workers
+  never spawn agents. In Claude Code only coordinator files grant the `Agent`
+  tool, and only for their own workers.
+- An agent receives one brief and returns one handoff. Agents do not message
+  each other while they work; cross-domain questions go back to the main
+  session, which decides the next step.
+- The orchestrator writes the brief with the `agent-brief` skill. For a vague
+  or multi-step request, the skill says to plan first with `prompt-architect`
+  in plan-only mode. This is a rule the orchestrator follows, not an automatic
+  step: nothing forces a plan before a brief.
+
+Between the two CLIs there is no direct tool:
+
+- Claude Code can hand read-only work to Codex by piping a brief into
+  `codex exec --sandbox read-only - < brief.md`; Codex reads the prompt from
+  stdin when it is `-`. `codex exec` asks no questions, so the sandbox is the
+  only boundary, and Codex still starts your enabled MCP servers and web
+  search. Write the brief outside the repository, keep secrets out of it, and
+  add `--profile offline` when the work needs no MCP server (it does not turn
+  off web search or shell network access).
+- Codex cannot call Claude Code. It hands work over through a
+  coordination-board task (see
+  [Skills, Plugins, And Specialist Agents](skills-and-agents.md)) or through
+  `beyin aktar` in the separate Beyin engine
+  ([`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)), which
+  AgentChef does not install.
 
 ## AgentSpace Ownership, Knowledge, And Worker Safety
 

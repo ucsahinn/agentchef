@@ -2,6 +2,7 @@
 name: engineering-planner
 description: "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy once the requirement is settled; turning vague intent into an executable spec belongs to spec_author."
 tools: Read, Grep, Glob, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

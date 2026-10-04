@@ -56,6 +56,14 @@ Code'da `/agentchef:agent-brief`) bu alışverişi sabitler: worker'ın aldığ�
 brief ve döndürdüğü handoff (Sonuç, Kanıt, Değişen kapsam, Risk, Açık soru,
 Sonraki doğrulama).
 
+Ayrıntılı coordination-board sözleşmesi
+[Skill'ler, Plugin'ler ve Uzman Agent'lar](skills-and-agents.tr.md) sayfasındadır:
+iş yalnızca kullanıcının açıkça oluşturduğu bir board göreviyle başlar; pane
+seçimi, rol seçimi ve routing eşleşmeleri onu asla kendiliğinden başlatmaz.
+Koordinatörler yalnızca katalogdaki worker'larını seçer, worker'lar yapılandırılmış
+kanıt handoff'u döndürür, alanlar arası soruları ana oturum iletir ve görev done
+olmadan önce kanıt eklenip incelenmelidir.
+
 ## 🗺️ Önce Problemi Anla
 
 | Agent | Ne zaman işe yarar? |
@@ -110,8 +118,8 @@ Sonraki doğrulama).
 3. Spawn edilen agent'lar mevcut onay ve sandbox sınırlarını miras alır.
 4. Aynı dosyalara dokunan paralel işler koordinasyon maliyeti yarattığı için
    write-heavy delegasyon sınırlı tutulur.
-5. Aktif kullanıcı profili yetkili kalır; AgentChef rol dosyaları her agent'ı
-   tek bir modele sabitlemez.
+5. Açtığın oturum kendi modelini ve profilini korur. Delege edilen roller daha
+   ucuz worker modelinde çalışır; bkz. [Model Katmanları](#model-katmanları).
 
 Veri rotası dardır: `backend_coordinator`, `docs_researcher` ile salt-okunur
 lineage, katalog, kalite ve kaynak kanıtını birleştirir. Data engineering,
@@ -131,6 +139,100 @@ ve `Write`, `Edit`, `Bash` yasaklı subagent'lara dönüşür; workspace-write
 roller düzenleme araçlarını korur; koordinatörler yalnızca kataloğa bağlı
 worker'larını `Agent(agentchef:<worker>)` ile başlatabilir. AgentChef
 `~/.claude/agents/` dizinine asla yazmaz ve asla `bypassPermissions` üretmez.
+
+## Model Katmanları
+
+AgentChef işi iki model katmanına böler. Bu, 1.3.2 ile geçerlidir;
+1.3.1 ve öncesinde her rol oturumun modelinde çalışır.
+
+| Katman | Kim çalışır | Model | Nerede ayarlanır |
+| --- | --- | --- | --- |
+| Orkestratör | Açtığın oturum (ana thread) | Senin seçimin; AgentChef bunu asla değiştirmez | Codex: `config.toml` içindeki `model` veya aktif profil. Claude Code: `/model`, `--model` veya ayarların |
+| Worker | 28 rolün tamamı: 21 uzman ve 7 koordinatör | Codex `gpt-6-luna`, Claude Code `sonnet` | [`catalog/agents.json`](../catalog/agents.json) içindeki `workerModels` |
+
+Worker modeli her CLI'a rol dosyası başına tek satır olarak ulaşır: her
+`templates/codex/agents/*.toml` dosyasında `model = "gpt-6-luna"`
+(`~/.codex/agents/` altına kurulur) ve her `plugins/agentchef/agents/*.md`
+dosyasının frontmatter'ında `model: sonnet`. Koordinatörler de worker modelinde
+çalışır; yalnızca açtığın oturum kendi modelinde plan yapar.
+
+Reasoning effort sabitlenmez. Hiçbir rol dosyası `model_reasoning_effort`
+koymaz; resmi Codex subagent rehberine göre yalnızca `model` koyan özel agent
+dosyası, spawn için zaten çözülmüş effort değerini korur. AgentChef Claude Code
+frontmatter'ına da effort alanı yazmaz.
+
+Birden fazla değer varsa hangisi kazanır:
+
+- Codex: özel agent dosyasındaki `model` önceliklidir
+  ([Codex subagent'ları](https://developers.openai.com/codex/subagents),
+  2026-10-04'te kontrol edildi).
+- Claude Code: tek bir `Agent` çağrısında verilen `model` önce gelir, sonra
+  agent'ın `model:` frontmatter'ı, sonra `CLAUDE_CODE_SUBAGENT_MODEL`
+  değişkeni, en son ana konuşmanın modeli
+  ([Claude Code subagent'ları](https://code.claude.com/docs/en/sub-agents),
+  2026-10-04'te kontrol edildi). Bu yüzden ortam değişkeni AgentChef'in
+  `sonnet` değerini ezmez; çağrı başına `model` ezer.
+
+Güvenlik ve inceleme kararları da worker katmanından gelir: `security-auditor`,
+`code-reviewer` ve `release-verifier` diğer roller gibi worker modelinde
+çalışır. Yüksek riskli bir inceleme için onu açtığın oturumda çalıştır ya da
+Claude Code'da o tek `Agent` çağrısına daha güçlü bir `model` ver.
+
+Worker modelinin hesabında kullanılabilir olması gerekir. Bir rolü başlatmak
+model hatasıyla başarısız olursa worker modelini aşağıdaki gibi değiştir.
+
+Kendi checkout'unda `workerModels` değerini değiştirmek için:
+
+1. `catalog/agents.json` içinde `workerModels.codex` ve `workerModels.claude`
+   değerlerini düzenle.
+2. Aynı değeri 28 `templates/codex/agents/*.toml` dosyasının
+   `model = "..."` satırına yaz; her satır katalogla eşleşene kadar
+   `node scripts/validate-agent-config.mjs` başarısız olur.
+3. `templates/shared/working-agreement.md` içindeki ve iki değeri de sabitleyen
+   `scripts/tests/claude-emitters.test.mjs` içindeki model adlarını güncelle.
+4. Claude agent dosyalarını, Codex `AGENTS.md` dosyasını ve Claude kuralını
+   yeniden üretmek için `npm run render:targets`, ardından `npm run check`
+   çalıştır.
+5. `npm run chef -- --update` ile önizle, `npm run chef -- --update --apply`
+   ile uygula.
+
+Kurulu tek bir `~/.codex/agents/<rol>.toml` dosyasının `model` satırını
+düzenlemek o makinede çalışır, ancak bu yönetilen bir dosyadır: sonraki update
+veya repair şablonu (yedek aldıktan sonra) geri yazar ve düzenlemeyi drift
+olarak raporlar.
+
+## Agent'lar Birbiriyle Nasıl Konuşur
+
+İletişim hiyerarşik ve tek seferliktir, sürekli bir sohbet değildir:
+
+`ana oturum -> koordinatör -> uzman`
+
+- Derinlik iki seviyede durur (Codex config'inde `max_depth = 2`). Bir
+  koordinatör kendi katalogdaki worker'larından en çok dördünü seçer; worker'lar
+  asla agent başlatmaz. Claude Code'da `Agent` aracını yalnızca koordinatör
+  dosyaları verir, o da yalnızca kendi worker'ları için.
+- Bir agent tek bir brief alır ve tek bir handoff döndürür. Agent'lar çalışırken
+  birbirine mesaj atmaz; alanlar arası sorular ana oturuma döner ve sonraki
+  adıma ana oturum karar verir.
+- Orkestratör brief'i `agent-brief` skill'iyle yazar. Belirsiz veya çok adımlı
+  bir istekte skill, önce `prompt-architect` ile plan-only modunda plan
+  yapılmasını söyler. Bu orkestratörün uyduğu bir kuraldır, otomatik bir adım
+  değildir: hiçbir şey brief'ten önce plan yapılmasını zorlamaz.
+
+İki CLI arasında doğrudan bir araç yoktur:
+
+- Claude Code salt-okunur bir işi, brief'i
+  `codex exec --sandbox read-only - < brief.md` komutuna pipe ederek Codex'e
+  verebilir; prompt `-` olduğunda Codex onu stdin'den okur. `codex exec` soru
+  sormaz, bu yüzden tek sınır sandbox'tır; Codex açık MCP sunucularını ve web
+  aramasını yine başlatır. Brief'i repo dışına yaz, içine sır koyma ve iş MCP
+  sunucusu gerektirmiyorsa `--profile offline` ekle (web aramasını ve shell ağ
+  erişimini kapatmaz).
+- Codex, Claude Code'u çağıramaz. İşi bir coordination-board görevi üzerinden
+  (bkz. [Skill'ler, Plugin'ler ve Uzman Agent'lar](skills-and-agents.tr.md))
+  veya ayrı Beyin motorundaki `beyin aktar` ile
+  ([`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain))
+  devreder; AgentChef bu motoru kurmaz.
 
 ## AgentSpace Sahipliği, Knowledge ve Worker Güvenliği
 

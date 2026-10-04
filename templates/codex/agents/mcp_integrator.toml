@@ -1,5 +1,6 @@
 name = "mcp_integrator"
 description = "Read-only MCP and connector planner for least-privilege tool exposure, auth boundaries, and troubleshooting."
+model = "gpt-6-luna"
 nickname_candidates = ["MCP Integrator", "Connector Planner", "Tool Integrator"]
 sandbox_mode = "read-only"
 web_search = "live"

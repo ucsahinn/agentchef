@@ -2,6 +2,7 @@
 name: test-verifier
 description: "Validation specialist for lint, typecheck, tests, build, smoke checks, and failure evidence."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: NotebookEdit
 ---
 

@@ -39,7 +39,8 @@ if (exists(agentsRel)) {
     "Routing plan:",
     "Routing result:",
     "adaptive-agent-routing",
-    "preserve the active profile's model and reasoning choices"
+    "keep the session's own model and profile",
+    "do not pass a model override when spawning them"
   ]) {
     if (!text.includes(required)) fail(`Compact global AGENTS.md missing: ${required}`);
   }
@@ -73,8 +74,8 @@ if (exists("catalog/routing-profiles.json")) {
   if (routing.delegationPolicy?.mode !== "conditional") fail("Routing catalog must define conditional delegation.");
   if (routing.delegationPolicy?.capacityCeiling !== 10) fail("Routing capacity ceiling must preserve max_threads=10.");
   if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) fail("Recommended parallelism must cap normal routing at four agents.");
-  if (routing.agentRuntimePolicy?.modelSelection !== "inherit-profile-adaptive") {
-    fail("Routing catalog must preserve profile-inherited adaptive agent model selection.");
+  if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier" || routing.agentRuntimePolicy?.reasoningSelection !== "inherit-profile-adaptive") {
+    fail("Routing catalog must run roles on the worker tier and keep reasoning inherited.");
   }
   for (const profile of routing.profiles || []) {
     if (profile.delegationMode !== "conditional") fail(`Route must use conditional delegation: ${profile.id}`);
@@ -98,8 +99,8 @@ if (exists("catalog/skills.json")) {
 if (exists("catalog/agents.json")) {
   const catalog = JSON.parse(read("catalog/agents.json"));
   for (const agent of catalog.agents || []) {
-    if (agent.modelSelection !== "auto" || agent.modelReasoningEffort !== "auto") {
-      fail(`Agent must retain automatic inherited model/reasoning selection: ${agent.name}`);
+    if (agent.modelSelection !== "worker" || agent.modelReasoningEffort !== "auto") {
+      fail(`Agent must run on the worker model with inherited reasoning: ${agent.name}`);
     }
     if (agent.neverOverrideUserProfile !== true) fail(`Agent must preserve user profile choice: ${agent.name}`);
   }

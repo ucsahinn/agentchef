@@ -2,6 +2,7 @@
 name: qa-coordinator
 description: "QA coordinator that correlates quality, verification, and security evidence."
 tools: Read, Grep, Glob, Agent(agentchef:qa-lead, agentchef:test-verifier, agentchef:security-auditor)
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

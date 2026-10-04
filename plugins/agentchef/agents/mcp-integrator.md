@@ -2,6 +2,7 @@
 name: mcp-integrator
 description: "Read-only MCP and connector planner for least-privilege tool exposure, auth boundaries, and troubleshooting."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

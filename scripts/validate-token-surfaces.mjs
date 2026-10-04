@@ -149,12 +149,12 @@ for (const rel of ["docs/install.md", "docs/install.tr.md"]) {
 if (exists("catalog/agents.json")) {
   const catalog = JSON.parse(read("catalog/agents.json"));
   for (const agent of catalog.agents || []) {
-    if (agent.modelSelection !== "auto") fail(`Agent ${agent.name} must declare modelSelection auto.`);
+    if (agent.modelSelection !== "worker") fail(`Agent ${agent.name} must declare modelSelection worker.`);
     if (agent.modelReasoningEffort !== "auto") fail(`Agent ${agent.name} must declare modelReasoningEffort auto.`);
     const templatePath = `templates/codex/${agent.configFile}`;
     if (!exists(templatePath)) continue;
     const template = read(templatePath);
-    if (readTomlString(template, "model")) fail(`Agent template must not pin model when catalog modelSelection is auto: ${agent.name}`);
+    if (readTomlString(template, "model") !== catalog.workerModels?.codex) fail(`Agent template must use the catalog worker model: ${agent.name}`);
     if (readTomlString(template, "model_reasoning_effort")) {
       fail(`Agent template must not pin model_reasoning_effort when catalog modelReasoningEffort is auto: ${agent.name}`);
     }

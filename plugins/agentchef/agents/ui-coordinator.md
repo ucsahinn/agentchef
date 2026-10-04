@@ -2,6 +2,7 @@
 name: ui-coordinator
 description: "UI coordinator that correlates rendered UI verification and product design review evidence."
 tools: Read, Grep, Glob, Agent(agentchef:frontend-verifier, agentchef:design-reviewer)
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

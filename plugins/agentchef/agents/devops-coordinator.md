@@ -2,6 +2,7 @@
 name: devops-coordinator
 description: "DevOps coordinator that correlates operational performance, runtime health, setup diagnostics, and onboarding friction."
 tools: Read, Grep, Glob, Agent(agentchef:performance-auditor, agentchef:codex-doctor, agentchef:devex-auditor)
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

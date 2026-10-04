@@ -77,6 +77,19 @@ Lisans sütunu, sabitlenen commit'te upstream depoda ölçülen lisansı kaydede
 lock dosyası da aynı değeri tutar, böylece bir pin değişikliği lisansı sessizce
 değiştiremez.
 
+### İki Sabitlenmiş Skill'in Bilinen Sınırları
+
+- `improve-codebase-architecture`, upstream `SKILL.md` dosyasında
+  `disable-model-invocation: true` taşır. Görev eşleşse bile agent'lar onu
+  kendiliğinden seçmez. Açıkça çağır: Codex'te
+  `$agentchef:improve-codebase-architecture`, Claude Code'da
+  `/agentchef:improve-codebase-architecture`.
+- `git-workflow-and-versioning` upstream'de kendini "Use when making any code
+  change" diye tanımlar; bu yüzden bir agent onu sıradan düzenlemelerde de
+  yükleyebilir. Yüklenmesi bir yetki vermez: AgentChef çalışma sözleşmesi,
+  sen istemedikçe asla commit veya push yapılmamasını söyler ve bu kural
+  skill'in kontrol listesinden önce gelir.
+
 ## 🧰 Katalogda Bulunan Diğer Workflow'lar
 
 AgentChef aşağıdaki isimleri otomatik kurmaz.

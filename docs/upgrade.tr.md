@@ -215,6 +215,24 @@ DevTools plugin'de yoktur. Onları browser kanıtı gereken projeye ekle (bkz.
 `browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
 araçlarını reddeder.
 
+## 1.3.x'ten 1.3.2'ye Geçiş
+
+1.3.2 migration adımı gerektirmez:
+
+```powershell
+npm run chef -- --update            # önizleme
+npm run chef -- --update --apply    # inceledikten sonra uygula
+```
+
+Ne değişir: her agent rolü artık daha ucuz bir worker modelinde çalışır, açtığın
+oturum ise kendi model ve profilini korur. Update her
+`~/.codex/agents/*.toml` dosyasına `model = "gpt-6-luna"` yazar ve Claude
+Code'u agent dosyaları `model: sonnet` taşıyan plugin sürümüne geçirir.
+Reasoning effort devralınmaya devam eder. Kurulu bir rol dosyasını
+düzenlediysen uygulamadan önce önizlemeyi kontrol et.
+[Model Katmanları](agents.tr.md#model-katmanları) iki katmanı ve
+`workerModels` değerinin nasıl değiştirileceğini anlatır.
+
 ## Güvenli Upgrade Akışı
 
 1. Repo güncellemesini çek.
@@ -328,8 +346,9 @@ npm run verify:install:runtime -- --expect-skills
 codex exec --strict-config "Summarize the active Codex setup."
 ```
 
-Kurulu agent role dosyalarinin agent bazli `model` /
-`model_reasoning_effort` pinlerini geri getirmedigini dogrula. Broad veya uzun
+Kurulu agent role dosyalarinin yalnizca katalogdaki worker `model` satirini
+(1.3.2'den itibaren) tasidigini ve `model_reasoning_effort` pini
+icermedigini dogrula. Broad veya uzun
 session'larda maksimum default reasoning yerine daha dusuk cikti hacmi onemliyse
 `token-safe.config.toml` kullan.
 

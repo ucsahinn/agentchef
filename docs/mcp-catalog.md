@@ -180,6 +180,29 @@ Every other pin in this catalog was verified by starting the server over stdio,
 completing the MCP handshake, and comparing the tool names it advertises with
 the allowlist recorded here.
 
+## Known Limit: Codex Keeps Every Thread's MCP Servers Running
+
+Codex starts a full set of the enabled MCP servers for each thread and does
+not stop the set of an earlier thread until the app exits. Long sessions with many threads therefore pile up MCP processes.
+This is an upstream Codex issue,
+[openai/codex#30408](https://github.com/openai/codex/issues/30408) (open when
+checked on 2026-10-04). Codex has no config key that limits it: an MCP table
+offers only `enabled`, `required`, `startup_timeout_sec`,
+`tool_timeout_sec`, and `enabled_tools`/`disabled_tools`.
+
+Until it is fixed upstream:
+
+- Keep few servers enabled. The Codex base turns on only
+  `openaiDeveloperDocs` and `serena`; enable others for the task that needs
+  them.
+- Start sessions that will open many threads with
+  `codex --profile multi-session`, which leaves only the Serena bridge among
+  the local stdio servers.
+- Restart the Codex app from time to time; exiting the app closes the sets it
+  kept.
+- `npm run chef -- --processes --no-log` shows what is running; see
+  [multi-session process hygiene](process-hygiene.md).
+
 ## The Boundary I Keep
 
 - Remote documentation, browser evidence, and one semantic-code helper form

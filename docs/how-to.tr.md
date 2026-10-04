@@ -147,8 +147,10 @@ Installer profilleri `~/.codex` içine kopyalar:
   app yüzeylerini korur.
 
 Ana config'i bozmak yerine farklı güvenlik duruşu gerektiğinde profil kullan.
-Uzman role dosyaları agent bazlı model/reasoning pinlemez; aktif profil ve
-Codex runtime task'a uygun dengeyi seçebilir.
+Profil, açtığın oturumun modelini belirler. 1.3.2 ile
+agent rollerinde model/reasoning ayrımı sabittir: katalogdaki worker modelinde çalışırlar ve reasoning effort'u
+devralırlar (bkz.
+[Model Katmanları](agents.tr.md#model-katmanları)).
 Sahiplik farkındalıklı denetim ve tam hedefli eski süreç temizliği için
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md) sayfasına bak.
 

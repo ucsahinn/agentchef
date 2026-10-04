@@ -1,5 +1,6 @@
 name = "qa_lead"
 description = "QA lead for end-to-end bug finding, regression coverage, and re-verification plans."
+model = "gpt-6-luna"
 nickname_candidates = ["QA Lead", "Regression Lead", "Workflow Tester"]
 sandbox_mode = "workspace-write"
 developer_instructions = """
