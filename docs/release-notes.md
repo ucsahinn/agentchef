@@ -2,6 +2,50 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.0 - 2026-10-04
+
+AgentChef 1.3.0 makes the whole harness one plugin, counted the same way
+everywhere, and lighter to run. Upgrade with `npm run chef -- --update --apply`,
+then move a 1.0–1.2 install with
+`npm run chef -- --migrate-identity --target both --apply` (preview it first
+without `--apply`); see [Upgrade](upgrade.md).
+
+### What Changed
+
+- **One plugin, one name.** The plugin is `agentchef` (was
+  `agentchef-workflows`). Every skill reaches both CLIs only through it:
+  `$agentchef:<skill>` in Codex, `/agentchef:<skill>` in Claude Code. No
+  copies in `~/.agents/skills`, no links in `~/.claude/skills`; the
+  migration retires the ones an earlier release left, after a backup.
+- **28 agent roles.** Eleven coordinators became seven (new `ui_coordinator`);
+  the five removed role files and config tables are retired only when they
+  are exactly what AgentChef wrote.
+- **Skills.** 11 bundled + 18 commit-pinned upstream skills. New: `agent-brief`
+  (the brief and handoff contract between agents), `security-threat-model`,
+  `shipping-and-launch`, `git-workflow-and-versioning`; `frontend-design` and
+  `improve-codebase-architecture` replace two older pins. Optional duplicates
+  became aliases or retired entries.
+- **MCP servers.** `memory` and `filesystem` are gone (14 servers). Claude Code
+  gets `context7` and `serena` from the plugin; Playwright and Chrome DevTools
+  are off by default and added per project, because every session started
+  every configured server. An npx server the plugin starts runs in one node
+  process instead of a chain of four. Entries an earlier install wrote into
+  `~/.claude.json` are retired; your own are reported, or retired with
+  `-AdoptMcp` after a backup.
+- **Approvals and hooks.** An agent running a pinned npx package, `git
+  ls-remote`, or `node --check` is asked first; `rg --pre` is guarded. Claude
+  Code now gets the session-end process-hygiene hook as well.
+- **One map.** `npm run chef -- --inventory` lists every skill, role, and MCP
+  server with its source and state on each target (shadowed, migration
+  pending, broken link, drifted); its totals come from the catalog. See
+  [Harness map](harness-map.md).
+- **Coordination board v3.** Tasks carry an owner, a write scope with a lease,
+  the brief, and evidence; work starts only from a complete brief.
+- **Fixes.** About thirty bugs from two bug hunts over install, migration,
+  status, process hygiene, and the Serena pool, each with a test.
+
+The [CHANGELOG](../CHANGELOG.md) lists every change with its cause.
+
 ## v1.2.2 - 2026-10-02
 
 AgentChef 1.2.2 collects the fixes from running every one of the 32 AgentChef
