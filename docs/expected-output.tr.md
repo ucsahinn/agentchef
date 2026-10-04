@@ -134,7 +134,7 @@ What if: Performing the operation ...
   - No tokens, secrets, cookies, sessions, or credentials are requested.
 Codex home [...]:
 Agents home [...]:
-Install or reconcile the 15 reviewed global Codex skills now? [Y/n]:
+Install or reconcile the 18 pinned upstream skills in the AgentChef plugin now? [Y/n]:
 Replace existing managed AgentChef files after backup instead of preserving/merging? [y/N]:
 Install optional global Git guards for this Windows user? [y/N]:
 
