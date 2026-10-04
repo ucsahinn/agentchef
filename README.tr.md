@@ -193,6 +193,7 @@ supply-chain göstergeleri ve güvenlik sınırlarını birlikte denetler.
 - [Agent'lar](docs/agents.tr.md)
 - [Skill ve plugin'ler](docs/skills.tr.md)
 - [MCP kataloğu](docs/mcp-catalog.tr.md)
+- [Harness haritası ve envanter](docs/harness-map.tr.md)
 - [Harness uyumluluğu](docs/harness-compatibility.tr.md)
 - [Bilgi bankası](kb/README.tr.md)
 - [Sorun giderme](docs/troubleshooting.tr.md)

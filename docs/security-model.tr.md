@@ -413,6 +413,22 @@ account/database/broad-filesystem connector enable etmez.
 
 ## Backup Inventory Ve Restore
 
+## Taşınabilir Workspace OS Sınırı
+
+AgentChef taşınabilirdir, çünkü installer `CODEX_HOME` ve `AGENTS_HOME`
+yollarını makine yoluna gömmek yerine çalışma anında çözer. Önizleme ve izole
+smoke testi için depoya göreli geçici bir kök uygundur; gerçek bir home ise
+açık bir kullanıcı tercihi olarak kalır ve her managed değiştirme yine
+backup'la korunur.
+
+Paket sınırı bilinçlidir: Chef yalnız Codex yeteneklerini ve dağıtım
+varlıklarını kurar. Memory engine veya control plane gibi yardımcı araçları
+kurmaz ya da yönetmez, verilerini okumaz veya yazmaz, mevcut terminal
+oturumlarını sahiplenmez ve `auth.json`, oturum, credential ya da makine
+durumunu bilgisayarlar arasında taşımaz. Bu araçlar ayrı sürümlenen, en az
+yetkili sözleşmeleri üzerinden entegre olabilir; asla bir installer yan etkisi
+olarak değil.
+
 `npm run chef -- --backups`, aktif Codex home altindaki backup archive'larini
 global/user state degistirmeden listeler. `npm run chef -- --backups --backup
 <id>` backup archive metadata'sini inceler: path, size, hash, manifest durumu,

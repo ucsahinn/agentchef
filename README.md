@@ -192,6 +192,7 @@ contents, supply-chain indicators, and security boundaries.
 - [Agents](docs/agents.md)
 - [Skills and plugins](docs/skills.md)
 - [MCP catalog](docs/mcp-catalog.md)
+- [Harness map and inventory](docs/harness-map.md)
 - [Harness compatibility](docs/harness-compatibility.md)
 - [Knowledge base](kb/README.md)
 - [Troubleshooting](docs/troubleshooting.md)

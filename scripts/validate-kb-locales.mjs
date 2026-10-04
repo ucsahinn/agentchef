@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { headingLevels } from "./lib/markdown-headings.mjs";
 
 const root = path.resolve(process.cwd());
 const kbDir = path.join(root, "kb");
@@ -55,7 +56,15 @@ if (!fs.existsSync(kbDir)) {
 
   for (const file of englishFiles) {
     const pair = file.replace(/\.md$/, localeSuffix);
-    if (!fileSet.has(pair)) fail(`Missing Turkish KB pair for kb/${file}: kb/${pair}`);
+    if (!fileSet.has(pair)) {
+      fail(`Missing Turkish KB pair for kb/${file}: kb/${pair}`);
+      continue;
+    }
+    const english = headingLevels(read(file));
+    const turkish = headingLevels(read(pair));
+    if (english.join(",") !== turkish.join(",")) {
+      fail(`kb/${file} and kb/${pair} differ in heading structure (${english.length} vs ${turkish.length} headings)`);
+    }
   }
 
   for (const file of turkishFiles) {

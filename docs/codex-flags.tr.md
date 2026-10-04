@@ -51,6 +51,22 @@ agent baslatma, MCP acma veya onay ayari degisikligi yapmaz.
 `multi-session`, ikincil eşzamanlı oturumlarda lokal stdio MCP'leri kapatır;
 agent, skill, uzak OpenAI docs, built-in memory, hook ve app yüzeylerini korur.
 
+## Yaygın Komutlar
+
+| Komut | Kullanım |
+| --- | --- |
+| `codex` | Terminal arayüzünü başlatır. |
+| `codex app` | Masaüstü uygulamasını başlatır. |
+| `codex doctor --summary` | Kurulum, config, auth, runtime, Git ve thread sağlığını teşhis eder. |
+| `codex exec` | Codex'i etkileşimsiz çalıştırır. |
+| `codex features` | Feature flag'leri listeler ve kalıcı yapar. |
+| `codex mcp` | MCP server'larını yönetir. |
+| `codex plugin` | Plugin kurar, listeler ve kaldırır. |
+| `codex plugin marketplace` | Plugin marketplace ekler, listeler, günceller veya kaldırır. |
+| `codex completion power-shell` | PowerShell tamamlamalarını üretir. |
+| `codex debug models` | Codex'in gördüğü model kataloğunu inceler. |
+| `codex execpolicy check` | Kuralları bir komut üzerinde test eder. |
+
 Sahiplik farkındalıklı AgentChef süreç komutları:
 
 ```bash
@@ -70,29 +86,6 @@ home, MCP envanteri ve plugin durumunu kontrol eder. Buyuk yerel rollout gecmisi
 tamamlaniyorsa sinirli doctor timeout'u yanlis bir kurulum hatasi degil
 `attention` uyarisi olur. Farkli bir ambient `CODEX_HOME` karsilastirmasi ancak
 ozellikle gerekiyorsa `--ambient-doctor` kullanin.
-
-## Güvenli Başlangıçlar
-
-İnteraktif çalışma:
-
-```bash
-codex --sandbox workspace-write --ask-for-approval on-request
-```
-
-Sadece review:
-
-```bash
-codex --sandbox read-only --ask-for-approval never
-```
-
-Config kontrolü:
-
-```bash
-codex exec --strict-config "Summarize the active setup."
-```
-
-`danger-full-access` ve bypass flagleri standart çözüm değildir. Sadece dışarıdan
-izole edilmiş, atılabilir ortamda kullan.
 
 ## MCP Config Alanlari
 
@@ -124,6 +117,29 @@ kalir.
 | `apps._default.destructive_enabled` | `false` | Destructive davranis bildiren tool'lari default olarak kapatir. |
 | `apps._default.open_world_enabled` | `false` | Genis open-world davranis bildiren tool'lari default olarak kapatir. |
 | `apps.<id>.tools.<tool>.approval_mode` | unset | Sadece belirli bir connector tool'u review edildiyse kullan. |
+
+## Güvenli Başlangıçlar
+
+İnteraktif çalışma:
+
+```bash
+codex --sandbox workspace-write --ask-for-approval on-request
+```
+
+Sadece review:
+
+```bash
+codex --sandbox read-only --ask-for-approval never
+```
+
+Config kontrolü:
+
+```bash
+codex exec --strict-config "Summarize the active setup."
+```
+
+`danger-full-access` ve bypass flagleri standart çözüm değildir. Sadece dışarıdan
+izole edilmiş, atılabilir ortamda kullan.
 
 ## Acik Tutulmasi Gereken Gelismis Ozellikler
 

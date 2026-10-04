@@ -21,6 +21,7 @@ Primary human entry points:
 - [Agent catalog](docs/agents.md)
 - [Skill catalog](docs/skills.md)
 - [MCP catalog](docs/mcp-catalog.md)
+- [Harness map and inventory](docs/harness-map.md)
 - [Knowledge base](kb/README.md)
 - [Workflow surface map](docs/workflow-surface-map.md)
 - [Harness compatibility](docs/harness-compatibility.md)
