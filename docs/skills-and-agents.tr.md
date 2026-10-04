@@ -66,6 +66,23 @@ npm run coordination:board -- init --state .coordination-board.json
 npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "API zaman asimini incele" --owner-coordinator backend_coordinator
 ```
 
+1.3.0 ile (durum şeması v3) bir görev, onu kimin yürüttüğünü ve neyi
+yazabileceğini de kaydeder; iş yalnızca eksiksiz bir brief ile başlar:
+
+- `create … --owner-agent codex --owner-session <ad> --write-repo <repo> --write-paths scripts/lib,docs`
+  sahibi ve repo-göreli yazma kapsamını kaydeder.
+- `brief --task <id> --brief-file brief.md` brief'i saklar. Brief, İngilizce
+  ya da Türkçe etiketli yedi alandan oluşur: Hedef, Kanıt, Yazma kapsamı,
+  Sınırlar, Bitti kriteri, Dönüş biçimi ve kullanıcının özgün cümlesi
+  (birebir). `brief-check --brief-file brief.md` brief'i göndermeden önce,
+  pano gerekmeden denetler.
+- İşe başlamak (`in_progress`) eksiksiz brief ister; yazma kapsamı olan görev
+  ayrıca canlı bir kira ister: `renew-lease --task <id> --minutes 90` (en çok
+  24 saat). Diğer ajanlar kapsamı ve kirayı okuyarak neyin alındığını görür.
+- `add-evidence --task <id> --evidence "<komut>: <sonuç>"` kanıt ekler.
+- `--state` verilmezse pano dosyasını `AGENTCHEF_BOARD_STATE` belirler. v1 ya
+  da v2 pano okunurken bellekte taşınır; sonraki yazım v3 olarak kaydeder.
+
 ## Enterprise Routing Profiles
 
 Routing profilleri; yapılacak işi uygun agent, skill, MCP, kontrol komutu ve
