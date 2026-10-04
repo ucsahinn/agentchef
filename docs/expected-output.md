@@ -109,10 +109,10 @@ What if: Performing the operation ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
@@ -165,10 +165,10 @@ Continue with this plan? [Y/n]:
 [chef] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
@@ -223,7 +223,7 @@ current managed-file inventory vary by machine and release.
 AgentChef status
 Overall: attention
 Repo Git: attention - git status --short reports changed lines.
-MCP: 14/14 cataloged configured, 0 missing, <user-added> user-added; 3 enabled/11 disabled; live not probed
+MCP: 14/14 cataloged configured, 0 missing, <user-added> user-added; 2 enabled/12 disabled; live not probed
 Codex CLI: ok (strict config ok, login ok, MCP ok)
 Installed runtime: attention/current (...)
 Skills: <installed> total across global roots (<managed> AgentChef managed, <missing> missing, <other> other/user-installed)
@@ -254,10 +254,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):
@@ -286,10 +286,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Requires npm/npx network access on first startup; no credential is required., ...
   - Local plugin skills (10):

@@ -50,9 +50,11 @@ connectors, not harmless documentation helpers.
 
 Rules used in this starter:
 
-- OpenAI Docs, Playwright, and the lazy Serena semantic bridge are enabled by
-  default in the Codex base config; the `multi-session` and `offline` profiles
-  keep Playwright off. Context7 is an opt-in library-documentation helper on
+- OpenAI Docs and the lazy Serena semantic bridge are enabled by default in
+  the Codex base config. Playwright and Chrome DevTools are off by default on
+  both CLIs: the Codex `full` profile turns them on, `multi-session` and
+  `offline` keep them off, and on Claude Code a project adds them when a task
+  needs browser evidence (catalog `scope: "project"`). Context7 is an opt-in library-documentation helper on
   Codex because it starts an additional Node process and may need first-run
   network access.
 - The former `memory` and `filesystem` servers are no longer cataloged. A Codex
@@ -93,8 +95,8 @@ Rules used in this starter:
   Codex from untrusted working directories should also set
   `NoDefaultCurrentDirectoryInExePath=1` in the parent environment or
   materialize trusted absolute launcher paths for that machine.
-- On Claude Code the `agentchef` plugin ships `context7`, `playwright`, and
-  `serena` (`plugins/agentchef/mcp/claude.mcp.json`). The npx servers start
+- On Claude Code the `agentchef` plugin ships `context7` and `serena`
+  (`plugins/agentchef/mcp/claude.mcp.json`). The npx servers start
   through `plugins/agentchef/scripts/mcp-launch.mjs`, which refuses anything but
   an exact `name@x.y.z` pin (a range or tag would start whatever the registry
   serves that day) and any argument with shell syntax; on Windows it goes
@@ -117,9 +119,11 @@ Rules used in this starter:
   `ask`, and `deny` for codebase-memory's `delete_project`, `index_repository`,
   `ingest_traces`, and `manage_adr` plus Playwright's
   `browser_run_code_unsafe`, `browser_evaluate`, and `browser_file_upload`.
+  Playwright's rules use the plain `mcp__playwright__<tool>` names, so the deny
+  rules keep its riskiest tools shut as soon as a project adds the server.
   Claude Code cannot turn off one plugin MCP server on its own (only
-  `--strict-mcp-config` disables every server), so Playwright is on in every
-  Claude Code session; those deny rules are what keeps its riskiest tools shut.
+  `--strict-mcp-config` disables every server), which is why the browser
+  servers are not in the plugin.
 - Apps/connectors also have a separate `[apps._default]` gate:
   `enabled = false`, `destructive_enabled = false`, and
   `open_world_enabled = false` are part of the reviewed templates.

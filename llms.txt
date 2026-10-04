@@ -70,9 +70,10 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
   full install.
 - Conservative MCP defaults for 14 cataloged servers in
   `catalog/mcp-servers.json` and `templates/codex/config.*.toml` (Codex on by
-  default: `openaiDeveloperDocs`, `playwright`, `serena`); the Claude Code
-  plugin ships `context7`, `playwright`, and `serena` through
-  `plugins/agentchef/mcp/claude.mcp.json`.
+  default: `openaiDeveloperDocs`, `serena`); the Claude Code plugin ships
+  `context7` and `serena` through `plugins/agentchef/mcp/claude.mcp.json`.
+  Playwright and Chrome DevTools are off by default and added per project
+  when a task needs browser evidence.
 - Bilingual task-focused knowledge base under `kb/`.
 - No-write installer previews for PowerShell and Bash.
 - Repo-only doctor command:

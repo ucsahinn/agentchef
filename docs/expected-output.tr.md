@@ -108,10 +108,10 @@ What if: Performing the operation ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (10):
@@ -164,10 +164,10 @@ Continue with this plan? [Y/n]:
 [chef] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (10):
@@ -223,7 +223,7 @@ managed-file envanteri makineye ve sürüme göre değişir.
 AgentChef durumu
 Genel: dikkat
 Repo Git: dikkat - git status --short değişen satırlar bildiriyor.
-MCP: 14/14 katalog bağlayıcısı yapılandırılmış, 0 eksik, <user-added> kullanıcı kaydı; katalog varsayılanlarında 3 açık/11 kapalı; canlı durum ölçülmedi
+MCP: 14/14 katalog bağlayıcısı yapılandırılmış, 0 eksik, <user-added> kullanıcı kaydı; katalog varsayılanlarında 2 açık/12 kapalı; canlı durum ölçülmedi
 Codex CLI: tamam (strict config tamam, login tamam, MCP tamam)
 Kurulu ortam: dikkat/güncel (...)
 Skill'ler: global köklerde toplam <installed> (<managed> AgentChef managed, <missing> eksik, <other> diğer/kullanıcı kurulu)
@@ -250,10 +250,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (10):
@@ -282,10 +282,10 @@ Would install file from ...
 [*] Capability board
   - Agents ready (32):
     code_mapper, docs_researcher, ...
-  - MCP ready by default (3):
-    openaiDeveloperDocs, playwright, serena
-  - MCP opt-in / disabled by default (11):
-    context7, sequential-thinking, chrome-devtools, codebase-memory, github, figma, linear, notion, ...
+  - MCP ready by default (2):
+    openaiDeveloperDocs, serena
+  - MCP opt-in / disabled by default (12):
+    context7, sequential-thinking, playwright, chrome-devtools, codebase-memory, github, figma, linear, ...
   - MCP setup notes (13):
     context7 [tooling]: Ilk acilista npm/npx network erisimi gerekir; credential gerekmez., ...
   - Local plugin skills (10):

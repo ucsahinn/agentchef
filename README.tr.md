@@ -50,7 +50,7 @@ lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 | --- | --- |
 | [🤖 7 koordinatör + 21 uzmanı gör](docs/agents.tr.md) | Koordinasyon rolleri, uzman worker'lar ve delegasyonun ne zaman gerçekten faydalı olduğunu. |
 | [🧩 Skill kataloğunu aç](docs/skills.tr.md) | On bundled workflow'u, full install ile gelen on sekiz incelenmiş skill'i ve varsayılan yolu kalabalıklaştırmayan opsiyonları. |
-| [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | Üç sunuculu Codex varsayılanını, Claude Code plugin'inin getirdiği üç sunucuyu, opsiyonel lokal yetenekleri, yedi kontrollü connector'ı ve süreç/erişim sınırlarını. |
+| [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | İki sunuculu Codex varsayılanını, Claude Code plugin'inin getirdiği iki sunucuyu, proje başına eklenen browser sunucularını, opsiyonel lokal yetenekleri, yedi kontrollü connector'ı ve süreç/erişim sınırlarını. |
 | [📜 Kurulan çalışma sözleşmesini oku](templates/codex/AGENTS.md) | `~/.codex/AGENTS.md` olarak kurulan kullanıcı-geneli varsayılanlar; repo-içi `AGENTS.md` yine daha yüksek önceliklidir. |
 | [🛡️ Güvenlik modelini oku](docs/security-model.tr.md) | Ön izleme, yedekleme, onay kapıları, secret sınırları ve AgentChef'in bilerek kendi başına yapmadığı işlemleri. |
 
@@ -95,22 +95,22 @@ açıldıktan sonra kullanılabilir.
 
 MCP; ajanı dokümantasyona, browser'a, semantic code navigation'a ve lokal
 codebase graph okumalarına bağlar. AgentChef 14 sunucuyu kataloglar. Codex'te
-dengeli ana config uzak `openaiDeveloperDocs` sunucusunu, browser kanıtı için
-`playwright`'ı ve hafif bir Serena köprüsünü açar. Köprü oturum açılışında
-Serena/LSP başlatmaz: aynı kanonik proje tek bir tembel backend'i paylaşır,
-ayrı bir worktree ise yalnızca semantic navigation gerçekten kullanıldığında
-kendi backend'ini alır. Diğer dört lokal stdio sunucusu (`context7`,
-`sequential-thinking`, `chrome-devtools` ve `codebase-memory`) tanımlı ama
-kapalı kalır. Böylece her eşzamanlı oturum aynı Node/Python yardımcı
-ağaçlarını baştan kurmaz. Yetenek ağırlıklı tek ana oturumda `full`, düşük
-süreç maliyetli ikincil oturumlarda `multi-session` profilini kullanabilirsin.
+dengeli ana config uzak `openaiDeveloperDocs` sunucusunu ve hafif bir Serena
+köprüsünü açar. Köprü oturum açılışında Serena/LSP başlatmaz: aynı kanonik
+proje tek bir tembel backend'i paylaşır, ayrı bir worktree ise yalnızca
+semantic navigation gerçekten kullanıldığında kendi backend'ini alır. Diğer
+beş lokal stdio sunucusu (`context7`, `sequential-thinking`, `playwright`,
+`chrome-devtools` ve `codebase-memory`) tanımlı ama kapalı kalır. Böylece her
+eşzamanlı oturum aynı Node/Python yardımcı ağaçlarını baştan kurmaz. Yetenek
+ağırlıklı tek ana oturumda `full` (browser sunucularını açar), düşük süreç
+maliyetli ikincil oturumlarda `multi-session` profilini kullanabilirsin.
 Hesap, database ve production connector'ları sen bilerek açana kadar kapalı
-kalır. Claude Code'da `context7`, `playwright` ve aynı Serena köprüsünü
-`agentchef` plugin'i getirir; Claude Code tek bir plugin sunucusunu ayrı
-kapatamadığı için `playwright` her Claude Code oturumunda açıktır, en riskli
-araçları ise izin kurallarında reddedilir. `~/.claude.json` içinde bu
-adlardan biriyle zaten bir girdin varsa korunur ve plugin sunucusunu
-gölgelediği bildirilir.
+kalır. Claude Code'da `context7` ve aynı Serena köprüsünü `agentchef`
+plugin'i getirir. Browser sunucuları (`playwright`, `chrome-devtools`)
+plugin'de yoktur: bir görev browser kanıtı gerektirdiğinde onları projeye
+ekle; Playwright'ın en riskli araçlarını reddeden izin kuralları orada da
+geçerlidir. `~/.claude.json` içinde bir plugin sunucusunun adıyla zaten bir
+girdin varsa korunur ve plugin sunucusunu gölgelediği bildirilir.
 
 [Tüm MCP'leri, önkoşulları ve erişim sınırlarını gör →](docs/mcp-catalog.tr.md)
 

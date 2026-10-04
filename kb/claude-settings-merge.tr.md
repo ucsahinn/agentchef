@@ -11,15 +11,17 @@ bilmen gerekiyorsa bu makaleyi kullan.
   üretilen `allow`, `ask` ve `deny` MCP araç kuralları (yasaklar
   codebase-memory'nin yönetim araçlarını ve Playwright'ın
   `browser_run_code_unsafe`, `browser_evaluate`, `browser_file_upload`
-  araçlarını kapsar). Bir `deny` kuralı yalnızca eklenir; mevcut `deny`
-  kuralları asla kaldırılmaz.
+  araçlarını kapsar). Playwright kuralları düz `mcp__playwright__<tool>`
+  adlarını kullanır; bu yüzden bir proje o sunucuyu eklediğinde geçerli olur.
+  Bir `deny` kuralı yalnızca eklenir; mevcut `deny` kuralları asla
+  kaldırılmaz.
 - `settings.json` içinde başka hiçbir şey: `hooks`, `env` ve diğer tüm
   anahtarlar senin yazdığın gibi kalır. Claude Code için tek hook (`SessionEnd`
   anında süreç hijyeni) `settings.json` içinde değil, `agentchef` plugin
   manifestinde gelir.
 - `.claude.json` içine (`~/.claude.json`; `CLAUDE_CONFIG_DIR` ayarlıysa onun
-  içinde) AgentChef 1.3.0'dan beri MCP girdisi yazmaz; çünkü `context7`,
-  `playwright` ve `serena` sunucularını plugin getirir. Yalnızca önceki bir
+  içinde) AgentChef 1.3.0'dan beri MCP girdisi yazmaz; çünkü `context7` ve
+  `serena` sunucularını plugin getirir. Yalnızca önceki bir
   sürümün yazdığı `mcpServers.context7` ve `mcpServers.serena` girdilerini,
   değerleri makbuz hash'i ile hâlâ eşleşiyorsa kaldırır. Aynı adlı kendi
   girdin korunur ve plugin'i gölgelediği bildirilir; `-AdoptMcp` /

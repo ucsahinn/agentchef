@@ -71,7 +71,7 @@ test("containers created by a merge are pruned on removal only while they are em
 test("MCP merge writes no user entry by default and retires only what this install wrote for plugin servers", () => {
   const options = { platform: "windows", claudeHome: "C:\\Claude" };
   assert.deepEqual(claudeDefaultServers, []);
-  assert.deepEqual(claudePluginServers(mcpCatalog).sort(), ["context7", "playwright", "serena"]);
+  assert.deepEqual(claudePluginServers(mcpCatalog).sort(), ["context7", "serena"]);
 
   // Nothing to write and nothing recorded: a user's own entry is kept and
   // reported as shadowing the plugin's server.

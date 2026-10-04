@@ -184,7 +184,7 @@ startup_timeout_sec = 20
 tool_timeout_sec = 120
 
 [mcp_servers.playwright]
-enabled = true
+enabled = false
 command = "cmd.exe"
 args = ["/d", "/s", "/c", "npx.cmd", "-y", "@playwright/mcp@0.0.83", "--isolated", "--block-service-workers"]
 env = { NoDefaultCurrentDirectoryInExePath = "1" }

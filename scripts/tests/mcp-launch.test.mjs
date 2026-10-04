@@ -31,7 +31,7 @@ test("every npx server the plugin ships is pinned to an exact version the launch
   const rendered = renderClaudePluginMcp(root);
   const committed = JSON.parse(fs.readFileSync(path.join(root, "plugins", "agentchef", "mcp", "claude.mcp.json"), "utf8"));
   assert.deepEqual(committed, rendered);
-  assert.deepEqual(Object.keys(rendered.mcpServers).sort(), ["context7", "playwright", "serena"]);
+  assert.deepEqual(Object.keys(rendered.mcpServers).sort(), ["context7", "serena"]);
   for (const [name, server] of Object.entries(rendered.mcpServers)) {
     assert.equal(server.command, "node", `${name} starts through node on every platform`);
     if (name === "serena") {

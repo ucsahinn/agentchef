@@ -180,11 +180,10 @@ Retired automatically:
 - Codex: the `memory` and `filesystem` servers are no longer cataloged. An
   update (`-Update` / `--update`) drops their `[mcp_servers.memory*]` and
   `[mcp_servers.filesystem]` tables when they are byte-identical to what
-  AgentChef wrote (`templates/codex/retired-tables.json`). Playwright is now on
-  in the Codex base config (pinned `@playwright/mcp@0.0.83`); Chrome DevTools
-  moves to `chrome-devtools-mcp@1.10.1`.
-- Claude Code: the `agentchef` plugin now ships `context7`, `playwright`, and
-  `serena`. The `context7` and `serena` entries a 1.0–1.2 install wrote into
+  AgentChef wrote (`templates/codex/retired-tables.json`). Playwright moves to
+  `@playwright/mcp@0.0.83` and Chrome DevTools to `chrome-devtools-mcp@1.10.1`;
+  both stay off in the Codex base config and on in the `full` profile.
+- Claude Code: the `agentchef` plugin now ships `context7` and `serena`. The `context7` and `serena` entries a 1.0–1.2 install wrote into
   `~/.claude.json` are retired when their value still matches the hash in the
   MCP receipt, because a user-scope entry would outrank the plugin's server.
   Plugin tools are named `mcp__plugin_agentchef_<server>__<tool>`; the
@@ -194,7 +193,7 @@ Only reported, never removed on their own:
 
 - A Codex `memory` or `filesystem` table you edited stays in `config.toml`, and
   the update names it. Delete it yourself if you no longer want it.
-- A `.claude.json` entry named `context7`, `playwright`, or `serena` that
+- A `.claude.json` entry named `context7` or `serena` that
   AgentChef did not write, or that was edited since, stays and is reported as
   shadowing the plugin's server (the installer plan and
   `verify-install-runtime --target claude` both say so). Rerun the Claude
@@ -202,10 +201,11 @@ Only reported, never removed on their own:
   backed up first.
 
 Claude Code cannot switch off one plugin MCP server on its own (only
-`--strict-mcp-config` disables every server), so Playwright is available in
-every Claude Code session after the upgrade; its `browser_run_code_unsafe`,
-`browser_evaluate`, and `browser_file_upload` tools are denied in the
-permission rules.
+`--strict-mcp-config` disables every server), so Playwright and Chrome
+DevTools are not in the plugin. Add them to a project that needs browser
+evidence (see [MCP Catalog](mcp-catalog.md)); the permission rules deny
+Playwright's `browser_run_code_unsafe`, `browser_evaluate`, and
+`browser_file_upload` tools there.
 
 ## Safe Upgrade Flow
 

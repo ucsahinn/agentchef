@@ -211,8 +211,8 @@ const balancedEnabledNames = (catalog.servers || [])
   .filter((server) => server.transport === "stdio" && server.defaultEnabled === true)
   .map((server) => server.name)
   .sort();
-if (JSON.stringify(balancedEnabledNames) !== JSON.stringify(["playwright", "serena"])) {
-  fail(`Balanced default must enable only the Serena bridge and the isolated Playwright browser; other npx MCPs remain disabled, found: ${balancedEnabledNames.join(", ") || "none"}`);
+if (JSON.stringify(balancedEnabledNames) !== JSON.stringify(["serena"])) {
+  fail(`Balanced default must enable only the managed Serena bridge; browser and other npx MCPs stay off until a project needs them, found: ${balancedEnabledNames.join(", ") || "none"}`);
 }
 
 for (const [profileFile, expectedEnabled] of [

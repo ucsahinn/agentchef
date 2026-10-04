@@ -8,9 +8,9 @@ access. That makes them useful, but it also means each server needs a clear
 boundary.
 
 AgentChef knows about 14 MCP servers. The balanced Codex starter enables
-three: remote `openaiDeveloperDocs`, the local lazy `serena` bridge, and
-`playwright` for browser evidence. Four additional local stdio helpers remain
-defined but disabled, preserving capability without eagerly starting their
+two: remote `openaiDeveloperDocs` and the local lazy `serena` bridge. Five
+additional local stdio helpers, the `playwright` and `chrome-devtools` browser
+servers among them, remain defined but disabled, preserving capability without eagerly starting their
 Node/Python trees in every concurrent session. Serena uses a lightweight bridge
 instead of a direct `uvx` stdio child, so it creates no Serena/LSP tree until a
 semantic tool is actually called. Seven account or database connectors stay
@@ -18,8 +18,8 @@ off until you deliberately need them. The former `memory` and `filesystem`
 entries were removed in 1.3.0; see [Upgrade](upgrade.md) for how an existing
 config is cleaned up.
 
-On the Claude Code target, the `agentchef` plugin ships `context7`,
-`playwright`, and `serena` itself
+On the Claude Code target, the `agentchef` plugin ships `context7` and
+`serena` itself
 ([plugins/agentchef/mcp/claude.mcp.json](../plugins/agentchef/mcp/claude.mcp.json),
 referenced from the plugin manifest's `mcpServers`). The npx servers start
 through `plugins/agentchef/scripts/mcp-launch.mjs`, which accepts only an exact
@@ -31,15 +31,57 @@ plugin's copy of the shared pool bridge with
 servers into `.claude.json`: an entry AgentChef 1.0–1.2 wrote there is retired,
 because a user-scope entry outranks the plugin's server. Your own entry under
 the same name is kept and reported as shadowing the plugin; see
-[Install](install.md) for `-AdoptMcp` / `--adopt-mcp`. Claude Code cannot turn
-off one plugin MCP server on its own (only `--strict-mcp-config` disables every
-server), so `playwright` is on in every Claude Code session. The Codex-specific
+[Install](install.md) for `-AdoptMcp` / `--adopt-mcp`. The Codex-specific
 `openaiDeveloperDocs` entry is not added there. Add any other catalog server
 yourself with `claude mcp add --scope user`, using the command and args from
 [catalog/mcp-servers.json](../catalog/mcp-servers.json). GitHub's remote MCP
 endpoint does not support OAuth dynamic client registration, so
 `claude mcp add` for it needs a personal access token header instead of
 `/mcp` login (measured: "Incompatible auth server").
+
+### Browser servers are added per project
+
+`playwright` and `chrome-devtools` are off by default on both CLIs (catalog
+`scope: "project"`). Measured on one machine, every Claude Code session
+started every configured MCP server: 11 sessions with about 41 child
+processes each. A browser server that only some tasks need should not start
+in every session, and Claude Code cannot turn off a single plugin MCP server
+(only `--strict-mcp-config` disables every server), so the browser servers
+are not in the plugin.
+
+On Codex, `codex --profile full` turns both on. On Claude Code, add them to
+the project that needs browser evidence:
+
+```bash
+claude mcp add --scope project playwright -- npx -y @playwright/mcp@0.0.83 --isolated --block-service-workers
+claude mcp add --scope project chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1
+```
+
+On Windows, put `cmd /c` before `npx`:
+
+```bash
+claude mcp add --scope project playwright -- cmd /c npx -y @playwright/mcp@0.0.83 --isolated --block-service-workers
+claude mcp add --scope project chrome-devtools -- cmd /c npx -y chrome-devtools-mcp@1.10.1
+```
+
+Both commands write the project's `.mcp.json`, which you can also write by
+hand:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.83", "--isolated", "--block-service-workers"]
+    }
+  }
+}
+```
+
+The settings fragment already carries Playwright's rules under the plain
+`mcp__playwright__<tool>` names, so they apply as soon as a project adds the
+server, and `frontend-verifier` keeps its `mcp__playwright` and
+`mcp__chrome-devtools` grants.
 
 > **Configured is not the same as live.** A server can exist in the template
 > and still need a launcher, first-run package download, browser, authorization,
@@ -58,14 +100,15 @@ endpoint does not support OAuth dynamic client registration, so
 | [`context7`](https://github.com/upstash/context7) | Off | Yes | Opt-in current library and framework docs | Node/npx and first-run network access |
 | [`serena`](https://github.com/oraios/serena) | On | Yes | Symbol-aware code navigation in unfamiliar repositories | Lightweight local bridge; `uvx` and the pinned source only on first semantic call |
 | [`sequential-thinking`](https://github.com/modelcontextprotocol/servers) | Off | No | Breaking a complex task into clear steps | Node/npx and first-run network access |
-| [`playwright`](https://github.com/microsoft/playwright-mcp) | On | Yes | Browser snapshots, screenshots, console and prompt-gated network evidence in an isolated, non-persistent profile | Node/npx and local browser control |
-| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Off | No | Chrome inspection and UI diagnostics | Node/npx and an isolated Chrome bridge |
+| [`playwright`](https://github.com/microsoft/playwright-mcp) | Off (`full` on) | No (add per project) | Browser snapshots, screenshots, console and prompt-gated network evidence in an isolated, non-persistent profile | Node/npx and local browser control |
+| [`chrome-devtools`](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Off (`full` on) | No (add per project) | Chrome inspection and UI diagnostics | Node/npx and an isolated Chrome bridge |
 | [`codebase-memory`](https://github.com/DeusData/codebase-memory-mcp) | Off | No | Architecture, graph search, paths, and change impact | Node/npx; indexing and admin tools stay gated |
 
 Use `codex --profile full` for one primary session that needs every bundled
 local MCP. Start secondary concurrent windows with
 `codex --profile multi-session`; that profile keeps the lightweight Serena
-bridge but parks the other five eager local stdio servers, Playwright included, while leaving agents,
+bridge and keeps the other five local stdio servers, the browser servers
+included, off while leaving agents,
 skills, remote OpenAI docs, built-in memories, hooks, and apps available. The
 bridge shares one loopback-only backend for the same canonical project and
 creates a separate backend for a distinct worktree only on demand. Profiles

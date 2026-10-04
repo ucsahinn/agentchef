@@ -73,10 +73,17 @@
     are exactly what AgentChef wrote (`templates/codex/retired-tables.json`);
     an edited table stays and is reported.
   - Pins: `@playwright/mcp@0.0.83`, `chrome-devtools-mcp@1.10.1`.
-  - Playwright is on by default in the Codex base config; the `multi-session`
-    and `offline` profiles keep it off. Codex now starts with
-    `openaiDeveloperDocs`, `playwright`, and `serena`.
-  - Claude Code gets `context7`, `playwright`, and `serena` from the
+  - Playwright and Chrome DevTools are off by default on both CLIs; add them
+    to a project when a task needs browser evidence. Measured on one machine,
+    every Claude Code session started every configured MCP server (11
+    sessions, about 41 child processes each), and Claude Code cannot turn off
+    a single plugin MCP server, so a browser server that only some tasks need
+    is not in the plugin.
+  - Codex: the base config sets `[mcp_servers.playwright] enabled = false`
+    (`chrome-devtools` was already off); the `full` profile turns both on,
+    and `multi-session` and `offline` keep them off. Codex starts with
+    `openaiDeveloperDocs` and `serena`.
+  - Claude Code gets `context7` and `serena` from the
     `agentchef` plugin (`plugins/agentchef/mcp/claude.mcp.json`, manifest
     `mcpServers`). npx servers start through
     `plugins/agentchef/scripts/mcp-launch.mjs`, which accepts only an exact
@@ -97,9 +104,12 @@
     catalog: Codex `approve` → `allow`, `prompt` → `ask`, and `deny` for
     codebase-memory's four admin tools and Playwright's
     `browser_run_code_unsafe`, `browser_evaluate`, and `browser_file_upload`.
-    Claude Code cannot turn off one plugin MCP server on its own (only
-    `--strict-mcp-config` disables all of them), so Playwright is on in every
-    Claude Code session.
+    Playwright's rules use the plain `mcp__playwright__<tool>` names, so they
+    apply once a project adds the server (catalog `scope: "project"`, for
+    example `claude mcp add --scope project playwright -- npx -y
+    @playwright/mcp@0.0.83 --isolated --block-service-workers`).
+    `frontend-verifier` keeps its `mcp__playwright` and `mcp__chrome-devtools`
+    grants.
 
 - Coordinators go from eleven to seven, so the plugin ships 28 roles instead
   of 32:

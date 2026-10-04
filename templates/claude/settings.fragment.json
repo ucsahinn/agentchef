@@ -110,11 +110,11 @@
       "mcp__codebase-memory__search_code",
       "mcp__codebase-memory__search_graph",
       "mcp__codebase-memory__trace_path",
-      "mcp__plugin_agentchef_playwright__browser_console_messages",
-      "mcp__plugin_agentchef_playwright__browser_resize",
-      "mcp__plugin_agentchef_playwright__browser_snapshot",
-      "mcp__plugin_agentchef_playwright__browser_take_screenshot",
-      "mcp__plugin_agentchef_playwright__browser_wait_for",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_wait_for",
       "mcp__plugin_agentchef_serena__find_declaration",
       "mcp__plugin_agentchef_serena__find_implementations",
       "mcp__plugin_agentchef_serena__find_referencing_symbols",
@@ -309,20 +309,20 @@
       "mcp__chrome-devtools__navigate_page",
       "mcp__chrome-devtools__take_screenshot",
       "mcp__chrome-devtools__take_snapshot",
-      "mcp__plugin_agentchef_playwright__browser_close",
-      "mcp__plugin_agentchef_playwright__browser_navigate",
-      "mcp__plugin_agentchef_playwright__browser_navigate_back",
-      "mcp__plugin_agentchef_playwright__browser_network_requests",
-      "mcp__plugin_agentchef_playwright__browser_tabs"
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_navigate_back",
+      "mcp__playwright__browser_network_requests",
+      "mcp__playwright__browser_tabs"
     ],
     "deny": [
       "mcp__codebase-memory__delete_project",
       "mcp__codebase-memory__index_repository",
       "mcp__codebase-memory__ingest_traces",
       "mcp__codebase-memory__manage_adr",
-      "mcp__plugin_agentchef_playwright__browser_evaluate",
-      "mcp__plugin_agentchef_playwright__browser_file_upload",
-      "mcp__plugin_agentchef_playwright__browser_run_code_unsafe"
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_file_upload",
+      "mcp__playwright__browser_run_code_unsafe"
     ]
   }
 }

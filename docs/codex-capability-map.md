@@ -23,8 +23,8 @@ Official references:
 | `config.toml` | Models, sandbox, approvals, MCP, features, profiles | Conservative workspace-write sandbox and on-request approvals | `npm run validate:mcp` |
 | Rules | Narrow command approval defaults | Verification commands only; destructive/publish actions stay gated | `npm run validate:content` |
 | Skills | Reusable workflows with progressive disclosure | Commit-pinned curated installs plus ten local plugin skills, including GPT Pro context/handoff, authorized reconstruction, evidence-backed SEO, and traceable deep research | `npm run verify:skills` |
-| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with ten skills and one exact, trust-gated SessionEnd process hook; the Codex manifest bundles no MCP/apps (the Claude Code manifest ships `context7`, `playwright`, and `serena`, plus the same SessionEnd hook inline) | `npm run validate` |
-| MCP/connectors | Live docs, browser, code navigation, external systems | Three balanced defaults (OpenAI Docs, Playwright, Serena); Context7, other local stdio helpers, and authenticated connectors disabled until needed | `npm run validate:mcp` |
+| Plugins | Shareable packages for skills and reviewed lifecycle surfaces | One local plugin with ten skills and one exact, trust-gated SessionEnd process hook; the Codex manifest bundles no MCP/apps (the Claude Code manifest ships `context7` and `serena`, plus the same SessionEnd hook inline) | `npm run validate` |
+| MCP/connectors | Live docs, browser, code navigation, external systems | Two balanced defaults (OpenAI Docs, Serena); Context7, Playwright, Chrome DevTools, other local stdio helpers, and authenticated connectors disabled until needed | `npm run validate:mcp` |
 | Subagents | Delegated evidence-heavy specialist work | Twenty-one reviewed specialist agents with sandboxed role files | `npm run validate:agents` |
 | Doctor/status | No-write health and drift summary | Repo-only by default; optional global existence checks | `npm run codex:doctor` |
 
