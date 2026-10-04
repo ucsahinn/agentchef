@@ -71,7 +71,9 @@ may write, and work starts only from a complete brief:
   seven labeled fields, in English or Turkish: Goal, Evidence, Write scope,
   Boundaries, Done when, Return format, and the user's words verbatim.
   `brief-check --brief-file brief.md` checks one before it is sent, with no
-  board needed.
+  board needed. The bundled `agent-brief` skill writes this brief and checks
+  the handoff that comes back; bilingual labels such as
+  `Kapsam / Yazma kapsamı` also parse.
 - Starting work (`in_progress`) needs a complete brief, and a task with a write scope
   also needs a live lease: `renew-lease --task <id> --minutes 90` (at most 24
   hours). Other agents read the scope and lease to see what is taken.

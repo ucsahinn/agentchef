@@ -339,7 +339,7 @@ oluşturur. Geri alma, yedeği olmayan ve üzerine yazılmış bir dosyayı asla
 silmez.
 
 1.3.0'dan beri AgentChef'in her skill'i iki CLI'ya da yalnızca plugin
-üzerinden ulaşır. On bundled skill
+üzerinden ulaşır. On bir bundled skill
 `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` plugin kaynağında gelir;
 pinned skill'ler de `.agentchef-source.json` provenance kayıtlarıyla aynı
 klasöre yazılır. Installer `AGENTS_HOME/skills` altına hiçbir şey yazmaz ve

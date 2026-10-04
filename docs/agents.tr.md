@@ -51,6 +51,11 @@ Routing yolu şöyledir:
 Alanlar arası iş, ana oturuma kısa bir handoff döndürür; başka bir koordinatör
 gerekip gerekmediğine ana oturum karar verir.
 
+Bundled `agent-brief` skill'i (Codex'te `$agentchef:agent-brief`, Claude
+Code'da `/agentchef:agent-brief`) bu alışverişi sabitler: worker'ın aldığı
+brief ve döndürdüğü handoff (Sonuç, Kanıt, Değişen kapsam, Risk, Açık soru,
+Sonraki doğrulama).
+
 ## 🗺️ Önce Problemi Anla
 
 | Agent | Ne zaman işe yarar? |

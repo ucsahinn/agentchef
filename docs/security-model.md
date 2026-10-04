@@ -335,7 +335,7 @@ themselves, and the installer also drops inherited Git location variables
 a rollback never deletes a replaced file that has no backup.
 
 Since 1.3.0 every AgentChef skill reaches both CLIs only through the plugin.
-The ten bundled skills ship inside the plugin source
+The eleven bundled skills ship inside the plugin source
 `AGENTS_HOME/plugins/sources/agentchef/skills/<name>`, and pinned skills are
 written into the same folder with their `.agentchef-source.json` provenance
 record. The installer writes nothing into `AGENTS_HOME/skills` and creates no

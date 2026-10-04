@@ -139,7 +139,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -R
 
 Repair mode is for machines that already have a Codex setup. It previews or
 applies backup-backed reconciliation for AgentChef-managed guidance, rules,
-agent/profile files, the bundled plugin and its ten bundled skills,
+agent/profile files, the bundled plugin and its eleven bundled skills,
 `serena-pool.mjs`, missing config blocks, and the local plugin
 marketplace entry. The launcher, Serena bridge, generated/copied profiles,
 ownership markers, marketplace, and every other selected source and target are
@@ -320,7 +320,7 @@ Useful switches:
   agents, profiles, rules, and verified public/first-party skills. It does not
   change global Git config.
 - Since 1.3.0 every AgentChef skill reaches both CLIs only as a plugin skill.
-  The ten bundled skills ship inside the plugin and are installed into the
+  The eleven bundled skills ship inside the plugin and are installed into the
   marketplace source `AGENTS_HOME/plugins/sources/agentchef/skills/<name>`.
   The installer no longer copies them into `AGENTS_HOME/skills` and no longer
   links anything into `~/.claude/skills`, so each skill is listed once per

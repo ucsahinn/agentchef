@@ -54,9 +54,10 @@ explicit `-InstallGitGuards` or `--install-git-guards` flag.
 ## Core Capabilities
 
 - 21 specialist Codex subagent role definitions.
-- 10 bundled skills in the `agentchef` plugin (`$agentchef:<skill>` in Codex,
+- 11 bundled skills in the `agentchef` plugin (`$agentchef:<skill>` in Codex,
   `/agentchef:<skill>` in Claude Code):
   - `adaptive-agent-routing`
+  - `agent-brief`
   - `agentchef-operator`
   - `context-budget-planner`
   - `evidence-research`
