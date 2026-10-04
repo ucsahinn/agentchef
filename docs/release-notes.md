@@ -2,6 +2,20 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.1 - 2026-10-04
+
+AgentChef 1.3.1 fixes three false alarms seen on the first live upgrade to
+1.3.0. Nothing in an installed home changes; `verify-install-runtime` now
+reports the real state. Update with `npm run chef -- --update --apply`.
+
+### What Changed
+
+- The verifier no longer reports managed config drift for a table that only
+  has AgentChef's merge banner under it.
+- Pinned skills in the plugin source are no longer listed as extra files.
+- A skill copy you installed yourself is reported as yours, not as something
+  the migration will retire.
+
 ## v1.3.0 - 2026-10-04
 
 AgentChef 1.3.0 makes the whole harness one plugin, counted the same way

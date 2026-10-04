@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.1 - 2026-10-04
+
+Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
+
+- A table followed by the "AgentChef merged config blocks" banner (written
+  before tables a merge appends) read as managed drift forever, so
+  `verify-install-runtime` failed and pointed at `repair --apply` although
+  nothing differed. Comment and blank lines at the end of a table now belong
+  to the next table, and a retired table still matches its digest either way.
+- `verify-install-runtime` warned about every file of every pinned skill in
+  the plugin source as an "extra local file". Pinned skills with their
+  provenance marker are expected there since 1.3.0; it now skips them, as
+  repair already did.
+- The verifier told a user to run the migration for a harness skill copy the
+  migration will never remove because AgentChef did not write it. It now
+  says the copy is the user's own and shadows the plugin's.
+
 ## 1.3.0 - 2026-10-04
 
 - Agent brief and handoff contract:

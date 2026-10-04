@@ -120,3 +120,26 @@ test("a second sync after a retirement changes nothing", () => {
   assert.equal(second.text, first.text);
   assert.deepEqual(second.report.retiredRemovedTables, []);
 });
+
+test("a comment banner before the next table is not drift in the table above it", () => {
+  const tmpl = ["[agents.a]", "description = \"a\"", "", "# Section note for b.", "[agents.b]", "description = \"b\"", ""].join("\n");
+  // What a merge leaves after appending a table: its banner directly under the
+  // previous table.
+  const installed = ["[agents.a]", "description = \"a\"", "", "# AgentChef merged config blocks. Existing user-defined tables were preserved.", "[agents.b]", "description = \"b\"", ""].join("\n");
+  const { report, text } = merge(tmpl, installed, ["--sync-managed-tables"]);
+  assert.deepEqual(report.updatedManagedTables || [], [], "no table changes");
+  assert.deepEqual(report.driftedManagedTables || [], []);
+  assert.match(text, /# AgentChef merged config blocks/, "the banner stays");
+  const second = merge(tmpl, text, ["--sync-managed-tables"]);
+  assert.equal(second.text, text, "a second sync is a no-op");
+});
+
+test("a retired table still matches its digest when the next table's comment follows it", () => {
+  const block = "[mcp_servers.memory]\ncommand = \"npx\"\nenabled = false";
+  const withComment = `${block}\n\n# Optional graph-backed code intelligence.`;
+  const digest = crypto.createHash("sha256").update(withComment).digest("hex");
+  const { report, text } = mergeWithRetired(`${template}\n${withComment}\n[mcp_servers.other]\ncommand = "x"\n`, { "mcp_servers.memory": [digest] }, ["--sync-managed-tables"]);
+  assert.deepEqual(report.retiredRemovedTables, ["mcp_servers.memory"]);
+  assert.doesNotMatch(text, /mcp_servers\.memory/);
+  assert.match(text, /# Optional graph-backed code intelligence\./, "the comment that belongs to the next table stays");
+});

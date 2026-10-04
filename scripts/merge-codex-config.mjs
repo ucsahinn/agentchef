@@ -329,15 +329,36 @@ function syncManagedTables(text) {
   let currentTable = null;
   let currentLines = [];
 
+  // Comment and blank lines at the end of a table belong to the next one: the
+  // "AgentChef merged config blocks" banner a merge writes before appended
+  // tables would otherwise count as a change to the table above it, which
+  // then reads as managed drift forever and never matches a retired digest.
   function flush() {
     if (!currentTable) {
       if (currentLines.length > 0) next.push(...currentLines);
       currentLines = [];
       return;
     }
+    let end = currentLines.length;
+    while (end > 1 && /^\s*(?:#.*)?$/.test(currentLines[end - 1])) end -= 1;
+    const fullBlock = currentLines.join("\n").trimEnd();
+    const tail = currentLines.slice(end);
+    currentLines = currentLines.slice(0, end);
+    flushTable(fullBlock);
+    next.push(...tail);
+  }
 
+  function withoutTrailingComments(block) {
+    const blockLines = String(block).split("\n");
+    let end = blockLines.length;
+    while (end > 1 && /^\s*(?:#.*)?$/.test(blockLines[end - 1])) end -= 1;
+    return blockLines.slice(0, end).join("\n");
+  }
+
+  function flushTable(fullBlock) {
     const currentBlock = currentLines.join("\n").trimEnd();
-    const templateBlock = templateBlockForDestination(currentTable);
+    const rawTemplateBlock = templateBlockForDestination(currentTable);
+    const templateBlock = rawTemplateBlock ? withoutTrailingComments(rawTemplateBlock) : rawTemplateBlock;
     if (currentTable === "apps._default") {
       next.push(...currentLines);
       currentTable = null;
@@ -348,7 +369,10 @@ function syncManagedTables(text) {
       // A table an earlier AgentChef template wrote and the current one dropped.
       // It goes only when it is byte-for-byte what AgentChef wrote; a table the
       // user edited is kept and reported.
-      const ownedByAgentChef = retiredTables.get(currentTable).includes(blockDigest(currentBlock));
+      // Digests were taken over blocks as earlier templates laid them out,
+      // sometimes with the next table's comment attached; either form counts.
+      const digests = retiredTables.get(currentTable);
+      const ownedByAgentChef = digests.includes(blockDigest(currentBlock)) || digests.includes(blockDigest(fullBlock));
       if (!ownedByAgentChef) {
         addUnique(retiredUserModifiedTables, currentTable);
         next.push(...currentLines);
