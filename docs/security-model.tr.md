@@ -225,10 +225,10 @@ Agent template'leri `danger-full-access`, `approval_policy = "never"` veya
 gomulu token environment variable adlari kullanmamalidir. Read-only uzmanlar
 read-only kalir; verifier/release rolleri sadece smoke-test output gibi lokal
 kanitlar icin `workspace-write` kullanabilir.
-Catalog bu alanlari `auto` olarak isaretlediginde agent role template'leri
-agent bazli `model` ve `model_reasoning_effort` pinlemez. Boylece aktif profil
-ve Codex runtime, role boundary ve approval gate'lerini zayiflatmadan uygun
-model/effort dengesini secebilir.
+1.3.2 ile (henüz yayımlanmadı) agent role template'leri yalnız katalogdaki
+worker `model` değerini (`workerModels`) taşır, `model_reasoning_effort`
+pinlemez; effort'u profil belirler, açtığın oturum seçtiğin modeli korur.
+Model satırı hiçbir role boundary veya approval gate'i değiştirmez.
 
 `max_threads = 10` concurrency kapasite tavanidir; her task'i fan-out etme izni
 degildir. Kosullu routing normalde bir ile dort ajan kullanir ve yalniz

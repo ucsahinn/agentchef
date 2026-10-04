@@ -32,9 +32,9 @@ This runs:
   for drift preview, backup-backed apply, marketplace preservation, config
   merge, skill cleanup reporting, and explicit managed-plugin pruning.
 - `scripts/validate-agent-config.mjs`: specialist-agent catalog/config drift
-  checks across Windows and Unix Codex templates, including automatic
-  model/reasoning selection for role files without overriding the active user
-  profile.
+  checks across Windows and Unix Codex templates, including that every role
+  and coordinator file uses the catalog worker model (`workerModels.codex`)
+  with no reasoning pin.
 - `scripts/validate-adaptive-runtime.mjs`: conditional spawn policy, compact
   routing visibility, `max_threads = 10` capacity, one-to-four normal
   parallelism, canonical skill aliases, user-owned config overlay, token-audit
@@ -51,7 +51,7 @@ This runs:
   guidance.
 - `scripts/validate-token-surfaces.mjs`: token audit script, `token-safe`
   profile, AGENTS token discipline, context-budget skill reference, README
-  command docs, and unpinned agent model/reasoning contract.
+  command docs, and the worker-model agent contract.
 - `scripts/verify-skill-sources.mjs`: offline skill catalog validation and
   `catalog/skills-lock.json` commit, skill, CLI version, and integrity pin drift
   checks.

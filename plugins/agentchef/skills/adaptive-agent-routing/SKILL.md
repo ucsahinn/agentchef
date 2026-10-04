@@ -11,7 +11,7 @@ Select routes by expected value, not by catalog match alone.
 
 1. Classify the task shape and identify the smallest owning surface.
 2. Read [global-working-agreements.md](references/global-working-agreements.md) only when the detailed route, specialist map, alias policy, or MCP boundary is relevant.
-3. Preserve the active user's profile, model, and reasoning settings. Agent role files must not pin them.
+3. Preserve the active session's profile and model. Role files carry only the catalog worker `model`; they never pin reasoning effort, and spawns pass no model override.
 4. Delegate only for independent parallel work, noisy log or research isolation, or explicit user-requested agent work.
 5. Treat ten threads as capacity for concurrent sessions. Normally use one agent and no more than four agents for one task.
 6. Emit one `Routing plan:` update and one `Routing result:` summary instead of per-surface narration.

@@ -201,6 +201,15 @@ if (!fs.existsSync(catalogPath)) {
       fail("catalog/agents.json must define a non-empty agents array.");
     }
 
+    // A missing or malformed worker model would let role files drop their
+    // model line unnoticed and would be written raw into agent frontmatter.
+    for (const target of ["codex", "claude"]) {
+      const value = catalog.workerModels?.[target];
+      if (typeof value !== "string" || !/^[A-Za-z0-9._:-]+$/.test(value)) {
+        fail(`catalog/agents.json workerModels.${target} must be a non-empty model name of letters, digits, '.', '_', ':' or '-'.`);
+      }
+    }
+
     const catalogNames = new Set();
     const workerProfile = catalog.workerApprovalProfile;
     if (workerProfile?.approvalPolicy !== "on-request"

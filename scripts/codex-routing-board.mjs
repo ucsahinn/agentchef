@@ -192,7 +192,7 @@ if (options.json) {
     }
     for (const recommendation of recommendations) printWrapped(`${recommendation.profile.id} — matched: ${recommendation.matchedTerms.join(", ")}`, { prefix: "[recommend] ", continuationPrefix: "            " });
   }
-  printWrapped("Policy: route matches are recommendations; delegation is conditional and inherits the active user profile.");
+  printWrapped("Policy: route matches are recommendations; delegation is conditional; roles run on the catalog worker model and inherit reasoning effort.");
   console.log("");
   console.log("Routing visibility contract:");
   printWrapped("Routing plan: selected agents, skills, MCPs, commands, and skips in one initial line.", { prefix: "- ", continuationPrefix: "  " });

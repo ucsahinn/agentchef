@@ -177,6 +177,29 @@ Bu katalogdaki diğer bütün pinler, sunucu stdio üzerinden başlatılıp MCP
 el sıkışması tamamlanarak ve sunucunun bildirdiği araç adları buradaki izin
 listesiyle karşılaştırılarak doğrulandı.
 
+## Bilinen Sınır: Codex Her Thread'in MCP Sunucularını Açık Tutar
+
+Codex her thread için etkin MCP sunucularının tam bir setini başlatır ve
+önceki bir thread'in setini uygulama kapanana kadar
+durdurmaz. Bu yüzden çok thread açılan uzun oturumlarda MCP süreçleri birikir.
+Bu bir upstream Codex sorunudur:
+[openai/codex#30408](https://github.com/openai/codex/issues/30408)
+(2026-10-04'te kontrol edildiğinde açıktı). Codex'te bunu sınırlayan bir config
+anahtarı yoktur: bir MCP tablosu yalnızca `enabled`, `required`,
+`startup_timeout_sec`, `tool_timeout_sec` ve `enabled_tools`/`disabled_tools`
+sunar.
+
+Upstream'de düzelene kadar:
+
+- Az sunucu açık tut. Codex ana config'i yalnızca `openaiDeveloperDocs` ve
+  `serena` sunucularını açar; diğerlerini onlara ihtiyaç duyan görev için aç.
+- Çok thread açacak oturumları `codex --profile multi-session` ile başlat; bu
+  profil lokal stdio sunucularından yalnızca Serena bridge'ini açık bırakır.
+- Codex uygulamasını ara sıra yeniden başlat; uygulamadan çıkmak biriken
+  setleri kapatır.
+- `npm run chef -- --processes --no-log` neyin çalıştığını gösterir; bkz.
+  [çoklu oturum süreç hijyeni](process-hygiene.tr.md).
+
 ## Koruduğum Sınır
 
 - Uzak dokümantasyon, browser kanıtı ve bir semantic-code yardımcısı dengeli

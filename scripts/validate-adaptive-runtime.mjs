@@ -39,7 +39,8 @@ if (exists(agentsRel)) {
     "Routing plan:",
     "Routing result:",
     "adaptive-agent-routing",
-    "preserve the active profile's model and reasoning choices"
+    "keep the session's own model and profile",
+    "do not pass a model override when spawning them"
   ]) {
     if (!text.includes(required)) fail(`Compact global AGENTS.md missing: ${required}`);
   }

@@ -6,7 +6,9 @@ This reference preserves the detailed routing knowledge removed from the always-
 
 Spawn only when at least one condition holds: independent parallel work exists; noisy logs or research should be isolated; or the user explicitly requests delegation. A matching agent is a recommendation, not an unconditional spawn hook. Prefer one specialist, normally cap one task at four, and retain `max_threads = 10` as cross-session capacity.
 
-Agent roles inherit the active profile. Omitted model and reasoning fields are intentional: normal profiles may use medium, token-safe may use low, and review may use high without role files overriding the user.
+Model tiers: the session the user opens keeps its own model and profile and does the orchestration. Every specialist and coordinator role runs on the catalog `workerModels` (Codex gpt-6-luna, Claude Code sonnet), written as the `model` line of each role file. Reasoning effort is never pinned in a role file, so it stays inherited: normal profiles may use medium, token-safe may use low, and review may use high.
+
+Communication is hierarchical and one-shot: main session, then coordinator, then specialist, at most two levels; a coordinator picks at most four of its cataloged workers and workers never spawn. Each agent gets one brief (the `agent-brief` skill) and returns one handoff; agents do not message peers. For a vague or multi-step request, plan with `prompt-architect` in plan-only mode before writing the brief; this is an orchestrator rule, not an automatic step. There is no direct Codex-to-Claude tool: Claude Code can hand read-only work to Codex with `codex exec --sandbox read-only` and the brief on stdin; Codex hands work to Claude through a coordination-board task or the separate Beyin engine's `beyin aktar`.
 
 ## Routing Profiles
 
@@ -40,6 +42,11 @@ Choose the narrowest canonical owner and do not load its compatibility alias in 
 - `codex-enterprise-prompt-architect -> prompt-architect`
 
 Aliases remain discoverable for compatibility and user-authored references. They are not deleted or disabled. The catalog's `compatibilityAliases` also map overlapping optional names to installed skills (for example `request-refactor-plan -> improve-codebase-architecture`, `frontend-skill -> frontend-design`, `git-hygiene -> git-workflow-and-versioning`); entries marked `retired` name their replacement skill or agent role.
+
+Two pinned skills behave differently from their descriptions:
+
+- `improve-codebase-architecture` is user-invoked upstream (disable-model-invocation: true). It never auto-selects; when a task needs it, tell the user to call `$agentchef:improve-codebase-architecture` in Codex or `/agentchef:improve-codebase-architecture` in Claude Code, or invoke it explicitly.
+- `git-workflow-and-versioning` says upstream "Use when making any code change". Loading it authorizes nothing: never commit, push, tag, or open a pull request unless the user asked; the working agreement governs the skill.
 
 Use debugging skills before uncertain fixes, feature/TDD skills for bounded implementation, release and git hygiene only for release-shaped work, MCP connector skills for connector changes, and browser/design/accessibility skills only for UI-shaped work.
 

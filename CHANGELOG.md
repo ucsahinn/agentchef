@@ -1,5 +1,46 @@
 # Changelog
 
+## Unreleased
+
+Planned as 1.3.2.
+
+- Worker models:
+  - `catalog/agents.json` gains `workerModels` (`codex: gpt-6-luna`,
+    `claude: sonnet`), and every specialist and coordinator role now has
+    `modelSelection: "worker"`. Each Codex role file under
+    `templates/codex/agents/` carries `model = "gpt-6-luna"`, and each
+    generated Claude agent file carries `model: sonnet`.
+  - The session the user opens keeps its own model and profile, so
+    orchestration stays on the stronger model; no role file pins reasoning
+    effort, which stays inherited. `agentRuntimePolicy.modelSelection` in
+    `catalog/routing-profiles.json` is now `worker-tier`.
+  - The working agreement (Codex `AGENTS.md` and the Claude rule) says so in
+    place of the old "no model pins" line. The validators check the model
+    line of all 28 roles against the catalog, and a test pins it.
+- Documentation:
+  - `docs/agents.md` adds "Model Tiers" (which model each tier uses, where it
+    is set, which value wins, how to change `workerModels`) and "How Agents
+    Talk To Each Other" (main session to coordinator to specialist, at most
+    two levels and four workers, one brief and one handoff; the `agent-brief`
+    skill, and `prompt-architect` first for vague or multi-step requests as an
+    orchestrator rule; no direct Codex-to-Claude tool, `codex exec` from
+    Claude, a coordination-board task or Beyin from Codex).
+  - `docs/skills.md` documents two pinned-skill limits:
+    `improve-codebase-architecture` is user-invoked upstream
+    (`disable-model-invocation: true`) and must be called explicitly, and
+    `git-workflow-and-versioning`'s "Use when making any code change" trigger
+    stays under the never-commit-or-push-unless-asked rule. The
+    `adaptive-agent-routing` reference says the same.
+  - `docs/mcp-catalog.md` documents that Codex keeps every thread's MCP server
+    set until the app exits
+    ([openai/codex#30408](https://github.com/openai/codex/issues/30408), open,
+    no config knob) with the mitigations: few enabled servers,
+    `--profile multi-session`, periodic app restarts.
+  - Install, upgrade (a 1.3.x to 1.3.2 section), harness map, how-to, and
+    verification pages drop the "role files carry no model pin" claims;
+    the process-hygiene page now names the real Codex defaults
+    (`openaiDeveloperDocs` and `serena`; six local stdio servers in `full`).
+
 ## 1.3.1 - 2026-10-04
 
 Fixes found on the first live 1.2.2 → 1.3.0 upgrade:

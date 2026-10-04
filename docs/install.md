@@ -462,8 +462,12 @@ database, production, broad filesystem, and broad/destructive graph-indexing
 connectors remain disabled unless you explicitly enable them later. Local
 codebase graph reads are enabled only with destructive/admin graph tools
 disabled.
-Agent role files are installed without per-agent model/reasoning pins. The
-active profile and Codex runtime choose the task-appropriate balance; use
+From 1.3.2 (not released yet), every agent role file carries the catalog
+worker model (`model = "gpt-6-luna"` in `~/.codex/agents/*.toml`,
+`model: sonnet` in the Claude plugin's agent files) and no reasoning-effort
+pin, so the model/reasoning split is: worker model fixed, effort inherited.
+The session you open keeps the model and profile you chose; see
+[Model Tiers](agents.md#model-tiers) for how to change the worker model. Use
 `token-safe.config.toml` for broad or long-running work that needs lower
 verbosity and tighter tool-output limits without disabling skills, agents, or
 MCPs.

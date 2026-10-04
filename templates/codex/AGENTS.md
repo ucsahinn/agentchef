@@ -24,7 +24,7 @@
 
 - Classify non-trivial work against installed agents, skills, MCPs, and profile/config flags, then use the narrowest useful route.
 - Use `$adaptive-agent-routing` when routing details, aliases, specialist ownership, or surface placement materially affect the task.
-- Agent role selection is automatic when delegation is useful, but preserve the active profile's model and reasoning choices.
+- Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them.
 - Treat `agents.max_threads = 10` as a capacity ceiling, not a target. Prefer one agent and normally use no more than four in a single task.
 - Spawn agents only when there is independent parallel work, noisy logs or research should be isolated from the main thread, or the user explicitly requests delegation.
 - Do not spawn for trivial, sequential, tightly coupled, or single-file work where delegation adds coordination cost.

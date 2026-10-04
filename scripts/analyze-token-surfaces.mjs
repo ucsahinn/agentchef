@@ -342,7 +342,7 @@ const report = {
     "Keep SKILL.md triggers concise and move heavy procedures into references or scripts.",
     "Use context-budget-planner for broad work, then load catalogs/manifests before full files.",
     "Use token-safe profile knobs for verbosity, compaction, and tool-output ceilings without disabling features.",
-    "Leave subagent model and reasoning unpinned when the agent should adapt to task context."
+    "Keep role files on the catalog worker model and leave reasoning effort unpinned so the profile still sets it."
   ]
 };
 
