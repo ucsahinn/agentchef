@@ -34,3 +34,17 @@ test("a handoff needs every return field", () => {
   assert.equal(full.ok, true, full.missing.join(", "));
   assert.equal(parseHandoff("Outcome: done").missing.length, HANDOFF_FIELDS.length - 1);
 });
+
+test("bilingual labels such as \"Kapsam / Yazma kapsamı\" parse as one field", () => {
+  const result = parseBrief([
+    "## Goal / Hedef", "x",
+    "**Kanıt / Evidence:** y",
+    "- Kapsam / Yazma kapsamı: scripts/lib",
+    "Sınırlar / Boundaries: z",
+    "Done when / Bitti kriteri: tests",
+    "Dönüş biçimi / Return format: handoff",
+    "User's words / Kullanıcının özgün cümlesi: \"aynen\""
+  ].join("\n"));
+  assert.equal(result.ok, true, result.missing.join(", "));
+  assert.equal(result.fields.scope, "scripts/lib");
+});

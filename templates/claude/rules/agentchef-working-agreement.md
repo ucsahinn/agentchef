@@ -42,7 +42,8 @@
 
 - Coordinate only after the user explicitly creates or asks to create a task in the active coordination board. Creating that task records the work state; opening a pane, selecting a role, or matching a routing profile never starts work by itself.
 - A coordinator may delegate only cataloged workers assigned to that coordinator. Each worker receives a bounded task with its question, scope, evidence required, and stop condition.
-- Workers return a structured handoff to their coordinator or parent: outcome, evidence (commands, paths, or observations), changed scope if any, risks, unresolved questions, and the next verification need. Workers do not message peer coordinators or delegate further.
+- Brief fields: a delegated task states its goal, evidence, write scope, boundaries, done-when criteria, return format, and the user's words verbatim (the `agent-brief` skill; `coordination-board brief-check` checks one).
+- Handoff fields: workers return a structured handoff to their coordinator or parent: outcome, evidence (commands, paths, or observations), changed scope if any, risks, unresolved questions, and the next verification need. Workers do not message peer coordinators or delegate further.
 - Cross-domain work is relayed by the parent/main session. A handoff names the question, evidence, conflict, decision needed, and open verification need; coordinators never directly spawn or message peers.
 - Attach the returned evidence to the task before moving it to done. A task with missing, failed, or unreviewed evidence remains open or in review. No coordinator, worker, profile, or pane may auto-start, auto-complete, or infer approval.
 
