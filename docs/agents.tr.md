@@ -142,9 +142,8 @@ worker'larını `Agent(agentchef:<worker>)` ile başlatabilir. AgentChef
 
 ## Model Katmanları
 
-AgentChef işi iki model katmanına böler. Bu, bir sonraki sürüm olan 1.3.2 ile
-geçerlidir (henüz yayımlanmadı); 1.3.1 ve öncesinde her rol oturumun modelinde
-çalışır.
+AgentChef işi iki model katmanına böler. Bu, 1.3.2 ile geçerlidir;
+1.3.1 ve öncesinde her rol oturumun modelinde çalışır.
 
 | Katman | Kim çalışır | Model | Nerede ayarlanır |
 | --- | --- | --- | --- |

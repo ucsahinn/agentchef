@@ -209,8 +209,7 @@ Playwright's `browser_run_code_unsafe`, `browser_evaluate`, and
 
 ## Upgrading From 1.3.x To 1.3.2
 
-1.3.2 is the next release and is not released yet; this section describes it
-ahead of time. It needs no migration step:
+1.3.2 needs no migration step:
 
 ```powershell
 npm run chef -- --update            # preview

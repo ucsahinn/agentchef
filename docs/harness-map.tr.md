@@ -47,7 +47,7 @@ Home dizinleri `CODEX_HOME`, `AGENTS_HOME` ve `CLAUDE_CONFIG_DIR` değerlerinden
 | Agent rolleri | `~/.codex/agents/<name>.toml` | plugin'in `agents/<name>.md` dosyaları |
 | MCP sunucuları | `~/.codex/config.toml` içinde `[mcp_servers.<name>]`; ikisi açık, diğerleri mevcut ama kapalı | plugin'in `mcp/claude.mcp.json` dosyası ikisini getirir; diğer katalog sunucuları yalnız sen `~/.claude.json` içine eklersen yapılandırılmış olur |
 
-1.3.2 ile (henüz yayımlanmadı) her agent rol dosyası modelini de belirtir:
+1.3.2 ile her agent rol dosyası modelini de belirtir:
 katalogdaki `workerModels` (Codex rol dosyalarında `gpt-6-luna`, Claude agent
 dosyalarında `sonnet`). Açtığın oturum harness'in parçası değildir ve kendi
 modelini korur; bkz. [Model Katmanları](agents.tr.md#model-katmanları).

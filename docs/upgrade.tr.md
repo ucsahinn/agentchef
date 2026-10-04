@@ -217,8 +217,7 @@ araçlarını reddeder.
 
 ## 1.3.x'ten 1.3.2'ye Geçiş
 
-1.3.2 bir sonraki sürümdür ve henüz yayımlanmadı; bu bölüm onu önceden
-anlatır. Migration adımı gerekmez:
+1.3.2 migration adımı gerektirmez:
 
 ```powershell
 npm run chef -- --update            # önizleme

@@ -46,7 +46,7 @@ Homes resolve from `CODEX_HOME`, `AGENTS_HOME`, and `CLAUDE_CONFIG_DIR`, with
 | Agent roles | `~/.codex/agents/<name>.toml` | the plugin's `agents/<name>.md` |
 | MCP servers | `[mcp_servers.<name>]` in `~/.codex/config.toml`; two enabled, the rest present but disabled | the plugin's `mcp/claude.mcp.json` ships two; the other catalog servers are configured only if you add them to `~/.claude.json` |
 
-From 1.3.2 (not released yet), each agent role file also names its model: the
+From 1.3.2, each agent role file also names its model: the
 catalog's `workerModels` (`gpt-6-luna` in the Codex role files, `sonnet` in the
 Claude agent files). The session you open is not part of the harness and keeps
 its own model; see [Model Tiers](agents.md#model-tiers).

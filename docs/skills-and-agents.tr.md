@@ -47,7 +47,7 @@ gerektiği anlamına gelmez.
 Subagent'lar mevcut onay ve sandbox sınırlarını devralır. İşin devredilmesi,
 onlara fazladan yetki vermez.
 
-1.3.2 ile (henüz yayımlanmadı) roller daha ucuz bir worker modelinde çalışır,
+1.3.2 ile roller daha ucuz bir worker modelinde çalışır,
 açtığın oturum ise kendi modelini korur; bkz.
 [Model Katmanları](agents.tr.md#model-katmanları). Agent'lar birbiriyle
 sohbet etmez: ana oturum bir koordinatöre brief verir, koordinatör kendi

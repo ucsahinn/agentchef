@@ -144,9 +144,8 @@ AgentChef never writes `~/.claude/agents/` and never emits
 
 ## Model Tiers
 
-AgentChef splits the work between two model tiers. This applies from 1.3.2,
-the next release (not released yet); in 1.3.1 and earlier every role runs on
-the session model.
+AgentChef splits the work between two model tiers. This applies from 1.3.2;
+in 1.3.1 and earlier every role runs on the session model.
 
 | Tier | Who runs on it | Model | Where it is set |
 | --- | --- | --- | --- |

@@ -213,7 +213,7 @@ Agent templates must not use `danger-full-access`,
 `approval_policy = "never"`, or embedded token environment variable names.
 Read-only specialists stay read-only, while verifier/release roles can use
 `workspace-write` only for local evidence such as smoke-test output.
-From 1.3.2 (not released yet), agent role templates carry only the catalog
+From 1.3.2, agent role templates carry only the catalog
 worker `model` (`workerModels`) and never `model_reasoning_effort`, so the
 profile still sets effort and the session you open keeps the model you chose.
 The model line changes no role boundary or approval gate.

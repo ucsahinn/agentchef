@@ -460,7 +460,7 @@ gereksinimlerini connector'a ihtiyac duymadan once gosterir. Account, database,
 production, genis filesystem ve broad/destructive graph-indexing connector'lari
 sen acikca enable edene kadar kapali kalir. Lokal codebase graph okumalari
 yalniz destructive/admin graph tool'lari kapaliyken acik olur.
-1.3.2 ile (henüz yayımlanmadı) her agent rol dosyası katalogdaki worker
+1.3.2 ile her agent rol dosyası katalogdaki worker
 modelini taşır (`~/.codex/agents/*.toml` içinde `model = "gpt-6-luna"`, Claude
 plugin'inin agent dosyalarında `model: sonnet`) ve reasoning effort pinlemez;
 yani model/reasoning ayrımı: worker modeli sabit, effort devralınır.

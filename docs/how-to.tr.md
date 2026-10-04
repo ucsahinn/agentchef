@@ -147,7 +147,7 @@ Installer profilleri `~/.codex` içine kopyalar:
   app yüzeylerini korur.
 
 Ana config'i bozmak yerine farklı güvenlik duruşu gerektiğinde profil kullan.
-Profil, açtığın oturumun modelini belirler. 1.3.2 ile (henüz yayımlanmadı)
+Profil, açtığın oturumun modelini belirler. 1.3.2 ile
 agent rollerinde model/reasoning ayrımı sabittir: katalogdaki worker modelinde çalışırlar ve reasoning effort'u
 devralırlar (bkz.
 [Model Katmanları](agents.tr.md#model-katmanları)).

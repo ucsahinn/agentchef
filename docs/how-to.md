@@ -144,8 +144,7 @@ The installer copies profile configs into `~/.codex`:
   built-in memories, hooks, or apps.
 
 Use profiles when a task needs a different safety posture without rewriting the
-main config. A profile sets the model of the session you open. From 1.3.2
-(not released yet), agent roles have a fixed model/reasoning split: they run on the catalog worker model
+main config. A profile sets the model of the session you open. From 1.3.2, agent roles have a fixed model/reasoning split: they run on the catalog worker model
 and inherit reasoning effort (see
 [Model Tiers](agents.md#model-tiers)).
 For the ownership-aware audit and exact stale cleanup boundary, see

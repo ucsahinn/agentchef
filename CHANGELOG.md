@@ -1,18 +1,16 @@
 # Changelog
 
-## Unreleased
-
-Planned as 1.3.2.
+## 1.3.2 - 2026-10-04
 
 - Worker models:
   - `catalog/agents.json` gains `workerModels` (`codex: gpt-6-luna`,
-    `claude: sonnet`), and every specialist and coordinator role now has
-    `modelSelection: "worker"`. Each Codex role file under
+    `claude: sonnet`), and every specialist role now has
+    `modelSelection: "worker"` and every coordinator role file is pinned to
+    the worker model. Each Codex role file under
     `templates/codex/agents/` carries `model = "gpt-6-luna"`, and each
     generated Claude agent file carries `model: sonnet`.
-  - The session the user opens keeps its own model and profile, so
-    orchestration stays on the stronger model; no role file pins reasoning
-    effort, which stays inherited. `agentRuntimePolicy.modelSelection` in
+  - The session the user opens keeps its own model and profile and does the
+    orchestration; no role file pins reasoning effort, which stays inherited. `agentRuntimePolicy.modelSelection` in
     `catalog/routing-profiles.json` is now `worker-tier`.
   - The working agreement (Codex `AGENTS.md` and the Claude rule) says so in
     place of the old "no model pins" line. The validators check the model
@@ -40,6 +38,14 @@ Planned as 1.3.2.
     verification pages drop the "role files carry no model pin" claims;
     the process-hygiene page now names the real Codex defaults
     (`openaiDeveloperDocs` and `serena`; six local stdio servers in `full`).
+  - The routing skill, working agreement, security model, catalog text,
+    token guidance, and ADR-001 (status note) no longer say roles carry no
+    model pin. `docs/agents.md` notes that `security-auditor`,
+    `code-reviewer`, and `release-verifier` run on the worker tier too, and
+    lists the boundaries of a `codex exec` handoff.
+- `validate-agent-config` rejects a missing or malformed `workerModels`
+  entry, so a role cannot silently lose its model line.
+- Tests pin the three 1.3.1 verifier fixes.
 
 ## 1.3.1 - 2026-10-04
 

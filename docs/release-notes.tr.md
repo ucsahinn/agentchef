@@ -2,6 +2,25 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.2 - 2026-10-04
+
+AgentChef 1.3.2 her agent rolünü daha düşük maliyetli bir worker modelinde
+çalıştırır; açtığın oturum seçtiğin modeli korur. Güncellemek için
+`npm run chef -- --update --apply`; migration adımı gerekmez.
+
+### Neler Değişti
+
+- **Worker modelleri.** 28 rolün hepsi katalogdaki `workerModels` ile
+  çalışır: Codex `gpt-6-luna`, Claude Code `sonnet`. Reasoning effort
+  pinlenmez, devralınır. Değiştirmek için bkz.
+  [Model Katmanları](agents.tr.md#model-katmanları).
+- **Güvenlik ve inceleme rolleri** de worker katmanında çalışır; yüksek riskli
+  bir inceleme için onu kendi oturumunda çalıştır ya da Claude Code'da o tek
+  `Agent` çağrısına daha güçlü bir `model` ver.
+- **Belgeler.** Agent'ların birbiriyle nasıl konuştuğu, iki pinli skill
+  sınırı ve Codex'in her thread'in MCP sunucularını uygulama kapanana kadar
+  açık tutması (openai/codex#30408) ile bunun hafifletmeleri.
+
 ## v1.3.1 - 2026-10-04
 
 AgentChef 1.3.1, 1.3.0'a ilk canlı yükseltmede görülen üç yanlış alarmı

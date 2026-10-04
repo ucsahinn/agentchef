@@ -2,6 +2,24 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.2 - 2026-10-04
+
+AgentChef 1.3.2 runs every agent role on a lower-cost worker model, while the
+session you open keeps the model you chose. Update with
+`npm run chef -- --update --apply`; no migration step is needed.
+
+### What Changed
+
+- **Worker models.** All 28 roles run on the catalog `workerModels`: Codex
+  `gpt-6-luna`, Claude Code `sonnet`. Reasoning effort is not pinned and
+  stays inherited. See [Model Tiers](agents.md#model-tiers) to change them.
+- **Security and review roles** run on the worker tier too; for a high-stakes
+  review, run it in your own session or pass a stronger `model` on that one
+  Claude Code `Agent` call.
+- **Docs.** How agents talk to each other, two pinned-skill limits, and the
+  Codex limit that keeps every thread's MCP servers running until the app
+  exits (openai/codex#30408) with its mitigations.
+
 ## v1.3.1 - 2026-10-04
 
 AgentChef 1.3.1 fixes three false alarms seen on the first live upgrade to
