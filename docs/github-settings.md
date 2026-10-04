@@ -2,7 +2,7 @@
 
 These settings shape the project’s public first impression. Apply them manually only after the source tree is verified and the account-level change is explicitly approved.
 
-Release candidate baseline: **v1.3.0**.
+Release candidate baseline: **v1.3.1**.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

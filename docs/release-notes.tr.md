@@ -2,6 +2,21 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.1 - 2026-10-04
+
+AgentChef 1.3.1, 1.3.0'a ilk canlı yükseltmede görülen üç yanlış alarmı
+düzeltir. Kurulu bir ev dizininde hiçbir şey değişmez; `verify-install-runtime`
+artık gerçek durumu raporlar. `npm run chef -- --update --apply` ile güncelle.
+
+### Neler Değişti?
+
+- Doğrulayıcı, altında yalnızca AgentChef'in birleştirme başlığı bulunan bir
+  tablo için artık yönetilen config sapması raporlamaz.
+- Plugin kaynağındaki sabitlenmiş skill'ler artık fazla dosya olarak
+  listelenmez.
+- Kendi kurduğun bir skill kopyası, göçün kaldıracağı bir şey olarak değil,
+  senin kopyan olarak raporlanır.
+
 ## v1.3.0 - 2026-10-04
 
 AgentChef 1.3.0 harness'ın tamamını tek bir plugin yapar; her yerde aynı

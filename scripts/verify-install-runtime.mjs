@@ -11,7 +11,7 @@ import { claudeCliEnv, resolveClaudeHomes } from "./lib/targets/claude.mjs";
 import { claudeInstallReceiptName, claudeInstallSchemaVersion, legacyClaudeInstallSchemaVersion } from "./install-claude-target.mjs";
 import { fileSha256, inspectReceipt, readReceipt } from "./lib/json-merge-receipt.mjs";
 import { inspectSkillLink } from "./lib/skill-links.mjs";
-import { managedMarkerNames } from "./lib/identity.mjs";
+import { identity, managedMarkerNames } from "./lib/identity.mjs";
 import { assertManagedTargetPath } from "./lib/managed-path-safety.mjs";
 import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { cacheContentDrift } from "./refresh-installed-plugin.mjs";
@@ -561,8 +561,17 @@ function inspectManagedFileDrift(failures, warnings) {
       failures.push(error.message);
       continue;
     }
+    // Since 1.3.0 the installer writes the pinned skills into the plugin's
+    // marketplace source; they carry a provenance marker and are not extras
+    // (the same rule repair applies before it prunes).
+    const pinnedSkillNames = new Set(readJson("catalog/skills.json").skills.filter((skill) => skill.install === true).map((skill) => skill.skill || skill.name));
+    const isPinnedSkillFile = (file) => {
+      const [top, name] = posixPath(file).split("/");
+      return top === "skills" && pinnedSkillNames.has(name)
+        && [identity.sourceMarker, identity.legacySourceMarker].some((marker) => fs.existsSync(path.join(mirror.target, "skills", name, marker)));
+    };
     for (const file of mirrorFiles) {
-      if (!mirror.sourceFiles.has(file)) {
+      if (!mirror.sourceFiles.has(file) && !isPinnedSkillFile(file)) {
         const extraPath = path.join(mirror.target, file);
         extra.push(redact(extraPath));
         warnings.push(`Installed managed plugin mirror preserves an extra local file not present in source: ${redact(extraPath)}. Use repair --prune-managed-plugin-extras only after review.`);
@@ -845,7 +854,13 @@ function inspectSkills(failures, warnings) {
     for (const skill of expectedEntries) {
       for (const name of [skill.name, ...(skill.name === "agentchef-operator" ? ["codex-chef-operator"] : [])]) {
         if (fs.existsSync(path.join(plainRoot, name, "SKILL.md"))) {
-          warnings.push(`Harness skill ${skill.name} also has a direct copy at ${redact(path.join(plainRoot, name))}; run npm run chef -- --migrate-identity --target both --apply to retire it.`);
+          // The migration retires only a copy AgentChef can prove it wrote
+          // (marker or provenance); any other copy is the user's to remove.
+          const copy = path.join(plainRoot, name);
+          const ownedByAgentChef = [...managedMarkerNames, identity.sourceMarker, identity.legacySourceMarker].some((marker) => fs.existsSync(path.join(copy, marker)));
+          warnings.push(ownedByAgentChef
+            ? `Harness skill ${skill.name} also has a direct copy at ${redact(copy)}; run npm run chef -- --migrate-identity --target both --apply to retire it.`
+            : `Harness skill ${skill.name} also has your own copy at ${redact(copy)}, which shadows the plugin's; AgentChef does not remove it. Delete it (after a backup) if the plugin's copy should be used.`);
         }
       }
     }
