@@ -29,6 +29,7 @@ AgentChef keeps complete operator documentation in English and Turkish at full p
 - [Specialist agents](agents.md)
 - [Skill catalog](skills.md)
 - [MCP catalog](mcp-catalog.md)
+- [Harness map and inventory](harness-map.md)
 - [Multi-session process hygiene](process-hygiene.md)
 - [Skills, plugins, and agents compatibility map](skills-and-agents.md)
 - [Workflow surface map](workflow-surface-map.md)

@@ -241,6 +241,8 @@ npm run chef -- --migrate-identity --target both --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
+npm run chef -- --inventory
+npm run chef -- --inventory --target claude --details
 npm run chef -- --diagnostics
 npm run chef -- --processes
 npm run chef -- --processes --cleanup-stale
@@ -292,6 +294,14 @@ use `/ps` and `/stop` for live terminal work started by the current
 Codex session. `--diagnostics` includes the Serena/MCP process-audit command
 and other read-only evidence commands, but it does not stop processes or mutate
 global files.
+
+`--inventory` is read-only too: it lists every harness skill, agent role, and
+MCP server with its source and state on each target, a totals line from the
+catalog, and an `Issues` line. Add `--target codex|claude|both`, `--json`, or
+`--details` (every row, including the ones already in their expected state).
+It exits 1 when AgentChef is installed but a harness skill or role is missing
+on a selected target. See the [harness map](harness-map.md) for the states and
+what to do about each.
 
 Installed and ready skills do not execute by themselves. A skill enters Codex
 context when the user names it or the task clearly matches its description;

@@ -29,6 +29,7 @@ AgentChef’in operatör dokümantasyonu İngilizce ve Türkçe olarak tam parit
 - [Uzman agent'lar](agents.tr.md)
 - [Skill kataloğu](skills.tr.md)
 - [MCP kataloğu](mcp-catalog.tr.md)
+- [Harness haritası ve envanter](harness-map.tr.md)
 - [Çoklu oturum süreç hijyeni](process-hygiene.tr.md)
 - [Skill, plugin ve agent uyumluluk haritası](skills-and-agents.tr.md)
 - [Workflow yüzey haritası](workflow-surface-map.tr.md)

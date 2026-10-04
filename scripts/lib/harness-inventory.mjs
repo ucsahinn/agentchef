@@ -24,7 +24,7 @@ const directSkillMarkers = [".agentchef-managed.json", ".codex-chef-managed.json
 
 function readJson(file, fallback = null) {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8").replace(/^﻿/, ""));
+    return JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
   } catch {
     return fallback;
   }

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Harness inventory:
+  - `npm run chef -- --inventory [--target codex|claude|both] [--json]
+    [--details]` is a read-only map of every skill, agent role, and MCP server
+    with its source and state on each target (`installed`, `missing`,
+    `shadowed`, `migration-pending`, `broken-link`, `user`, `optional`,
+    `retired`, `legacy-name`, and the MCP states). It prints a totals line
+    computed from the catalog, an `Issues` line that also counts cache drift
+    and a pre-1.3.0 plugin name, and exits 1 when AgentChef is installed but a
+    harness skill or role is missing on a selected target. See
+    [docs/harness-map.md](docs/harness-map.md).
+  - The Claude Code plugin cache comparison now also covers the plugin
+    manifest, `mcp/`, and `scripts/`, since Claude Code loads the MCP servers
+    and the `SessionEnd` hook from them; before, only `agents/` and `skills/`
+    were compared.
+  - `validate-doc-locales` and `validate-kb-locales` now require the same
+    heading structure (heading count and levels, in order) in each EN/TR pair.
+    `docs/codex-flags.tr.md` gains the missing "Common Commands" section and
+    `docs/security-model.tr.md` the missing "Portable Workspace OS Boundary"
+    section.
 - Coordination board state schema v3:
   - Tasks record an owner (agent, session), a repository-relative write
     scope, a lease, the task brief, and attached evidence.

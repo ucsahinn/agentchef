@@ -237,6 +237,8 @@ npm run chef -- --migrate-identity --target both --apply
 npm run chef -- --skills
 npm run chef -- --mcp
 npm run chef -- --routing
+npm run chef -- --inventory
+npm run chef -- --inventory --target claude --details
 npm run chef -- --diagnostics
 npm run chef -- --processes
 npm run chef -- --processes --cleanup-stale
@@ -289,6 +291,13 @@ icin `/agent`; current Codex session tarafindan baslatilan terminal
 isleri icin `/ps` ve `/stop` kullan. `--diagnostics` Serena/MCP surec audit
 komutunu ve diger read-only kanit komutlarini gosterir, ama surec durdurmaz ve
 global dosya degistirmez.
+
+`--inventory` da yalnız okur: her harness skill'ini, agent rolünü ve MCP
+sunucusunu kaynağı ve her hedefteki durumuyla listeler; katalogdan hesaplanan
+bir toplam satırı ve bir `Issues` satırı ekler. `--target codex|claude|both`,
+`--json` veya `--details` (beklenen durumdaki satırlar dahil hepsi) eklenebilir.
+AgentChef kuruluyken seçili bir hedefte harness skill'i veya rolü eksikse 1 ile
+çıkar. Durumlar ve her biri için yapılacaklar [harness haritasında](harness-map.tr.md).
 
 Kurulu ve hazır skill'ler kendiliğinden çalışmaz. Kullanıcı skill adını
 yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer;
