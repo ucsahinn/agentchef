@@ -2,6 +2,50 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.0 - 2026-10-04
+
+AgentChef 1.3.0 harness'ın tamamını tek bir plugin yapar; her yerde aynı
+biçimde sayılır ve çalıştırması daha hafiftir. `npm run chef -- --update --apply`
+ile güncelle, ardından 1.0–1.2 kurulumunu
+`npm run chef -- --migrate-identity --target both --apply` ile taşı (önce
+`--apply` olmadan ön izle); bkz. [Yükseltme](upgrade.tr.md).
+
+### Neler Değişti?
+
+- **Tek plugin, tek ad.** Plugin artık `agentchef` (eskiden
+  `agentchef-workflows`). Her skill iki CLI'ya yalnızca onun üzerinden ulaşır:
+  Codex'te `$agentchef:<skill>`, Claude Code'da `/agentchef:<skill>`.
+  `~/.agents/skills` altında kopya, `~/.claude/skills` altında bağlantı
+  yoktur; göç, önceki sürümün bıraktıklarını yedekledikten sonra kaldırır.
+- **28 ajan rolü.** On bir koordinatör yediye indi (yeni `ui_coordinator`);
+  kaldırılan beş rol dosyası ve config tablosu yalnızca AgentChef'in
+  yazdığıyla birebir aynıysa kaldırılır.
+- **Skill'ler.** 11 paketli + 18 commit'e sabitlenmiş upstream skill. Yeni:
+  `agent-brief` (ajanlar arası brief ve handoff sözleşmesi),
+  `security-threat-model`, `shipping-and-launch`, `git-workflow-and-versioning`;
+  `frontend-design` ve `improve-codebase-architecture` iki eski pinin yerini
+  alır. İsteğe bağlı mükerrerler alias ya da emekli girdi oldu.
+- **MCP sunucuları.** `memory` ve `filesystem` kalktı (14 sunucu). Claude Code
+  `context7` ve `serena`'yı plugin'den alır; Playwright ve Chrome DevTools
+  varsayılan kapalıdır ve proje başına eklenir, çünkü her oturum tanımlı tüm
+  sunucuları başlatıyordu. Plugin'in başlattığı bir npx sunucusu dört
+  süreçlik zincir yerine tek node sürecinde çalışır. Önceki kurulumun
+  `~/.claude.json` içine yazdığı girdiler kaldırılır; seninkiler raporlanır ya
+  da yedeklendikten sonra `-AdoptMcp` ile kaldırılır.
+- **Onaylar ve hook'lar.** Bir ajan sabitlenmiş bir npx paketini, `git
+  ls-remote` ya da `node --check` çalıştıracaksa önce sorulur; `rg --pre`
+  korunur. Claude Code da artık oturum sonu süreç hijyeni hook'unu alır.
+- **Tek harita.** `npm run chef -- --inventory`, her skill'i, rolü ve MCP
+  sunucusunu kaynağı ve her hedefteki durumuyla (gölgelenmiş, göç bekliyor,
+  kırık bağlantı, sapmış) listeler; toplamlar katalogdan gelir. Bkz.
+  [Harness haritası](harness-map.tr.md).
+- **Koordinasyon panosu v3.** Görevler sahip, kiralı yazma kapsamı, brief ve
+  kanıt taşır; iş yalnızca eksiksiz bir brief ile başlar.
+- **Düzeltmeler.** Kurulum, göç, durum, süreç hijyeni ve Serena havuzu
+  üzerinde yapılan iki hata avından yaklaşık otuz hata, her biri bir testle.
+
+Her değişiklik, nedeniyle birlikte [CHANGELOG](../CHANGELOG.md) içinde listelenir.
+
 ## v1.2.2 - 2026-10-02
 
 AgentChef 1.2.2, 32 AgentChef ajanının her biri bir kez çalıştırılarak bulunan

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 - 2026-10-04
 
 - Agent brief and handoff contract:
   - New bundled skill `agent-brief` (`$agentchef:agent-brief` in Codex,
