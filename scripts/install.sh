@@ -360,7 +360,9 @@ if [ "$REPAIR" -eq 1 ]; then
 fi
 
 if [ "$INTERACTIVE" -eq 1 ] && [ "$ALL" -eq 1 ] && [ "$INSTALL_SKILLS" -eq 1 ]; then
-  if ! yes_no "Install or reconcile the 15 reviewed global Codex skills now?" "yes"; then
+  # The count comes from the catalog, so the prompt cannot go stale.
+  PINNED_SKILL_COUNT="$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).skills.filter((skill) => skill.install === true).length))' "$CURATED_SKILLS_CATALOG")"
+  if ! yes_no "Install or reconcile the $PINNED_SKILL_COUNT pinned upstream skills in the AgentChef plugin now?" "yes"; then
     INSTALL_SKILLS=0
   fi
 fi

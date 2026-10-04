@@ -49,7 +49,7 @@ credentials, sessions, or local memory.
 | Explore | What you will find |
 | --- | --- |
 | [🤖 See 7 coordinators + 21 specialists](docs/agents.md) | The coordination roles, specialist workers, and when delegation is actually useful. |
-| [🧩 Browse the skill catalog](docs/skills.md) | Ten bundled workflows, fifteen reviewed full-install skills, and the optional references that stay out of the default path. |
+| [🧩 Browse the skill catalog](docs/skills.md) | Ten bundled workflows, eighteen reviewed full-install skills, and the optional references that stay out of the default path. |
 | [🔌 Open the MCP catalog](docs/mcp-catalog.md) | The three-server Codex default, the three servers the Claude Code plugin ships, optional local capabilities, seven gated connectors, and their process/access boundaries. |
 | [📜 Read the installed working agreement](templates/codex/AGENTS.md) | The user-wide defaults installed as `~/.codex/AGENTS.md`; a repository-local `AGENTS.md` still has precedence. |
 | [🛡️ Read the security model](docs/security-model.md) | Preview-first changes, backups, approval gates, secret handling, and the actions AgentChef deliberately leaves to you. |
@@ -79,7 +79,7 @@ continue to win where they should.
 
 Skills teach the agent how to handle a focused job. The agent sees a short
 description first and loads the full instructions only when the task matches.
-AgentChef ships ten bundled workflows and offers fifteen reviewed skills
+AgentChef ships ten bundled workflows and offers eighteen reviewed skills
 through the full install profile. All of them reach both CLIs only through the
 `agentchef` plugin, so each skill is listed once per CLI. The `$seo` and
 `$evidence-research` workflows, for example, are called `$agentchef:seo` and

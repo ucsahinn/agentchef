@@ -356,7 +356,9 @@ if ($Repair) {
 }
 
 if ($Interactive -and $All -and $InstallSkills) {
-  if (-not (Read-YesNo -Prompt "Install or reconcile the 15 reviewed global Codex skills now?" -Default $true)) {
+  # The count comes from the catalog, so the prompt cannot go stale.
+  $PinnedSkillCount = @((Get-Content -Path (Join-Path $RepoRoot "catalog\skills.json") -Raw | ConvertFrom-Json).skills | Where-Object { $_.install -eq $true }).Count
+  if (-not (Read-YesNo -Prompt "Install or reconcile the $PinnedSkillCount pinned upstream skills in the AgentChef plugin now?" -Default $true)) {
     $InstallSkills = $false
   }
 }

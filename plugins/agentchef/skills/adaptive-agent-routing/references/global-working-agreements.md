@@ -39,7 +39,7 @@ Choose the narrowest canonical owner and do not load its compatibility alias in 
 - `codex-skill-forge -> ai-skill-create`
 - `codex-enterprise-prompt-architect -> prompt-architect`
 
-Aliases remain discoverable for compatibility and user-authored references. They are not deleted or disabled.
+Aliases remain discoverable for compatibility and user-authored references. They are not deleted or disabled. The catalog's `compatibilityAliases` also map overlapping optional names to installed skills (for example `request-refactor-plan -> improve-codebase-architecture`, `frontend-skill -> frontend-design`, `git-hygiene -> git-workflow-and-versioning`); entries marked `retired` name their replacement skill or agent role.
 
 Use debugging skills before uncertain fixes, feature/TDD skills for bounded implementation, release and git hygiene only for release-shaped work, MCP connector skills for connector changes, and browser/design/accessibility skills only for UI-shaped work.
 

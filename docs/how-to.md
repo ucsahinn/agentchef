@@ -180,7 +180,8 @@ states, and the primary contact flow before calling it done.
 Release readiness:
 
 ```text
-Use release_verifier and git-hygiene. Inspect git status, validate docs/scripts,
+Use release_verifier with shipping-and-launch and git-workflow-and-versioning.
+Inspect git status, validate docs/scripts,
 run secret scanning when available, check public-readiness files, and summarize
 whether this is safe to push or publish. Do not push unless I explicitly approve.
 ```

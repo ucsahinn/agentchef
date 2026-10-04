@@ -83,9 +83,10 @@ otoritesi resmi dokümanların yerini almaz.
   prompt-polish, release-only ve framework/vendor-specific skill'ler faydali
   olabilir; fakat Windows-first Codex setup starter icin default kurulumda daha
   fazla trigger cakismasi veya risk yaratir.
-- `impeccable`, ekstra design-taste, Vercel, prompt, context, memory ve
-  token-related skill'ler bundled ajanlarla cakistiginda veya auth/vendor akisi
-  gerektirdiginde manuel opt-in katalog referansi olarak korunur.
+- Cakisan design, prompt, context, review ve release isimleri
+  `compatibilityAliases` ile kurulu bir harness skill'ine yonlendirilir, yerine
+  baskasi gelen referanslar `retired` olarak isaretlenir; Vercel ve diger
+  vendor'a ozel skill'ler manuel opt-in katalog referansi olarak kalir.
 - First-party ekosistem skill'leri incelenmis `-All` / `-InstallSkills` setine
   alinir:
   `ai-project-starter`, `prompt-architect`

@@ -49,7 +49,7 @@ lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 | İncele | Ne bulacaksın? |
 | --- | --- |
 | [🤖 7 koordinatör + 21 uzmanı gör](docs/agents.tr.md) | Koordinasyon rolleri, uzman worker'lar ve delegasyonun ne zaman gerçekten faydalı olduğunu. |
-| [🧩 Skill kataloğunu aç](docs/skills.tr.md) | On bundled workflow'u, full install ile gelen on beş incelenmiş skill'i ve varsayılan yolu kalabalıklaştırmayan opsiyonları. |
+| [🧩 Skill kataloğunu aç](docs/skills.tr.md) | On bundled workflow'u, full install ile gelen on sekiz incelenmiş skill'i ve varsayılan yolu kalabalıklaştırmayan opsiyonları. |
 | [🔌 MCP kataloğuna bak](docs/mcp-catalog.tr.md) | Üç sunuculu Codex varsayılanını, Claude Code plugin'inin getirdiği üç sunucuyu, opsiyonel lokal yetenekleri, yedi kontrollü connector'ı ve süreç/erişim sınırlarını. |
 | [📜 Kurulan çalışma sözleşmesini oku](templates/codex/AGENTS.md) | `~/.codex/AGENTS.md` olarak kurulan kullanıcı-geneli varsayılanlar; repo-içi `AGENTS.md` yine daha yüksek önceliklidir. |
 | [🛡️ Güvenlik modelini oku](docs/security-model.tr.md) | Ön izleme, yedekleme, onay kapıları, secret sınırları ve AgentChef'in bilerek kendi başına yapmadığı işlemleri. |
@@ -79,7 +79,7 @@ yerde üstün gelmeye devam eder.
 
 Skill, ajana belirli bir işi hangi adımlarla yapacağını anlatır. Ajan önce
 kısa açıklamayı görür; tam talimatı yalnızca görev eşleştiğinde yükler.
-AgentChef on bundled workflow sunar ve full install profilinde on beş
+AgentChef on bundled workflow sunar ve full install profilinde on sekiz
 incelenmiş skill'e yer verir. Hepsi iki CLI'ya da yalnızca `agentchef`
 plugin'i üzerinden ulaşır; bu yüzden her skill CLI başına bir kez listelenir.
 Örneğin `$seo` ve `$evidence-research` workflow'ları Codex'te

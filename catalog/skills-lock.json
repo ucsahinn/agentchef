@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
   "generatedFrom": "catalog/skills.json",
-  "dateChecked": "2026-09-18",
+  "dateChecked": "2026-10-03",
   "status": "offline-validated",
   "lockSemantics": "commit-pinned",
   "skillsCliVersion": "1.5.20",
@@ -12,11 +12,12 @@
     {
       "name": "dependency-upgrade",
       "package": "wshobson/agents",
-      "commit": "c4b82b0ad771190355eb8e204b1329732a18449a",
+      "commit": "156b7a5e7a8b93642628a339ee4039c925b34c7f",
       "skill": "dependency-upgrade",
       "source": "wshobson/agents@dependency-upgrade",
       "sourceUrl": "https://github.com/wshobson/agents",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package wshobson/agents --commit c4b82b0ad771190355eb8e204b1329732a18449a --skill dependency-upgrade --cli-version 1.5.20"
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package wshobson/agents --commit 156b7a5e7a8b93642628a339ee4039c925b34c7f --skill dependency-upgrade --cli-version 1.5.20"
     },
     {
       "name": "gh-fix-ci",
@@ -25,7 +26,48 @@
       "skill": "gh-fix-ci",
       "source": "openai/skills@gh-fix-ci",
       "sourceUrl": "https://github.com/openai/skills",
+      "license": "Apache-2.0",
       "installCommand": "node scripts/install-pinned-skill.mjs --package openai/skills --commit 49f948faa9258a0c61caceaf225e179651397431 --skill gh-fix-ci --cli-version 1.5.20"
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "package": "addyosmani/agent-skills",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
+      "skill": "git-workflow-and-versioning",
+      "source": "addyosmani/agent-skills@git-workflow-and-versioning",
+      "sourceUrl": "https://github.com/addyosmani/agent-skills",
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/agent-skills --commit 9d0c60d406b454a78ccc0a175b19932047aa4dac --skill git-workflow-and-versioning --cli-version 1.5.20"
+    },
+    {
+      "name": "shipping-and-launch",
+      "package": "addyosmani/agent-skills",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
+      "skill": "shipping-and-launch",
+      "source": "addyosmani/agent-skills@shipping-and-launch",
+      "sourceUrl": "https://github.com/addyosmani/agent-skills",
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/agent-skills --commit 9d0c60d406b454a78ccc0a175b19932047aa4dac --skill shipping-and-launch --cli-version 1.5.20"
+    },
+    {
+      "name": "systematic-debugging",
+      "package": "obra/superpowers",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
+      "skill": "systematic-debugging",
+      "source": "obra/superpowers@systematic-debugging",
+      "sourceUrl": "https://github.com/obra/superpowers",
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package obra/superpowers --commit 8ca22dba9a94f28898bbce59f2537ff4d87c747d --skill systematic-debugging --cli-version 1.5.20"
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "package": "mattpocock/skills",
+      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "skill": "improve-codebase-architecture",
+      "source": "mattpocock/skills@improve-codebase-architecture",
+      "sourceUrl": "https://github.com/mattpocock/skills",
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package mattpocock/skills --commit d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill improve-codebase-architecture --cli-version 1.5.20"
     },
     {
       "name": "security-best-practices",
@@ -34,88 +76,88 @@
       "skill": "security-best-practices",
       "source": "openai/skills@security-best-practices",
       "sourceUrl": "https://github.com/openai/skills",
+      "license": "Apache-2.0",
       "installCommand": "node scripts/install-pinned-skill.mjs --package openai/skills --commit 49f948faa9258a0c61caceaf225e179651397431 --skill security-best-practices --cli-version 1.5.20"
     },
     {
-      "name": "systematic-debugging",
-      "package": "obra/superpowers",
-      "commit": "44c9b2d6e889982ac18c27d05a19fefe335194e1",
-      "skill": "systematic-debugging",
-      "source": "obra/superpowers@systematic-debugging",
-      "sourceUrl": "https://github.com/obra/superpowers",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package obra/superpowers --commit 44c9b2d6e889982ac18c27d05a19fefe335194e1 --skill systematic-debugging --cli-version 1.5.20"
+      "name": "security-threat-model",
+      "package": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "skill": "security-threat-model",
+      "source": "openai/skills@security-threat-model",
+      "sourceUrl": "https://github.com/openai/skills",
+      "license": "Apache-2.0",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package openai/skills --commit 49f948faa9258a0c61caceaf225e179651397431 --skill security-threat-model --cli-version 1.5.20"
     },
     {
-      "name": "request-refactor-plan",
-      "package": "mattpocock/skills",
-      "commit": "2ab958093e83e0ec752e6c1c5932da465bf23e0c",
-      "skill": "request-refactor-plan",
-      "source": "mattpocock/skills@request-refactor-plan",
-      "sourceUrl": "https://github.com/mattpocock/skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package mattpocock/skills --commit 2ab958093e83e0ec752e6c1c5932da465bf23e0c --skill request-refactor-plan --cli-version 1.5.20"
-    },
-    {
-      "name": "frontend-skill",
-      "package": "nexu-io/open-design",
-      "commit": "f52fda29a8a6fc65c501a45bb165b6f5208194a1",
-      "skill": "frontend-skill",
-      "source": "nexu-io/open-design@frontend-skill",
-      "sourceUrl": "https://github.com/nexu-io/open-design",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package nexu-io/open-design --commit f52fda29a8a6fc65c501a45bb165b6f5208194a1 --skill frontend-skill --cli-version 1.5.20"
+      "name": "frontend-design",
+      "package": "anthropics/skills",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
+      "skill": "frontend-design",
+      "source": "anthropics/skills@frontend-design",
+      "sourceUrl": "https://github.com/anthropics/skills",
+      "license": "Apache-2.0",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package anthropics/skills --commit 8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4 --skill frontend-design --cli-version 1.5.20"
     },
     {
       "name": "webapp-testing",
       "package": "anthropics/skills",
-      "commit": "b29e7cf65e5cb78a5ac33d582270551bc74a14eb",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
       "skill": "webapp-testing",
       "source": "anthropics/skills@webapp-testing",
       "sourceUrl": "https://github.com/anthropics/skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package anthropics/skills --commit b29e7cf65e5cb78a5ac33d582270551bc74a14eb --skill webapp-testing --cli-version 1.5.20"
+      "license": "Apache-2.0",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package anthropics/skills --commit 8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4 --skill webapp-testing --cli-version 1.5.20"
     },
     {
       "name": "web-quality-audit",
       "package": "addyosmani/web-quality-skills",
-      "commit": "95d6e255afe1596b557d7a8498517884438f5b3a",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "skill": "web-quality-audit",
       "source": "addyosmani/web-quality-skills@web-quality-audit",
       "sourceUrl": "https://github.com/addyosmani/web-quality-skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/web-quality-skills --commit 95d6e255afe1596b557d7a8498517884438f5b3a --skill web-quality-audit --cli-version 1.5.20"
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/web-quality-skills --commit afa8da942115f2961fdbfa80807ea0b232ff6c00 --skill web-quality-audit --cli-version 1.5.20"
     },
     {
       "name": "accessibility",
       "package": "addyosmani/web-quality-skills",
-      "commit": "95d6e255afe1596b557d7a8498517884438f5b3a",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "skill": "accessibility",
       "source": "addyosmani/web-quality-skills@accessibility",
       "sourceUrl": "https://github.com/addyosmani/web-quality-skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/web-quality-skills --commit 95d6e255afe1596b557d7a8498517884438f5b3a --skill accessibility --cli-version 1.5.20"
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/web-quality-skills --commit afa8da942115f2961fdbfa80807ea0b232ff6c00 --skill accessibility --cli-version 1.5.20"
     },
     {
       "name": "test-driven-development",
       "package": "obra/superpowers",
-      "commit": "44c9b2d6e889982ac18c27d05a19fefe335194e1",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
       "skill": "test-driven-development",
       "source": "obra/superpowers@test-driven-development",
       "sourceUrl": "https://github.com/obra/superpowers",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package obra/superpowers --commit 44c9b2d6e889982ac18c27d05a19fefe335194e1 --skill test-driven-development --cli-version 1.5.20"
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package obra/superpowers --commit 8ca22dba9a94f28898bbce59f2537ff4d87c747d --skill test-driven-development --cli-version 1.5.20"
     },
     {
       "name": "documentation-and-adrs",
       "package": "addyosmani/agent-skills",
-      "commit": "7829ffd90d973b6325f5f12f1b1226dcace74443",
+      "commit": "9d0c60d406b454a78ccc0a175b19932047aa4dac",
       "skill": "documentation-and-adrs",
       "source": "addyosmani/agent-skills@documentation-and-adrs",
       "sourceUrl": "https://github.com/addyosmani/agent-skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/agent-skills --commit 7829ffd90d973b6325f5f12f1b1226dcace74443 --skill documentation-and-adrs --cli-version 1.5.20"
+      "license": "MIT",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package addyosmani/agent-skills --commit 9d0c60d406b454a78ccc0a175b19932047aa4dac --skill documentation-and-adrs --cli-version 1.5.20"
     },
     {
       "name": "mcp-builder",
       "package": "anthropics/skills",
-      "commit": "b29e7cf65e5cb78a5ac33d582270551bc74a14eb",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
       "skill": "mcp-builder",
       "source": "anthropics/skills@mcp-builder",
       "sourceUrl": "https://github.com/anthropics/skills",
-      "installCommand": "node scripts/install-pinned-skill.mjs --package anthropics/skills --commit b29e7cf65e5cb78a5ac33d582270551bc74a14eb --skill mcp-builder --cli-version 1.5.20"
+      "license": "Apache-2.0",
+      "installCommand": "node scripts/install-pinned-skill.mjs --package anthropics/skills --commit 8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4 --skill mcp-builder --cli-version 1.5.20"
     },
     {
       "name": "ai-project-starter",
@@ -124,6 +166,7 @@
       "skill": "ai-project-starter",
       "source": "ucsahinn/ai-project-starter@ai-project-starter",
       "sourceUrl": "https://github.com/ucsahinn/ai-project-starter",
+      "license": "MIT",
       "installCommand": "node scripts/install-pinned-skill.mjs --package ucsahinn/ai-project-starter --commit 9da8cdced620a89d4c4540cbbe562359eeb99c33 --skill ai-project-starter --cli-version 1.5.20"
     },
     {
@@ -133,6 +176,7 @@
       "skill": "prompt-architect",
       "source": "ucsahinn/prompt-architect@prompt-architect",
       "sourceUrl": "https://github.com/ucsahinn/prompt-architect",
+      "license": "MIT",
       "installCommand": "node scripts/install-pinned-skill.mjs --package ucsahinn/prompt-architect --commit 6d62cb0cfe44580e3422cdd9900f8be57ad8cd0f --skill prompt-architect --cli-version 1.5.20"
     },
     {
@@ -142,6 +186,7 @@
       "skill": "ai-skill-create",
       "source": "ucsahinn/ai-skill-create@ai-skill-create",
       "sourceUrl": "https://github.com/ucsahinn/ai-skill-create",
+      "license": "MIT",
       "fullDepth": true,
       "installCommand": "node scripts/install-pinned-skill.mjs --package ucsahinn/ai-skill-create --commit 78144e434a5216799b0d0932579c7d9d84781d39 --skill ai-skill-create --cli-version 1.5.20 --full-depth"
     }

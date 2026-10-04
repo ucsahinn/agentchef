@@ -460,3 +460,27 @@ test("coordinator role files 1.3.0 no longer ships are retired only when AgentCh
   assert.equal(again.steps.find((step) => step.id === "retired-file:agents/data_coordinator.toml")?.decision, "absent");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("a pinned skill the catalog replaced leaves the plugin source only when AgentChef installed it untouched", async () => {
+  const { writePinnedSkillProvenance } = await import("../lib/skill-provenance.mjs");
+  const state = legacyFixture({ withClaude: false });
+  const skillsRoot = path.join(state.agentsHome, "plugins", "sources", identity.pluginName, "skills");
+  const install = (name, edit) => {
+    const target = path.join(skillsRoot, name);
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, "SKILL.md"), `---\nname: ${name}\ndescription: Replaced upstream skill.\n---\n`);
+    writePinnedSkillProvenance(target, { package: "owner/repo", commit: "a".repeat(40), skill: name, cliVersion: "1.5.20", sourceTreeSha256: hashSkillTree(target) });
+    if (edit) fs.appendFileSync(path.join(target, "SKILL.md"), "local edit\n");
+    return target;
+  };
+  const replaced = install("request-refactor-plan", false);
+  const edited = install("frontend-skill", true);
+  const plan = run(state, ["--dry-run"]);
+  const decision = (id) => plan.steps.find((step) => step.id === id)?.decision;
+  assert.equal(decision("replaced-pinned-skill:request-refactor-plan"), "retire");
+  assert.equal(decision("replaced-pinned-skill:frontend-skill"), "foreign", "an edited copy stays");
+  run(state, ["--apply"]);
+  assert.ok(!fs.existsSync(replaced), "the untouched replaced pin is gone");
+  assert.ok(fs.existsSync(edited), "the edited one is kept");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

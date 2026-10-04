@@ -585,11 +585,17 @@ if (fs.existsSync(skillCatalog)) {
   if (!String(catalog.skillsCliIntegrity || "").startsWith("sha512-")) {
     failures.push("Public skill catalog must pin the Skills CLI registry integrity.");
   }
-  if (skills.length !== 56) {
-    failures.push(`Public skill catalog contract expects 56 entries; found ${skills.length}.`);
+  // Counts are derived from the catalog so a pin change cannot leave a stale
+  // literal behind; the lock and llms.txt must agree with the catalog.
+  const pinnedCount = skills.filter((skill) => skill.install === true).length;
+  const lockPath = path.join(root, "catalog/skills-lock.json");
+  const lockCount = fs.existsSync(lockPath) ? (JSON.parse(fs.readFileSync(lockPath, "utf8")).entries || []).length : 0;
+  if (pinnedCount === 0 || lockCount !== pinnedCount) {
+    failures.push(`Public skill catalog has ${pinnedCount} full-install skills but the lock pins ${lockCount}.`);
   }
-  if (skills.filter((skill) => skill.install === true).length !== 15) {
-    failures.push("Public skill catalog contract expects 15 full-install skills.");
+  const llmsPath = path.join(root, "llms.txt");
+  if (fs.existsSync(llmsPath) && !fs.readFileSync(llmsPath, "utf8").includes(`${pinnedCount} reviewed pinned skills`)) {
+    failures.push(`llms.txt must state ${pinnedCount} reviewed pinned skills.`);
   }
   for (const doc of ["docs/skills.md", "docs/skills.tr.md"]) {
     if (!fs.existsSync(path.join(root, doc))) continue;

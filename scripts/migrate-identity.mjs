@@ -25,7 +25,7 @@ import { spawnHarnessCli } from "./lib/platform-command.mjs";
 import { writeMarketplaceEntry } from "./upsert-marketplace-entry.mjs";
 import { KNOWN_LEGACY_FILE_SHA256, inspectGlobalGitGuards } from "./lib/global-git-guards.mjs";
 import { inspectSkillLink, createSkillLink, removeSkillLink } from "./lib/skill-links.mjs";
-import { inspectPinnedSkillOwnership } from "./lib/skill-provenance.mjs";
+import { inspectPinnedSkillOwnership, pinnedSkillProvenanceFileName } from "./lib/skill-provenance.mjs";
 import { claudeInstallReceiptName } from "./install-claude-target.mjs";
 import crypto from "node:crypto";
 
@@ -341,6 +341,27 @@ export function planIdentityMigration(options) {
         }
       }
       note(`retired-file:${relative}`, "retire-file", target, decision);
+    }
+  }
+
+  // 3d. A pinned skill the catalog replaced (now a compatibility alias or a
+  // retired entry) stays in the plugin source after an update, where both
+  // CLIs still list it. It goes only when its provenance record proves an
+  // untouched AgentChef install of exactly that skill.
+  const skillCatalog = readJson(path.join(repoRoot, "catalog", "skills.json"), { skills: [], compatibilityAliases: {} });
+  const formerSkillNames = new Set([
+    ...Object.keys(skillCatalog.compatibilityAliases || {}),
+    ...(skillCatalog.skills || []).filter((skill) => skill.retired === true).map((skill) => skill.name)
+  ]);
+  for (const rootDir of pluginSkillRoots) {
+    let entries = [];
+    try { entries = fs.readdirSync(rootDir, { withFileTypes: true }); } catch { entries = []; }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !formerSkillNames.has(entry.name)) continue;
+      const target = path.join(rootDir, entry.name);
+      const marker = readJson(path.join(target, pinnedSkillProvenanceFileName), null);
+      const owned = Boolean(marker?.package) && inspectPinnedSkillOwnership(target, { package: marker.package, skill: entry.name }).valid;
+      note(`replaced-pinned-skill:${entry.name}`, "retire-direct-copy", target, owned ? "retire" : "foreign", { skill: entry.name });
     }
   }
 
