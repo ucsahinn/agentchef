@@ -62,6 +62,23 @@ npm run coordination:board -- init --state .coordination-board.json
 npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
 ```
 
+Since 1.3.0 (state schema v3) a task can also name who works it and what it
+may write, and work starts only from a complete brief:
+
+- `create … --owner-agent codex --owner-session <name> --write-repo <repo> --write-paths scripts/lib,docs`
+  records the owner and a repository-relative write scope.
+- `brief --task <id> --brief-file brief.md` stores the brief. A brief has
+  seven labeled fields, in English or Turkish: Goal, Evidence, Write scope,
+  Boundaries, Done when, Return format, and the user's words verbatim.
+  `brief-check --brief-file brief.md` checks one before it is sent, with no
+  board needed.
+- Starting work (`in_progress`) needs a complete brief, and a task with a write scope
+  also needs a live lease: `renew-lease --task <id> --minutes 90` (at most 24
+  hours). Other agents read the scope and lease to see what is taken.
+- `add-evidence --task <id> --evidence "<command>: <result>"` attaches evidence.
+- Without `--state`, `AGENTCHEF_BOARD_STATE` names the board file. A v1 or v2
+  board is read and migrated in memory; the next write stores v3.
+
 ## Enterprise Routing Profiles
 
 Routing profiles connect a task type with useful agents, skills, MCPs, checks,

@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import process from "node:process";
+import fs from "node:fs";
+import { parseBrief } from "./lib/agent-brief.mjs";
 import {
+  addEvidence,
   addHandoff,
   acquireCoordinationStateLock,
   attachReport,
   createTask,
   readState,
+  renewLease,
+  setBrief,
   showTasks,
   transitionTask,
   writeInitialState,
@@ -25,9 +30,17 @@ function parse(argv) {
     options[key] = value;
     index += 1;
   }
-  if (!command || command === "help" || options.help) throw new Error("Usage: coordination-board <init|create|transition|handoff|attach-report|show> --state <path> [--json]");
-  if (!options.state) throw new Error("--state is required; no machine-local default is used.");
+  if (!command || command === "help" || options.help) throw new Error("Usage: coordination-board <init|create|transition|handoff|attach-report|brief|renew-lease|add-evidence|show|brief-check> --state <path> [--json]");
+  // An explicit --state wins; AGENTCHEF_BOARD_STATE names a shared board.
+  if (!options.state && process.env.AGENTCHEF_BOARD_STATE) options.state = process.env.AGENTCHEF_BOARD_STATE;
+  if (!options.state && command !== "brief-check") throw new Error("--state (or AGENTCHEF_BOARD_STATE) is required; no machine-local default is used.");
   return { command, options };
+}
+
+function briefText(options) {
+  if (options["brief-file"]) return fs.readFileSync(options["brief-file"], "utf8");
+  if (options.brief) return options.brief;
+  throw new Error("--brief-file <path> or --brief <text> is required.");
 }
 
 function output(payload, json) {
@@ -60,7 +73,7 @@ try {
       output({ ok: true, state }, options.json);
       break;
     case "create":
-      task = mutate(options.state, (current) => createTask(current, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"] }));
+      task = mutate(options.state, (current) => createTask(current, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"], ownerAgent: options["owner-agent"], ownerSession: options["owner-session"], writeRepo: options["write-repo"], writePaths: options["write-paths"] }));
       output({ ok: true, task }, options.json);
       break;
     case "transition":
@@ -73,6 +86,25 @@ try {
       break;
     case "attach-report":
       task = mutate(options.state, (current) => attachReport(current, { taskId: options.task, reportId: options["report-id"] }));
+      output({ ok: true, task }, options.json);
+      break;
+    case "brief":
+      task = mutate(options.state, (current) => setBrief(current, { taskId: options.task, brief: briefText(options) }));
+      output({ ok: true, task }, options.json);
+      break;
+    case "brief-check": {
+      // Checks a brief before it is sent; no board state is needed.
+      const parsed = parseBrief(briefText(options));
+      output({ ok: parsed.ok, missing: parsed.missing, fields: Object.keys(parsed.fields) }, options.json);
+      if (!parsed.ok) process.exitCode = 1;
+      break;
+    }
+    case "renew-lease":
+      task = mutate(options.state, (current) => renewLease(current, { taskId: options.task, minutes: options.minutes }));
+      output({ ok: true, task }, options.json);
+      break;
+    case "add-evidence":
+      task = mutate(options.state, (current) => addEvidence(current, { taskId: options.task, evidence: options.evidence }));
       output({ ok: true, task }, options.json);
       break;
     case "show":

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Coordination board state schema v3:
+  - Tasks record an owner (agent, session), a repository-relative write
+    scope, a lease, the task brief, and attached evidence.
+  - `todo → in_progress` needs a complete brief, and a task with a write
+    scope needs a live lease.
+  - New commands: `brief`, `brief-check` (no board needed), `renew-lease`,
+    `add-evidence`. `AGENTCHEF_BOARD_STATE` names the board when `--state` is
+    omitted. v1 and v2 boards migrate on read; existing commands and their
+    JSON output are unchanged apart from the new fields.
+  - `scripts/lib/agent-brief.mjs` parses briefs and handoffs with English or
+    Turkish field labels.
 - Skill catalog:
   - Harness skills are now 10 bundled + 18 commit-pinned upstream skills
     (was 10 + 15). `request-refactor-plan` is replaced by
