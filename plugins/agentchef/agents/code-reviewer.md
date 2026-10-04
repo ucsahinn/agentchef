@@ -2,6 +2,7 @@
 name: code-reviewer
 description: "Fresh-context senior code reviewer for diffs, PRs, and risky changes."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

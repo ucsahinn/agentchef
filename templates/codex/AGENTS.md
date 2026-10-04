@@ -89,7 +89,7 @@
 - Keep large logs, docs, and agent transcripts out of the main thread; return summaries, evidence paths, commands, and blockers.
 - Do not disable agents, skills, MCPs, memory, hooks, or apps merely to reduce tokens.
 - Prefer profile knobs such as verbosity, reasoning effort, compaction thresholds, and tool-output limits.
-- Keep agent role files free of model/reasoning pins so the active user profile remains authoritative.
+- Specialist and coordinator roles run on the catalog worker model (`gpt-6-luna`); the session the user opens keeps its own model and profile, and reasoning effort stays inherited.
 - Run `npm.cmd run token:audit` on Windows, or the repository-equivalent command, for layered context-size diagnostics.
 
 ## Implementation Standards

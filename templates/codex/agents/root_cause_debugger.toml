@@ -1,5 +1,6 @@
 name = "root_cause_debugger"
 description = "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes."
+model = "gpt-6-luna"
 nickname_candidates = ["Root Cause Debugger", "Failure Debugger", "Trace Debugger"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

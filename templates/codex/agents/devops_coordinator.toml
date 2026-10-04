@@ -1,5 +1,6 @@
 name = "devops_coordinator"
 description = "DevOps coordinator that correlates operational performance, runtime health, setup diagnostics, and onboarding friction."
+model = "gpt-6-luna"
 nickname_candidates = ["DevOps Lead", "DevOps Coordinator", "Operations Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

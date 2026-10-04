@@ -1,5 +1,6 @@
 name = "ui_coordinator"
 description = "UI coordinator that correlates rendered UI verification and product design review evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["UI Lead", "UI Coordinator", "UX Evidence Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

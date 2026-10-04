@@ -2,6 +2,7 @@
 name: backend-coordinator
 description: "Backend coordinator that correlates bounded implementation, integration, debugging, and source-documentation evidence."
 tools: Read, Grep, Glob, Agent(agentchef:code-mapper, agentchef:mcp-integrator, agentchef:root-cause-debugger, agentchef:docs-researcher)
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

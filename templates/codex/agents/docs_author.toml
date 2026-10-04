@@ -1,5 +1,6 @@
 name = "docs_author"
 description = "Documentation author for Diataxis coverage, stale docs, release docs, and missing guide generation."
+model = "gpt-6-luna"
 nickname_candidates = ["Docs Author", "Guide Author", "Docs Writer"]
 sandbox_mode = "workspace-write"
 web_search = "live"

@@ -1,5 +1,6 @@
 name = "marketing_coordinator"
 description = "Marketing coordinator that correlates discoverability and content evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["Marketing Lead", "Marketing Coordinator", "Growth Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

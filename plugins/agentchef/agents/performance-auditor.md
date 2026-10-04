@@ -2,6 +2,7 @@
 name: performance-auditor
 description: "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions; search-facing metadata and indexing belongs to google_seo_auditor."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: NotebookEdit
 ---
 

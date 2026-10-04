@@ -2,7 +2,8 @@
 // catalog/agents.json and the Codex role files under templates/codex/agents/.
 // The catalog stays the single source: sandbox and web-search flags become
 // Claude tool allow/deny lists, and the Codex developer_instructions become
-// the subagent system prompt. Model pins are never emitted.
+// the subagent system prompt. Every role runs on the catalog's worker model
+// (catalog.workerModels.claude); the session the user opens keeps its own.
 import fs from "node:fs";
 import path from "node:path";
 import { identity } from "../identity.mjs";
@@ -79,7 +80,7 @@ function toolsFor(agent) {
   return { tools, disallowed };
 }
 
-export function emitWorkerAgent(agent, roleToml, { pluginName }) {
+export function emitWorkerAgent(agent, roleToml, { pluginName, workerModel }) {
   const role = parseRoleToml(roleToml);
   const { tools, disallowed } = toolsFor(agent);
   const frontmatter = [
@@ -87,6 +88,7 @@ export function emitWorkerAgent(agent, roleToml, { pluginName }) {
     `name: ${kebab(agent.name)}`,
     `description: ${yamlString(agent.templateDescription || agent.description)}`,
     `tools: ${tools.join(", ")}`,
+    ...(workerModel ? [`model: ${workerModel}`] : []),
     `disallowedTools: ${disallowed.join(", ")}`,
     "---"
   ];
@@ -110,13 +112,14 @@ export function emitWorkerAgent(agent, roleToml, { pluginName }) {
   return `${frontmatter.join("\n")}\n\n${body.join("\n").trimEnd()}\n`;
 }
 
-export function emitCoordinatorAgent(coordinator, roleToml, { pluginName }) {
+export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel }) {
   const role = parseRoleToml(roleToml);
   const frontmatter = [
     "---",
     `name: ${kebab(coordinator.name)}`,
     `description: ${yamlString(coordinator.description)}`,
     `tools: ${readOnlyTools.join(", ")}, Agent(${coordinator.workers.map((worker) => `${pluginName}:${kebab(worker)}`).join(", ")})`,
+    ...(workerModel ? [`model: ${workerModel}`] : []),
     "disallowedTools: Write, Edit, NotebookEdit, Bash",
     "---"
   ];
@@ -138,13 +141,16 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName }) {
 // allowlist must use the plugin's real name or it matches no worker.
 export function emitClaudeAgents({ catalog, roleDirectory, pluginName = identity.pluginName }) {
   const outputs = new Map();
+  // Roles run on the lower-cost worker model; the session that orchestrates
+  // them keeps its own, stronger model.
+  const workerModel = catalog.workerModels?.claude;
   for (const agent of catalog.agents || []) {
     const roleToml = fs.readFileSync(path.join(roleDirectory, `${agent.name}.toml`), "utf8");
-    outputs.set(`${kebab(agent.name)}.md`, emitWorkerAgent(agent, roleToml, { pluginName }));
+    outputs.set(`${kebab(agent.name)}.md`, emitWorkerAgent(agent, roleToml, { pluginName, workerModel: agent.modelSelection === "worker" ? workerModel : undefined }));
   }
   for (const coordinator of catalog.coordinators || []) {
     const roleToml = fs.readFileSync(path.join(roleDirectory, `${coordinator.name}.toml`), "utf8");
-    outputs.set(`${kebab(coordinator.name)}.md`, emitCoordinatorAgent(coordinator, roleToml, { pluginName }));
+    outputs.set(`${kebab(coordinator.name)}.md`, emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel }));
   }
   return outputs;
 }

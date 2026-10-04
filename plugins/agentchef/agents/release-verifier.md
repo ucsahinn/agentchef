@@ -2,6 +2,7 @@
 name: release-verifier
 description: "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
+model: sonnet
 disallowedTools: NotebookEdit
 ---
 

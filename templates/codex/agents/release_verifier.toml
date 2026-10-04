@@ -1,5 +1,6 @@
 name = "release_verifier"
 description = "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates."
+model = "gpt-6-luna"
 nickname_candidates = ["Release Verifier", "Ship Gate", "Artifact Verifier"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

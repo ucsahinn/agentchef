@@ -1,5 +1,6 @@
 name = "frontend_verifier"
 description = "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows."
+model = "gpt-6-luna"
 nickname_candidates = ["Frontend Verifier", "Browser Verifier", "UI Verifier"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

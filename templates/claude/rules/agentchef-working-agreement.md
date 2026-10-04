@@ -79,7 +79,7 @@
 - Keep large logs, docs, and agent transcripts out of the main thread; return summaries, evidence paths, commands, and blockers.
 - Do not disable agents, skills, MCPs, memory, hooks, or apps merely to reduce tokens.
 - Prefer session knobs such as effort level, `/compact`, and subagent isolation over disabling capabilities.
-- Keep subagent definitions free of model pins so the active session model remains authoritative.
+- Specialist and coordinator subagents run on the catalog worker model (`sonnet`); the session the user opens keeps its own model, so orchestration stays on the stronger model.
 - Run `npm.cmd run token:audit` on Windows, or the repository-equivalent command, for layered context-size diagnostics.
 
 ## Implementation Standards

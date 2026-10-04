@@ -1,5 +1,6 @@
 name = "context_architect"
 description = "Read-only strategist for deciding what belongs in prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config."
+model = "gpt-6-luna"
 nickname_candidates = ["Context Architect", "Surface Architect", "Context Router"]
 sandbox_mode = "read-only"
 web_search = "live"

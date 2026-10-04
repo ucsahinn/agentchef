@@ -12,7 +12,7 @@ const configFiles = [
 ];
 const agentDir = path.join(root, "templates", "codex", "agents");
 const allowedSandboxModes = new Set(["read-only", "workspace-write"]);
-const allowedModelSelections = new Set(["auto"]);
+const allowedModelSelections = new Set(["auto", "worker"]);
 const allowedReasoningEfforts = new Set(["auto", "low", "medium", "high", "xhigh"]);
 const minimumSourceBackedItems = 100;
 const minimumDistinctSourceMarkers = 20;
@@ -297,6 +297,8 @@ if (!fs.existsSync(catalogPath)) {
         const templateModel = readTomlString(template, "model");
         if (agent.modelSelection === "auto") {
           if (templateModel) fail(`Agent template must not pin model when modelSelection is auto for ${agent.name}.`);
+        } else if (agent.modelSelection === "worker") {
+          if (templateModel !== catalog.workerModels?.codex) fail(`Agent template ${agent.name} must use the catalog worker model ${catalog.workerModels?.codex}.`);
         } else if (templateModel !== catalog.defaults.model) {
           fail(`Agent template model drift for ${agent.name}.`);
         }
@@ -424,7 +426,12 @@ if (!fs.existsSync(catalogPath)) {
       ]) {
         if (!template.includes(required)) fail(`Coordinator ${coordinator.name} missing orchestration guardrail: ${required}`);
       }
-      if (/model\s*=|model_reasoning_effort\s*=|danger-full-access|approval_policy\s*=\s*"never"|\.agentspace[\\/]|MEMORY\.md|auth\.json|sessions[\\/]/i.test(template)) {
+      // Coordinators run on the catalog worker model like specialists; any other
+      // model, a reasoning pin, or an unsafe setting stays forbidden.
+      if (readTomlString(template, "model") !== catalog.workerModels?.codex) {
+        fail(`Coordinator ${coordinator.name} must use the catalog worker model ${catalog.workerModels?.codex}.`);
+      }
+      if (/model_reasoning_effort\s*=|danger-full-access|approval_policy\s*=\s*"never"|\.agentspace[\\/]|MEMORY\.md|auth\.json|sessions[\\/]/i.test(template)) {
         fail(`Coordinator ${coordinator.name} contains a forbidden pin, unsafe setting, or private-context reference.`);
       }
     }

@@ -1,5 +1,6 @@
 name = "docs_researcher"
 description = "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts."
+model = "gpt-6-luna"
 nickname_candidates = ["Docs Researcher", "Source Scout", "API Researcher"]
 sandbox_mode = "read-only"
 web_search = "live"

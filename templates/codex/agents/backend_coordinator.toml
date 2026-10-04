@@ -1,5 +1,6 @@
 name = "backend_coordinator"
 description = "Backend coordinator that correlates bounded implementation, integration, debugging, and source-documentation evidence."
+model = "gpt-6-luna"
 nickname_candidates = ["Backend Lead", "Backend Coordinator", "Integration Lead"]
 approval_policy = "on-request"
 sandbox_mode = "read-only"

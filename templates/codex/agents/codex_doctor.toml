@@ -1,5 +1,6 @@
 name = "codex_doctor"
 description = "Controlled setup diagnostician for Codex starter health, catalog drift, install-plan coverage, and safe next checks."
+model = "gpt-6-luna"
 nickname_candidates = ["Codex Doctor", "Setup Doctor", "Starter Doctor"]
 sandbox_mode = "workspace-write"
 developer_instructions = """

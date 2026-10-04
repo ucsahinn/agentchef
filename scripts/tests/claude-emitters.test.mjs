@@ -136,3 +136,15 @@ test("the Claude plugin manifest mirrors the Codex manifest version and lists ev
   // Neither CLI may pick up the other's hook file.
   assert.ok(!fs.existsSync(path.join(root, "plugins", "agentchef", "hooks", "hooks.json")), "Claude would auto-load hooks/hooks.json");
 });
+
+test("every role runs on the catalog worker model; the orchestrating session keeps its own", () => {
+  assert.equal(catalog.workerModels?.claude, "sonnet");
+  assert.equal(catalog.workerModels?.codex, "gpt-6-luna");
+  const agents = emitClaudeAgents({ catalog, roleDirectory, pluginName: "agentchef" });
+  for (const [fileName, text] of agents) {
+    assert.match(text, /^model: sonnet$/m, `${fileName} runs on the worker model`);
+  }
+  for (const file of fs.readdirSync(roleDirectory).filter((name) => name.endsWith(".toml"))) {
+    assert.match(fs.readFileSync(path.join(roleDirectory, file), "utf8"), /^model = "gpt-6-luna"$/m, `${file} runs on the worker model`);
+  }
+});

@@ -88,9 +88,9 @@ if (routing.delegationPolicy?.mode !== "conditional" || routing.delegationPolicy
 if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) {
   fail("routing catalog must normally cap one task at four agents.");
 }
-if (routing.agentRuntimePolicy?.modelSelection !== "inherit-profile-adaptive"
+if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier"
   || routing.agentRuntimePolicy?.neverOverrideUserProfile !== true) {
-  fail("routing catalog must preserve adaptive profile-inherited model selection.");
+  fail("routing catalog must run roles on the worker tier and never override the user's own session profile.");
 }
 
 for (const required of [

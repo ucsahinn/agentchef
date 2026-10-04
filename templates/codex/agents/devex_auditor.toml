@@ -1,5 +1,6 @@
 name = "devex_auditor"
 description = "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks."
+model = "gpt-6-luna"
 nickname_candidates = ["DevEx Auditor", "Onboarding Auditor", "DX Auditor"]
 sandbox_mode = "workspace-write"
 developer_instructions = """
