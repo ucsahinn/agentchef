@@ -24,17 +24,18 @@
 
 - Classify non-trivial work against installed agents, skills, MCPs, and profile/config flags, then use the narrowest useful route.
 - Use `$adaptive-agent-routing` when routing details, aliases, specialist ownership, or surface placement materially affect the task.
-- Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them.
-- Treat `agents.max_threads = 10` as a capacity ceiling, not a target. Prefer one agent and normally use no more than four in a single task.
+- Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them, except a stronger model for one security or release review the user asks for.
+- Treat `agents.max_threads = 10` (alias of `agents.max_concurrent_threads_per_session`) as a capacity ceiling, not a target. Use at most four workers per task (a coordinator is not counted); more needs the user's explicit request.
 - Spawn agents only when there is independent parallel work, noisy logs or research should be isolated from the main thread, or the user explicitly requests delegation.
 - Do not spawn for trivial, sequential, tightly coupled, or single-file work where delegation adds coordination cost.
+- Two routes, both at most two levels deep: Direct, the main session briefs one to four specialists itself; Team, for a user-created board task, the main session briefs that task's coordinator, which briefs its own workers.
 - Keep write-heavy implementation in the main thread unless the user explicitly requests split write scopes.
-- If agents may edit, give them non-overlapping files and reconcile before verification.
+- If agents may edit, give them non-overlapping files. The parent session merges: it checks each Changed scope against its brief's Write scope, resolves conflicts or asks the user, and reruns every Done-when check on the merged result before verification.
 - Agents inherit approval and sandbox boundaries; never use delegation to bypass them.
 - AgentSpace worker sessions must start from a Codex home whose root config keeps `sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and `approvals_reviewer = "auto_review"`; an isolated account profile does not inherit these keys from another Codex home.
-- A coordinator may delegate only to its cataloged specialist workers, with at most four workers and one coordinator-to-worker level.
-- Specialist workers must not spawn agents; return a bounded evidence handoff to the coordinator or parent instead.
-- Coordinator-to-coordinator communication is a parent-routed handoff, not direct peer spawning; include the question, evidence, conflict, decision, and open verification need.
+- A coordinator may delegate only to its cataloged specialist workers, with one coordinator-to-worker level, and never to `general-purpose`, `fork`, or another coordinator.
+- Specialist workers must not spawn agents; when another role is needed, they name it under Open questions (`needs: <role> - <why>`) and the parent decides.
+- Coordinator-to-coordinator communication is a parent-routed handoff (an escalation), not direct peer spawning; include the question, evidence, conflict, decision needed, and verification need.
 - Never inject or request private AgentSpace memory, sessions, credentials, or other machine-local context in coordinator or worker prompts.
 - Wait for requested agents unless the user explicitly asks for background work.
 - Close completed agent threads when the runtime exposes that operation.
@@ -42,11 +43,11 @@
 ## Explicit Coordination Board Workflow
 
 - Coordinate only after the user explicitly creates or asks to create a task in the active coordination board. Creating that task records the work state; opening a pane, selecting a role, or matching a routing profile never starts work by itself.
-- A coordinator may delegate only cataloged workers assigned to that coordinator. Each worker receives a bounded task with its question, scope, evidence required, and stop condition.
-- Brief fields: a delegated task states its goal, evidence, write scope, boundaries, done-when criteria, return format, and the user's words verbatim (the `agent-brief` skill; `coordination-board brief-check` checks one).
-- Handoff fields: workers return a structured handoff to their coordinator or parent: outcome, evidence (commands, paths, or observations), changed scope if any, risks, unresolved questions, and the next verification need. Workers do not message peer coordinators or delegate further.
-- Cross-domain work is relayed by the parent/main session. A handoff names the question, evidence, conflict, decision needed, and open verification need; coordinators never directly spawn or message peers.
-- Attach the returned evidence to the task before moving it to done. A task with missing, failed, or unreviewed evidence remains open or in review. No coordinator, worker, profile, or pane may auto-start, auto-complete, or infer approval.
+- The parent session runs every coordination-board command; coordinators and workers never do, and no agent creates a board task the user did not ask for.
+- Brief fields, one brief per worker: Goal, Evidence, Write scope, Boundaries, Done when (the stop condition), Return format, and the user's words verbatim (the `agent-brief` skill; `coordination-board brief-check` checks one).
+- Handoff fields: workers return exactly six labeled fields, in order: Outcome, Evidence (commands, paths, observations), Changed scope (`none` if nothing changed), Risks, Open questions, Next verification (`coordination-board handoff-check` checks one). Workers do not message peer coordinators or delegate further.
+- A board task needs an owner to start and evidence to reach review. It closes only with evidence, a linked report, resolved decisions, and `--verified-by` naming an agent that did not do the work: never the owner, its session, or its coordinator. Pick the verifier by work type: `test_verifier` for checks, `code_reviewer` for diffs, `frontend_verifier` for UI, `security_auditor` for security, or the user.
+- Failed verification sends the task back (`review` to `in_progress` with `--reason`); a stuck task is `blocked` with a reason, and unwanted work is `cancelled`. No coordinator, worker, profile, or pane may auto-start, auto-complete, or infer approval.
 
 ## Routing Visibility
 

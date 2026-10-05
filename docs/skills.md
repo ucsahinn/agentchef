@@ -37,7 +37,7 @@ install or enable it. To use namespaced calls such as
 | [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Keep this starter aligned without weakening installer or security boundaries. |
 | [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
 | [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
-| [`agent-brief`](../plugins/agentchef/skills/agent-brief/SKILL.md) | Write the fixed brief an orchestrator hands to another agent and check the handoff that comes back, with `coordination-board brief-check`. |
+| [`agent-brief`](../plugins/agentchef/skills/agent-brief/SKILL.md) | Write the seven-field brief an orchestrator hands to another agent (checked with `coordination-board brief-check`) and the six-field handoff that comes back (checked with `coordination-board handoff-check` from 1.3.3); also holds the team protocol: Direct and Team routes, at most four workers per task (a coordinator is not counted), merge, and verifier rules. |
 | [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
 | [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Export a fresh external-review snapshot as architecture-aware GPT Pro Project text context without uploading it. |
 | [`gptpro-handoff`](../plugins/agentchef/skills/gptpro-handoff/SKILL.md) | Write a review-ID-bound GPT Pro prompt and verify its returned report before implementation. |

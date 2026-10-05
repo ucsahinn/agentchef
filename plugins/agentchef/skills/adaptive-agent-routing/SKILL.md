@@ -13,9 +13,10 @@ Select routes by expected value, not by catalog match alone.
 2. Read [global-working-agreements.md](references/global-working-agreements.md) only when the detailed route, specialist map, alias policy, or MCP boundary is relevant.
 3. Preserve the active session's profile and model. Role files carry only the catalog worker `model`; they never pin reasoning effort, and spawns pass no model override.
 4. Delegate only for independent parallel work, noisy log or research isolation, or explicit user-requested agent work.
-5. Treat ten threads as capacity for concurrent sessions. Normally use one agent and no more than four agents for one task.
-6. Emit one `Routing plan:` update and one `Routing result:` summary instead of per-surface narration.
-7. Keep destructive, credentialed, account, database, publish, deploy, and external-write actions approval-gated.
+5. Treat ten threads as capacity, not a target. Normally use one agent, and at most four workers per task (a coordinator is not counted); more needs the user's explicit request.
+6. Pick one of two routes, both at most two levels deep: Direct (the main session briefs one to four specialists) or Team (for a user-created board task, the main session briefs its coordinator, which briefs only its own cataloged workers). Workers never spawn; they name a needed role under Open questions as `needs: <role> - <why>`. Brief and check handoffs with the `agent-brief` skill.
+7. Emit one `Routing plan:` update and one `Routing result:` summary instead of per-surface narration.
+8. Keep destructive, credentialed, account, database, publish, deploy, and external-write actions approval-gated.
 
 ## Output Contract
 

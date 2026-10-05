@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.3.3 - 2026-10-05
+
+The agent team works like an office team, with one
+protocol, a board that can send work back, and a spawn rule Claude Code
+actually enforces.
+
+- Coordination board (state schema 4; v1 to v3 boards still load, and a
+  v3-only reader now refuses a v4 file instead of misreading it):
+  - New statuses `blocked` and `cancelled`. A failed review goes back
+    (`review` to `in_progress`), a claim can be released (`in_progress` to
+    `todo`, which frees the lease), `blocked` returns only to where it came
+    from, and `cancelled` is final; every backward or sideways move needs
+    `--reason`.
+  - Starting work needs an owner (new `assign` command), a complete brief,
+    and, for a write scope, a live lease that no other open task holds on an
+    overlapping path. Review needs evidence. Done needs evidence, a report,
+    every open decision resolved (new `resolve-handoff`), and
+    `--verified-by` naming an agent other than the owner, its session, or its
+    coordinator (`root-cause-debugger` and `root_cause_debugger` count as the
+    same agent). A closed task accepts no further change and frees its lease.
+  - `renew-lease --by` refuses a non-owner. Every change is recorded in a
+    task `history` with `createdAt`/`updatedAt`; handoffs get ids, times,
+    and a resolution. `show` adds `leaseState` and `stale` and filters by
+    `--status` (or `open`) and `--owner`.
+  - Each command rejects options it does not know (a typo such as
+    `--owner-agnet` used to create a task without an owner), `--help` prints
+    usage, a value may start with `--`, and `--evidence-file` and
+    `handoff-check` are new.
+  - A lock left by a crashed process (older than 30 seconds) is taken over,
+    a busy lock is retried for about two seconds, and a failed rename on
+    Windows is retried once without leaving a temporary file.
+  - Bearer tokens, JWTs, and credentials in URLs are refused like other
+    secrets.
+- Brief and handoff parser: labels in capitals (`EVIDENCE`, which Turkish
+  lower-casing used to turn into an unknown field), numbered labels, and
+  `**Goal** (Hedef):` now parse; handoffs accept `Risks`/`Riskler`,
+  `Açık sorular`, `Unresolved questions`, `Next verification need`, and
+  `Sonraki doğrulama`.
+- Claude Code spawn guard: Claude Code applies a coordinator's
+  `Agent(<worker>, ...)` list only under `claude --agent`; as a subagent the
+  list is ignored. The plugin now ships a `PreToolUse` hook on the `Agent`
+  tool (`scripts/agent-spawn-guard.mjs`) that refuses a spawn by an AgentChef
+  coordinator outside its workers (named in full, `agentchef:<worker>`, since a
+  bare name resolves to a user agent first) and any spawn by an AgentChef
+  worker. It does not block the main session (unless it was started with
+  `claude --agent agentchef:<role>`) or non-AgentChef agents, and lets unknown
+  input through. `chrome-devtools` is granted by tool name, limited to the
+  catalog's reviewed tools.
+- One team protocol in the working agreement, the `agent-brief` skill, the
+  coordinators, and the docs: two routes (Direct and Team), at most four workers per task (a coordinator is not
+  counted), the parent runs every board command, six handoff fields (Outcome, Evidence, Changed scope, Risks, Open questions, Next
+  verification), merge rules, and a verifier picked by work type.
+- Roles: coordinators state whom they may spawn, how to merge conflicting
+  evidence, and when to escalate; every worker is told it never spawns and
+  names a needed role under Open questions; every worker's handoff payload sits
+  inside the six fields. `qa_lead` hands verification of its own fixes to
+  `test_verifier` and asks `frontend_verifier` for browser evidence;
+  `performance_auditor` gets `chrome-devtools`; Core Web Vitals belongs to
+  `performance_auditor`, not `google_seo_auditor`; the QA coordinator's
+  nickname no longer repeats "QA Lead". No role gets the `Skill` tool, since
+  a skill can fork a general-purpose subagent outside the role's tool list.
+
 ## 1.3.2 - 2026-10-04
 
 - Worker models:

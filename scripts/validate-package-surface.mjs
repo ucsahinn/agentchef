@@ -237,6 +237,7 @@ if (result.error) {
     "templates/codex/serena-pool.mjs",
     "plugins/agentchef/hooks/process-hygiene.json",
     "plugins/agentchef/scripts/codex-process-hygiene.mjs",
+    "plugins/agentchef/scripts/agent-spawn-guard.mjs",
     "templates/codex/profiles/ci.config.toml",
     "templates/codex/profiles/development.config.toml",
     "templates/codex/profiles/full.config.toml",

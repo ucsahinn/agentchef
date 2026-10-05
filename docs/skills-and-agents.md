@@ -39,27 +39,33 @@ reason to open a subagent for every small task.
 
 - [See the 7 coordinators and all 21 specialist workers](agents.md)
 - [Open the machine-readable agent catalog](../catalog/agents.json)
-- [Read the official Codex subagents guide](https://developers.openai.com/codex/subagents)
+- [Read the official Codex subagents guide](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- [Read the official Claude Code subagents guide](https://code.claude.com/docs/en/sub-agents)
 
 Subagents inherit the current approval and sandbox boundaries. They do not get
 extra authority just because the work was delegated.
 
 From 1.3.2, roles run on a cheaper worker model while the
 session you open keeps its own; see [Model Tiers](agents.md#model-tiers).
-Agents do not chat with each other: the main session briefs a coordinator, the
-coordinator briefs at most four of its own workers, and each returns one
-handoff. Codex and Claude Code have no direct tool between them; see
+Agents do not chat with each other. From 1.3.3 there are
+two routes, both at most two levels deep: Direct, where the main session briefs one to four specialists,
+and Team, where for a board task the main session briefs that task's
+coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff. Codex and
+Claude Code have no direct tool between them; see
 [How Agents Talk To Each Other](agents.md#how-agents-talk-to-each-other).
 
 ## Explicit Coordination Board Workflow
 
 Creating a task explicitly is the only coordination-state trigger. Opening a
 pane, selecting an agent, or matching a routing profile does not start work.
-The coordinator may select only its cataloged workers; each worker returns a
-structured evidence handoff with its outcome, evidence, risks, open questions,
-and next verification need. The parent/main session relays cross-domain
-handoffs. Evidence must be attached and reviewed before the task becomes done;
-there is no auto-start or auto-complete behavior.
+From 1.3.3 the main session runs every board command;
+coordinators and workers never do.
+The coordinator may select only its cataloged workers; each worker returns six
+labeled handoff fields: Outcome, Evidence, Changed scope, Risks, Open
+questions, and Next verification. The parent/main session relays cross-domain
+handoffs. Evidence must be attached and checked by an agent other than the
+owner before the task becomes done; there is no auto-start or auto-complete
+behavior.
 
 Use a user-chosen, repository-local state path. Initializing or creating a task
 records coordination state only; it does not start a coordinator or worker.
@@ -85,8 +91,66 @@ may write, and work starts only from a complete brief:
   also needs a live lease: `renew-lease --task <id> --minutes 90` (at most 24
   hours). Other agents read the scope and lease to see what is taken.
 - `add-evidence --task <id> --evidence "<command>: <result>"` attaches evidence.
-- Without `--state`, `AGENTCHEF_BOARD_STATE` names the board file. A v1 or v2
-  board is read and migrated in memory; the next write stores v3.
+- Without `--state`, `AGENTCHEF_BOARD_STATE` names the board file.
+
+### Board Changes In 1.3.3
+
+From 1.3.3 the board stores state schema 4. A v1, v2, or v3
+board is read and migrated in memory, and the next write stores v4; AgentChef
+1.3.2 and earlier then refuse that file instead of misreading it.
+
+Statuses are `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked`,
+and `cancelled`. The allowed moves:
+
+| Move | Needs |
+| --- | --- |
+| `backlog` -> `todo` | nothing |
+| `todo` -> `in_progress` | an owner, a complete brief, a live lease when the task has a write scope, and no other open task holding a live lease on an overlapping path |
+| `in_progress` -> `review` | at least one evidence entry |
+| `review` -> `done` | evidence, a linked report, every handoff that needs a decision resolved, and `--verified-by <agent>` |
+| `review` -> `in_progress` (rework) | `--reason`; the `in_progress` checks apply again |
+| `in_progress` -> `todo` (release) | `--reason`; clears the lease |
+| any open status -> `blocked` | `--reason`; a blocked task returns only to the status it was blocked from, and that status's checks apply |
+| any open or `blocked` status -> `cancelled` | `--reason`; final |
+
+- Paths overlap when they are in the same repository and one path equals the
+  other or starts with it followed by `/`; repository and path compare
+  case-insensitively. `renew-lease` refuses an overlapping lease too.
+- `assign --task <id> --owner-agent <agent> [--owner-session <name>] [--owner-coordinator <coordinator>] [--by <actor>]`
+  sets or changes the owner.
+- `--verified-by` must not be the owner agent, the owner session, or the owner
+  coordinator; names compare case-insensitively, and `-` and `_` count as the
+  same (`root-cause-debugger` is `root_cause_debugger`). `show` lists the
+  verifier and time under `verification`. The names are typed by the caller,
+  so this stops slips, not impersonation.
+- `done` and `cancelled` tasks accept no further change, and their lease is
+  cleared.
+- `renew-lease --task <id> --minutes <1-1440> [--by <agent>]` refuses a `--by`
+  that is not the owner.
+- `handoff --task <id> --source-coordinator <a> --target-coordinator <b> --question "<text>" [--decision-needed "<text>"]`
+  records a handoff with an id (`H1`, `H2`, ...) and a time. Source and target
+  must be different catalog coordinators, and one of them must be the task's
+  owner coordinator. `resolve-handoff --task <id> --handoff H1 --answer "<text>"`
+  resolves it.
+- Every change appends a `history` entry (`at`, `action`, and `from`, `to`,
+  `by`, `reason` when they apply) and sets `updatedAt`; `create` sets
+  `createdAt`.
+- `show [--task <id>] [--status <list>|open] [--owner <agent>]` adds two
+  computed fields: `leaseState` (`none`, `live`, or `expired`) and `stale`
+  (an `in_progress` or `review` task whose write-scope lease is not live, or
+  that nobody changed for 24 hours). `--status open` includes `blocked`.
+- Each command rejects options it does not accept, `--help` prints usage,
+  `add-evidence` also takes `--evidence-file`, and
+  `handoff-check --handoff-file handoff.md` (or `--handoff`) checks a returned
+  handoff with no board needed; it exits 1 when a field is missing.
+- Brief and handoff labels may be numbered (`1. Goal:`), bold with a
+  parenthesized alias (`**Goal** (Hedef):`), or in capitals (`EVIDENCE:`).
+  Handoffs also accept `Risks`/`Riskler`, `Open questions`/`Açık sorular`/
+  `Unresolved questions`, and `Next verification need`/`Sonraki doğrulama`.
+- A lock left by a crashed process (older than 30 seconds) is taken over; a
+  busy lock is retried for about two seconds before the command fails.
+- Text that looks like a credential is refused, now including Bearer tokens,
+  JWTs, and credentials inside URLs.
 
 ## Enterprise Routing Profiles
 

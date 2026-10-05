@@ -1,6 +1,6 @@
 {
   "name": "agentchef",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Security-first AgentChef workflows for setup maintenance, planning, review, reconstruction, and verification.",
   "author": {
     "name": "AgentChef",
@@ -49,6 +49,21 @@
   ],
   "mcpServers": "./mcp/claude.mcp.json",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/agent-spawn-guard.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
