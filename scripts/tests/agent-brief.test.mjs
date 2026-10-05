@@ -48,3 +48,26 @@ test("bilingual labels such as \"Kapsam / Yazma kapsamı\" parse as one field", 
   assert.equal(result.ok, true, result.missing.join(", "));
   assert.equal(result.fields.scope, "scripts/lib");
 });
+
+test("labels parse in capitals, numbered lists, and bold with a parenthesized alias", () => {
+  const caps = parseBrief("GOAL: a\nEVIDENCE: b\nWRITE SCOPE: c\nBOUNDARIES: d\nDONE WHEN: e\nRETURN FORMAT: f\nUSER'S WORDS: g");
+  assert.equal(caps.ok, true, caps.missing.join(", "));
+  assert.equal(Object.hasOwn(caps.fields, "undefined"), false);
+  const numbered = parseBrief([
+    "1. **Goal** (Hedef): a",
+    "2. **Evidence** (Kanıt): b",
+    "3. **Write scope** (Yazma kapsamı): c",
+    "4. **Boundaries** (Sınırlar): d",
+    "5. **Done when** (Bitti kriteri): e",
+    "6. **Return format** (Dönüş biçimi): f",
+    "7. **User's words** (Kullanıcının özgün cümlesi): g"
+  ].join("\n"));
+  assert.equal(numbered.ok, true, numbered.missing.join(", "));
+  assert.equal(numbered.fields.scope, "c");
+});
+
+test("handoff labels accept the plural and Turkish variants agents write", () => {
+  const result = parseHandoff("OUTCOME: x\nKanıt: y\nChanged scope: none\nRiskler: r\nAçık sorular: q\nSonraki doğrulama: n");
+  assert.equal(result.ok, true, result.missing.join(", "));
+  assert.equal(parseHandoff("Outcome: x\nEvidence: y\nChanged scope: none\nRISKS: r\nUnresolved questions: q\nNext verification need: n").ok, true);
+});

@@ -8,7 +8,7 @@ import {
   CliUsageError,
   installCliErrorBoundary
 } from "./lib/cli-error-contract.mjs";
-import { claudeSessionEndHooks } from "./render-target-artifacts.mjs";
+import { claudePluginHooks } from "./render-target-artifacts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -253,9 +253,9 @@ function inspectClaudeTemplates(failures) {
     for (const entry of claudeManifest.agents || []) {
       if (!exists(`${pluginRoot}/${String(entry).replace(/^\.\//, "")}`)) failures.push(`Claude plugin manifest references a missing agent file: ${entry}`);
     }
-    // Only the reviewed SessionEnd process-hygiene hook may ship to Claude.
-    if (Object.hasOwn(claudeManifest, "hooks") && JSON.stringify(claudeManifest.hooks) !== JSON.stringify(claudeSessionEndHooks)) {
-      failures.push("Claude plugin manifest hooks differ from the reviewed SessionEnd process-hygiene hook");
+    // Only the reviewed hooks (Agent spawn guard, SessionEnd hygiene) may ship to Claude.
+    if (Object.hasOwn(claudeManifest, "hooks") && JSON.stringify(claudeManifest.hooks) !== JSON.stringify(claudePluginHooks)) {
+      failures.push("Claude plugin manifest hooks differ from the reviewed Agent spawn guard and SessionEnd process-hygiene hooks");
     }
   } catch (error) {
     failures.push(`Claude plugin manifest is unreadable: ${error.message}`);

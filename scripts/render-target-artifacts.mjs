@@ -57,14 +57,31 @@ export function renderClaudePluginManifest(repoRoot, agentFileNames) {
     agents: [...agentFileNames].sort().map((fileName) => `./agents/${fileName}`),
     // Not the root .mcp.json: Claude would load that one on its own as well.
     mcpServers: "./mcp/claude.mcp.json",
-    hooks: claudeSessionEndHooks
+    hooks: claudePluginHooks
   };
 }
 
 // Exec form (command + args, no shell): node's parent is then the Claude
 // process itself, so the owner lookup ends at its first step. The sweep it
 // schedules stops only the MCP trees that session started, once it has exited.
-export const claudeSessionEndHooks = Object.freeze({
+//
+// PreToolUse on the Agent tool enforces each coordinator's worker list, which
+// Claude Code itself enforces only under claude --agent (see
+// plugins/agentchef/scripts/agent-spawn-guard.mjs).
+export const claudePluginHooks = Object.freeze({
+  PreToolUse: [
+    {
+      matcher: "Agent",
+      hooks: [
+        {
+          type: "command",
+          command: "node",
+          args: ["${CLAUDE_PLUGIN_ROOT}/scripts/agent-spawn-guard.mjs"],
+          timeout: 10
+        }
+      ]
+    }
+  ],
   SessionEnd: [
     {
       hooks: [

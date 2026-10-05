@@ -42,7 +42,8 @@ gerektiği anlamına gelmez.
 
 - [7 koordinatörü ve 21 uzman worker'ın tamamını gör](agents.tr.md)
 - [Makine tarafından okunan agent kataloğunu aç](../catalog/agents.json)
-- [Resmî Codex subagents rehberini oku](https://developers.openai.com/codex/subagents)
+- [Resmî Codex subagents rehberini oku](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- [Resmî Claude Code subagents rehberini oku](https://code.claude.com/docs/en/sub-agents)
 
 Subagent'lar mevcut onay ve sandbox sınırlarını devralır. İşin devredilmesi,
 onlara fazladan yetki vermez.
@@ -50,24 +51,29 @@ onlara fazladan yetki vermez.
 1.3.2 ile roller daha ucuz bir worker modelinde çalışır,
 açtığın oturum ise kendi modelini korur; bkz.
 [Model Katmanları](agents.tr.md#model-katmanları). Agent'lar birbiriyle
-sohbet etmez: ana oturum bir koordinatöre brief verir, koordinatör kendi
-worker'larından en çok dördüne brief verir ve her biri tek bir handoff döndürür.
-Codex ile Claude Code arasında doğrudan bir araç yoktur; bkz.
+sohbet etmez. 1.3.3 ile (henüz yayımlanmadı) iki rota vardır, ikisi de en çok
+iki seviye derinliktedir: Direct, ana oturum bir ila dört uzmana brief verir;
+Team, bir board görevi için ana oturum o görevin koordinatörüne brief verir,
+koordinatör de kendi worker'larına. Görev başına en çok dört worker kullan
+(koordinatör sayılmaz); her agent tek bir handoff döndürür. Codex ile Claude Code
+arasında doğrudan bir araç yoktur; bkz.
 [Agent'lar Birbiriyle Nasıl Konuşur](agents.tr.md#agentlar-birbiriyle-nasıl-konuşur).
 
-## Acik Koordinasyon Panosu Akisi
+## Açık Koordinasyon Panosu Akışı
 
-Koordinasyon durumu yalnizca kullanicinin acikca olusturdugu gorevle baslar.
-Pane acmak, agent secmek veya routing profiliyle eslesmek calismayi baslatmaz.
-Koordinator yalnizca katalogdaki worker'lari secer. Her worker; sonucu, kaniti,
-kapsam degisikligini, riskleri, acik sorulari ve sonraki dogrulama ihtiyacini
-iceren yapilandirilmis bir handoff dondurur. Alanlar arasi handoff'u ana oturum
-iletir. Kanit eklenip incelenmeden gorev done olmaz; auto-start ve auto-complete
+Koordinasyon durumu yalnızca kullanıcının açıkça oluşturduğu görevle başlar.
+Pane açmak, agent seçmek veya routing profiliyle eşleşmek çalışmayı başlatmaz.
+1.3.3 ile (henüz yayımlanmadı) her pano komutunu ana oturum çalıştırır;
+koordinatörler ve worker'lar asla çalıştırmaz. Koordinatör yalnızca katalogdaki
+worker'larını seçer; her worker altı etiketli handoff alanı döndürür: Sonuç,
+Kanıt, Değişen kapsam, Riskler, Açık sorular ve Sıradaki doğrulama. Alanlar
+arası handoff'u ana oturum iletir. Kanıt eklenip sahibinden farklı bir ajan
+tarafından kontrol edilmeden görev done olmaz; auto-start ve auto-complete
 yoktur.
 
-Kullanici tarafindan secilen, repo-yerel bir state yolu kullanin. Baslatma veya
-gorev olusturma yalnizca koordinasyon durumunu kaydeder; koordinator ya da
-worker otomatik baslamaz.
+Kullanıcı tarafından seçilen, repo-yerel bir state yolu kullanın. Başlatma veya
+görev oluşturma yalnızca koordinasyon durumunu kaydeder; koordinatör ya da
+worker otomatik başlamaz.
 
 ```bash
 npm run coordination:board -- init --state .coordination-board.json
@@ -90,8 +96,68 @@ yazabileceğini de kaydeder; iş yalnızca eksiksiz bir brief ile başlar:
   ayrıca canlı bir kira ister: `renew-lease --task <id> --minutes 90` (en çok
   24 saat). Diğer ajanlar kapsamı ve kirayı okuyarak neyin alındığını görür.
 - `add-evidence --task <id> --evidence "<komut>: <sonuç>"` kanıt ekler.
-- `--state` verilmezse pano dosyasını `AGENTCHEF_BOARD_STATE` belirler. v1 ya
-  da v2 pano okunurken bellekte taşınır; sonraki yazım v3 olarak kaydeder.
+- `--state` verilmezse pano dosyasını `AGENTCHEF_BOARD_STATE` belirler.
+
+### 1.3.3 İle Pano Değişiklikleri
+
+1.3.3 ile (henüz yayımlanmadı) pano durum şeması 4'ü kaydeder. v1, v2 veya v3
+pano okunurken bellekte taşınır ve sonraki yazım v4 olarak kaydeder; AgentChef
+1.3.2 ve öncesi bu dosyayı yanlış okumak yerine reddeder.
+
+Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
+`cancelled`'dır. İzin verilen geçişler:
+
+| Geçiş | Gerekenler |
+| --- | --- |
+| `backlog` -> `todo` | hiçbir şey |
+| `todo` -> `in_progress` | bir sahip, eksiksiz bir brief, görevin yazma kapsamı varsa canlı bir kira ve çakışan bir yolda canlı kira tutan başka açık görev olmaması |
+| `in_progress` -> `review` | en az bir kanıt kaydı |
+| `review` -> `done` | kanıt, bağlı bir rapor, karar gerektiren her handoff'un çözülmüş olması ve `--verified-by <ajan>` |
+| `review` -> `in_progress` (yeniden çalışma) | `--reason`; `in_progress` kontrolleri yeniden uygulanır |
+| `in_progress` -> `todo` (bırakma) | `--reason`; kirayı temizler |
+| herhangi bir açık durum -> `blocked` | `--reason`; engellenen görev yalnızca engellendiği duruma döner ve o durumun kontrolleri uygulanır |
+| herhangi bir açık durum veya `blocked` -> `cancelled` | `--reason`; kesindir |
+
+- İki yol aynı repodaysa ve biri diğerine eşitse ya da diğeriyle başlayıp `/`
+  ile devam ediyorsa çakışır; repo ve yol büyük/küçük harf duyarsız
+  karşılaştırılır. `renew-lease` de çakışan kirayı reddeder.
+- `assign --task <id> --owner-agent <ajan> [--owner-session <ad>] [--owner-coordinator <koordinatör>] [--by <aktör>]`
+  sahibi atar veya değiştirir.
+- `--verified-by` sahip ajan, sahip oturum veya sahip koordinatör olamaz; adlar
+  büyük/küçük harf duyarsız karşılaştırılır ve `-` ile `_` aynı sayılır
+  (`root-cause-debugger`, `root_cause_debugger` ile aynıdır). `show`
+  doğrulayanı ve zamanı `verification` altında gösterir. Adları çağıran yazar;
+  bu, kaza eseri hataları durdurur, kimliğe bürünmeyi değil.
+- `done` ve `cancelled` görevler artık değişiklik kabul etmez ve kiraları
+  temizlenir.
+- `renew-lease --task <id> --minutes <1-1440> [--by <ajan>]`, sahip olmayan bir
+  `--by` değerini reddeder.
+- `handoff --task <id> --source-coordinator <a> --target-coordinator <b> --question "<metin>" [--decision-needed "<metin>"]`
+  bir kimlik (`H1`, `H2`, ...) ve zamanla bir handoff kaydeder. Kaynak ve hedef
+  farklı katalog koordinatörleri olmalı, biri görevin sahip koordinatörü
+  olmalıdır. `resolve-handoff --task <id> --handoff H1 --answer "<metin>"` onu
+  çözer.
+- Her değişiklik bir `history` kaydı ekler (`at`, `action` ve uygun olduğunda
+  `from`, `to`, `by`, `reason`) ve `updatedAt` değerini ayarlar; `create`
+  `createdAt` değerini ayarlar.
+- `show [--task <id>] [--status <liste>|open] [--owner <ajan>]` iki hesaplanmış
+  alan ekler: `leaseState` (`none`, `live` veya `expired`) ve `stale` (yazma
+  kapsamı kirası canlı olmayan ya da 24 saattir kimsenin değiştirmediği bir
+  `in_progress` veya `review` görevi). `--status open` `blocked` görevleri de
+  içerir.
+- Her komut kabul etmediği seçenekleri reddeder, `--help` kullanımı yazdırır,
+  `add-evidence` `--evidence-file` de alır ve
+  `handoff-check --handoff-file handoff.md` (veya `--handoff`) dönen bir
+  handoff'u pano gerekmeden denetler; bir alan eksikse 1 ile çıkar.
+- Brief ve handoff etiketleri numaralı (`1. Goal:`), parantez içinde takma
+  adlı kalın (`**Goal** (Hedef):`) ya da büyük harfli (`EVIDENCE:`) olabilir.
+  Handoff'lar ayrıca `Risks`/`Riskler`, `Open questions`/`Açık sorular`/
+  `Unresolved questions` ve `Next verification need`/`Sonraki doğrulama`
+  etiketlerini kabul eder.
+- Çöken bir süreçten kalan kilit (30 saniyeden eski) devralınır; meşgul bir
+  kilit komut başarısız olmadan önce yaklaşık iki saniye yeniden denenir.
+- Kimlik bilgisine benzeyen metin reddedilir; buna artık Bearer token'lar,
+  JWT'ler ve URL içindeki kimlik bilgileri de dahildir.
 
 ## Enterprise Routing Profiles
 

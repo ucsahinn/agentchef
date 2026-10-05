@@ -255,7 +255,7 @@
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": ["context7", "chrome-devtools"],
       "risk": "medium",
       "defaultReason": "Can collect local performance evidence while keeping deploys and production load approval-gated.",
       "primaryUse": "Measure build size, web vitals, traces, resource budgets, expensive paths, and before/after regression evidence.",
@@ -275,7 +275,7 @@
       "claudeMcp": ["context7"],
       "risk": "low",
       "defaultReason": "Keeps SEO and Search Console guidance evidence-based and read-only before any site change.",
-      "primaryUse": "Audit crawlability, indexability, metadata, structured data, sitemaps, canonicalization, hreflang, internal links, Core Web Vitals, and Search Console-ready verification steps.",
+      "primaryUse": "Audit crawlability, indexability, metadata, structured data, sitemaps, canonicalization, hreflang, internal links, and Search Console-ready verification steps; Core Web Vitals measurement belongs to performance_auditor.",
       "mustNot": "Promise rankings, keyword-stuff content, invent analytics, automate backlinks, or use credentialed Search Console access without explicit approval."
     },
     {

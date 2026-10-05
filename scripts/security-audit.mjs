@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { claudeSessionEndHooks } from "./render-target-artifacts.mjs";
+import { claudePluginHooks } from "./render-target-artifacts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -206,21 +206,27 @@ for (const file of files) {
   const rel = posix(path.relative(root, file));
   const text = fs.readFileSync(file, "utf8");
   // The Claude manifest counts as reviewed only while its hooks are exactly the
-  // one SessionEnd hygiene hook the renderer emits; anything else fails below.
+  // reviewed hooks the renderer emits (Agent spawn guard, SessionEnd hygiene); anything else fails below.
   const claudeManifestHooksReviewed = rel === "plugins/agentchef/.claude-plugin/plugin.json"
     && (() => {
       try {
-        return JSON.stringify(JSON.parse(text).hooks) === JSON.stringify(claudeSessionEndHooks);
+        return JSON.stringify(JSON.parse(text).hooks) === JSON.stringify(claudePluginHooks);
       } catch {
         return false;
       }
     })();
   const reviewedProcessHygieneSurface = [
     "plugins/agentchef/hooks/process-hygiene.json",
-    "plugins/agentchef/scripts/codex-process-hygiene.mjs"
+    "plugins/agentchef/scripts/codex-process-hygiene.mjs",
+    "plugins/agentchef/scripts/agent-spawn-guard.mjs"
   ].includes(rel) || claudeManifestHooksReviewed;
-  if (rel === "plugins/agentchef/.claude-plugin/plugin.json" && /"hooks"/.test(text) && !claudeManifestHooksReviewed) {
-    failures.push(`Claude plugin manifest hooks must be exactly the reviewed SessionEnd process-hygiene hook: ${rel}`);
+  // Decide on the parsed manifest: a key written with a JSON escape, such as
+  // an escaped "s" in "hooks", still parses to hooks.
+  const claudeManifestHasHooks = rel === "plugins/agentchef/.claude-plugin/plugin.json" && (() => {
+    try { return Object.hasOwn(JSON.parse(text), "hooks"); } catch { return /hooks/.test(text); }
+  })();
+  if (claudeManifestHasHooks && !claudeManifestHooksReviewed) {
+    failures.push(`Claude plugin manifest hooks must be exactly the reviewed Agent spawn guard and SessionEnd process-hygiene hooks: ${rel}`);
   }
 
   if (isHookSurfacePath(rel)) {

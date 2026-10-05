@@ -11,7 +11,10 @@ guide the main session without being spawned. Delegation is useful when work can
 run independently, noisy output should stay out of the main thread, or you
 explicitly ask for parallel agents.
 
-Official Codex reference: [Subagents](https://developers.openai.com/codex/subagents)
+Official references: [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+(the old `developers.openai.com/codex/subagents` URL redirects there) and
+[Claude Code subagents](https://code.claude.com/docs/en/sub-agents), both
+checked 2026-10-05.
 
 ## Call A Coordinator
 
@@ -34,9 +37,13 @@ level.
 | `Product Lead`, `Product Coordinator`, `Scope Lead` | `product_coordinator` |
 | `Backend Lead`, `Backend Coordinator`, `Integration Lead` | `backend_coordinator` |
 | `DevOps Lead`, `DevOps Coordinator`, `Operations Lead` | `devops_coordinator` |
-| `QA Lead`, `QA Coordinator`, `Assurance Lead` | `qa_coordinator` |
+| `QA Coordinator`, `Assurance Lead`, `Quality Lead` | `qa_coordinator` |
 | `UI Lead`, `UI Coordinator`, `UX Evidence Lead` | `ui_coordinator` |
 | `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
+
+From 1.3.3 (not released yet) the QA coordinator no longer answers to
+`QA Lead`, which is the `qa_lead` worker's role; 1.3.2 and earlier still list
+`QA Lead`, `QA Coordinator`, and `Assurance Lead`.
 
 The main session remains the decision and permission boundary. A coordinator
 correlates evidence; it does not silently publish, deploy, broaden permissions,
@@ -52,17 +59,21 @@ Cross-domain work returns a compact handoff to the main session, which decides
 whether another coordinator is needed.
 
 The bundled `agent-brief` skill (`$agentchef:agent-brief` in Codex,
-`/agentchef:agent-brief` in Claude Code) fixes that exchange: the brief a
-worker receives and the handoff it returns (Outcome, Evidence, Changed scope,
-Risk, Open questions, Next verification).
+`/agentchef:agent-brief` in Claude Code) fixes that exchange: the seven-field
+brief a worker receives and the six-field handoff it returns (Outcome,
+Evidence, Changed scope, Risks, Open questions, Next verification).
+`coordination-board brief-check` checks a brief before it is sent; from 1.3.3
+(not released yet) `coordination-board handoff-check` checks the handoff that
+comes back.
 
 The detailed coordination-board contract is in
 [Skills, Plugins, And Specialist Agents](skills-and-agents.md): work begins
 only with an explicit user-created board task; pane selection, role selection,
 and routing matches never auto-start it. Coordinators select only their
-cataloged workers, workers return structured evidence handoffs, the main session
-relays cross-domain questions, and evidence must be attached and reviewed before
-the task becomes done.
+cataloged workers, workers return the six handoff fields, the main session
+relays cross-domain questions and runs every board command, and evidence must
+be attached and checked by an agent that did not do the work before the task
+becomes done.
 
 ## 🗺️ Understand The Problem
 
@@ -100,7 +111,7 @@ the task becomes done.
 | --- | --- |
 | [`docs_author`](../templates/codex/agents/docs_author.toml) | Documentation needs a clearer map, a missing guide, a release update, or stale-content cleanup. |
 | [`code_reviewer`](../templates/codex/agents/code_reviewer.toml) | A fresh reviewer should look for correctness risks, regressions, and missing tests. |
-| [`google_seo_auditor`](../templates/codex/agents/google_seo_auditor.toml) | Public pages need crawlability, metadata, structured data, Core Web Vitals, and Search Console readiness. |
+| [`google_seo_auditor`](../templates/codex/agents/google_seo_auditor.toml) | Public pages need crawlability, metadata, structured data, and Search Console readiness. Core Web Vitals measurement belongs to `performance_auditor`. |
 
 ## 🛡️ Protect The Boundary
 
@@ -137,10 +148,47 @@ The Claude Code target ships the same 28 roles as plugin subagents named
 `agentchef:<role>` (for example `agentchef:code-mapper`). They are generated
 from the catalog by `npm run render:targets`: read-only Codex roles become
 subagents with `Read`, `Grep`, and `Glob` tools and `Write`, `Edit`,
-`Bash` disallowed; workspace-write roles keep edit tools; coordinators may
-only spawn their catalog-bound workers through `Agent(agentchef:<worker>)`.
-AgentChef never writes `~/.claude/agents/` and never emits
-`bypassPermissions`.
+`Bash` disallowed; workspace-write roles keep edit tools. AgentChef never
+writes `~/.claude/agents/` and never emits `bypassPermissions`.
+
+From 1.3.3 (not released yet):
+
+- `performance-auditor` also gets the `chrome-devtools` tools. They work only
+  when you added a `chrome-devtools` MCP server yourself, per project (see
+  [MCPs](mcp-catalog.md)); AgentChef does not enable it.
+- `chrome-devtools` is granted by tool name, limited to the eleven tools the
+  catalog reviewed, as Serena already was; script evaluation, form filling, and
+  uploads stay out of reach.
+- No role gets the `Skill` tool: a skill can fork a `general-purpose`
+  subagent or run shell commands outside the role's own tool list.
+
+No role's tool list names `SendMessage`, so a role cannot message another
+agent while it works. Only coordinator files list the `Agent` tool, as
+`Agent(agentchef:<worker>, ...)` with their own catalog workers. Claude Code
+enforces that list only when the coordinator runs as the main thread
+(`claude --agent`); when it runs as an ordinary subagent, the names in the
+parentheses are ignored and the coordinator could spawn any agent type. From
+1.3.3 (not released yet) the plugin closes that gap with a `PreToolUse` hook
+on the `Agent` tool (`plugins/agentchef/scripts/agent-spawn-guard.mjs`):
+
+- An AgentChef coordinator that asks for a worker outside its list is denied
+  (exit code 2, reason shown to the caller); the allowed list is read from its
+  own agent file, so the hook and the frontmatter cannot drift apart.
+- The worker must be named in full (`agentchef:test-verifier`): a bare
+  `test-verifier` would resolve to a project or user agent of that name first,
+  so it is denied.
+- Any spawn by an AgentChef worker is denied, and so is any spawn by an
+  AgentChef-named caller the plugin has no agent file for.
+- The main session, your own agents, and non-AgentChef plugin agents are never
+  blocked, except a session started with `claude --agent agentchef:<role>`,
+  which runs under that role's rule. Input the hook cannot read is let
+  through, so Claude Code's own rules decide.
+- The hook recognizes the caller as `agentchef:<role>`,
+  `plugin_agentchef_<role>`, or `plugin:agentchef:<role>`, and the tool as
+  `Agent` or its earlier name `Task`.
+
+In 1.3.2 and earlier there is no such hook: a coordinator's worker list is
+guidance only when it runs as a subagent.
 
 ## Model Tiers
 
@@ -160,20 +208,28 @@ only the session you open plans on its own model.
 
 Reasoning effort is not pinned. No role file sets `model_reasoning_effort`;
 the official Codex subagents guide says a custom agent file that sets only
-`model` keeps the effort already resolved for the spawn. Claude Code's
-frontmatter carries no effort field from AgentChef either.
+`model` keeps the effort already resolved for the spawn. Claude Code supports
+an `effort` frontmatter field for subagents (it overrides the session effort);
+AgentChef does not set it, so Claude roles inherit the session effort too.
 
 Which value wins when several are set:
 
 - Codex: a `model` in the custom agent file takes precedence
-  ([Codex subagents](https://developers.openai.com/codex/subagents), checked
-  2026-10-04).
+  ([Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
+  checked 2026-10-05).
 - Claude Code: a `model` passed on the individual `Agent` call comes first,
   then the agent's `model:` frontmatter, then the
   `CLAUDE_CODE_SUBAGENT_MODEL` variable, then the main conversation's model
   ([Claude Code subagents](https://code.claude.com/docs/en/sub-agents), checked
-  2026-10-04). The environment variable therefore does not override
+  2026-10-05). The environment variable alone therefore does not override
   AgentChef's `sonnet`; a per-call `model` does.
+- Claude Code with `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` (Claude Code v2.1.257
+  or later): every subagent runs on `CLAUDE_CODE_SUBAGENT_MODEL`, or on the
+  main conversation's model when that variable is unset. This overrides
+  AgentChef's `sonnet` and any per-call `model`.
+- Claude Code with a Sonnet main session: the `sonnet` alias resolves to the
+  main conversation's exact model (including a `[1m]` suffix), not to the
+  version the alias normally points to.
 
 Security and review verdicts come from the worker tier too: `security-auditor`,
 `code-reviewer`, and `release-verifier` run on the worker model like every
@@ -207,17 +263,45 @@ Communication is hierarchical and one-shot, not a continuous conversation:
 
 `main session -> coordinator -> specialist`
 
-- The depth stops at two levels (`max_depth = 2` in the Codex config). A
-  coordinator selects at most four of its own cataloged workers, and workers
-  never spawn agents. In Claude Code only coordinator files grant the `Agent`
-  tool, and only for their own workers.
+From 1.3.3 (not released yet) one team protocol applies in the working
+agreement, the `agent-brief` skill, every role file, and these docs. It works
+like an office team:
+
+| Who | Does | Never does |
+| --- | --- | --- |
+| You | Approve risky actions and ask for board tasks. | - |
+| Main session | Plans, writes each brief, merges handoffs, runs every coordination-board command, picks the verifier, and reports to you. | Create a board task you did not ask for. |
+| Coordinator | Picks only its own cataloged workers, briefs each one, merges their handoffs, and escalates to the main session. Read-only. | Spawn `general-purpose`, `fork`, another coordinator, or a worker outside its list; run board commands; verify its own task. |
+| Worker | Does one bounded job and returns the six handoff fields. | Spawn any agent. When another role is needed it writes `needs: <role> - <why>` under Open questions, and the parent decides. |
+
+Two routes, both at most two levels deep:
+
+- **Direct**: the main session briefs one to four specialists itself.
+- **Team**: for a board task you created, the main session briefs that task's
+  coordinator, which briefs its own workers.
+
+Use at most four workers per task (a coordinator is not counted); more needs your
+explicit request.
+
 - An agent receives one brief and returns one handoff. Agents do not message
   each other while they work; cross-domain questions go back to the main
-  session, which decides the next step.
+  session as a parent-routed escalation, which decides the next step.
 - The orchestrator writes the brief with the `agent-brief` skill. For a vague
   or multi-step request, the skill says to plan first with `prompt-architect`
   in plan-only mode. This is a rule the orchestrator follows, not an automatic
   step: nothing forces a plan before a brief.
+- Merge: the main session (or the coordinator, for its workers) checks each
+  Changed scope against its brief's Write scope, keeps conflicting evidence
+  side by side with its sources instead of averaging it, resolves conflicts or
+  asks you, and reruns every Done-when check on the merged result. A handoff
+  is a report, not proof.
+- A coordinator escalates when approval is needed, a worker is blocked or
+  failed, a write scope changes, another domain is needed, or evidence is
+  still missing after one retry.
+- Verification is done by an agent that did not do the work: never the owner,
+  its session, or its coordinator. Pick by work type: `test_verifier` for
+  checks, `code_reviewer` for diffs, `frontend_verifier` for UI,
+  `security_auditor` for security, or you.
 
 Between the two CLIs there is no direct tool:
 
@@ -235,6 +319,42 @@ Between the two CLIs there is no direct tool:
   ([`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)), which
   AgentChef does not install.
 
+### Depth And Spawn Limits In Each CLI
+
+Codex (checked 2026-10-05 against
+[Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+and the [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)):
+
+- Current local Codex releases spawn subagents only after a direct request or
+  an applicable project or skill instruction. AgentChef's working agreement is
+  such an instruction, and it limits delegation to the cases above.
+- AgentChef writes `max_depth = 2` under `[agents]`. The default multi-agent
+  backend enforces it; the opt-in `multi_agent_v2` backend ignores it, so
+  there the two-level rule rests on the role instructions.
+- `max_threads = 10` is a legacy alias of
+  `max_concurrent_threads_per_session`: a ceiling across the session, not a
+  target. The four-agents-per-task rule still applies.
+- AgentChef also writes `job_max_runtime_seconds = 3600`; it no longer has an
+  effect upstream and is harmless. The current configuration reference does
+  not list `max_depth` or `job_max_runtime_seconds`.
+
+Claude Code (checked 2026-10-05 against
+[Claude Code subagents](https://code.claude.com/docs/en/sub-agents) and
+[agent teams](https://code.claude.com/docs/en/agent-teams)):
+
+- By default a subagent can spawn its own subagents up to three layers below
+  the main conversation (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` changes this).
+  From 1.3.3 (not released yet) an AgentChef tree stays at two levels: workers
+  have no `Agent` tool, and the spawn guard hook above denies any worker spawn
+  and any coordinator spawn outside its list. In 1.3.2 and earlier a
+  coordinator running as a subagent could spawn another agent type, which
+  could nest further.
+- Agent teams are experimental and off unless
+  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set. With teams on, a subagent
+  Claude names can launch as a teammate, and Claude Code adds `SendMessage` to
+  in-process teammates, so agents could talk outside the brief and handoff.
+  AgentChef assumes agent teams are off.
+
 ## AgentSpace Ownership, Knowledge, And Worker Safety
 
 | Coordinator | Bounded specialist workers |
@@ -249,8 +369,10 @@ Between the two CLIs there is no direct tool:
 
 The seven installed coordinators own work: leadership, product, backend, DevOps,
 QA, UI, and marketing. The 21 AgentChef specialists remain narrow task workers.
-\`catalog/agents.json\` records the complete 7-to-21 ownership map. A coordinator may select only its cataloged
-worker group (at most four workers), and workers do not delegate further.
+`catalog/agents.json` records the complete 7-to-21 ownership map. A
+coordinator may select only its cataloged worker group, within the limit of
+four workers per task (the coordinator itself is not counted), and workers do
+not delegate further.
 
 Starting with 1.3.0, upgrading from a 1.2 install retires the five removed
 coordinator role files (`data_coordinator`, `frontend_coordinator`,
@@ -262,26 +384,26 @@ peer spawning: the primary coordinator returns its question, evidence, conflict,
 decision, and open verification need to the main session, which decides whether a
 peer coordinator is needed. This keeps the runtime at two delegation levels and
 prevents recursive agent trees. A routing result exposes each selected worker's
-owner and a \`knowledgeRef\` equal to the specialist name. That reference resolves
-only to reviewed metadata in \`catalog/agent-research-corpus.json\`; routing never
+owner and a `knowledgeRef` equal to the specialist name. That reference resolves
+only to reviewed metadata in `catalog/agent-research-corpus.json`; routing never
 injects AgentSpace memory, auth, session, or other machine-local content.
 
-Every installed coordinator and worker TOML applies \`approval_policy = "on-request"\`.
+Every installed coordinator and worker TOML applies `approval_policy = "on-request"`.
 An AgentSpace worker session has a separate runtime profile:
-\`sandbox_mode = "workspace-write"\`, \`approval_policy = "on-request"\`, and
-\`approvals_reviewer = "auto_review"\`. Routing reports this effective session
-profile and the specialist's narrower \`roleSandboxMode\` separately. Because
-AgentSpace account profiles use an isolated \`CODEX_HOME\`, those root keys must
+`sandbox_mode = "workspace-write"`, `approval_policy = "on-request"`, and
+`approvals_reviewer = "auto_review"`. Routing reports this effective session
+profile and the specialist's narrower `roleSandboxMode` separately. Because
+AgentSpace account profiles use an isolated `CODEX_HOME`, those root keys must
 exist in that profile; another Codex home's defaults are not inherited.
 The official [Codex Configuration Reference](https://developers.openai.com/codex/config-reference#configtoml)
 defines `approvals_reviewer = "auto_review"` as the reviewer-subagent mode and
 states that it does not change sandboxing.
 Coordinators remain read-only, and specialist role files retain their catalog
-sandbox (\`read-only\` or \`workspace-write\`). The reviewed
-\`rules/default.rules\` surface can allow narrow safe inspection commands while
+sandbox (`read-only` or `workspace-write`). The reviewed
+`rules/default.rules` surface can allow narrow safe inspection commands while
 destructive, credentialed, publishing, deployment, broad-shell, and other risky
-classes remain prompt-gated. Workers never use \`danger-full-access\` or a global
-\`approval_policy = "never"\` default.
+classes remain prompt-gated. Workers never use `danger-full-access` or a global
+`approval_policy = "never"` default.
 
 To see the reviewed metadata behind this page, open
 [`catalog/agents.json`](../catalog/agents.json). Routing profiles live in

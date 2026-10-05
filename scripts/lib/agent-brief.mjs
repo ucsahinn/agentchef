@@ -29,25 +29,33 @@ export const HANDOFF_FIELDS = Object.freeze([
   { key: "outcome", labels: ["Outcome", "Sonuç", "Sonuc"] },
   { key: "evidence", labels: ["Evidence", "Kanıt", "Kanit"] },
   { key: "changedScope", labels: ["Changed scope", "Değişen kapsam", "Degisen kapsam"] },
-  { key: "risk", labels: ["Risks", "Risk"] },
-  { key: "openQuestions", labels: ["Open questions", "Open question", "Açık soru", "Acik soru"] },
-  { key: "nextVerification", labels: ["Next verification", "Sıradaki doğrulama", "Siradaki dogrulama"] }
+  { key: "risk", labels: ["Risks", "Risk", "Riskler"] },
+  { key: "openQuestions", labels: ["Open questions", "Open question", "Unresolved questions", "Açık sorular", "Acik sorular", "Açık soru", "Acik soru"] },
+  { key: "nextVerification", labels: ["Next verification", "Next verification need", "Sıradaki doğrulama", "Siradaki dogrulama", "Sonraki doğrulama", "Sonraki dogrulama"] }
 ]);
 
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Turkish lower-casing turns "I" into a dotless "ı", so "EVIDENCE" would not
+// match "evidence"; both sides fold the same way.
+function fold(text) {
+  return text.toLocaleLowerCase("tr").replace(/ı/g, "i");
+}
+
 // A field starts on a line that is the label, optionally as a Markdown
-// heading, list item, or bold text, followed by ":" or the end of the line.
-// A bilingual label ("Kapsam / Yazma kapsamı", "Goal / Hedef") counts as its
-// first label.
+// heading, a bullet or numbered list item, or bold text, followed by ":" or
+// the end of the line. A bilingual label ("Kapsam / Yazma kapsamı",
+// "Goal (Hedef)") counts as its first label.
 function labelPattern(fields) {
   const labels = fields.flatMap((field) => field.labels.map((label) => ({ key: field.key, label })))
     .sort((left, right) => right.label.length - left.label.length);
-  const alternatives = labels.map(({ label }) => escapeRegExp(label)).join("|");
-  const pattern = new RegExp(`^\\s*(?:#{1,6}\\s*|[-*]\\s+)?(?:\\*\\*)?(${alternatives})(?:\\s*/\\s*(?:${alternatives}))*(?:\\*\\*)?\\s*(?:[:：]\\s*(?:\\*\\*)?\\s*(.*))?$`, "iu");
-  const keyFor = new Map(labels.map(({ key, label }) => [label.toLocaleLowerCase("tr"), key]));
+  // Lines are matched in folded form, so "DÖNÜŞ BİÇİMİ" and "EVIDENCE" find
+  // their labels; the value is then cut from the original line.
+  const alternatives = labels.map(({ label }) => escapeRegExp(fold(label))).join("|");
+  const pattern = new RegExp(`^\\s*(?:#{1,6}\\s*|[-*]\\s+|\\d+[.)]\\s+)?(?:\\*\\*)?(${alternatives})(?:\\*\\*)?(?:\\s*(?:/\\s*(?:\\*\\*)?(?:${alternatives})(?:\\*\\*)?|\\(\\s*(?:${alternatives})\\s*\\)))*(?:\\*\\*)?\\s*(?:[:：]\\s*(?:\\*\\*)?\\s*(.*))?$`, "ud");
+  const keyFor = new Map(labels.map(({ key, label }) => [fold(label), key]));
   return { pattern, keyFor };
 }
 
@@ -56,10 +64,16 @@ function parseFields(text, fields) {
   const values = {};
   let current = null;
   for (const line of String(text ?? "").split(/\r?\n/)) {
-    const match = pattern.exec(line);
+    const folded = fold(line);
+    const match = pattern.exec(folded);
     if (match) {
-      current = keyFor.get(match[1].toLocaleLowerCase("tr"));
-      values[current] = values[current] ? `${values[current]}\n${match[2] ?? ""}` : (match[2] ?? "");
+      current = keyFor.get(match[1]);
+      if (!current) continue;
+      const start = match.indices[2]?.[0];
+      // Folding keeps Turkish text the same length; if it ever did not, keep
+      // the folded value rather than a misaligned slice.
+      const value = start === undefined ? "" : folded.length === line.length ? line.slice(start) : match[2];
+      values[current] = values[current] ? `${values[current]}\n${value}` : value;
       continue;
     }
     if (current) values[current] = `${values[current]}\n${line}`;

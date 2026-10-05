@@ -23,7 +23,7 @@ Repository agentchef: `catalog/mcp-servers.json`, `templates/codex/config.*.toml
 - The plugin's `mcp/claude.mcp.json` lists only context7 and serena.
 
 ## Return format
-Outcome, Evidence, Changed scope, Risk, Open questions, Next verification.
+Outcome, Evidence, Changed scope, Risks, Open questions, Next verification.
 
 ## User's words
 "pc çok yavaşladı ... canlı ve kullanılan hiçbirşeye dokunmadan hızlandır"
@@ -35,7 +35,7 @@ Outcome, Evidence, Changed scope, Risk, Open questions, Next verification.
 Outcome: the plugin ships context7 and serena only.
 Evidence: `node --test scripts/tests/mcp-launch.test.mjs` 4/4; fast 34/34.
 Changed scope: catalog/mcp-servers.json, templates/codex/config.unix.toml, ...
-Risk: a project that relied on the global Playwright must add it per project.
+Risks: a project that relied on the global Playwright must add it per project.
 Open questions: none.
 Next verification: open a new Claude session and run `claude mcp list`.
 ```

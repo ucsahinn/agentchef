@@ -47,7 +47,8 @@ if (!fs.existsSync(docsDir)) {
       failures.push(`Generated summary locale should not return to deep docs: docs/${file}`);
     }
     const text = fs.readFileSync(path.join(docsDir, file), "utf8");
-    if (/(?:TODO|TBD|translation needed|lorem ipsum)/i.test(text)) {
+    // `todo` in backticks is the coordination-board status name, not a placeholder.
+    if (/(?:TODO|TBD|translation needed|lorem ipsum)/i.test(text.replace(/`todo`/g, ""))) {
       failures.push(`Doc contains placeholder text: docs/${file}`);
     }
   }

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { emitClaudeAgents } from "../lib/emitters/claude-agents.mjs";
 import { emitClaudePermissions, parseCodexRules } from "../lib/emitters/claude-permissions.mjs";
 import { renderClaudePluginManifest } from "../render-target-artifacts.mjs";
@@ -126,8 +127,12 @@ test("the Claude plugin manifest mirrors the Codex manifest version and lists ev
   assert.deepEqual(manifest.agents, [...manifest.agents].sort());
   assert.ok(manifest.agents.every((entry) => entry.startsWith("./agents/") && entry.endsWith(".md")));
   assert.equal(manifest.skills, "./skills/");
-  // One inline SessionEnd hook, in exec form, running the plugin's own script.
-  assert.deepEqual(Object.keys(manifest.hooks), ["SessionEnd"]);
+  // Two inline hooks in exec form, each running the plugin's own script: the
+  // Agent spawn guard and the SessionEnd hygiene sweep.
+  assert.deepEqual(Object.keys(manifest.hooks), ["PreToolUse", "SessionEnd"]);
+  const [guard] = manifest.hooks.PreToolUse;
+  assert.equal(guard.matcher, "Agent");
+  assert.deepEqual(guard.hooks.map((entry) => entry.args), [["${CLAUDE_PLUGIN_ROOT}/scripts/agent-spawn-guard.mjs"]]);
   const [hook] = manifest.hooks.SessionEnd.flatMap((group) => group.hooks);
   assert.equal(manifest.hooks.SessionEnd.flatMap((group) => group.hooks).length, 1);
   assert.equal(hook.command, "node");
@@ -147,4 +152,29 @@ test("every role runs on the catalog worker model; the orchestrating session kee
   for (const file of fs.readdirSync(roleDirectory).filter((name) => name.endsWith(".toml"))) {
     assert.match(fs.readFileSync(path.join(roleDirectory, file), "utf8"), /^model = "gpt-6-luna"$/m, `${file} runs on the worker model`);
   }
+});
+
+test("the Agent spawn guard keeps coordinators to their workers and workers from spawning", async () => {
+  const { decide } = await import(new URL("../../plugins/agentchef/scripts/agent-spawn-guard.mjs", import.meta.url));
+  const call = (caller, target) => decide({ tool_name: "Agent", agent_type: caller, tool_input: { subagent_type: target } });
+  assert.equal(decide({ tool_name: "Agent", tool_input: { subagent_type: "general-purpose" } }), null, "main session is never blocked");
+  assert.equal(call("Explore", "general-purpose"), null, "a user's own agent is not ours to police");
+  assert.equal(call("agentchef:qa-coordinator", "agentchef:test-verifier"), null);
+  assert.match(call("agentchef:qa-coordinator", "test-verifier"), /use the full agentchef: name/, "a bare name resolves to a user agent first");
+  assert.equal(call("plugin_agentchef_qa-coordinator", "agentchef:test-verifier"), null);
+  assert.match(call("plugin_agentchef_qa-coordinator", "general-purpose"), /may spawn only/);
+  assert.match(call("plugin:agentchef:qa-coordinator", "general-purpose"), /may spawn only/);
+  assert.match(decide({ tool_name: "Task", agent_type: "agentchef:code-reviewer", tool_input: { subagent_type: "x" } }), /is a worker/);
+  assert.match(call("agentchef:qa-coordinator", "general-purpose"), /may spawn only agentchef:qa-lead/);
+  assert.match(call("agentchef:qa-coordinator", "agentchef:ui-coordinator"), /outside its workers/);
+  assert.match(call("agentchef:code-reviewer", "agentchef:code-mapper"), /is a worker and never spawns/);
+  assert.match(call("agentchef:no-such-role", "general-purpose"), /no agent file/, "an AgentChef-named caller without a file fails closed");
+  assert.equal(call("other-plugin:qa-coordinator", "general-purpose"), null, "another plugin is not ours");
+  assert.equal(decide({ tool_name: "Bash", agent_type: "agentchef:code-reviewer" }), null);
+  const script = path.join(root, "plugins", "agentchef", "scripts", "agent-spawn-guard.mjs");
+  const denied = spawnSync(process.execPath, [script], { input: JSON.stringify({ tool_name: "Agent", agent_type: "agentchef:ui-coordinator", tool_input: { subagent_type: "fork" } }), encoding: "utf8" });
+  assert.equal(denied.status, 2, "exit code 2 blocks the call");
+  assert.match(denied.stderr, /may spawn only agentchef:frontend-verifier/);
+  const garbage = spawnSync(process.execPath, [script], { input: "not json", encoding: "utf8" });
+  assert.deepEqual([garbage.status, garbage.stdout], [0, ""]);
 });

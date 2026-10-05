@@ -8,6 +8,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { identity } from "../identity.mjs";
 
+// No role gets the Skill tool: a skill can fork a general-purpose subagent or
+// run shell commands outside the role's own tool list.
 const readOnlyTools = ["Read", "Grep", "Glob"];
 const writeTools = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"];
 const webTools = ["WebSearch", "WebFetch"];
@@ -26,11 +28,17 @@ const { TOOL_NAMES: serenaReadTools } = await import(new URL("../../../templates
 const mcpCatalog = JSON.parse(fs.readFileSync(new URL("../../../catalog/mcp-servers.json", import.meta.url), "utf8"));
 const pluginMcpServers = new Set(mcpCatalog.servers.filter((server) => server.claudeSource === "plugin").map((server) => server.name));
 
+// A user's own chrome-devtools entry also serves script evaluation, form
+// filling, and uploads; roles get only the tools the catalog reviewed.
+const reviewedTools = new Map([
+  ["serena", serenaReadTools],
+  ["chrome-devtools", mcpCatalog.servers.find((server) => server.name === "chrome-devtools")?.enabledTools ?? []]
+]);
+
 function mcpGrants(server) {
   const prefixes = pluginMcpServers.has(server) ? [`mcp__plugin_${identity.pluginName}_${server}`, `mcp__${server}`] : [`mcp__${server}`];
-  return server === "serena"
-    ? prefixes.flatMap((prefix) => serenaReadTools.map((tool) => `${prefix}__${tool}`))
-    : prefixes;
+  const tools = reviewedTools.get(server);
+  return tools ? prefixes.flatMap((prefix) => tools.map((tool) => `${prefix}__${tool}`)) : prefixes;
 }
 
 function parseRoleToml(text) {
@@ -100,7 +108,7 @@ export function emitWorkerAgent(agent, roleToml, { pluginName, workerModel }) {
     `- Primary use: ${agent.primaryUse}`,
     `- Must not: ${agent.mustNot}`,
     `- Default reason: ${agent.defaultReason}`,
-    "- Workers never spawn further agents; return a bounded evidence handoff to the parent session.",
+    "- Workers never spawn further agents; return the six handoff fields (Outcome, Evidence, Changed scope, Risks, Open questions, Next verification) to the parent session.",
     // Codex read-only still allows commands; the Claude mapping does not, so a
     // role without an execution tool has to be told to ask for command output.
     ...(disallowed.includes("Bash")
@@ -112,7 +120,7 @@ export function emitWorkerAgent(agent, roleToml, { pluginName, workerModel }) {
   return `${frontmatter.join("\n")}\n\n${body.join("\n").trimEnd()}\n`;
 }
 
-export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel }) {
+export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel, maxWorkers = 4 }) {
   const role = parseRoleToml(roleToml);
   const frontmatter = [
     "---",
@@ -129,7 +137,10 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, worker
     `${pluginName} coordinator \`${kebab(coordinator.name)}\` for the ${coordinator.roleId} domain.`,
     "",
     `- Delegate only to these cataloged workers: ${coordinator.workers.map((worker) => `\`${pluginName}:${kebab(worker)}\``).join(", ")}.`,
-    "- Use at most four workers and one coordinator-to-worker level; never spawn peer coordinators.",
+    // Claude Code enforces the Agent(...) type list only when this agent runs
+    // as the main thread (claude --agent); as a subagent the list is ignored,
+    // so the rule is stated here too.
+    `- Spawn only the workers listed above; never \`general-purpose\`, \`fork\`, another coordinator, or any agent outside that list. Use at most ${maxWorkers} workers per task and one coordinator-to-worker level.`,
     "- Attach worker evidence (commands, paths, observations) to the handoff before reporting done.",
     "",
     role.developer_instructions || ""
@@ -150,7 +161,7 @@ export function emitClaudeAgents({ catalog, roleDirectory, pluginName = identity
   }
   for (const coordinator of catalog.coordinators || []) {
     const roleToml = fs.readFileSync(path.join(roleDirectory, `${coordinator.name}.toml`), "utf8");
-    outputs.set(`${kebab(coordinator.name)}.md`, emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel }));
+    outputs.set(`${kebab(coordinator.name)}.md`, emitCoordinatorAgent(coordinator, roleToml, { pluginName, workerModel, maxWorkers: catalog.coordinationPolicy?.maxWorkersPerCoordinator ?? 4 }));
   }
   return outputs;
 }

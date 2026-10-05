@@ -503,6 +503,25 @@ if (!fs.existsSync(catalogPath)) {
   }
 }
 
+// Team protocol: a worker never spawns and names a needed role instead, and a
+// role's first nickname (its display name) is unique, so "QA Lead" means one role.
+{
+  const teamCatalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  const workerLine = "You are a worker: never spawn agents.";
+  const firstNicknames = new Map();
+  for (const role of [...(teamCatalog.agents || []), ...(teamCatalog.coordinators || [])]) {
+    const file = path.join(agentDir, `${role.name}.toml`);
+    if (!fs.existsSync(file)) continue;
+    const template = fs.readFileSync(file, "utf8");
+    const isWorker = (teamCatalog.agents || []).includes(role);
+    if (isWorker && !template.includes(workerLine)) fail(`Worker ${role.name} must say "${workerLine}"`);
+    if (isWorker && /^- Delegate /m.test(template)) fail(`Worker ${role.name} must escalate, not "Delegate", to another role.`);
+    const first = readTomlStringArray(template, "nickname_candidates")?.[0];
+    if (first && firstNicknames.has(first)) fail(`Roles ${firstNicknames.get(first)} and ${role.name} share the display name "${first}".`);
+    if (first) firstNicknames.set(first, role.name);
+  }
+}
+
 if (failures.length > 0) {
   console.error("Agent config validation failed:");
   for (const failure of failures) console.error(`- ${failure}`);
