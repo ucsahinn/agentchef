@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.3.3 - 2026-10-05
 
-Planned as 1.3.3: the agent team works like an office team, with one
+The agent team works like an office team, with one
 protocol, a board that can send work back, and a spawn rule Claude Code
 actually enforces.
 

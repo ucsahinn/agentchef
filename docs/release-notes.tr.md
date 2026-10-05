@@ -2,6 +2,32 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.3 - 2026-10-05
+
+AgentChef 1.3.3 ajanları tek bir ekip gibi çalıştırır: tek protokol, işi geri
+gönderebilen bir pano ve Claude Code'da gerçekten uygulanan bir spawn kuralı.
+Güncellemek için `npm run chef -- --update --apply`; mevcut panolar okunmaya
+devam eder.
+
+### Neler Değişti
+
+- **Pano.** Görevler gerekçeyle yeniden çalışmaya gönderilebilir, bırakılabilir,
+  bloke edilebilir veya iptal edilebilir. Başlamak bir sahip (yeni `assign`),
+  incelemeye geçmek kanıt, kapatmak ise rapor, cevaplanmış açık kararlar ve işi
+  yapmamış bir doğrulayıcı ister. İki görev aynı dosyaları kiralayamaz; her
+  değişiklik görev geçmişinde tutulur ve `show` bekleyen işi işaretler. Çöken
+  bir işlemin bıraktığı kilit panoyu artık kilitlemez.
+- **Spawn koruması.** Claude Code, koordinatör subagent olarak çalışırken onun
+  worker listesini yok sayar. Yeni bir plugin hook'u her AgentChef
+  koordinatörünü kendi worker'larıyla sınırlar ve worker'ların ajan açmasını
+  engeller.
+- **Tek protokol.** Her yerde aynı yedi alanlı brief ve altı alanlı handoff;
+  `brief-check` ve yeni `handoff-check` ile denetlenir. İki delegasyon rotası;
+  görev başına en çok dört worker.
+- **Roller.** Koordinatörler için daha net spawn, birleştirme ve üst kademeye
+  taşıma kuralları; worker'lar ihtiyaç duydukları rolü açmak yerine adını
+  bildirir; birkaç rol düzeltmesi.
+
 ## v1.3.2 - 2026-10-04
 
 AgentChef 1.3.2 her agent rolünü daha düşük maliyetli bir worker modelinde

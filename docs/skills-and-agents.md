@@ -47,7 +47,7 @@ extra authority just because the work was delegated.
 
 From 1.3.2, roles run on a cheaper worker model while the
 session you open keeps its own; see [Model Tiers](agents.md#model-tiers).
-Agents do not chat with each other. From 1.3.3 (not released yet) there are
+Agents do not chat with each other. From 1.3.3 there are
 two routes, both at most two levels deep: Direct, where the main session briefs one to four specialists,
 and Team, where for a board task the main session briefs that task's
 coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff. Codex and
@@ -58,7 +58,7 @@ Claude Code have no direct tool between them; see
 
 Creating a task explicitly is the only coordination-state trigger. Opening a
 pane, selecting an agent, or matching a routing profile does not start work.
-From 1.3.3 (not released yet) the main session runs every board command;
+From 1.3.3 the main session runs every board command;
 coordinators and workers never do.
 The coordinator may select only its cataloged workers; each worker returns six
 labeled handoff fields: Outcome, Evidence, Changed scope, Risks, Open
@@ -95,7 +95,7 @@ may write, and work starts only from a complete brief:
 
 ### Board Changes In 1.3.3
 
-From 1.3.3 (not released yet) the board stores state schema 4. A v1, v2, or v3
+From 1.3.3 the board stores state schema 4. A v1, v2, or v3
 board is read and migrated in memory, and the next write stores v4; AgentChef
 1.3.2 and earlier then refuse that file instead of misreading it.
 

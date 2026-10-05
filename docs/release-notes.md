@@ -2,6 +2,29 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.3 - 2026-10-05
+
+AgentChef 1.3.3 makes the agents work as one team: one protocol, a board
+that can send work back, and a spawn rule Claude Code actually enforces.
+Update with `npm run chef -- --update --apply`; existing boards keep loading.
+
+### What Changed
+
+- **Board.** Tasks can be sent back for rework, released, blocked, or
+  cancelled, each with a reason. Starting needs an owner (new `assign`),
+  review needs evidence, and closing needs a report, every open decision
+  resolved, and a verifier who did not do the work. Two tasks cannot lease the
+  same files; every change is kept in the task history, and `show` marks stale
+  work. A lock left by a crash no longer blocks the board.
+- **Spawn guard.** Claude Code ignores a coordinator's worker list when the
+  coordinator runs as a subagent. A new plugin hook keeps each AgentChef
+  coordinator to its own workers and stops workers from spawning.
+- **One protocol.** The same seven-field brief and six-field handoff
+  everywhere, checked by `brief-check` and the new `handoff-check`; two
+  delegation routes; at most four workers per task.
+- **Roles.** Clearer spawn, merge, and escalation rules for coordinators;
+  workers name the role they need instead of spawning it; several role fixes.
+
 ## v1.3.2 - 2026-10-04
 
 AgentChef 1.3.2 runs every agent role on a lower-cost worker model, while the

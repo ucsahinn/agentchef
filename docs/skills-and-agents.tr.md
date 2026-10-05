@@ -51,7 +51,7 @@ onlara fazladan yetki vermez.
 1.3.2 ile roller daha ucuz bir worker modelinde çalışır,
 açtığın oturum ise kendi modelini korur; bkz.
 [Model Katmanları](agents.tr.md#model-katmanları). Agent'lar birbiriyle
-sohbet etmez. 1.3.3 ile (henüz yayımlanmadı) iki rota vardır, ikisi de en çok
+sohbet etmez. 1.3.3 ile iki rota vardır, ikisi de en çok
 iki seviye derinliktedir: Direct, ana oturum bir ila dört uzmana brief verir;
 Team, bir board görevi için ana oturum o görevin koordinatörüne brief verir,
 koordinatör de kendi worker'larına. Görev başına en çok dört worker kullan
@@ -63,7 +63,7 @@ arasında doğrudan bir araç yoktur; bkz.
 
 Koordinasyon durumu yalnızca kullanıcının açıkça oluşturduğu görevle başlar.
 Pane açmak, agent seçmek veya routing profiliyle eşleşmek çalışmayı başlatmaz.
-1.3.3 ile (henüz yayımlanmadı) her pano komutunu ana oturum çalıştırır;
+1.3.3 ile her pano komutunu ana oturum çalıştırır;
 koordinatörler ve worker'lar asla çalıştırmaz. Koordinatör yalnızca katalogdaki
 worker'larını seçer; her worker altı etiketli handoff alanı döndürür: Sonuç,
 Kanıt, Değişen kapsam, Riskler, Açık sorular ve Sıradaki doğrulama. Alanlar
@@ -100,7 +100,7 @@ yazabileceğini de kaydeder; iş yalnızca eksiksiz bir brief ile başlar:
 
 ### 1.3.3 İle Pano Değişiklikleri
 
-1.3.3 ile (henüz yayımlanmadı) pano durum şeması 4'ü kaydeder. v1, v2 veya v3
+1.3.3 ile pano durum şeması 4'ü kaydeder. v1, v2 veya v3
 pano okunurken bellekte taşınır ve sonraki yazım v4 olarak kaydeder; AgentChef
 1.3.2 ve öncesi bu dosyayı yanlış okumak yerine reddeder.
 

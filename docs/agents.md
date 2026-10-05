@@ -41,7 +41,7 @@ level.
 | `UI Lead`, `UI Coordinator`, `UX Evidence Lead` | `ui_coordinator` |
 | `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
 
-From 1.3.3 (not released yet) the QA coordinator no longer answers to
+From 1.3.3 the QA coordinator no longer answers to
 `QA Lead`, which is the `qa_lead` worker's role; 1.3.2 and earlier still list
 `QA Lead`, `QA Coordinator`, and `Assurance Lead`.
 
@@ -63,7 +63,7 @@ The bundled `agent-brief` skill (`$agentchef:agent-brief` in Codex,
 brief a worker receives and the six-field handoff it returns (Outcome,
 Evidence, Changed scope, Risks, Open questions, Next verification).
 `coordination-board brief-check` checks a brief before it is sent; from 1.3.3
-(not released yet) `coordination-board handoff-check` checks the handoff that
+`coordination-board handoff-check` checks the handoff that
 comes back.
 
 The detailed coordination-board contract is in
@@ -151,7 +151,7 @@ subagents with `Read`, `Grep`, and `Glob` tools and `Write`, `Edit`,
 `Bash` disallowed; workspace-write roles keep edit tools. AgentChef never
 writes `~/.claude/agents/` and never emits `bypassPermissions`.
 
-From 1.3.3 (not released yet):
+From 1.3.3:
 
 - `performance-auditor` also gets the `chrome-devtools` tools. They work only
   when you added a `chrome-devtools` MCP server yourself, per project (see
@@ -168,7 +168,7 @@ agent while it works. Only coordinator files list the `Agent` tool, as
 enforces that list only when the coordinator runs as the main thread
 (`claude --agent`); when it runs as an ordinary subagent, the names in the
 parentheses are ignored and the coordinator could spawn any agent type. From
-1.3.3 (not released yet) the plugin closes that gap with a `PreToolUse` hook
+1.3.3 the plugin closes that gap with a `PreToolUse` hook
 on the `Agent` tool (`plugins/agentchef/scripts/agent-spawn-guard.mjs`):
 
 - An AgentChef coordinator that asks for a worker outside its list is denied
@@ -263,7 +263,7 @@ Communication is hierarchical and one-shot, not a continuous conversation:
 
 `main session -> coordinator -> specialist`
 
-From 1.3.3 (not released yet) one team protocol applies in the working
+From 1.3.3 one team protocol applies in the working
 agreement, the `agent-brief` skill, every role file, and these docs. It works
 like an office team:
 
@@ -344,7 +344,7 @@ Claude Code (checked 2026-10-05 against
 
 - By default a subagent can spawn its own subagents up to three layers below
   the main conversation (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` changes this).
-  From 1.3.3 (not released yet) an AgentChef tree stays at two levels: workers
+  From 1.3.3 an AgentChef tree stays at two levels: workers
   have no `Agent` tool, and the spawn guard hook above denies any worker spawn
   and any coordinator spawn outside its list. In 1.3.2 and earlier a
   coordinator running as a subagent could spawn another agent type, which

@@ -41,7 +41,7 @@ seviyesi oluşturmazlar.
 | `UI Lead`, `UI Coordinator`, `UX Evidence Lead` | `ui_coordinator` |
 | `Marketing Lead`, `Marketing Coordinator`, `Growth Lead` | `marketing_coordinator` |
 
-1.3.3 ile (henüz yayımlanmadı) QA koordinatörü artık `QA Lead` adına yanıt
+1.3.3 ile QA koordinatörü artık `QA Lead` adına yanıt
 vermez; bu ad `qa_lead` worker'ının rolüdür. 1.3.2 ve öncesi hâlâ `QA Lead`,
 `QA Coordinator` ve `Assurance Lead` adlarını listeler.
 
@@ -63,7 +63,7 @@ Code'da `/agentchef:agent-brief`) bu alışverişi sabitler: worker'ın aldığ�
 yedi alanlı brief ve döndürdüğü altı alanlı handoff (Sonuç, Kanıt, Değişen
 kapsam, Riskler, Açık sorular, Sıradaki doğrulama).
 `coordination-board brief-check` brief'i göndermeden önce denetler; 1.3.3 ile
-(henüz yayımlanmadı) `coordination-board handoff-check` geri dönen handoff'u
+`coordination-board handoff-check` geri dönen handoff'u
 denetler.
 
 Ayrıntılı coordination-board sözleşmesi
@@ -150,7 +150,7 @@ ve `Write`, `Edit`, `Bash` yasaklı subagent'lara dönüşür; workspace-write
 roller düzenleme araçlarını korur. AgentChef `~/.claude/agents/` dizinine asla
 yazmaz ve asla `bypassPermissions` üretmez.
 
-1.3.3 ile (henüz yayımlanmadı):
+1.3.3 ile:
 
 - `performance-auditor` ayrıca `chrome-devtools` araçlarını alır. Bunlar
   yalnızca `chrome-devtools` MCP sunucusunu proje bazında kendin eklediysen
@@ -167,7 +167,7 @@ kendi katalog worker'larıyla `Agent(agentchef:<worker>, ...)` biçiminde
 listeler. Claude Code bu listeyi yalnızca koordinatör ana thread olarak
 çalıştığında (`claude --agent`) uygular; sıradan bir subagent olarak
 çalıştığında parantez içindeki adlar yok sayılır ve koordinatör herhangi bir
-agent türünü başlatabilir. 1.3.3 ile (henüz yayımlanmadı) plugin bu açığı
+agent türünü başlatabilir. 1.3.3 ile plugin bu açığı
 `Agent` aracı üzerindeki bir `PreToolUse` hook'uyla kapatır
 (`plugins/agentchef/scripts/agent-spawn-guard.mjs`):
 
@@ -266,7 +266,7 @@ olarak raporlar.
 
 `ana oturum -> koordinatör -> uzman`
 
-1.3.3 ile (henüz yayımlanmadı) çalışma sözleşmesinde, `agent-brief`
+1.3.3 ile çalışma sözleşmesinde, `agent-brief`
 skill'inde, her rol dosyasında ve bu dokümanlarda tek bir ekip protokolü
 geçerlidir. Bir ofis ekibi gibi işler:
 
@@ -346,7 +346,7 @@ ve [agent teams](https://code.claude.com/docs/en/agent-teams) ile
 
 - Varsayılan olarak bir subagent, ana konuşmanın üç katman altına kadar kendi
   subagent'larını başlatabilir (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` bunu
-  değiştirir). 1.3.3 ile (henüz yayımlanmadı) bir AgentChef ağacı iki seviyede
+  değiştirir). 1.3.3 ile bir AgentChef ağacı iki seviyede
   kalır: worker'larda `Agent` aracı yoktur ve yukarıdaki spawn guard hook'u her
   worker spawn'ını ve koordinatörün listesi dışındaki her spawn'ı reddeder.
   1.3.2 ve öncesinde subagent olarak çalışan bir koordinatör başka bir agent
