@@ -94,6 +94,11 @@ refreshing the plugin, start a new Codex session, open `/hooks`, inspect the
 exact source and hash, and trust it only if it matches this repository. Do not
 use `--dangerously-bypass-hook-trust` as an installation shortcut.
 
+From 1.3.4, the plugin also registers a prompt-submit routing
+hint for each CLI (`hooks/routing-hint.json` on Codex). It is not part of
+process hygiene and is trusted separately in `/hooks`; what it reads, stores,
+and prints is in the [security model](security-model.md#hooks).
+
 Official references:
 
 - [Codex hooks](https://developers.openai.com/codex/hooks)

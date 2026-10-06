@@ -1,6 +1,8 @@
 // Renders the single shared working-agreement source into one file per target.
 // Fences: <!-- target:codex --> ... <!-- /target:codex --> keep a block for one
-// target only; lines outside fences are shared. Tokens: {{NAME}}.
+// target only; lines outside fences are shared. Tokens: {{NAME}}; the
+// per-target ones live below, the catalog-derived ones (spawn conditions,
+// the auto-spawn cap, worker models) are passed in by the renderer.
 export const workingAgreementTargets = Object.freeze({
   codex: Object.freeze({
     id: "codex",
@@ -28,7 +30,7 @@ const openFence = /^<!--\s*target:([a-z]+)\s*-->\s*$/;
 const closeFence = /^<!--\s*\/target:([a-z]+)\s*-->\s*$/;
 const tokenPattern = /\{\{([A-Z_]+)\}\}/g;
 
-export function renderWorkingAgreement(sourceText, targetId) {
+export function renderWorkingAgreement(sourceText, targetId, sharedTokens = {}) {
   const target = workingAgreementTargets[targetId];
   if (!target) throw new Error(`Unknown working-agreement target: ${targetId}`);
   const lines = sourceText.replace(/\r\n/g, "\n").split("\n");
@@ -50,8 +52,9 @@ export function renderWorkingAgreement(sourceText, targetId) {
     }
     if (activeFence && activeFence !== targetId) continue;
     output.push(line.replace(tokenPattern, (match, name) => {
-      if (!(name in target.tokens)) throw new Error(`Unknown token ${match} at line ${index + 1}`);
-      return target.tokens[name];
+      if (name in target.tokens) return target.tokens[name];
+      if (name in sharedTokens) return String(sharedTokens[name]);
+      throw new Error(`Unknown token ${match} at line ${index + 1}`);
     }));
   }
   if (activeFence) throw new Error("Unclosed target fence at end of source");

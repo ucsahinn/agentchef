@@ -2,7 +2,7 @@
 
 Publishing is the point where local confidence becomes a public claim. Keep it deliberate: verify first, review the exact diff, and only then create commits, tags, or releases with explicit approval.
 
-Release candidate baseline: **v1.3.3**.
+Release candidate baseline: **v1.3.4**.
 
 ## Before Commit Or Push
 

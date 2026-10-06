@@ -127,9 +127,12 @@ test("the Claude plugin manifest mirrors the Codex manifest version and lists ev
   assert.deepEqual(manifest.agents, [...manifest.agents].sort());
   assert.ok(manifest.agents.every((entry) => entry.startsWith("./agents/") && entry.endsWith(".md")));
   assert.equal(manifest.skills, "./skills/");
-  // Two inline hooks in exec form, each running the plugin's own script: the
-  // Agent spawn guard and the SessionEnd hygiene sweep.
-  assert.deepEqual(Object.keys(manifest.hooks), ["PreToolUse", "SessionEnd"]);
+  // Three inline hooks in exec form, each running the plugin's own script: the
+  // Agent spawn guard, the SessionEnd hygiene sweep, and the routing hint.
+  assert.deepEqual(Object.keys(manifest.hooks), ["PreToolUse", "SessionEnd", "UserPromptSubmit"]);
+  const [hint] = manifest.hooks.UserPromptSubmit;
+  assert.equal(hint.matcher, undefined, "the prompt-submit event has no matcher");
+  assert.deepEqual(hint.hooks.map((entry) => [entry.command, entry.args, entry.timeout]), [["node", ["${CLAUDE_PLUGIN_ROOT}/scripts/routing-hint.mjs"], 10]]);
   const [guard] = manifest.hooks.PreToolUse;
   assert.equal(guard.matcher, "Agent");
   assert.deepEqual(guard.hooks.map((entry) => entry.args), [["${CLAUDE_PLUGIN_ROOT}/scripts/agent-spawn-guard.mjs"]]);

@@ -36,7 +36,7 @@ install or enable it. To use namespaced calls such as
 | --- | --- |
 | [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Keep this starter aligned without weakening installer or security boundaries. |
 | [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Plan sources, token use, compaction handoff, and verification for broad work. |
-| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy without spawning by default. |
+| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Select the narrowest useful agent, skill, MCP, and wait policy. From 1.3.4, it spawns an agent only under one of four catalog conditions, loads the matched profile's auto-skill first, and requires the verifier for `autoVerify` profiles. |
 | [`agent-brief`](../plugins/agentchef/skills/agent-brief/SKILL.md) | Write the seven-field brief an orchestrator hands to another agent (checked with `coordination-board brief-check`) and the six-field handoff that comes back (checked with `coordination-board handoff-check` from 1.3.3); also holds the team protocol: Direct and Team routes, at most four workers per task (a coordinator is not counted), merge, and verifier rules. |
 | [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Prepare a secret-safe, hash-pinned manual review handoff without uploading anything automatically. |
 | [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Export a fresh external-review snapshot as architecture-aware GPT Pro Project text context without uploading it. |
@@ -90,6 +90,16 @@ the license.
   any code change", so an agent may load it for ordinary edits. Loading it
   grants nothing: the AgentChef working agreement still says never to commit
   or push unless you ask, and that rule wins over the skill's checklist.
+
+### Explicit-Only Skills
+
+Four skills carry `implicitInvocation: false` in `catalog/skills.json`:
+`fetch`, `security-best-practices`, `security-threat-model`, and
+`improve-codebase-architecture`. They are used only when you ask for them by
+name. From 1.3.4, a routing profile whose auto-skill is one
+of these (for example `security-sensitive` with `security-best-practices`) does
+not load it by itself: the session suggests it to you instead. The two
+pinned-skill caveats above still apply.
 
 ## 🧰 Other Cataloged Workflows
 

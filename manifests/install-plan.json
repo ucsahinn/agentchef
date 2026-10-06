@@ -190,7 +190,7 @@
       "id": "codex-plugin",
       "kind": "copy-directory",
       "target": "codex",
-      "summary": "Install the local workflow plugin bundle and its reviewed SessionEnd process-hygiene hook.",
+      "summary": "Install the local workflow plugin bundle and its three reviewed hooks: the Agent spawn guard, the routing hint, and the SessionEnd process-hygiene sweep.",
       "source": "plugins/agentchef",
       "destination": "${CODEX_HOME}/plugins/agentchef",
       "platforms": [

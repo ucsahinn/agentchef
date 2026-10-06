@@ -261,7 +261,12 @@ kurar. Kurulum veya yenilemeden sonra yeni Codex oturumu aç, `/hooks` ekranınd
 tam kaynak/hash bilgisini incele ve yalnız bu repoyla eşleşiyorsa güven.
 Installer hook trust kontrolünü bilerek bypass etmez. Claude Code aynı hook'u
 `agentchef` plugin manifestinden alır ve plugin etkinleştirildiğinde çalıştırır;
-`/hooks` ile incele. Profiller, denetim
+`/hooks` ile incele. 1.3.4 ile plugin ikinci bir Codex
+hook'u, `hooks/routing-hint.json`, ekler; o da `/hooks` içinde güven ister:
+Codex bir hook'a tanımının hash'iyle güvenir, bu da komut satırını kapsar,
+çalıştırdığı betiği veya indeksi değil (`npm run chef -- --inventory` kurulu
+plugin'i kurulum kaynağıyla karşılaştırır). Claude Code için yeni oturum gerekir.
+Profiller, denetim
 alanları, 45 saniyelik bekleme ve ayrıca onaylı temizlik komutu için
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md) sayfasına bak.
 
@@ -300,9 +305,11 @@ AgentChef kuruluyken seçili bir hedefte harness skill'i veya rolü eksikse 1 il
 çıkar. Durumlar ve her biri için yapılacaklar [harness haritasında](harness-map.tr.md).
 
 Kurulu ve hazır skill'ler kendiliğinden çalışmaz. Kullanıcı skill adını
-yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer;
-canlı aktivasyon, asistanın `Skill selected` yazması ve işlemden önce ilgili
-`SKILL.md` dosyasını okumasıyla kanıtlanır.
+yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer.
+Routing'in repo tarafındaki kanıtı
+`npm run chef -- --routing --task "<istek>"` komutudur; eşleşen profili ve bir
+`[hint]` satırını gösterir (1.3.4 ile); oturumda kanıt,
+asistanın işlemden önce yazdığı `Routing plan:` satırıdır.
 
 GitHub release, push veya workflow check'leri lokal GitHub authentication bayat
 oldugu icin fail ederse GitHub CLI veya Git Credential Manager'i kendi kurum politikaniza

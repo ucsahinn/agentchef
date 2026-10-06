@@ -36,8 +36,10 @@
 <!-- target:claude -->
 - Use at most four workers per task (a coordinator is not counted); more needs the user's explicit request. The bundled `agentchef:<role>` subagents are namespaced and never replace your own `~/.claude/agents/` definitions.
 <!-- /target:claude -->
-- Spawn agents only when there is independent parallel work, noisy logs or research should be isolated from the main thread, or the user explicitly requests delegation.
-- Do not spawn for trivial, sequential, tightly coupled, or single-file work where delegation adds coordination cost.
+- Spawn an agent only when one of these holds: {{SPAWN_WHEN}}.
+- Do not spawn for {{SKIP_WHEN}}.
+- When a request matches a routing profile (the routing-hint line, or your own classification against the profile catalog), load the profile's auto-skill first; if that skill is explicit-only, suggest it to the user instead. If files changed and the profile's verifier is required ({{AUTO_VERIFY_PROFILES}}), run that verifier before reporting done; otherwise suggest it.
+- Start at most {{AUTO_SPAWN_CAP}} agents per task without the user naming them; more needs the user's explicit request. Agents the user asks for by name are not counted, and the team limit of four workers per task still applies. The routing-hint line is advice: you still judge whether the work needs it.
 - Two routes, both at most two levels deep: Direct, the main session briefs one to four specialists itself; Team, for a user-created board task, the main session briefs that task's coordinator, which briefs its own workers.
 - Keep write-heavy implementation in the main thread unless the user explicitly requests split write scopes.
 - If agents may edit, give them non-overlapping files. The parent session merges: it checks each Changed scope against its brief's Write scope, resolves conflicts or asks the user, and reruns every Done-when check on the merged result before verification.
@@ -104,7 +106,7 @@
 - Disabling a local MCP in a profile parks its launcher without removing its definition; agents, skills, remote OpenAI docs, built-in memories, hooks, and apps stay available.
 - Audit Codex/MCP ownership before cleanup. Active Codex descendants, recent unowned trees, PID-reused processes, and unrelated Node/Python runtimes must never be cleanup candidates.
 - Manual stale cleanup requires the exact preview/apply path `npm run chef -- --processes --cleanup-stale [--apply]`. Do not broaden it to name-based process killing.
-- The reviewed session-end process hook is fail-closed and owner-scoped. Do not bypass hook trust, add startup context injection, or turn it into broad lifecycle automation.
+- AgentChef's reviewed hooks are the only hook context in this setup: the routing hint adds one advisory line of profile, skill, and role identifiers per prompt, and the session-end process sweep is fail-closed and owner-scoped. Do not bypass hook trust, add other context-injecting hooks, or turn these into broad lifecycle automation.
 
 <!-- /target:codex -->
 ## Token Budget Discipline
@@ -115,11 +117,11 @@
 - Do not disable agents, skills, MCPs, memory, hooks, or apps merely to reduce tokens.
 <!-- target:codex -->
 - Prefer profile knobs such as verbosity, reasoning effort, compaction thresholds, and tool-output limits.
-- Specialist and coordinator roles run on the catalog worker model (`gpt-6-luna`); the session the user opens keeps its own model and profile, and reasoning effort stays inherited.
+- Specialist and coordinator roles run on the catalog worker model (`{{WORKER_MODEL_CODEX}}`); the session the user opens keeps its own model and profile, and reasoning effort stays inherited.
 <!-- /target:codex -->
 <!-- target:claude -->
 - Prefer session knobs such as effort level, `/compact`, and subagent isolation over disabling capabilities.
-- Specialist and coordinator subagents run on the catalog worker model (`sonnet`); the session the user opens keeps its own model and does the orchestration.
+- Specialist and coordinator subagents run on the catalog worker model (`{{WORKER_MODEL_CLAUDE}}`); the session the user opens keeps its own model and does the orchestration.
 <!-- /target:claude -->
 - Run `npm.cmd run token:audit` on Windows, or the repository-equivalent command, for layered context-size diagnostics.
 

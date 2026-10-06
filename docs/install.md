@@ -265,8 +265,12 @@ hook. Start a new Codex session after install or refresh, open `/hooks`, inspect
 the exact source/hash, and trust it only when it matches this repository. Hook
 trust is intentionally not bypassed by the installer. Claude Code gets the same
 hook from the `agentchef` plugin manifest and runs it once the plugin is
-enabled; inspect it with `/hooks`. See
-[multi-session process hygiene](process-hygiene.md) for profiles, audit fields,
+enabled; inspect it with `/hooks`. From 1.3.4, the plugin adds
+a second Codex hook, `hooks/routing-hint.json`, which also needs trust in
+`/hooks`: Codex trusts a hook by the hash of its definition, which covers the
+command line, not the script or index it runs (`npm run chef -- --inventory`
+compares the installed plugin with the install source). Claude Code needs a new
+session. See [multi-session process hygiene](process-hygiene.md) for profiles, audit fields,
 the 45-second grace period, and the separately gated cleanup command.
 
 `Skill status & catalog` separates commit-pinned upstream skills, bundled/direct
@@ -304,9 +308,11 @@ on a selected target. See the [harness map](harness-map.md) for the states and
 what to do about each.
 
 Installed and ready skills do not execute by themselves. A skill enters Codex
-context when the user names it or the task clearly matches its description;
-live activation is proven when the assistant prints `Skill selected` and reads
-the skill's `SKILL.md` before acting.
+context when the user names it or the task clearly matches its description.
+Repo-side proof of routing is
+`npm run chef -- --routing --task "<request>"`, which shows the matched profile
+and a `[hint]` line (from 1.3.4); in a session, the proof is
+the `Routing plan:` line the assistant prints before acting.
 
 If GitHub release, push, or workflow checks fail because local GitHub
 authentication is stale, refresh GitHub CLI or Git Credential Manager according

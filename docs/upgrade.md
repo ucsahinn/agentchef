@@ -224,6 +224,26 @@ effort stays inherited. If you edited an installed role file, check the
 preview before applying. [Model Tiers](agents.md#model-tiers) explains the
 two tiers and how to change `workerModels`.
 
+## Upgrading To 1.3.4
+
+From 1.3.4, the `agentchef` plugin adds a prompt-submit
+routing hint for both CLIs. It reads each prompt in memory and, on a
+high-confidence match, adds one line of catalog identifiers; see the
+[security model](security-model.md#hooks) for what it reads and stores.
+
+```powershell
+npm run chef -- --update            # preview
+npm run chef -- --update --apply    # apply after review
+```
+
+- Codex: start a new session, open `/hooks`, and trust
+  `hooks/routing-hint.json` after checking it matches this repository. Until
+  you do, Codex does not run it.
+- Claude Code: start a new session; the hook runs once the updated plugin is
+  enabled.
+- To turn the hint off, set `AGENTCHEF_ROUTING_HINT=off` in the environment
+  that starts the CLI.
+
 ## Safe Upgrade Flow
 
 The guided CLI wraps the safe path:

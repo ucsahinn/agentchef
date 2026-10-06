@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.3.4 - 2026-10-06
+
+Skills and roles are used when a request needs them, by
+rule and by a one-line routing hint, instead of by guesswork.
+
+- Routing catalog 0.4.0 (`catalog/routing-profiles.json`): every profile names
+  its `verifier`, whether that verifier is required after file changes
+  (`autoVerify`: security-sensitive, release-or-publish, mcp-connector-change,
+  frontend-ui, data-systems), and the one skill to load first (`autoSkill`;
+  explicit-only skills such as `security-best-practices` are suggested, not
+  loaded). The free-text `owner` field is gone. New `code-review` profile for
+  "review this PR" requests, which used to land on release-or-publish because of
+  a bare `pr` term. `delegationPolicy` adds `autoSpawnCap: 2` and the
+  autoVerify spawn condition. Turkish signals were added to every profile.
+- Scorer (`scripts/lib/routing-recommendation.mjs`): the Turkish dotless ı is
+  folded ("çalışmıyor" now matches), multi-word `excludeTerms` work (they never
+  matched before), confidence is judged against the whole ranking (the last
+  shown entry is no longer "high" by default), and a single decisive term
+  ("deploy", "güvenlik") can reach "high". `normalize` is exported and reused by
+  the validator; `formatRoutingHint` builds the one-line hint from catalog
+  identifiers only. 40 Turkish and English golden prompts and 15 negatives are
+  tested.
+- The routing board prints `Verifier:` and `Auto-skill:` per profile and a
+  `[hint]` line for `--task`; `npm run chef -- --routing --task "..."` forwards
+  the task. The board's policy, boundary, and visibility sentences live once in
+  `scripts/lib/routing-text.mjs` (the board, `codex-status`, and
+  `validate-docs` import them; the boundary is built from the catalog's spawn
+  conditions). The profile list in the `adaptive-agent-routing` reference is
+  rendered from the catalog between markers; it had drifted on six profiles.
+- `catalog/skills.json`: `implicitInvocation: false` marks the skills that are
+  only used when the user asks for them (fetch, security-best-practices,
+  security-threat-model, improve-codebase-architecture).
+- Routing hint hook (both CLIs): on prompt submit,
+  `plugins/agentchef/scripts/routing-hint.mjs` scores the prompt in memory
+  against the plugin's rendered copy of the routing catalog and, on a
+  high-confidence match, adds one line of catalog identifiers (profile, skill
+  to load or suggest, verifier, roles, auto-spawn cap) to the model's context.
+  It keeps no prompt text or matched words, prints nothing on low confidence,
+  short or synthetic turns, inside subagents, or on any error, never blocks a
+  prompt, never writes to stderr, and remembers only which profiles it already
+  hinted in the session (a per-user state file of identifiers and counters that
+  it alone cleans up). `AGENTCHEF_ROUTING_HINT=off` disables it. Claude Code
+  gets it inline in the plugin manifest; Codex from `hooks/routing-hint.json`
+  (trust it in `/hooks`). The security audit now allowlists each hook event
+  name per reviewed file, compares the Codex hook file and the Claude manifest
+  to the renderer's definitions exactly, requires `plugins/agentchef/hooks` to
+  hold exactly the two reviewed files, and checks that the hook script imports
+  only inert modules.
+
 ## 1.3.3 - 2026-10-05
 
 The agent team works like an office team, with one

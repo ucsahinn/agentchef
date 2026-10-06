@@ -2,6 +2,29 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.4 - 2026-10-06
+
+AgentChef 1.3.4 uses a skill or a role when a request needs it, by rule and by
+a one-line routing hint, instead of by guesswork. Update with
+`npm run chef -- --update --apply`, then trust `hooks/routing-hint.json` in
+Codex's `/hooks` and start a new Claude Code session.
+
+### What Changed
+
+- **Routing catalog.** Each of the 19 profiles (new: `code-review`) names its
+  verifier, whether that verifier is required after file changes (security,
+  release, MCP, frontend, data), and the skill to load first; explicit-only
+  skills are suggested, not loaded. At most two agents start per task without
+  you naming them. Turkish requests route: the scorer folds the dotless ı.
+- **Routing hint.** On every prompt the plugin scores your request against the
+  catalog in memory and, on a high-confidence match, adds one line of catalog
+  identifiers for the model. It keeps no prompt text, never blocks a prompt,
+  and can be turned off with `AGENTCHEF_ROUTING_HINT=off`. See
+  [security model](security-model.md) and [PRIVACY](../PRIVACY.md).
+- **Roles.** Every role has one trigger-style description ("Use proactively
+  when ...") and preloads the skill its work needs. `npm run chef -- --routing
+  --task "<request>"` shows the matched profile and the hint line.
+
 ## v1.3.3 - 2026-10-05
 
 AgentChef 1.3.3 makes the agents work as one team: one protocol, a board

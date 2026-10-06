@@ -52,7 +52,8 @@ Avoid these patterns:
 - hook telemetry that records raw prompts, tool inputs, diffs, or outputs
 - lifecycle hook runtimes, `SessionStart` prompt injection,
   `hookSpecificOutput.additionalContext`, or learned-skill auto-injection
-  shipped as a silent default
+  shipped as a silent default; the one reviewed exception, from 1.3.4, is the plugin's prompt-submit routing hint, which prints one
+  line of catalog identifiers, stores no prompt text, and never blocks
 - plugin manifests that bundle write-capable interfaces or marketplace
   authentication requirements
 - plugin `.mcp.json` files with floating package specs or unpinned git-based

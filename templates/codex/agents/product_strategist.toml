@@ -1,5 +1,5 @@
 name = "product_strategist"
-description = "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation."
+description = "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation. Use proactively when a feature's value, scope, or smallest useful version is unclear; executable specs belong to spec_author."
 model = "gpt-6-luna"
 nickname_candidates = ["Product Strategist", "Scope Strategist", "Product Critic"]
 sandbox_mode = "read-only"

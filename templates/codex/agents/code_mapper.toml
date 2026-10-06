@@ -1,5 +1,5 @@
 name = "code_mapper"
-description = "Read-only explorer that maps relevant files, call paths, ownership boundaries, and existing patterns before implementation."
+description = "Read-only explorer that maps files, call paths, ownership, and existing patterns. Use proactively before changing an unfamiliar repository or a broad surface; not for implementation or review."
 model = "gpt-6-luna"
 nickname_candidates = ["Code Mapper", "Repo Scout", "Flow Mapper"]
 sandbox_mode = "read-only"

@@ -32,10 +32,11 @@ if (exists(agentsRel)) {
   if (lineCount < 100 || lineCount > 160) {
     fail(`Compact global AGENTS.md must stay between 100 and 160 lines, got ${lineCount}.`);
   }
+  const routingCatalog = JSON.parse(read("catalog/routing-profiles.json"));
   for (const required of [
-    "independent parallel work",
-    "noisy logs or research",
-    "the user explicitly requests delegation",
+    ...routingCatalog.delegationPolicy.spawnWhen,
+    `Start at most ${routingCatalog.delegationPolicy.autoSpawnCap} agents per task without the user naming them`,
+    "load the profile's auto-skill first",
     "Routing plan:",
     "Routing result:",
     "adaptive-agent-routing",
@@ -70,10 +71,10 @@ if (exists(routingReferenceRel)) {
 
 if (exists("catalog/routing-profiles.json")) {
   const routing = JSON.parse(read("catalog/routing-profiles.json"));
-  if (routing.version !== "0.3.0") fail("Routing catalog must use schema version 0.3.0.");
+  if (routing.version !== "0.4.0") fail("Routing catalog must use schema version 0.4.0.");
   if (routing.delegationPolicy?.mode !== "conditional") fail("Routing catalog must define conditional delegation.");
   if (routing.delegationPolicy?.capacityCeiling !== 10) fail("Routing capacity ceiling must preserve max_threads=10.");
-  if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) fail("Recommended parallelism must cap normal routing at four agents.");
+  if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) fail("Recommended parallelism must cap one task at four workers.");
   if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier" || routing.agentRuntimePolicy?.reasoningSelection !== "inherit-profile-adaptive") {
     fail("Routing catalog must run roles on the worker tier and keep reasoning inherited.");
   }

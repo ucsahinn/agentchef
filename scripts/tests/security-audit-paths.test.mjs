@@ -36,6 +36,19 @@ test("home-path patterns catch non-ASCII user names and leave placeholders alone
   assert.ok(!linux.test(fwd("/home", "runner", "work")), "CI runner paths stay allowed");
 });
 
+test("every hook event name is allowlisted per file and the hook files are compared exactly", () => {
+  for (const allowed of [
+    '{ pattern: /\\bUserPromptSubmit\\b/, allowed: ["plugins/agentchef/hooks/routing-hint.json", "plugins/agentchef/scripts/routing-hint.mjs"], manifest: true }',
+    '{ pattern: /\\bPreToolUse\\b/, allowed: ["plugins/agentchef/scripts/agent-spawn-guard.mjs"], manifest: true }',
+    '{ pattern: /\\bhookSpecificOutput\\b/, allowed: [], manifest: false }',
+    '{ pattern: /\\badditionalContext\\b/, allowed: [], manifest: false }',
+    'JSON.stringify(JSON.parse(text)) !== JSON.stringify(codexRoutingHintHook)',
+    '["process-hygiene.json", "routing-hint.json"]'
+  ]) {
+    assert.ok(source.includes(allowed), `audit source keeps: ${allowed.slice(0, 60)}`);
+  }
+});
+
 test("tracked files are listed NUL-separated, so non-ASCII paths are not quoted past the ignore check", () => {
   assert.match(source, /spawnSync\("git", \["ls-files", "-z"\]/);
   assert.match(source, /result\.stdout\.split\("\\0"\)/);

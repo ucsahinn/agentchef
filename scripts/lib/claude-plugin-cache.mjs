@@ -59,6 +59,7 @@ export function inspectClaudePluginCache(claudeHome, agentsHome) {
   collect(".claude-plugin");
   collect("mcp");
   collect("scripts");
+  collect("hooks");
   const stale = [];
   for (const version of served) {
     // A served copy missing a loaded file differs by that file, so a copy with

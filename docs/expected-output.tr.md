@@ -11,7 +11,7 @@ Discovery ciktisi no-write ve okunabilir kalir:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.3.3
+Package: agentchef@1.3.4
 Platform: windows
 Targets: codex
 
@@ -27,7 +27,7 @@ plugin kaynak ağacı, Git guard'ları, curated skill'ler) bir kez sayılır:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.3.3
+Package: agentchef@1.3.4
 Platform: windows
 Targets: codex, claude
 
@@ -69,16 +69,14 @@ node scripts/plan-install.mjs --all --json --redact-paths
 
 ```text
 AgentChef enterprise routing board
-Profiles: 18
-Policy: task-shape routing names matching specialists, selects matching skills when applicable, and may spawn bounded local subagents when the current runtime permits delegation; risky actions remain approval-gated.
+Profiles: 19
+Policy: route matches are recommendations; delegation is conditional; roles run on the catalog worker model and inherit reasoning effort.
 
-Subagent visibility contract:
-- Agent plan: name each requested agent, scope, reason, expected output, and wait policy before spawning.
-- Agent started: show the visible agent name or nickname and assigned task after spawning.
-- Agent result: wait for requested subagent results before continuing unless the user explicitly asks for background work.
-- Skill selected: name every selected skill and why it matches the task before acting on it.
-- MCP selected: name every selected MCP/tool surface, why it is needed, and whether it is read-only or approval-gated.
-- Surfaces used: agents=..., skills=..., mcp=..., commands=..., skipped=...
+Routing visibility contract:
+- Routing plan: selected agents, skills, MCPs, commands, and skips in one initial line.
+- Routing result: completion state and evidence in one final table or line.
+- Use /agent in Codex CLI to inspect active agent threads, switch to one, or steer/close it.
+- Boundary: A route match recommends a specialist and spawns one only when ... (the catalog's spawnWhen conditions and approval gates)
 ```
 
 Tek profil icin:

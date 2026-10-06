@@ -1,37 +1,155 @@
 {
-  "version": "0.3.0",
-  "dateChecked": "2026-07-29",
-  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces. A match does not create a coordination-board task or start work: delegation occurs only after an explicit user-created task and only to the selected coordinator's cataloged workers. Workers return structured evidence handoffs; the parent/main session relays cross-domain handoffs; a task becomes done only after its evidence is attached and reviewed. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
+  "version": "0.4.0",
+  "dateChecked": "2026-10-06",
+  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces and never start work by themselves. Two routes exist: Direct, where the main session briefs one to four specialists; Team, where a user-created coordination-board task names a coordinator that briefs its own cataloged workers. A profile with autoVerify names the verifier that runs before a file-changing task is reported done; other profiles only suggest one. A matched profile's autoSkill is loaded first when the skill allows implicit invocation and suggested otherwise. Workers return structured handoffs; the parent relays cross-domain handoffs; a task becomes done only after its evidence is attached and independently verified. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
   "delegationPolicy": {
     "mode": "conditional",
     "capacityCeiling": 10,
-    "recommendedParallelism": { "default": 1, "max": 4 },
+    "recommendedParallelism": {
+      "default": 1,
+      "max": 4
+    },
+    "autoSpawnCap": 2,
+    "autoSpawnNote": "At most autoSpawnCap agents start per task without the user naming them; agents the user asks for by name are not counted; more needs the user's explicit request.",
     "spawnWhen": [
+      "an autoVerify routing profile matched and files changed, so its verifier runs before the task is reported done",
       "independent parallel work exists",
       "noisy logs or research should be isolated from the main thread",
       "the user explicitly requests delegation"
     ],
-    "skipWhen": ["trivial work", "strictly sequential work", "tightly coupled single-file work"],
+    "skipWhen": [
+      "trivial work",
+      "strictly sequential work",
+      "tightly coupled work",
+      "single-file work where delegation adds coordination cost"
+    ],
     "writeIsolation": "Keep write-heavy implementation in the main thread unless the user explicitly requests non-overlapping write scopes.",
     "coordinationBoard": "Explicit task creation records work state; neither a routing match nor pane selection auto-starts, auto-completes, or infers approval."
   },
-  "agentRuntimePolicy": {"roleSelection":"automatic-when-beneficial","modelSelection":"worker-tier","reasoningSelection":"inherit-profile-adaptive","neverOverrideUserProfile":true,"note":"Specialist and coordinator roles run on the catalog workerModels (Codex gpt-6-luna, Claude sonnet); the session the user opens keeps its own model and profile."},
+  "agentRuntimePolicy": {
+    "roleSelection": "automatic-when-beneficial",
+    "modelSelection": "worker-tier",
+    "reasoningSelection": "inherit-profile-adaptive",
+    "neverOverrideUserProfile": true,
+    "note": "Specialist and coordinator roles run on the catalog workerModels in catalog/agents.json; the session the user opens keeps its own model and profile."
+  },
   "profiles": [
     {
       "id": "repo-map-before-change",
       "title": "Repository map before broad change",
       "trigger": "Broad implementation, refactor, unfamiliar repository, architecture question, or ownership uncertainty.",
-      "match": { "priority": 40, "phrases": [["repository map", 10], ["codebase map", 10], ["before broad change", 8]], "terms": [["repository", 4], ["repo", 4], ["architecture", 4], ["refactor", 3], ["ownership", 4], ["unfamiliar", 3], ["haritala", 5], ["mimari", 4]], "excludeTerms": [] },
-      "agents": ["code_mapper", "engineering_planner"],
-      "skills": ["context-budget-planner", "improve-codebase-architecture"],
-      "mcp": ["serena", "sequential-thinking", "codebase-memory"],
-      "flags": ["sandbox:read-only", "approval:on-request"],
+      "match": {
+        "priority": 40,
+        "phrases": [
+          [
+            "repository map",
+            10
+          ],
+          [
+            "codebase map",
+            10
+          ],
+          [
+            "before broad change",
+            8
+          ],
+          [
+            "kod haritasi",
+            10
+          ],
+          [
+            "map the repository",
+            10
+          ],
+          [
+            "map the codebase",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "repository",
+            4
+          ],
+          [
+            "repo",
+            4
+          ],
+          [
+            "architecture",
+            4
+          ],
+          [
+            "refactor",
+            3
+          ],
+          [
+            "ownership",
+            4
+          ],
+          [
+            "unfamiliar",
+            3
+          ],
+          [
+            "haritala",
+            5
+          ],
+          [
+            "mimari",
+            4
+          ],
+          [
+            "harita",
+            5
+          ],
+          [
+            "sahiplik",
+            4
+          ],
+          [
+            "haritasini",
+            5
+          ],
+          [
+            "haritasi",
+            5
+          ],
+          [
+            "kod tabani",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "code_mapper",
+        "engineering_planner"
+      ],
+      "skills": [
+        "context-budget-planner",
+        "improve-codebase-architecture"
+      ],
+      "mcp": [
+        "serena",
+        "sequential-thinking",
+        "codebase-memory"
+      ],
+      "flags": [
+        "sandbox:read-only",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Relevant files and ownership boundaries are listed before editing.", "Implementation scope names files or modules likely to change."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "context-budget-planner",
+      "evidence": [
+        "Relevant files and ownership boundaries are listed before editing.",
+        "Implementation scope names files or modules likely to change."
+      ],
       "boundary": "Keep exploration read-only where possible; write-heavy implementation stays in the main thread unless the user explicitly splits write scopes.",
-      "owner": "code_mapper with engineering_planner",
       "primarySurface": "catalog/routing-profiles.json and templates/codex/AGENTS.md",
       "durability": "Reusable repo policy and CLI routing-board evidence.",
       "privilegeDelta": "none; read-only mapping before edits.",
@@ -42,17 +160,101 @@
       "id": "current-docs-research",
       "title": "Current docs and version-sensitive facts",
       "trigger": "OpenAI/Codex behavior, library APIs, standards, product docs, or any current/version-sensitive claim.",
-      "match": { "priority": 45, "phrases": [["official docs", 10], ["current documentation", 9], ["version sensitive", 9]], "terms": [["codex", 3], ["openai", 5], ["api", 4], ["library", 4], ["standard", 4], ["docs", 4], ["documentation", 4], ["guncel", 5], ["dokumantasyon", 4], ["surum", 4]], "excludeTerms": [] },
-      "agents": ["docs_researcher"],
+      "match": {
+        "priority": 45,
+        "phrases": [
+          [
+            "official docs",
+            10
+          ],
+          [
+            "current documentation",
+            9
+          ],
+          [
+            "version sensitive",
+            9
+          ],
+          [
+            "resmi belge",
+            9
+          ]
+        ],
+        "terms": [
+          [
+            "codex",
+            3
+          ],
+          [
+            "openai",
+            5
+          ],
+          [
+            "api",
+            4
+          ],
+          [
+            "library",
+            4
+          ],
+          [
+            "standard",
+            4
+          ],
+          [
+            "docs",
+            4
+          ],
+          [
+            "documentation",
+            4
+          ],
+          [
+            "guncel",
+            5
+          ],
+          [
+            "dokumantasyon",
+            4
+          ],
+          [
+            "surum",
+            4
+          ],
+          [
+            "resmi",
+            4
+          ],
+          [
+            "belgeler",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "docs_researcher"
+      ],
       "skills": [],
-      "mcp": ["openaiDeveloperDocs", "context7"],
-      "flags": ["web_search:official-first", "mcp-docs:approve"],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "context7"
+      ],
+      "flags": [
+        "web_search:official-first",
+        "mcp-docs:approve"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Official or primary-source references are checked before implementation.", "Version-sensitive claims name the source used."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": null,
+      "evidence": [
+        "Official or primary-source references are checked before implementation.",
+        "Version-sensitive claims name the source used."
+      ],
       "boundary": "Do not rely on memory or guesses when official docs are available and the fact can drift.",
-      "owner": "docs_researcher",
       "primarySurface": "official docs, Context7, and docs citations in the final report",
       "durability": "Per-task evidence; durable docs only when behavior changes.",
       "privilegeDelta": "none for read-only docs lookup.",
@@ -63,17 +265,117 @@
       "id": "evidence-backed-research",
       "title": "Evidence-backed decision research",
       "trigger": "Deep research, literature or market review, landscape comparison, evidence synthesis, or a decision that requires traceable current sources and explicit uncertainty.",
-      "match": { "priority": 50, "phrases": [["deep research", 12], ["market review", 10], ["evidence synthesis", 12], ["source ledger", 10]], "terms": [["research", 5], ["literature", 5], ["market", 5], ["evidence", 5], ["sources", 4], ["comparison", 4], ["uncertainty", 4], ["arastirma", 5], ["kanit", 5], ["kaynak", 4], ["karsilastirma", 4]], "excludeTerms": [] },
-      "agents": ["docs_researcher", "product_strategist"],
-      "skills": ["evidence-research", "context-budget-planner"],
-      "mcp": ["context7", "sequential-thinking"],
-      "flags": ["web_search:official-first", "source-ledger:required"],
+      "match": {
+        "priority": 50,
+        "phrases": [
+          [
+            "deep research",
+            12
+          ],
+          [
+            "market review",
+            10
+          ],
+          [
+            "evidence synthesis",
+            12
+          ],
+          [
+            "source ledger",
+            10
+          ],
+          [
+            "derin arastirma",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "research",
+            5
+          ],
+          [
+            "literature",
+            5
+          ],
+          [
+            "market",
+            5
+          ],
+          [
+            "evidence",
+            5
+          ],
+          [
+            "sources",
+            4
+          ],
+          [
+            "comparison",
+            4
+          ],
+          [
+            "uncertainty",
+            4
+          ],
+          [
+            "arastirma",
+            5
+          ],
+          [
+            "kanit",
+            5
+          ],
+          [
+            "kaynak",
+            4
+          ],
+          [
+            "karsilastirma",
+            4
+          ],
+          [
+            "arastir",
+            5
+          ],
+          [
+            "kaynaklar",
+            4
+          ],
+          [
+            "karsilastir",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "docs_researcher",
+        "product_strategist"
+      ],
+      "skills": [
+        "evidence-research",
+        "context-budget-planner"
+      ],
+      "mcp": [
+        "context7",
+        "sequential-thinking"
+      ],
+      "flags": [
+        "web_search:official-first",
+        "source-ledger:required"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["A charter states the decision, question, scope, exclusions, and evidence standard before broad collection.", "Material claims cite checked source records and separate facts, inferences, recommendations, disagreements, and uncertainty."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "evidence-research",
+      "evidence": [
+        "A charter states the decision, question, scope, exclusions, and evidence standard before broad collection.",
+        "Material claims cite checked source records and separate facts, inferences, recommendations, disagreements, and uncertainty."
+      ],
       "boundary": "Do not fabricate sources or systematic-review rigor; private data, paid APIs, participant contact, publication, and other external writes require explicit approval.",
-      "owner": "evidence-research in the main thread with optional docs_researcher or product_strategist review",
       "primarySurface": "research charter, search log, source matrix, claim ledger, synthesis, and reproducible appendix",
       "durability": "Per-task evidence package; durable publication only after explicit review and approval.",
       "privilegeDelta": "public read-only research by default; private, paid, participant, and publishing surfaces stay gated.",
@@ -84,17 +386,122 @@
       "id": "context-surface-decision",
       "title": "Context surface decision",
       "trigger": "A change might belong in prompts, AGENTS.md, config profiles, skills, plugins, MCP, hooks, memory, rules, or docs.",
-      "match": { "priority": 55, "phrases": [["context surface", 12], ["agents md", 10], ["config profile", 10], ["where should", 7]], "terms": [["prompt", 4], ["agents", 5], ["config", 5], ["profile", 4], ["skill", 4], ["plugin", 4], ["hook", 4], ["memory", 4], ["rule", 4], ["context", 5], ["nereye", 5], ["kilavuz", 3]], "excludeTerms": [] },
-      "agents": ["context_architect", "prompt_architect"],
-      "skills": ["ai-project-starter", "ai-skill-create", "prompt-architect"],
-      "mcp": ["openaiDeveloperDocs", "sequential-thinking"],
-      "flags": ["profile:development", "approval:on-request"],
+      "match": {
+        "priority": 55,
+        "phrases": [
+          [
+            "context surface",
+            12
+          ],
+          [
+            "agents md",
+            10
+          ],
+          [
+            "config profile",
+            10
+          ],
+          [
+            "where should",
+            7
+          ],
+          [
+            "nereye yazilmali",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "prompt",
+            4
+          ],
+          [
+            "agents",
+            5
+          ],
+          [
+            "config",
+            5
+          ],
+          [
+            "profile",
+            4
+          ],
+          [
+            "skill",
+            4
+          ],
+          [
+            "plugin",
+            4
+          ],
+          [
+            "hook",
+            4
+          ],
+          [
+            "memory",
+            4
+          ],
+          [
+            "rule",
+            4
+          ],
+          [
+            "context",
+            5
+          ],
+          [
+            "nereye",
+            5
+          ],
+          [
+            "kilavuz",
+            3
+          ],
+          [
+            "ayar",
+            4
+          ],
+          [
+            "kural",
+            4
+          ],
+          [
+            "hafiza",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "context_architect",
+        "prompt_architect"
+      ],
+      "skills": [
+        "ai-project-starter",
+        "ai-skill-create",
+        "prompt-architect"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "sequential-thinking"
+      ],
+      "flags": [
+        "profile:development",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["The chosen surface names durability, owner, privilege, validation, and rollback.", "Docs and validators cover the changed surface."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "prompt-architect",
+      "evidence": [
+        "The chosen surface names durability, owner, privilege, validation, and rollback.",
+        "Docs and validators cover the changed surface."
+      ],
       "boundary": "Do not move secrets, credentials, account automation, or broad permissions into durable global instructions.",
-      "owner": "context_architect with prompt_architect",
       "primarySurface": "AGENTS.md, skills, config templates, plugin metadata, docs, or catalog files",
       "durability": "Durable only when placed in template/config/docs; otherwise thread-local.",
       "privilegeDelta": "none by default; approval mode and connector exposure must stay explicit.",
@@ -105,17 +512,139 @@
       "id": "bug-root-cause",
       "title": "Bug or failing test root cause",
       "trigger": "Bug report, regression, failing test, failing CI, unclear behavior, or production-like incident.",
-      "match": { "priority": 65, "phrases": [["root cause", 12], ["failing test", 12], ["failing ci", 12], ["bug report", 10]], "terms": [["bug", 7], ["regression", 7], ["failure", 6], ["failing", 6], ["test", 4], ["ci", 6], ["debug", 6], ["incident", 6], ["hata", 7], ["bozuk", 6], ["coktu", 7], ["calismiyor", 6]], "excludeTerms": [] },
-      "agents": ["root_cause_debugger", "qa_lead", "test_verifier"],
-      "skills": ["systematic-debugging", "test-driven-development", "gh-fix-ci"],
-      "mcp": ["serena", "context7"],
-      "flags": ["workspace-write", "approval:on-request"],
+      "match": {
+        "priority": 65,
+        "phrases": [
+          [
+            "root cause",
+            12
+          ],
+          [
+            "failing test",
+            12
+          ],
+          [
+            "failing ci",
+            12
+          ],
+          [
+            "bug report",
+            10
+          ],
+          [
+            "test basarisiz",
+            12
+          ],
+          [
+            "hata ayikla",
+            10
+          ],
+          [
+            "kok neden",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "bug",
+            7
+          ],
+          [
+            "regression",
+            7
+          ],
+          [
+            "failure",
+            6
+          ],
+          [
+            "failing",
+            6
+          ],
+          [
+            "test",
+            4
+          ],
+          [
+            "ci",
+            6
+          ],
+          [
+            "debug",
+            6
+          ],
+          [
+            "incident",
+            6
+          ],
+          [
+            "hata",
+            7
+          ],
+          [
+            "bozuk",
+            6
+          ],
+          [
+            "coktu",
+            7
+          ],
+          [
+            "calismiyor",
+            6
+          ],
+          [
+            "calismiyo",
+            6
+          ],
+          [
+            "patladi",
+            6
+          ],
+          [
+            "hatasi",
+            6
+          ],
+          [
+            "hatayi",
+            6
+          ],
+          [
+            "basarisiz",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "root_cause_debugger",
+        "qa_lead",
+        "test_verifier"
+      ],
+      "skills": [
+        "systematic-debugging",
+        "test-driven-development",
+        "gh-fix-ci"
+      ],
+      "mcp": [
+        "serena",
+        "context7"
+      ],
+      "flags": [
+        "workspace-write",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Reproduction or failure evidence is captured before the fix.", "A targeted verification command passes after the fix."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "systematic-debugging",
+      "evidence": [
+        "Reproduction or failure evidence is captured before the fix.",
+        "A targeted verification command passes after the fix."
+      ],
       "boundary": "Do not patch by guesswork or weaken tests, types, auth, validation, or error handling to get green output.",
-      "owner": "root_cause_debugger with test_verifier",
       "primarySurface": "reproduction command output, failing file, and targeted verifier",
       "durability": "Per-incident evidence plus tests or validators when behavior changes.",
       "privilegeDelta": "none until a scoped fix is implemented.",
@@ -126,17 +655,110 @@
       "id": "bounded-feature",
       "title": "Bounded feature implementation",
       "trigger": "Add, build, implement, or extend a bounded product or code feature.",
-      "match": { "priority": 40, "phrases": [["new feature", 12], ["implement feature", 10], ["add feature", 10]], "terms": [["add", 4], ["build", 5], ["implement", 6], ["extend", 5], ["feature", 6], ["gelistir", 6], ["ekle", 5], ["uygula", 5], ["ozellik", 6]], "excludeTerms": [] },
-      "agents": ["spec_author", "engineering_planner", "test_verifier", "code_reviewer"],
-      "skills": ["test-driven-development", "documentation-and-adrs", "dependency-upgrade"],
-      "mcp": ["serena", "context7", "sequential-thinking"],
-      "flags": ["profile:development", "workspace-write", "approval:on-request"],
+      "match": {
+        "priority": 40,
+        "phrases": [
+          [
+            "new feature",
+            12
+          ],
+          [
+            "implement feature",
+            10
+          ],
+          [
+            "add feature",
+            10
+          ],
+          [
+            "yeni ozellik",
+            12
+          ],
+          [
+            "ozellik ekle",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "add",
+            4
+          ],
+          [
+            "build",
+            5
+          ],
+          [
+            "implement",
+            6
+          ],
+          [
+            "extend",
+            5
+          ],
+          [
+            "feature",
+            6
+          ],
+          [
+            "gelistir",
+            6
+          ],
+          [
+            "ekle",
+            5
+          ],
+          [
+            "uygula",
+            5
+          ],
+          [
+            "ozellik",
+            6
+          ],
+          [
+            "gelistirme",
+            5
+          ],
+          [
+            "ekleyelim",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "spec_author",
+        "engineering_planner",
+        "test_verifier",
+        "code_reviewer"
+      ],
+      "skills": [
+        "test-driven-development",
+        "documentation-and-adrs",
+        "dependency-upgrade"
+      ],
+      "mcp": [
+        "serena",
+        "context7",
+        "sequential-thinking"
+      ],
+      "flags": [
+        "profile:development",
+        "workspace-write",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Feature scope, non-goals, and verification gates are explicit.", "Focused tests or equivalent project checks cover the changed behavior."],
+      "verifier": "code_reviewer",
+      "autoVerify": false,
+      "autoSkill": "test-driven-development",
+      "evidence": [
+        "Feature scope, non-goals, and verification gates are explicit.",
+        "Focused tests or equivalent project checks cover the changed behavior."
+      ],
       "boundary": "Do not add dependencies, change public APIs, or touch auth/billing/deploy behavior without explicit approval.",
-      "owner": "engineering_planner with test_verifier",
       "primarySurface": "implementation files, focused tests, docs, and validators",
       "durability": "Durable source change with matching docs/tests when user-facing.",
       "privilegeDelta": "workspace writes only unless explicitly expanded.",
@@ -147,39 +769,277 @@
       "id": "data-systems",
       "title": "Read-only data documentation evidence",
       "trigger": "Read-only data documentation, lineage, catalog, quality, or source-evidence work.",
-      "match": { "priority": 75, "phrases": [["data lineage", 16], ["data catalog", 15], ["data quality", 15], ["source evidence", 14]], "terms": [["data", 8], ["documentation", 9], ["lineage", 9], ["catalog", 8], ["quality", 8], ["evidence", 7], ["veri", 8], ["dokumantasyon", 9], ["soyagaci", 9], ["katalog", 8], ["kalite", 8], ["kanit", 7]], "excludeTerms": [] },
-      "agents": ["docs_researcher"],
-      "skills": ["evidence-research"],
-      "mcp": ["openaiDeveloperDocs", "context7"],
-      "flags": ["sandbox:read-only", "web_search:official-first"],
+      "match": {
+        "priority": 75,
+        "phrases": [
+          [
+            "data lineage",
+            16
+          ],
+          [
+            "data catalog",
+            15
+          ],
+          [
+            "data quality",
+            15
+          ],
+          [
+            "source evidence",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "data",
+            8
+          ],
+          [
+            "documentation",
+            5
+          ],
+          [
+            "lineage",
+            9
+          ],
+          [
+            "catalog",
+            8
+          ],
+          [
+            "quality",
+            8
+          ],
+          [
+            "evidence",
+            4
+          ],
+          [
+            "veri",
+            8
+          ],
+          [
+            "dokumantasyon",
+            5
+          ],
+          [
+            "soyagaci",
+            9
+          ],
+          [
+            "katalog",
+            8
+          ],
+          [
+            "kalite",
+            8
+          ],
+          [
+            "kanit",
+            4
+          ]
+        ],
+        "excludeTerms": [
+          "readme",
+          "adr",
+          "release notes",
+          "changelog"
+        ]
+      },
+      "agents": [
+        "docs_researcher"
+      ],
+      "skills": [
+        "evidence-research"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "context7"
+      ],
+      "flags": [
+        "sandbox:read-only",
+        "web_search:official-first"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["The handoff records documentation, lineage, catalog, and quality evidence with source, scope, and uncertainty.", "Data-quality findings distinguish observed facts, inferences, unresolved gaps, and the next read-only verification step."],
+      "verifier": "test_verifier",
+      "autoVerify": true,
+      "autoSkill": null,
+      "evidence": [
+        "The handoff records documentation, lineage, catalog, and quality evidence with source, scope, and uncertainty.",
+        "Data-quality findings distinguish observed facts, inferences, unresolved gaps, and the next read-only verification step."
+      ],
       "boundary": "Do not access production data, private datasets, credentials, databases, or mutate schemas without explicit task-scoped approval.",
-      "owner": "backend_coordinator with docs_researcher",
       "primarySurface": "read-only data documentation, lineage records, catalog entries, quality evidence, and source records",
       "durability": "Per-task evidence; durable data documentation updates only after scoped review.",
       "privilegeDelta": "read-only evidence by default; private-data, database, and schema-write access stay explicitly gated.",
       "validationGate": "The handoff names source, scope, lineage, uncertainty, and the read-only evidence inspected.",
       "rollback": "Discard unverified conclusions or revert only the scoped documentation change.",
-      "crossDomainHandoffs": [{ "when": "The task needs database performance measurement, runtime health, or operational diagnostics.", "toCoordinator": "devops_coordinator", "via": "parent-routed-handoff", "action": "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for devops_coordinator routing." }]
+      "crossDomainHandoffs": [
+        {
+          "when": "The task needs database performance measurement, runtime health, or operational diagnostics.",
+          "toCoordinator": "devops_coordinator",
+          "via": "parent-routed-handoff",
+          "action": "Return the question, inspected evidence, conflict, decision needed, and open verification need to the parent for devops_coordinator routing."
+        }
+      ]
     },
     {
       "id": "frontend-ui",
       "title": "Frontend, UI, and browser evidence",
       "trigger": "Frontend build, redesign, UI polish, accessibility, rendered behavior, screenshots, responsive layout, or browser errors.",
-      "match": { "priority": 55, "phrases": [["user interface", 11], ["browser evidence", 10], ["responsive layout", 10], ["ui polish", 10]], "terms": [["frontend", 7], ["ui", 7], ["ux", 7], ["browser", 6], ["screenshot", 6], ["responsive", 6], ["accessibility", 6], ["rendered", 5], ["arayuz", 7], ["tasarim", 6], ["ekran", 4]], "excludeTerms": [] },
-      "agents": ["design_reviewer", "frontend_verifier", "performance_auditor"],
-      "skills": ["frontend-design", "webapp-testing", "accessibility", "web-quality-audit"],
-      "mcp": ["playwright", "chrome-devtools", "context7"],
-      "flags": ["workspace-write", "mcp-browser:prompt"],
+      "match": {
+        "priority": 55,
+        "phrases": [
+          [
+            "user interface",
+            11
+          ],
+          [
+            "browser evidence",
+            10
+          ],
+          [
+            "responsive layout",
+            10
+          ],
+          [
+            "ui polish",
+            10
+          ],
+          [
+            "ekran goruntusu",
+            10
+          ],
+          [
+            "kullanici arayuzu",
+            11
+          ]
+        ],
+        "terms": [
+          [
+            "frontend",
+            7
+          ],
+          [
+            "ui",
+            7
+          ],
+          [
+            "ux",
+            7
+          ],
+          [
+            "browser",
+            6
+          ],
+          [
+            "screenshot",
+            6
+          ],
+          [
+            "responsive",
+            6
+          ],
+          [
+            "accessibility",
+            6
+          ],
+          [
+            "rendered",
+            5
+          ],
+          [
+            "arayuz",
+            7
+          ],
+          [
+            "tasarim",
+            6
+          ],
+          [
+            "ekran",
+            4
+          ],
+          [
+            "buton",
+            6
+          ],
+          [
+            "sayfa",
+            4
+          ],
+          [
+            "gorunum",
+            5
+          ],
+          [
+            "duzen",
+            4
+          ],
+          [
+            "css",
+            6
+          ],
+          [
+            "mobil",
+            5
+          ],
+          [
+            "arayuzdeki",
+            7
+          ],
+          [
+            "arayuzu",
+            7
+          ],
+          [
+            "mobilde",
+            5
+          ],
+          [
+            "goruntusuyle",
+            5
+          ],
+          [
+            "goruntusu",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "design_reviewer",
+        "frontend_verifier",
+        "performance_auditor"
+      ],
+      "skills": [
+        "frontend-design",
+        "webapp-testing",
+        "accessibility",
+        "web-quality-audit"
+      ],
+      "mcp": [
+        "playwright",
+        "chrome-devtools",
+        "context7"
+      ],
+      "flags": [
+        "workspace-write",
+        "mcp-browser:prompt"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Rendered UI is checked with browser evidence when available.", "Accessibility, overflow, console errors, and responsive states are considered."],
+      "verifier": "frontend_verifier",
+      "autoVerify": true,
+      "autoSkill": "frontend-design",
+      "evidence": [
+        "Rendered UI is checked with browser evidence when available.",
+        "Accessibility, overflow, console errors, and responsive states are considered."
+      ],
       "boundary": "Do not claim UI quality from code inspection alone when browser verification is available.",
-      "owner": "design_reviewer with frontend_verifier",
       "primarySurface": "browser evidence, screenshots, accessibility checks, and frontend files",
       "durability": "Durable UI source change plus captured evidence for verification.",
       "privilegeDelta": "browser/tool access remains approval-gated when configured that way.",
@@ -190,17 +1050,125 @@
       "id": "security-sensitive",
       "title": "Security-sensitive code and abuse paths",
       "trigger": "Auth, authorization, input validation, secrets, API routes, database access, permissions, crypto, or threat modeling.",
-      "match": { "priority": 90, "phrases": [["threat model", 14], ["security review", 14], ["input validation", 12], ["access control", 12]], "terms": [["security", 9], ["auth", 9], ["authorization", 9], ["secret", 9], ["permission", 8], ["crypto", 8], ["vulnerability", 9], ["guvenlik", 9], ["kimlik", 8], ["yetki", 8], ["parola", 8], ["tehdit", 9]], "excludeTerms": [] },
-      "agents": ["security_auditor", "code_reviewer"],
-      "skills": ["security-best-practices", "security-threat-model"],
-      "mcp": ["openaiDeveloperDocs", "serena"],
-      "flags": ["profile:review", "sandbox:read-only"],
+      "match": {
+        "priority": 90,
+        "phrases": [
+          [
+            "threat model",
+            14
+          ],
+          [
+            "security review",
+            14
+          ],
+          [
+            "input validation",
+            12
+          ],
+          [
+            "access control",
+            12
+          ],
+          [
+            "guvenlik incelemesi",
+            14
+          ],
+          [
+            "tehdit modeli",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "security",
+            9
+          ],
+          [
+            "auth",
+            9
+          ],
+          [
+            "authorization",
+            9
+          ],
+          [
+            "secret",
+            9
+          ],
+          [
+            "permission",
+            8
+          ],
+          [
+            "crypto",
+            8
+          ],
+          [
+            "vulnerability",
+            9
+          ],
+          [
+            "guvenlik",
+            9
+          ],
+          [
+            "kimlik",
+            8
+          ],
+          [
+            "yetki",
+            8
+          ],
+          [
+            "parola",
+            8
+          ],
+          [
+            "tehdit",
+            9
+          ],
+          [
+            "sizinti",
+            8
+          ],
+          [
+            "sifre",
+            8
+          ],
+          [
+            "yetkilendirme",
+            8
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "security_auditor",
+        "code_reviewer"
+      ],
+      "skills": [
+        "security-best-practices",
+        "security-threat-model"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "serena"
+      ],
+      "flags": [
+        "profile:review",
+        "sandbox:read-only"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Security review stays read-only until a scoped fix is assigned.", "Secret scans or equivalent checks run before release-sensitive handoff."],
+      "verifier": "security_auditor",
+      "autoVerify": true,
+      "autoSkill": "security-best-practices",
+      "evidence": [
+        "Security review stays read-only until a scoped fix is assigned.",
+        "Secret scans or equivalent checks run before release-sensitive handoff."
+      ],
       "boundary": "Never print secrets, broaden permissions, or bypass auth/validation to make checks pass.",
-      "owner": "security_auditor with code_reviewer",
       "primarySurface": "read-only security evidence, scoped fixes, and secret-scan output",
       "durability": "Durable only through reviewed guardrail, validation, or documentation changes.",
       "privilegeDelta": "read-only review first; no credential or permission expansion.",
@@ -211,17 +1179,104 @@
       "id": "mcp-connector-change",
       "title": "MCP connector or tool exposure change",
       "trigger": "Enable, disable, add, troubleshoot, or change MCP servers, app connectors, tool allowlists, auth, or timeouts.",
-      "match": { "priority": 85, "phrases": [["mcp connector", 15], ["tool allowlist", 14], ["tool exposure", 14], ["oauth callback", 12]], "terms": [["mcp", 12], ["connector", 10], ["allowlist", 10], ["timeout", 8], ["oauth", 10], ["server", 4], ["tools", 5], ["baglanti", 8], ["arac", 5], ["izin", 5]], "excludeTerms": [] },
-      "agents": ["mcp_integrator", "security_auditor"],
-      "skills": ["mcp-builder"],
-      "mcp": ["openaiDeveloperDocs", "context7"],
-      "flags": ["mcp-auth:disabled-by-default", "default_tools_approval_mode:prompt"],
+      "match": {
+        "priority": 85,
+        "phrases": [
+          [
+            "mcp connector",
+            15
+          ],
+          [
+            "tool allowlist",
+            14
+          ],
+          [
+            "tool exposure",
+            14
+          ],
+          [
+            "oauth callback",
+            12
+          ],
+          [
+            "mcp sunucusu",
+            15
+          ]
+        ],
+        "terms": [
+          [
+            "mcp",
+            12
+          ],
+          [
+            "connector",
+            10
+          ],
+          [
+            "allowlist",
+            10
+          ],
+          [
+            "timeout",
+            8
+          ],
+          [
+            "oauth",
+            10
+          ],
+          [
+            "server",
+            4
+          ],
+          [
+            "tools",
+            5
+          ],
+          [
+            "baglanti",
+            8
+          ],
+          [
+            "arac",
+            5
+          ],
+          [
+            "izin",
+            5
+          ],
+          [
+            "sunucu",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "mcp_integrator",
+        "security_auditor"
+      ],
+      "skills": [
+        "mcp-builder"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "context7"
+      ],
+      "flags": [
+        "mcp-auth:disabled-by-default",
+        "default_tools_approval_mode:prompt"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Connector risk, auth boundary, enabled tools, and approval mode are documented.", "Authenticated/account/database/broad-destructive graph connectors remain disabled unless explicitly needed."],
+      "verifier": "security_auditor",
+      "autoVerify": true,
+      "autoSkill": "mcp-builder",
+      "evidence": [
+        "Connector risk, auth boundary, enabled tools, and approval mode are documented.",
+        "Authenticated/account/database/broad-destructive graph connectors remain disabled unless explicitly needed."
+      ],
       "boundary": "Do not enable account, database, production, broad filesystem, or broad/destructive graph-indexing connectors silently.",
-      "owner": "mcp_integrator with security_auditor",
       "primarySurface": "catalog/mcp-servers.json, config templates, and MCP docs",
       "durability": "Durable only in catalog/config templates; live connectors remain session/config controlled.",
       "privilegeDelta": "disabled-by-default account/database/broad-destructive graph connectors unless explicitly enabled.",
@@ -229,20 +1284,263 @@
       "rollback": "Set connector enabled=false or remove the catalog/config entry, then restart Codex."
     },
     {
-      "id": "release-or-publish",
-      "title": "Release, package, push, or publish readiness",
-      "trigger": "Commit, push, PR, tag, release, package, deploy, artifact cleanup, or publication readiness.",
-      "match": { "priority": 95, "phrases": [["github release", 16], ["release readiness", 14], ["create tag", 14], ["push origin", 12]], "terms": [["commit", 8], ["push", 9], ["pr", 8], ["tag", 10], ["release", 11], ["publish", 10], ["deploy", 10], ["package", 7], ["artifact", 7], ["yayin", 11], ["surum", 7], ["etiket", 10], ["gonder", 7]], "excludeTerms": [] },
-      "agents": ["release_verifier", "test_verifier", "security_auditor"],
-      "skills": ["shipping-and-launch", "git-workflow-and-versioning"],
-      "mcp": ["serena"],
-      "flags": ["profile:review", "gitleaks:required"],
+      "id": "code-review",
+      "title": "Code or pull request review",
+      "trigger": "A diff, pull request, or risky change needs a fresh-context review before it is merged or shipped.",
+      "match": {
+        "priority": 60,
+        "phrases": [
+          [
+            "code review",
+            14
+          ],
+          [
+            "review this pr",
+            14
+          ],
+          [
+            "review the pr",
+            14
+          ],
+          [
+            "review the diff",
+            14
+          ],
+          [
+            "pull request review",
+            12
+          ],
+          [
+            "kod incelemesi",
+            14
+          ],
+          [
+            "kodu incele",
+            14
+          ],
+          [
+            "pr incele",
+            14
+          ],
+          [
+            "diff incele",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "review",
+            6
+          ],
+          [
+            "reviewer",
+            6
+          ],
+          [
+            "diff",
+            7
+          ],
+          [
+            "pr",
+            6
+          ],
+          [
+            "pull",
+            4
+          ],
+          [
+            "incele",
+            6
+          ],
+          [
+            "inceleme",
+            5
+          ],
+          [
+            "gozden",
+            5
+          ]
+        ],
+        "excludeTerms": [
+          "gpt pro",
+          "external review",
+          "second model",
+          "dis inceleme"
+        ]
+      },
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ],
+      "skills": [],
+      "mcp": [
+        "serena",
+        "context7"
+      ],
+      "flags": [
+        "sandbox:read-only",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Git status, staged diff, release notes, version, artifacts, and secret scan are checked.", "Push, tag, release, deploy, and destructive cleanup require explicit user approval."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": null,
+      "evidence": [
+        "Findings are ordered by severity with file and line references.",
+        "A targeted verification command or test run backs every blocking finding."
+      ],
+      "boundary": "Do not rewrite code during review or approve a change without reading the diff; findings are reports, and fixes stay with the owner and are verified separately.",
+      "primarySurface": "the diff or pull request under review plus the targeted verification command",
+      "durability": "Per-review findings; regression tests when a finding becomes a fix.",
+      "privilegeDelta": "none; review is read-only.",
+      "validationGate": "Each blocking finding cites file and line and names the check that proves it.",
+      "rollback": "No changes are made during review; nothing to roll back."
+    },
+    {
+      "id": "release-or-publish",
+      "title": "Release, package, push, or publish readiness",
+      "trigger": "Commit, push, PR, tag, release, package, deploy, artifact cleanup, or publication readiness.",
+      "match": {
+        "priority": 95,
+        "phrases": [
+          [
+            "github release",
+            16
+          ],
+          [
+            "release readiness",
+            14
+          ],
+          [
+            "create tag",
+            14
+          ],
+          [
+            "push origin",
+            12
+          ],
+          [
+            "open pr",
+            12
+          ],
+          [
+            "merge pr",
+            12
+          ],
+          [
+            "pr ac",
+            12
+          ],
+          [
+            "pr birlestir",
+            12
+          ],
+          [
+            "yayina al",
+            14
+          ],
+          [
+            "surum cikar",
+            14
+          ],
+          [
+            "etiket olustur",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "commit",
+            8
+          ],
+          [
+            "push",
+            9
+          ],
+          [
+            "tag",
+            10
+          ],
+          [
+            "release",
+            11
+          ],
+          [
+            "publish",
+            10
+          ],
+          [
+            "deploy",
+            10
+          ],
+          [
+            "package",
+            7
+          ],
+          [
+            "artifact",
+            7
+          ],
+          [
+            "yayin",
+            11
+          ],
+          [
+            "surum",
+            7
+          ],
+          [
+            "etiket",
+            10
+          ],
+          [
+            "gonder",
+            7
+          ],
+          [
+            "yayinla",
+            10
+          ],
+          [
+            "dagit",
+            8
+          ],
+          [
+            "birlestir",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "release_verifier",
+        "test_verifier",
+        "security_auditor"
+      ],
+      "skills": [
+        "shipping-and-launch",
+        "git-workflow-and-versioning"
+      ],
+      "mcp": [
+        "serena"
+      ],
+      "flags": [
+        "profile:review",
+        "gitleaks:required"
+      ],
+      "delegationMode": "conditional",
+      "skillMode": "narrowest-owner",
+      "mcpMode": "use-when-available-and-approved",
+      "verifier": "release_verifier",
+      "autoVerify": true,
+      "autoSkill": "shipping-and-launch",
+      "evidence": [
+        "Git status, staged diff, release notes, version, artifacts, and secret scan are checked.",
+        "Push, tag, release, deploy, and destructive cleanup require explicit user approval."
+      ],
       "boundary": "Do not commit, push, publish, deploy, delete, or rotate credentials unless the user explicitly asks.",
-      "owner": "release_verifier with test_verifier and security_auditor",
       "primarySurface": "git status, staged diff, package metadata, changelog, release notes, and secret scan",
       "durability": "Durable release metadata and git history only after explicit user approval.",
       "privilegeDelta": "commit, push, tag, release, publish, deploy, and cleanup stay gated.",
@@ -253,17 +1551,116 @@
       "id": "seo-web-quality",
       "title": "SEO and web quality",
       "trigger": "Crawlability, metadata, structured data, sitemap, hreflang, canonical URL, Core Web Vitals, or web quality audit.",
-      "match": { "priority": 60, "phrases": [["core web vitals", 15], ["structured data", 12], ["canonical url", 12], ["seo audit", 12]], "terms": [["seo", 12], ["sitemap", 10], ["hreflang", 10], ["canonical", 10], ["metadata", 8], ["crawlability", 10], ["lighthouse", 9], ["vitals", 8], ["arama", 5], ["indeks", 8]], "excludeTerms": [] },
-      "agents": ["google_seo_auditor", "performance_auditor", "frontend_verifier"],
-      "skills": ["seo", "web-quality-audit", "accessibility"],
-      "mcp": ["playwright", "chrome-devtools", "context7"],
-      "flags": ["mcp-browser:prompt", "web_search:official-first"],
+      "match": {
+        "priority": 60,
+        "phrases": [
+          [
+            "core web vitals",
+            15
+          ],
+          [
+            "structured data",
+            12
+          ],
+          [
+            "canonical url",
+            12
+          ],
+          [
+            "seo audit",
+            12
+          ],
+          [
+            "arama motoru",
+            12
+          ],
+          [
+            "site haritasi",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "seo",
+            12
+          ],
+          [
+            "sitemap",
+            10
+          ],
+          [
+            "hreflang",
+            10
+          ],
+          [
+            "canonical",
+            10
+          ],
+          [
+            "metadata",
+            8
+          ],
+          [
+            "crawlability",
+            10
+          ],
+          [
+            "lighthouse",
+            9
+          ],
+          [
+            "vitals",
+            8
+          ],
+          [
+            "arama",
+            5
+          ],
+          [
+            "indeks",
+            8
+          ],
+          [
+            "indeksleme",
+            8
+          ],
+          [
+            "meta",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "google_seo_auditor",
+        "performance_auditor",
+        "frontend_verifier"
+      ],
+      "skills": [
+        "seo",
+        "web-quality-audit",
+        "accessibility"
+      ],
+      "mcp": [
+        "playwright",
+        "chrome-devtools",
+        "context7"
+      ],
+      "flags": [
+        "mcp-browser:prompt",
+        "web_search:official-first"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["SEO claims are tied to inspectable markup, routes, rendered output, or official guidance.", "Performance and accessibility findings include reproducible checks when available."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "seo",
+      "evidence": [
+        "SEO claims are tied to inspectable markup, routes, rendered output, or official guidance.",
+        "Performance and accessibility findings include reproducible checks when available."
+      ],
       "boundary": "Do not promise rankings, automate backlinks, or use credentialed Search Console access without explicit approval.",
-      "owner": "google_seo_auditor with performance_auditor and frontend_verifier",
       "primarySurface": "rendered markup, route metadata, sitemap/canonical data, and browser evidence",
       "durability": "Durable source/docs changes only; external search-console actions stay gated.",
       "privilegeDelta": "browser/read-only evidence by default; credentialed tools require approval.",
@@ -274,17 +1671,106 @@
       "id": "onboarding-support",
       "title": "Onboarding and support evidence",
       "trigger": "Onboarding, support, setup diagnostics, first successful outcome, recovery guidance, or user-support flow review.",
-      "match": { "priority": 75, "phrases": [["onboarding support", 18], ["setup diagnostics", 16], ["recovery guidance", 15], ["first successful outcome", 15]], "terms": [["onboarding", 10], ["support", 10], ["setup", 7], ["diagnostics", 8], ["recovery", 8], ["guidance", 7], ["customer", 7], ["destek", 10], ["kurulum", 8], ["kurtarma", 8]], "excludeTerms": [] },
-      "agents": ["devex_auditor"],
+      "match": {
+        "priority": 75,
+        "phrases": [
+          [
+            "onboarding support",
+            18
+          ],
+          [
+            "setup diagnostics",
+            16
+          ],
+          [
+            "recovery guidance",
+            15
+          ],
+          [
+            "first successful outcome",
+            15
+          ],
+          [
+            "ilk kurulum",
+            14
+          ],
+          [
+            "sorun giderme",
+            12
+          ],
+          [
+            "kullanici destegi",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "onboarding",
+            10
+          ],
+          [
+            "support",
+            10
+          ],
+          [
+            "setup",
+            7
+          ],
+          [
+            "diagnostics",
+            8
+          ],
+          [
+            "recovery",
+            8
+          ],
+          [
+            "guidance",
+            7
+          ],
+          [
+            "customer",
+            7
+          ],
+          [
+            "destek",
+            10
+          ],
+          [
+            "kurulum",
+            8
+          ],
+          [
+            "kurtarma",
+            8
+          ],
+          [
+            "yardim",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "devex_auditor"
+      ],
       "skills": [],
       "mcp": [],
-      "flags": ["workspace-write", "approval:on-request"],
+      "flags": [
+        "workspace-write",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "none",
-      "evidence": ["The onboarding handoff identifies prerequisites, the first successful outcome, user-visible friction, and recovery guidance.", "Support findings distinguish reproduced evidence from assumptions and name the next verification step."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": null,
+      "evidence": [
+        "The onboarding handoff identifies prerequisites, the first successful outcome, user-visible friction, and recovery guidance.",
+        "Support findings distinguish reproduced evidence from assumptions and name the next verification step."
+      ],
       "boundary": "Do not perform account operations, access customer data, send support communications, or change production state.",
-      "owner": "devops_coordinator with devex_auditor",
       "primarySurface": "onboarding steps, setup diagnostics, first-run output, recovery guidance, and support-flow findings",
       "durability": "Durable documentation or workflow changes only after scoped review and verification.",
       "privilegeDelta": "workspace inspection and scoped docs edits only; account and production actions stay gated.",
@@ -295,17 +1781,122 @@
       "id": "docs-and-adrs",
       "title": "Documentation, ADRs, and release notes",
       "trigger": "Docs coverage, stale docs, README changes, ADRs, release notes, public copy, or setup guides.",
-      "match": { "priority": 50, "phrases": [["release notes", 12], ["readme update", 12], ["setup guide", 10], ["public copy", 10]], "terms": [["readme", 10], ["adr", 10], ["docs", 8], ["documentation", 8], ["guide", 7], ["changelog", 9], ["copy", 6], ["dokuman", 8], ["belge", 7], ["kilavuz", 8], ["notlar", 6]], "excludeTerms": [] },
-      "agents": ["docs_author", "devex_auditor"],
-      "skills": ["documentation-and-adrs", "ai-project-starter", "offline-diagram-triplet"],
-      "mcp": ["openaiDeveloperDocs", "context7"],
-      "flags": ["workspace-write", "approval:on-request"],
+      "match": {
+        "priority": 50,
+        "phrases": [
+          [
+            "release notes",
+            12
+          ],
+          [
+            "readme update",
+            12
+          ],
+          [
+            "setup guide",
+            10
+          ],
+          [
+            "public copy",
+            10
+          ],
+          [
+            "surum notlari",
+            12
+          ],
+          [
+            "readme guncelle",
+            12
+          ],
+          [
+            "karar kaydi",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "readme",
+            10
+          ],
+          [
+            "adr",
+            10
+          ],
+          [
+            "docs",
+            8
+          ],
+          [
+            "documentation",
+            8
+          ],
+          [
+            "guide",
+            7
+          ],
+          [
+            "changelog",
+            9
+          ],
+          [
+            "copy",
+            6
+          ],
+          [
+            "dokuman",
+            8
+          ],
+          [
+            "belge",
+            7
+          ],
+          [
+            "kilavuz",
+            8
+          ],
+          [
+            "notlar",
+            6
+          ],
+          [
+            "belgele",
+            8
+          ],
+          [
+            "dokumante",
+            8
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "docs_author",
+        "devex_auditor"
+      ],
+      "skills": [
+        "documentation-and-adrs",
+        "ai-project-starter",
+        "offline-diagram-triplet"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "context7"
+      ],
+      "flags": [
+        "workspace-write",
+        "approval:on-request"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["Docs are updated with the code or behavior they describe.", "Localized docs and README alignment checks pass when affected."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "documentation-and-adrs",
+      "evidence": [
+        "Docs are updated with the code or behavior they describe.",
+        "Localized docs and README alignment checks pass when affected."
+      ],
       "boundary": "Do not claim external publication or hosted availability without verifying the public URL or release state.",
-      "owner": "docs_author with devex_auditor",
       "primarySurface": "README files, docs, changelog, release notes, and docs validators",
       "durability": "Durable documentation and public-facing release notes.",
       "privilegeDelta": "workspace writes only; publication stays gated.",
@@ -316,17 +1907,98 @@
       "id": "external-deep-review",
       "title": "Manual external deep review",
       "trigger": "Prepare a bounded repository snapshot for second-model review, hand it off manually, or verify returned findings against the live worktree.",
-      "match": { "priority": 65, "phrases": [["external review", 14], ["second model", 12], ["manual handoff", 12], ["repository snapshot", 10]], "terms": [["external", 7], ["review", 5], ["snapshot", 8], ["handoff", 8], ["second", 5], ["model", 4], ["harici", 7], ["inceleme", 5], ["devir", 7]], "excludeTerms": [] },
-      "agents": ["code_reviewer", "security_auditor", "test_verifier"],
-      "skills": ["external-review-workflow"],
+      "match": {
+        "priority": 65,
+        "phrases": [
+          [
+            "external review",
+            14
+          ],
+          [
+            "second model",
+            12
+          ],
+          [
+            "manual handoff",
+            12
+          ],
+          [
+            "repository snapshot",
+            10
+          ],
+          [
+            "dis inceleme",
+            14
+          ],
+          [
+            "ikinci model",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "external",
+            7
+          ],
+          [
+            "review",
+            5
+          ],
+          [
+            "snapshot",
+            8
+          ],
+          [
+            "handoff",
+            8
+          ],
+          [
+            "second",
+            5
+          ],
+          [
+            "model",
+            4
+          ],
+          [
+            "harici",
+            7
+          ],
+          [
+            "inceleme",
+            5
+          ],
+          [
+            "devir",
+            7
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "code_reviewer",
+        "security_auditor",
+        "test_verifier"
+      ],
+      "skills": [
+        "external-review-workflow"
+      ],
       "mcp": [],
-      "flags": ["profile:review", "external-upload:manual-only"],
+      "flags": [
+        "profile:review",
+        "external-upload:manual-only"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "none",
-      "evidence": ["The package contains only tracked text files and records SHA-256 hashes, exclusions, commit, branch, and dirty state.", "Handoff performs no upload and verify rejects stale snapshots or reports that do not match the manifest."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "external-review-workflow",
+      "evidence": [
+        "The package contains only tracked text files and records SHA-256 hashes, exclusions, commit, branch, and dirty state.",
+        "Handoff performs no upload and verify rejects stale snapshots or reports that do not match the manifest."
+      ],
       "boundary": "Do not expose live filesystem access, upload automatically, include secrets or local agent state, pin a model, widen sandbox privileges, or apply external findings without local reproduction.",
-      "owner": "code_reviewer with security_auditor and test_verifier",
       "primarySurface": "external review CLI, external review schemas, and bundled workflow skill",
       "durability": "Durable local workflow contract; external transmission remains a separate user-controlled action.",
       "privilegeDelta": "read-only preview by default; local output writes require --apply and must stay outside the target.",
@@ -337,17 +2009,106 @@
       "id": "gptpro-project-context",
       "title": "GPT Pro Project context delivery",
       "trigger": "Prepare a repository for a GPT Pro Project with one portable context ZIP, named architecture bundles, or direct text fallback.",
-      "match": { "priority": 88, "phrases": [["gpt pro project", 20], ["gpt pro context", 18], ["gpt pro baglam", 18], ["context bundle", 14], ["baglam paketi", 14], ["subsystem zip", 14], ["proje zip", 14]], "terms": [["gpt", 8], ["pro", 4], ["context", 8], ["bundle", 7], ["zip", 7], ["baglam", 9], ["paketi", 6], ["subsystem", 6], ["proje", 4]], "excludeTerms": ["gpt pro report", "gpt pro raporu", "report verify", "raporu dogrula"] },
-      "agents": ["code_reviewer", "test_verifier"],
-      "skills": ["gptpro"],
+      "match": {
+        "priority": 88,
+        "phrases": [
+          [
+            "gpt pro project",
+            20
+          ],
+          [
+            "gpt pro context",
+            18
+          ],
+          [
+            "gpt pro baglam",
+            18
+          ],
+          [
+            "context bundle",
+            14
+          ],
+          [
+            "baglam paketi",
+            14
+          ],
+          [
+            "subsystem zip",
+            14
+          ],
+          [
+            "proje zip",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "gpt",
+            8
+          ],
+          [
+            "pro",
+            4
+          ],
+          [
+            "context",
+            8
+          ],
+          [
+            "bundle",
+            7
+          ],
+          [
+            "zip",
+            7
+          ],
+          [
+            "baglam",
+            9
+          ],
+          [
+            "paketi",
+            6
+          ],
+          [
+            "subsystem",
+            6
+          ],
+          [
+            "proje",
+            4
+          ]
+        ],
+        "excludeTerms": [
+          "gpt pro report",
+          "gpt pro raporu",
+          "report verify",
+          "raporu dogrula"
+        ]
+      },
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ],
+      "skills": [
+        "gptpro"
+      ],
       "mcp": [],
-      "flags": ["profile:review", "external-upload:manual-only"],
+      "flags": [
+        "profile:review",
+        "external-upload:manual-only"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "none",
-      "evidence": ["A fresh external-review snapshot and semantic delivery manifest bind every selected source file to one context bundle.", "A single ZIP, subsystem ZIPs and text fallback pass status verification before manual upload."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "gptpro",
+      "evidence": [
+        "A fresh external-review snapshot and semantic delivery manifest bind every selected source file to one context bundle.",
+        "A single ZIP, subsystem ZIPs and text fallback pass status verification before manual upload."
+      ],
       "boundary": "Never upload automatically, include secrets or runtime state, use an unverified snapshot, or treat a ZIP upload as proof that a Project indexed its contents.",
-      "owner": "gptpro with external-review workflow support",
       "primarySurface": "bundled/direct gptpro skill and Chef review CLI",
       "durability": "Durable local packaging workflow; ChatGPT Project upload remains a user-controlled action.",
       "privilegeDelta": "preview is read-only; local output requires --apply outside the target repository.",
@@ -358,37 +2119,223 @@
       "id": "gptpro-report-verification",
       "title": "GPT Pro returned-report verification",
       "trigger": "Verify a returned GPT Pro report or findings against the live repository before any implementation.",
-      "match": { "priority": 90, "phrases": [["gpt pro report", 20], ["gpt pro raporu", 20], ["report verify", 17], ["raporu dogrula", 17], ["returned findings", 14], ["canli kodla dogrula", 16]], "terms": [["gpt", 8], ["pro", 4], ["report", 9], ["rapor", 9], ["verify", 9], ["dogrula", 9], ["findings", 7], ["bulgulari", 7], ["canli", 5]], "excludeTerms": [] },
-      "agents": ["code_reviewer", "test_verifier"],
-      "skills": ["gptpro-handoff"],
+      "match": {
+        "priority": 90,
+        "phrases": [
+          [
+            "gpt pro report",
+            20
+          ],
+          [
+            "gpt pro raporu",
+            20
+          ],
+          [
+            "report verify",
+            17
+          ],
+          [
+            "raporu dogrula",
+            17
+          ],
+          [
+            "returned findings",
+            14
+          ],
+          [
+            "canli kodla dogrula",
+            16
+          ]
+        ],
+        "terms": [
+          [
+            "gpt",
+            8
+          ],
+          [
+            "pro",
+            4
+          ],
+          [
+            "report",
+            9
+          ],
+          [
+            "rapor",
+            9
+          ],
+          [
+            "verify",
+            9
+          ],
+          [
+            "dogrula",
+            9
+          ],
+          [
+            "findings",
+            7
+          ],
+          [
+            "bulgulari",
+            7
+          ],
+          [
+            "canli",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ],
+      "skills": [
+        "gptpro-handoff"
+      ],
       "mcp": [],
-      "flags": ["profile:review", "external-upload:manual-only"],
+      "flags": [
+        "profile:review",
+        "external-upload:manual-only"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "none",
-      "evidence": ["The returned report matches the exact review ID and snapshot commit.", "Accepted findings are re-anchored to live code and reproduced before implementation."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "gptpro-handoff",
+      "evidence": [
+        "The returned report matches the exact review ID and snapshot commit.",
+        "Accepted findings are re-anchored to live code and reproduced before implementation."
+      ],
       "boundary": "Do not rubber-stamp external findings, upload automatically, or allow an external model to select Codex approvals, sandbox, model or reasoning settings.",
-      "owner": "gptpro-handoff with code_reviewer and test_verifier",
       "primarySurface": "bundled/direct gptpro-handoff skill and Chef review verifier",
       "durability": "Durable local handoff contract; model output stays untrusted until live-code verification.",
       "privilegeDelta": "no external execution or upload; local verification only.",
       "validationGate": "External-review schema, identity and freshness verification pass before any code change.",
       "rollback": "Discard the untrusted report and retain no generated prompt/report artifacts in Git by default."
-    },    {
+    },
+    {
       "id": "starter-health",
       "title": "AgentChef starter health and drift",
       "trigger": "Install health, global setup drift, catalog alignment, skill pressure, MCP status, or AgentChef diagnostics.",
-      "match": { "priority": 70, "phrases": [["starter health", 14], ["managed file drift", 14], ["runtime verification", 12], ["process hygiene", 12]], "terms": [["health", 7], ["runtime", 7], ["drift", 8], ["install", 5], ["repair", 7], ["process", 5], ["diagnostic", 7], ["recovery", 7], ["kurulum", 5], ["durum", 4], ["onar", 7], ["surec", 5]], "excludeTerms": [] },
-      "agents": ["codex_doctor", "test_verifier"],
-      "skills": ["agentchef-operator", "context-budget-planner"],
-      "mcp": ["openaiDeveloperDocs", "sequential-thinking"],
-      "flags": ["codex:status", "verify:install:runtime", "repair:install"],
+      "match": {
+        "priority": 70,
+        "phrases": [
+          [
+            "starter health",
+            14
+          ],
+          [
+            "managed file drift",
+            14
+          ],
+          [
+            "runtime verification",
+            12
+          ],
+          [
+            "process hygiene",
+            12
+          ],
+          [
+            "kurulum sagligi",
+            14
+          ],
+          [
+            "durum kontrolu",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "health",
+            7
+          ],
+          [
+            "runtime",
+            7
+          ],
+          [
+            "drift",
+            8
+          ],
+          [
+            "install",
+            5
+          ],
+          [
+            "repair",
+            7
+          ],
+          [
+            "process",
+            5
+          ],
+          [
+            "diagnostic",
+            7
+          ],
+          [
+            "recovery",
+            7
+          ],
+          [
+            "kurulum",
+            5
+          ],
+          [
+            "durum",
+            4
+          ],
+          [
+            "onar",
+            7
+          ],
+          [
+            "surec",
+            5
+          ],
+          [
+            "sapma",
+            8
+          ],
+          [
+            "onarim",
+            7
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "agents": [
+        "codex_doctor",
+        "test_verifier"
+      ],
+      "skills": [
+        "agentchef-operator",
+        "context-budget-planner"
+      ],
+      "mcp": [
+        "openaiDeveloperDocs",
+        "sequential-thinking"
+      ],
+      "flags": [
+        "codex:status",
+        "verify:install:runtime",
+        "repair:install"
+      ],
       "delegationMode": "conditional",
       "skillMode": "narrowest-owner",
       "mcpMode": "use-when-available-and-approved",
-      "evidence": ["codex:status, verify:install:runtime, or repair preview reports the installed state.", "Managed file, agent, MCP, and curated skill counts are visible."],
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "autoSkill": "agentchef-operator",
+      "evidence": [
+        "codex:status, verify:install:runtime, or repair preview reports the installed state.",
+        "Managed file, agent, MCP, and curated skill counts are visible."
+      ],
       "boundary": "Repair may back up and update managed files, but it must not delete user skills, secrets, local state, or unrelated configuration.",
-      "owner": "codex_doctor with test_verifier",
       "primarySurface": "codex status scripts, runtime verifier, repair preview, and managed-file manifest",
       "durability": "Durable starter health evidence through scripts and managed templates.",
       "privilegeDelta": "read-only diagnostics first; repair writes only after explicit apply.",

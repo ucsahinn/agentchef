@@ -68,32 +68,19 @@ plugin, and the linked skills.
 
 ## Operating Model
 
-Use the setup as a specialist team:
+Use the setup as a specialist team. Which agent fits which task is listed once
+in the [Agents](agents.md) tables, and
+`npm run chef -- --routing --task "<request>"` shows the matching routing
+profile, verifier, and auto-skill for a request. Keep implementation in the
+main thread so decisions and edits stay coherent.
 
-1. Start with `code_mapper` for unfamiliar repositories, large changes, or
-   architecture questions.
-2. Use `context_architect` when deciding whether behavior belongs in a prompt,
-   `AGENTS.md`, skill, plugin, MCP, hook, memory, rule, or config profile.
-3. Use `docs_researcher` for current Codex, API, library, framework, or cloud
-   behavior.
-4. Use `prompt_architect` for reusable prompts, success criteria, skill briefs,
-   and instruction systems.
-5. Use `mcp_integrator` before enabling, disabling, or troubleshooting MCP
-   servers, app connectors, or tool allowlists.
-6. Keep implementation in the main thread so decisions and edits stay coherent.
-7. Use `test_verifier` for lint, typecheck, test, build, smoke, or failing CI.
-8. Use `frontend_verifier` for real-browser UI checks, screenshots, responsive
-   layout, console errors, and interaction states.
-9. Use `security_auditor` for auth, secrets, permissions, data access, API
-   routes, cryptography, or abuse paths.
-10. Use `codex_doctor` for starter health, catalog drift, install-plan, docs,
-    MCP, and safe no-write diagnostics.
-11. Use `release_verifier` before push, tag, release, package, deploy, or public
-   publication.
-
-Official Codex docs describe subagents as explicitly triggered parallel
-workflows. This starter gives you the agent files and routing language for that
-workflow, but it keeps approvals, sandboxing, and connector auth intact.
+Codex delegates when you ask for it directly or when `AGENTS.md` or a skill
+instruction asks for it. From 1.3.4, the working agreement
+names the cases: an autoVerify routing profile matched and files changed;
+independent parallel work exists; noisy logs or research should be isolated; you
+explicitly request delegation. This starter gives you the agent files and
+routing language for that workflow, but it keeps approvals, sandboxing, and
+connector auth intact.
 
 ## MCP Defaults
 

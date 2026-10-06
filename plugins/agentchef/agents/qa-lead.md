@@ -1,6 +1,6 @@
 ---
 name: qa-lead
-description: "QA lead for end-to-end bug finding, regression coverage, and re-verification plans."
+description: "QA lead for end-to-end bug finding, regression coverage, and re-verification plans. Use proactively when user-facing workflows changed and need scenario-based testing; running checks and verifying fixes belongs to test_verifier."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
 model: sonnet
 disallowedTools: NotebookEdit

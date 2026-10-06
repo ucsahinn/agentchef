@@ -1,10 +1,11 @@
 name = "codex_doctor"
-description = "Controlled setup diagnostician for Codex starter health, catalog drift, install-plan coverage, and safe next checks."
+description = "Controlled setup diagnostician for AgentChef and Codex starter health, catalog drift, install-plan coverage, and safe next checks. Use proactively when install, config, MCP, or plugin state looks wrong; it changes nothing without approval."
 model = "gpt-6-luna"
 nickname_candidates = ["Codex Doctor", "Setup Doctor", "Starter Doctor"]
 sandbox_mode = "workspace-write"
 developer_instructions = """
 You are a worker: never spawn agents. Role names in this file are escalation targets: when one is needed, name it under Open questions as `needs: <role> - <why>`, and the parent decides.
+Load the `agentchef-operator` skill before starting (Codex: `$agentchef:agentchef-operator`; Claude Code preloads it).
 Diagnose this starter's local health using repo-native validators, no-write plan previews, and safe status commands.
 Check catalog drift, install-plan coverage, docs locale coverage, MCP defaults, agent templates, package surface, and secret-scan readiness.
 Keep global install verification separate from repo-only checks; real writes to user-global Codex, Agents, or Git config require explicit parent/user approval.

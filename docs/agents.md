@@ -7,9 +7,12 @@ boundaries, and evidence to return.
 
 AgentChef includes 7 coordination roles and 21 specialist worker roles. They
 are not background services and they do not all run on every task. A role can
-guide the main session without being spawned. Delegation is useful when work can
-run independently, noisy output should stay out of the main thread, or you
-explicitly ask for parallel agents.
+guide the main session without being spawned. From 1.3.4,
+an agent is started only when one of four conditions holds: a routing profile
+that requires a verifier matched and files changed, independent parallel work
+exists, noisy logs or research should stay out of the main thread, or you
+explicitly ask for delegation (see [Routing profiles and automatic
+use](#routing-profiles-and-automatic-use)).
 
 Official references: [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 (the old `developers.openai.com/codex/subagents` URL redirects there) and
@@ -51,12 +54,14 @@ or take over unrelated work. In the CLI, use `/agent` to inspect or switch to an
 agent thread. In the app or IDE, use the subagent activity panel when available;
 you can also ask Codex to steer, stop, or close an agent.
 
-The routing path is:
+The routing path has two routes, both at most two levels deep:
 
-`task -> routing profile -> primary coordinator -> selected specialists + narrow skills/MCPs`
+- **Direct**: `task -> routing profile -> main session briefs one to four specialists + narrow skills/MCPs`
+- **Team**: for a board task you created, `task -> routing profile -> main session briefs that task's coordinator -> its cataloged workers`
 
-Cross-domain work returns a compact handoff to the main session, which decides
-whether another coordinator is needed.
+A coordinator is therefore not always in the path; it is used only for the Team
+route. Cross-domain work returns a compact handoff to the main session, which
+decides whether another coordinator is needed.
 
 The bundled `agent-brief` skill (`$agentchef:agent-brief` in Codex,
 `/agentchef:agent-brief` in Claude Code) fixes that exchange: the seven-field
@@ -110,7 +115,7 @@ becomes done.
 | Agent | Bring it in when... |
 | --- | --- |
 | [`docs_author`](../templates/codex/agents/docs_author.toml) | Documentation needs a clearer map, a missing guide, a release update, or stale-content cleanup. |
-| [`code_reviewer`](../templates/codex/agents/code_reviewer.toml) | A fresh reviewer should look for correctness risks, regressions, and missing tests. |
+| [`code_reviewer`](../templates/codex/agents/code_reviewer.toml) | A fresh reviewer should look at a diff or pull request for correctness risks, regressions, and missing tests before it is merged or reported done. |
 | [`google_seo_auditor`](../templates/codex/agents/google_seo_auditor.toml) | Public pages need crawlability, metadata, structured data, and Search Console readiness. Core Web Vitals measurement belongs to `performance_auditor`. |
 
 ## 🛡️ Protect The Boundary
@@ -123,9 +128,17 @@ becomes done.
 
 ## How Selection Works
 
-1. Codex matches the task shape to the narrowest useful role.
+1. The session matches the task shape to a routing profile and the narrowest
+   useful role.
 2. A match does **not** force a subagent. The main session can use the role's
-   guidance directly.
+   guidance directly. Codex delegates only when you ask for it directly or when
+   `AGENTS.md` or a skill instruction asks for it; AgentChef's working agreement
+   is such an instruction, and from 1.3.4 it names four spawn
+   conditions: a routing profile that requires a verifier matched and files
+   changed; independent parallel work exists; noisy logs or research should be
+   isolated from the main thread; you explicitly request delegation. It skips
+   trivial, strictly sequential, tightly coupled, and single-file work where
+   delegation adds coordination cost.
 3. Spawned agents inherit the current approval and sandbox boundaries.
 4. Parallel write-heavy work stays limited because overlapping edits create
    coordination cost.
@@ -141,6 +154,63 @@ operational diagnostics needs return a concise parent-routed handoff to
 needed, and open verification need. Customer support/onboarding (`devops_coordinator`
 with `devex_auditor`) is also advisory. Neither route grants database,
 customer-account, or production access.
+
+### Routing profiles and automatic use
+
+From 1.3.4, `catalog/routing-profiles.json` (version 0.4.0)
+has 19 routing profiles, including the new `code-review` profile. Each profile
+names:
+
+- a **verifier**, the independent role that checks the work. It is required for
+  the five `autoVerify` profiles (`security-sensitive`, `release-or-publish`,
+  `mcp-connector-change`, `frontend-ui`, `data-systems`): after files changed,
+  the verifier runs before the task is reported done. For every other profile
+  the verifier is only suggested.
+- an **auto-skill** to load first. A skill that is explicit-only
+  (`implicitInvocation: false`, see [Skills](skills.md)) is suggested to you
+  instead of being loaded.
+
+At most 2 agents start per task without you naming them; agents you name are not
+counted, and the four-workers-per-task limit still applies. The matching is
+advice: the main session still judges whether the work needs an agent.
+
+To see the match for a request, run:
+
+```bash
+npm run chef -- --routing --task "<request>"
+```
+
+It prints the profile, its Verifier and Auto-skill, and a `[hint]` line (the
+one-line routing hint; the hook that injects it into a session is covered in
+the security model). See [Codex Flags](codex-flags.md) for the
+confidence rules.
+
+From 1.3.4, in a live session that hint line comes from the
+plugin's prompt-submit hook, which scores the prompt in memory and stores none of
+it; what it reads, stores, and prints is in the
+[security model](security-model.md#hooks). `AGENTCHEF_ROUTING_HINT=off`
+disables it.
+
+Each role has one trigger-style `description` ("Use proactively when ...") in
+`catalog/agents.json`, and 13 roles preload one skill: Claude Code reads it from
+the `skills:` frontmatter of the plugin agent file; Codex role files say "Load
+the `<skill>` skill before starting".
+
+| Role | Preloaded skill |
+| --- | --- |
+| `docs_researcher` | `evidence-research` |
+| `context_architect` | `context-budget-planner` |
+| `prompt_architect` | `prompt-architect` |
+| `mcp_integrator` | `mcp-builder` |
+| `design_reviewer` | `frontend-design` |
+| `root_cause_debugger` | `systematic-debugging` |
+| `performance_auditor` | `web-quality-audit` |
+| `google_seo_auditor` | `seo` |
+| `docs_author` | `documentation-and-adrs` |
+| `spec_author` | `ai-project-starter` |
+| `frontend_verifier` | `webapp-testing` |
+| `release_verifier` | `shipping-and-launch` |
+| `codex_doctor` | `agentchef-operator` |
 
 ### The same roles in Claude Code
 

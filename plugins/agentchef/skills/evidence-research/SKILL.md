@@ -1,6 +1,6 @@
 ---
 name: evidence-research
-description: Design and execute source-traceable deep research for decisions, landscapes, comparisons, implementation questions, and evidence reviews. Use when the request needs a research charter, current primary sources, reproducible search and screening, source appraisal, claim-level citations, disagreement and uncertainty analysis, qualitative or quantitative methods, or a decision-ready evidence package.
+description: Source-traceable deep research for decisions, comparisons, landscapes, and evidence reviews. Use when a request needs a research charter, current primary sources, claim-level citations, disagreement and uncertainty analysis, or a decision-ready evidence package.
 ---
 
 # Evidence Research

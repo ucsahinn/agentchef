@@ -52,7 +52,8 @@ Kaçınılacak desenler:
 - ham prompt, tool input, diff veya output kaydeden hook telemetry
 - sessiz varsayılan olarak gönderilen lifecycle hook runtime'ları,
   `SessionStart` prompt injection, `hookSpecificOutput.additionalContext` veya
-  learned-skill auto-injection
+  learned-skill auto-injection; tek incelenmiş istisna, 1.3.4 ile plugin'in prompt gönderiminde çalışan routing hint'idir: katalog
+  tanımlayıcılarından tek satır yazar, prompt metni saklamaz ve asla engellemez
 - write-capable interface veya marketplace auth zorunluluğu taşıyan plugin
   manifest'leri
 - floating package spec taşıyan plugin `.mcp.json` dosyaları veya unpinned

@@ -55,7 +55,12 @@ sohbet etmez. 1.3.3 ile iki rota vardır, ikisi de en çok
 iki seviye derinliktedir: Direct, ana oturum bir ila dört uzmana brief verir;
 Team, bir board görevi için ana oturum o görevin koordinatörüne brief verir,
 koordinatör de kendi worker'larına. Görev başına en çok dört worker kullan
-(koordinatör sayılmaz); her agent tek bir handoff döndürür. Codex ile Claude Code
+(koordinatör sayılmaz); her agent tek bir handoff döndürür.
+1.3.4 ile bir agent yalnızca dört koşuldan biri geçerliyse
+başlar (verifier gerektiren bir routing profili eşleşti ve dosyalar değişti;
+bağımsız paralel iş; ayrılması gereken gürültülü log veya araştırma; sen istedin)
+ve sen adlarını vermeden görev başına en fazla 2 agent başlar; bkz.
+[Routing profilleri ve otomatik kullanım](agents.tr.md#routing-profilleri-ve-otomatik-kullanım). Codex ile Claude Code
 arasında doğrudan bir araç yoktur; bkz.
 [Agent'lar Birbiriyle Nasıl Konuşur](agents.tr.md#agentlar-birbiriyle-nasıl-konuşur).
 
@@ -164,6 +169,17 @@ Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
 Routing profilleri; yapılacak işi uygun agent, skill, MCP, kontrol komutu ve
 güvenlik sınırlarıyla eşleştirir. Codex'e makul bir rota gösterir ama eşleşen
 her şeyi arka planda sessizce çalıştırmaz.
+
+1.3.4 ile `catalog/routing-profiles.json` (sürüm 0.4.0)
+yeni `code-review` profili dahil 19 profil içerir. Her profil bir verifier ve bir
+auto-skill belirtir. Verifier, beş `autoVerify` profilinde (`security-sensitive`,
+`release-or-publish`, `mcp-connector-change`, `frontend-ui`, `data-systems`)
+dosyalar değiştikten sonra zorunludur; diğerlerinde yalnızca önerilir. Auto-skill
+önce yüklenir; skill yalnızca açıkça istenen türdeyse sana önerilir (bkz.
+[Skill'ler](skills.tr.md#yalnızca-açıkça-istenen-skillter)). Routing skill'inin
+`references/global-working-agreements.md` dosyasındaki profil listesi elle
+yazılmaz, katalogdan üretilir. Bir istek için tek bakışta:
+`npm run chef -- --routing --task "<istek>"`.
 
 ```bash
 npm run chef -- --routing

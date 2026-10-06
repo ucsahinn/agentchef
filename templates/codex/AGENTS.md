@@ -26,8 +26,10 @@
 - Use `$adaptive-agent-routing` when routing details, aliases, specialist ownership, or surface placement materially affect the task.
 - Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them, except a stronger model for one security or release review the user asks for.
 - Treat `agents.max_threads = 10` (alias of `agents.max_concurrent_threads_per_session`) as a capacity ceiling, not a target. Use at most four workers per task (a coordinator is not counted); more needs the user's explicit request.
-- Spawn agents only when there is independent parallel work, noisy logs or research should be isolated from the main thread, or the user explicitly requests delegation.
-- Do not spawn for trivial, sequential, tightly coupled, or single-file work where delegation adds coordination cost.
+- Spawn an agent only when one of these holds: an autoVerify routing profile matched and files changed, so its verifier runs before the task is reported done; independent parallel work exists; noisy logs or research should be isolated from the main thread; the user explicitly requests delegation.
+- Do not spawn for trivial work, strictly sequential work, tightly coupled work, single-file work where delegation adds coordination cost.
+- When a request matches a routing profile (the routing-hint line, or your own classification against the profile catalog), load the profile's auto-skill first; if that skill is explicit-only, suggest it to the user instead. If files changed and the profile's verifier is required (`data-systems`, `frontend-ui`, `security-sensitive`, `mcp-connector-change`, `release-or-publish`), run that verifier before reporting done; otherwise suggest it.
+- Start at most 2 agents per task without the user naming them; more needs the user's explicit request. Agents the user asks for by name are not counted, and the team limit of four workers per task still applies. The routing-hint line is advice: you still judge whether the work needs it.
 - Two routes, both at most two levels deep: Direct, the main session briefs one to four specialists itself; Team, for a user-created board task, the main session briefs that task's coordinator, which briefs its own workers.
 - Keep write-heavy implementation in the main thread unless the user explicitly requests split write scopes.
 - If agents may edit, give them non-overlapping files. The parent session merges: it checks each Changed scope against its brief's Write scope, resolves conflicts or asks the user, and reruns every Done-when check on the merged result before verification.
@@ -81,7 +83,7 @@
 - Disabling a local MCP in a profile parks its launcher without removing its definition; agents, skills, remote OpenAI docs, built-in memories, hooks, and apps stay available.
 - Audit Codex/MCP ownership before cleanup. Active Codex descendants, recent unowned trees, PID-reused processes, and unrelated Node/Python runtimes must never be cleanup candidates.
 - Manual stale cleanup requires the exact preview/apply path `npm run chef -- --processes --cleanup-stale [--apply]`. Do not broaden it to name-based process killing.
-- The reviewed session-end process hook is fail-closed and owner-scoped. Do not bypass hook trust, add startup context injection, or turn it into broad lifecycle automation.
+- AgentChef's reviewed hooks are the only hook context in this setup: the routing hint adds one advisory line of profile, skill, and role identifiers per prompt, and the session-end process sweep is fail-closed and owner-scoped. Do not bypass hook trust, add other context-injecting hooks, or turn these into broad lifecycle automation.
 
 ## Token Budget Discipline
 

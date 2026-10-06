@@ -17,6 +17,31 @@ const allowedReasoningEfforts = new Set(["auto", "low", "medium", "high", "xhigh
 const minimumSourceBackedItems = 100;
 const minimumDistinctSourceMarkers = 20;
 
+// A role may preload one skill. It has to be a harness skill that allows
+// implicit invocation (an explicit-only skill cannot be preloaded in Claude
+// Code either), and the role file has to tell Codex to load it.
+const skillCatalogEntries = new Map(JSON.parse(fs.readFileSync(path.join(root, "catalog", "skills.json"), "utf8")).skills.map((skill) => [skill.name, skill]));
+const bundledSkillDirectory = path.join(root, "plugins", "agentchef", "skills");
+function validatePreloadSkill(role, template) {
+  if (!Object.hasOwn(role, "preloadSkill")) {
+    fail(`Role ${role.name} must declare preloadSkill (a skill name or null).`);
+    return;
+  }
+  const skill = role.preloadSkill;
+  if (skill === null) {
+    if (template && /Load the `[a-z0-9-]+` skill before starting/.test(template)) fail(`Role ${role.name} loads a skill its catalog entry does not declare.`);
+    return;
+  }
+  const entry = skillCatalogEntries.get(skill);
+  const bundled = fs.existsSync(path.join(bundledSkillDirectory, skill));
+  if (!entry && !bundled) fail(`Role ${role.name} preloadSkill ${skill} is not a harness skill.`);
+  if (entry?.retired) fail(`Role ${role.name} preloadSkill ${skill} is retired.`);
+  if (entry?.implicitInvocation === false) fail(`Role ${role.name} preloadSkill ${skill} is explicit-only and cannot be preloaded.`);
+  if (template && !template.includes(`Load the \`${skill}\` skill before starting (Codex: \`$agentchef:${skill}\`; Claude Code preloads it).`)) {
+    fail(`Role ${role.name} template must tell Codex to load ${skill} first.`);
+  }
+}
+
 function fail(message) {
   failures.push(message);
 }
@@ -247,7 +272,6 @@ if (!fs.existsSync(catalogPath)) {
       for (const key of [
         "category",
         "description",
-        "templateDescription",
         "configFile",
         "sandboxMode",
         "modelSelection",
@@ -287,9 +311,16 @@ if (!fs.existsSync(catalogPath)) {
         if (readTomlString(template, "name") !== agent.name) {
           fail(`Agent template name drift for ${agent.name}.`);
         }
-        if (readTomlString(template, "description") !== agent.templateDescription) {
+        if (readTomlString(template, "description") !== agent.description) {
           fail(`Agent template description drift for ${agent.name}.`);
         }
+        // Both CLIs pick a role by this text, so it states the trigger.
+        if (agent.description.length > 300) fail(`Agent ${agent.name} description must stay within 300 characters.`);
+        if (!/Use proactively (?:when|before|for|after) /.test(agent.description)) {
+          fail(`Agent ${agent.name} description must say when to use it ("Use proactively when ...").`);
+        }
+        if (Object.hasOwn(agent, "templateDescription")) fail(`Agent ${agent.name} carries templateDescription; one description text is used everywhere.`);
+        validatePreloadSkill(agent, template);
         const nicknameCandidates = readTomlStringArray(template, "nickname_candidates");
         if (!nicknameCandidates || nicknameCandidates.length < 3) {
           fail(`Agent template ${agent.name} must include at least three nickname_candidates.`);
@@ -403,6 +434,11 @@ if (!fs.existsSync(catalogPath)) {
       if (!coordinator.description || coordinator.configFile !== `agents/${coordinator.name}.toml`) {
         fail(`Coordinator ${coordinator.name} must declare description and matching configFile.`);
       }
+      if (coordinator.description.length > 300) fail(`Coordinator ${coordinator.name} description must stay within 300 characters.`);
+      if (!coordinator.description.startsWith("Use only for an explicit coordination-board task")) {
+        fail(`Coordinator ${coordinator.name} description must start with "Use only for an explicit coordination-board task".`);
+      }
+      validatePreloadSkill(coordinator, readAgentTemplate(coordinator.configFile));
       if (!Array.isArray(coordinator.workers) || coordinator.workers.length < 1 || coordinator.workers.length > (coordinationPolicy?.maxWorkersPerCoordinator || 4)) {
         fail(`Coordinator ${coordinator.name} must own a bounded worker group.`);
       }

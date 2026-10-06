@@ -128,7 +128,9 @@ Adopted patterns are mapped to the smallest Codex-native surface:
 Rejected default patterns include broad cross-harness sync, enabled
 authenticated connectors, prompt-injection lifecycle hooks, cookie import,
 tunnels, auto-commit, auto-deploy, raw credential handling, and unreviewed large
-skill catalogs.
+skill catalogs. The one reviewed exception, from 1.3.4, is the
+plugin's routing-hint hook: it adds one catalog-identifier line on prompt submit,
+stores no prompt text, and never blocks (see docs/security-model.md).
 
 ## Official Codex Source Route
 

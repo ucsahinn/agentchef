@@ -8,7 +8,7 @@ import {
   CliUsageError,
   installCliErrorBoundary
 } from "./lib/cli-error-contract.mjs";
-import { claudePluginHooks } from "./render-target-artifacts.mjs";
+import { claudePluginHooks, workingAgreementSharedTokens } from "./render-target-artifacts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -253,9 +253,9 @@ function inspectClaudeTemplates(failures) {
     for (const entry of claudeManifest.agents || []) {
       if (!exists(`${pluginRoot}/${String(entry).replace(/^\.\//, "")}`)) failures.push(`Claude plugin manifest references a missing agent file: ${entry}`);
     }
-    // Only the reviewed hooks (Agent spawn guard, SessionEnd hygiene) may ship to Claude.
+    // Only the reviewed hooks (Agent spawn guard, routing hint, SessionEnd hygiene) may ship to Claude.
     if (Object.hasOwn(claudeManifest, "hooks") && JSON.stringify(claudeManifest.hooks) !== JSON.stringify(claudePluginHooks)) {
-      failures.push("Claude plugin manifest hooks differ from the reviewed Agent spawn guard and SessionEnd process-hygiene hooks");
+      failures.push("Claude plugin manifest hooks differ from the reviewed Agent spawn guard, routing hint, and SessionEnd process-hygiene hooks");
     }
   } catch (error) {
     failures.push(`Claude plugin manifest is unreadable: ${error.message}`);
@@ -273,7 +273,7 @@ function inspectClaudeTemplates(failures) {
   }
   try {
     const source = readText("templates/shared/working-agreement.md");
-    const rendered = `${renderWorkingAgreement(source, "claude").trimEnd()}\n`;
+    const rendered = `${renderWorkingAgreement(source, "claude", workingAgreementSharedTokens()).trimEnd()}\n`;
     const committed = readText("templates/claude/rules/agentchef-working-agreement.md").replace(/\r\n/g, "\n");
     if (rendered !== committed) failures.push("templates/claude/rules/agentchef-working-agreement.md is stale; run npm run render:targets");
   } catch (error) {

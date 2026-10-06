@@ -2,6 +2,30 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.4 - 2026-10-06
+
+AgentChef 1.3.4 bir skill'i ya da rolü istek gerektirdiğinde kullanır: tahminle
+değil, kuralla ve tek satırlık bir yönlendirme ipucuyla. Güncellemek için
+`npm run chef -- --update --apply`; sonra Codex'te `/hooks` içinde
+`hooks/routing-hint.json` dosyasına güven ver ve Claude Code'da yeni oturum aç.
+
+### Neler Değişti
+
+- **Yönlendirme kataloğu.** 19 profilin her biri (yeni: `code-review`)
+  doğrulayıcısını, dosya değişiminden sonra zorunlu olup olmadığını (güvenlik,
+  yayın, MCP, arayüz, veri) ve önce yüklenecek skill'i adlandırır; yalnız açıkça
+  istenen skill'ler yüklenmez, önerilir. Görev başına sen adlandırmadan en çok
+  iki ajan açılır. Türkçe istekler yönlendirilir: puanlayıcı noktasız ı'yı katlar.
+- **Yönlendirme ipucu.** Her prompt'ta plugin isteğini bellekte katalogla
+  karşılaştırır ve yüksek güvenle eşleşince modele yalnız katalog
+  kimliklerinden oluşan tek satır ekler. Prompt metnini saklamaz, prompt'u asla
+  engellemez, `AGENTCHEF_ROUTING_HINT=off` ile kapatılır. Bkz.
+  [güvenlik modeli](security-model.tr.md) ve [PRIVACY](../PRIVACY.md).
+- **Roller.** Her rolün tetikleyici biçiminde tek açıklaması var ("Use
+  proactively when ...") ve işinin gerektirdiği skill'i baştan yükler.
+  `npm run chef -- --routing --task "<istek>"` eşleşen profili ve ipucu
+  satırını gösterir.
+
 ## v1.3.3 - 2026-10-05
 
 AgentChef 1.3.3 ajanları tek bir ekip gibi çalıştırır: tek protokol, işi geri

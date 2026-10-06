@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "dateChecked": "2026-09-19",
   "officialReference": "https://developers.openai.com/codex/config-reference#configtoml",
-  "sourcePolicy": "Seven read-only coordinators and 21 specialist workers are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. An explicit user-created coordination-board task is the only work-state trigger: pane selection, role selection, and routing matches never auto-start work. Coordinators use a bounded, parent-routed orchestration contract, select only their cataloged workers, attach structured worker evidence before a task is done, and never receive private AgentSpace memory. Every specialist (modelSelection worker) and coordinator role file runs on the catalog workerModels entry so delegated work uses the lower-cost tier while the session the user opens keeps its own model; reasoning effort stays unpinned (modelReasoningEffort auto) so the profile still sets it. Each specialist role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-specialist expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
+  "sourcePolicy": "Seven read-only coordinators and 21 specialist workers are declared in config.toml with description and config_file, then backed by reviewed TOML role files under templates/codex/agents. An explicit user-created coordination-board task is the only work-state trigger: pane selection, role selection, and routing matches never auto-start work. Coordinators use a bounded, parent-routed orchestration contract, select only their cataloged workers, attach structured worker evidence before a task is done, and never receive private AgentSpace memory. Each role has one description, written as a trigger (\"Use proactively when ...\" for specialists, \"Use only for an explicit coordination-board task ...\" for coordinators) because both CLIs pick agents by that text, and at most one preloaded skill (preloadSkill). Every specialist (modelSelection worker) and coordinator role file runs on the catalog workerModels entry so delegated work uses the lower-cost tier while the session the user opens keeps its own model; reasoning effort stays unpinned (modelReasoningEffort auto) so the profile still sets it. Each specialist role file must keep world-class specialist upgrade, source-refresh, cross-repo transfer, research-synthesis, adversarial-validation, source-currency, corpus-expansion, and expert-calibration guidance explicit, exactly once, with at least 100 source-backed instruction items and 20 distinct source markers so high-signal external patterns are converted into evidence-backed operating rules, not copied as hidden behavior. catalog/agent-research-corpus.json owns reviewed authority references, source freshness cadence, and per-specialist expertise signals so stale source metadata and shallow role knowledge fail validation before runtime prompts drift.",
   "defaults": {
     "model": "gpt-5.5",
     "maxThreads": 10,
@@ -39,36 +39,165 @@
     "autoStart": "prohibited"
   },
   "coordinators": [
-    { "name": "backend_coordinator", "roleId": "backend", "description": "Backend coordinator that correlates bounded implementation, integration, debugging, and source-documentation evidence.", "configFile": "agents/backend_coordinator.toml", "workers": ["code_mapper", "mcp_integrator", "root_cause_debugger", "docs_researcher"] },
-    { "name": "devops_coordinator", "roleId": "devops", "description": "DevOps coordinator that correlates operational performance, runtime health, setup diagnostics, and onboarding friction.", "configFile": "agents/devops_coordinator.toml", "workers": ["performance_auditor", "codex_doctor", "devex_auditor"] },
-    { "name": "leadership_coordinator", "roleId": "leadership", "description": "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence.", "configFile": "agents/leadership_coordinator.toml", "workers": ["context_architect", "engineering_planner", "code_reviewer", "release_verifier"] },
-    { "name": "product_coordinator", "roleId": "product", "description": "Product coordinator that correlates prompts, product framing, and executable specifications.", "configFile": "agents/product_coordinator.toml", "workers": ["prompt_architect", "product_strategist", "spec_author"] },
-    { "name": "qa_coordinator", "roleId": "qa", "description": "QA coordinator that correlates quality, verification, and security evidence.", "configFile": "agents/qa_coordinator.toml", "workers": ["qa_lead", "test_verifier", "security_auditor"] },
-    { "name": "ui_coordinator", "roleId": "ui", "description": "UI coordinator that correlates rendered UI verification and product design review evidence.", "configFile": "agents/ui_coordinator.toml", "workers": ["frontend_verifier", "design_reviewer"] },
-    { "name": "marketing_coordinator", "roleId": "marketing", "description": "Marketing coordinator that correlates discoverability and content evidence.", "configFile": "agents/marketing_coordinator.toml", "workers": ["google_seo_auditor", "docs_author"] }
+    {
+      "name": "backend_coordinator",
+      "roleId": "backend",
+      "description": "Use only for an explicit coordination-board task in the backend domain: briefs code_mapper, mcp_integrator, root_cause_debugger, and docs_researcher, merges their implementation, integration, debugging, and source evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/backend_coordinator.toml",
+      "workers": [
+        "code_mapper",
+        "mcp_integrator",
+        "root_cause_debugger",
+        "docs_researcher"
+      ]
+    },
+    {
+      "name": "devops_coordinator",
+      "roleId": "devops",
+      "description": "Use only for an explicit coordination-board task in the devops domain: briefs performance_auditor, codex_doctor, and devex_auditor, merges their performance, runtime-health, setup, and onboarding evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/devops_coordinator.toml",
+      "workers": [
+        "performance_auditor",
+        "codex_doctor",
+        "devex_auditor"
+      ]
+    },
+    {
+      "name": "leadership_coordinator",
+      "roleId": "leadership",
+      "description": "Use only for an explicit coordination-board task in the leadership domain: briefs context_architect, engineering_planner, code_reviewer, and release_verifier, merges their architecture, planning, review, and release evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/leadership_coordinator.toml",
+      "workers": [
+        "context_architect",
+        "engineering_planner",
+        "code_reviewer",
+        "release_verifier"
+      ]
+    },
+    {
+      "name": "product_coordinator",
+      "roleId": "product",
+      "description": "Use only for an explicit coordination-board task in the product domain: briefs prompt_architect, product_strategist, and spec_author, merges their prompt, framing, and specification evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/product_coordinator.toml",
+      "workers": [
+        "prompt_architect",
+        "product_strategist",
+        "spec_author"
+      ]
+    },
+    {
+      "name": "qa_coordinator",
+      "roleId": "qa",
+      "description": "Use only for an explicit coordination-board task in the QA domain: briefs qa_lead, test_verifier, and security_auditor, merges their quality, verification, and security evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/qa_coordinator.toml",
+      "workers": [
+        "qa_lead",
+        "test_verifier",
+        "security_auditor"
+      ]
+    },
+    {
+      "name": "ui_coordinator",
+      "roleId": "ui",
+      "description": "Use only for an explicit coordination-board task in the UI domain: briefs frontend_verifier and design_reviewer, merges their rendered-UI and design-review evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/ui_coordinator.toml",
+      "workers": [
+        "frontend_verifier",
+        "design_reviewer"
+      ]
+    },
+    {
+      "name": "marketing_coordinator",
+      "roleId": "marketing",
+      "description": "Use only for an explicit coordination-board task in the marketing domain: briefs google_seo_auditor and docs_author, merges their discoverability and content evidence, and escalates to the parent session.",
+      "preloadSkill": "agent-brief",
+      "configFile": "agents/marketing_coordinator.toml",
+      "workers": [
+        "google_seo_auditor",
+        "docs_author"
+      ]
+    }
   ],
   "coordinatorDomains": [
-    { "id": "backend", "specialists": ["code_mapper", "mcp_integrator", "root_cause_debugger", "docs_researcher"] },
-    { "id": "devops", "specialists": ["performance_auditor", "codex_doctor", "devex_auditor"] },
-    { "id": "leadership", "specialists": ["context_architect", "engineering_planner", "code_reviewer", "release_verifier"] },
-    { "id": "product", "specialists": ["prompt_architect", "product_strategist", "spec_author"] },
-    { "id": "qa", "specialists": ["qa_lead", "test_verifier", "security_auditor"] },
-    { "id": "ui", "specialists": ["frontend_verifier", "design_reviewer"] },
-    { "id": "marketing", "specialists": ["google_seo_auditor", "docs_author"] }
+    {
+      "id": "backend",
+      "specialists": [
+        "code_mapper",
+        "mcp_integrator",
+        "root_cause_debugger",
+        "docs_researcher"
+      ]
+    },
+    {
+      "id": "devops",
+      "specialists": [
+        "performance_auditor",
+        "codex_doctor",
+        "devex_auditor"
+      ]
+    },
+    {
+      "id": "leadership",
+      "specialists": [
+        "context_architect",
+        "engineering_planner",
+        "code_reviewer",
+        "release_verifier"
+      ]
+    },
+    {
+      "id": "product",
+      "specialists": [
+        "prompt_architect",
+        "product_strategist",
+        "spec_author"
+      ]
+    },
+    {
+      "id": "qa",
+      "specialists": [
+        "qa_lead",
+        "test_verifier",
+        "security_auditor"
+      ]
+    },
+    {
+      "id": "ui",
+      "specialists": [
+        "frontend_verifier",
+        "design_reviewer"
+      ]
+    },
+    {
+      "id": "marketing",
+      "specialists": [
+        "google_seo_auditor",
+        "docs_author"
+      ]
+    }
   ],
   "agents": [
     {
       "name": "code_mapper",
       "category": "code-intelligence",
-      "description": "Read-only explorer that maps files, call paths, and existing patterns.",
-      "templateDescription": "Read-only explorer that maps relevant files, call paths, ownership boundaries, and existing patterns before implementation.",
+      "description": "Read-only explorer that maps files, call paths, ownership, and existing patterns. Use proactively before changing an unfamiliar repository or a broad surface; not for implementation or review.",
+      "preloadSkill": null,
       "configFile": "agents/code_mapper.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7", "serena"],
+      "claudeMcp": [
+        "context7",
+        "serena"
+      ],
       "risk": "low",
       "defaultReason": "Keeps broad repository exploration read-only before implementation.",
       "primaryUse": "Map unfamiliar repositories, file ownership, data flow, and existing conventions.",
@@ -77,15 +206,17 @@
     {
       "name": "docs_researcher",
       "category": "documentation",
-      "description": "Primary-source researcher for current docs, APIs, and version-sensitive facts.",
-      "templateDescription": "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts.",
+      "description": "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts. Use proactively when a claim depends on a current official source or a library version; not for implementation.",
+      "preloadSkill": "evidence-research",
       "configFile": "agents/docs_researcher.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Uses live primary-source research while staying read-only.",
       "primaryUse": "Check official docs, standards, release notes, and source repositories.",
@@ -94,15 +225,17 @@
     {
       "name": "context_architect",
       "category": "context-engineering",
-      "description": "Context strategist that decides what belongs in prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config.",
-      "templateDescription": "Read-only strategist for deciding what belongs in prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config.",
+      "description": "Read-only strategist for where instructions belong: prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config. Use proactively when a rule or workflow needs a durable home; not for writing the content itself.",
+      "preloadSkill": "context-budget-planner",
       "configFile": "agents/context_architect.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Keeps durable context placement decisions read-only before setup changes.",
       "primaryUse": "Choose the right Codex surface for persistent instructions, reusable workflows, external context, and approval boundaries.",
@@ -111,15 +244,17 @@
     {
       "name": "prompt_architect",
       "category": "prompt-engineering",
-      "description": "Prompt and instruction designer for reliable task briefs, mode contracts, and reusable workflows.",
-      "templateDescription": "Read-only prompt and instruction designer for reliable task briefs, mode contracts, and reusable agent workflows.",
+      "description": "Read-only prompt and instruction designer for task briefs, mode contracts, and reusable agent workflows. Use proactively when a request is vague or multi-step and needs a plan before a brief; not for implementation.",
+      "preloadSkill": "prompt-architect",
       "configFile": "agents/prompt_architect.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Improves task briefs and instruction systems without changing the repository by default.",
       "primaryUse": "Design prompts, success criteria, skill briefs, and reusable instruction contracts that reduce ambiguity and constraint drift.",
@@ -128,15 +263,17 @@
     {
       "name": "mcp_integrator",
       "category": "connectors",
-      "description": "MCP and connector planner for least-privilege tool exposure, auth boundaries, and troubleshooting.",
-      "templateDescription": "Read-only MCP and connector planner for least-privilege tool exposure, auth boundaries, and troubleshooting.",
+      "description": "Read-only MCP and connector planner for least-privilege tool exposure, auth boundaries, timeouts, and troubleshooting. Use proactively when an MCP server, tool allowlist, or connector changes; security review belongs to security_auditor.",
+      "preloadSkill": "mcp-builder",
       "configFile": "agents/mcp_integrator.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Plans MCP changes without enabling account, filesystem, database, or production access.",
       "primaryUse": "Review MCP server choices, tool allowlists, auth requirements, approval modes, startup/tool timeouts, and connector troubleshooting.",
@@ -145,15 +282,17 @@
     {
       "name": "product_strategist",
       "category": "planning",
-      "description": "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation.",
-      "templateDescription": "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation.",
+      "description": "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation. Use proactively when a feature's value, scope, or smallest useful version is unclear; executable specs belong to spec_author.",
+      "preloadSkill": null,
       "configFile": "agents/product_strategist.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Challenges framing and scope while staying read-only before implementation starts.",
       "primaryUse": "Run office-hours-style product framing, scope review, alternative generation, and smallest-useful-version decisions.",
@@ -162,15 +301,17 @@
     {
       "name": "engineering_planner",
       "category": "planning",
-      "description": "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy.",
-      "templateDescription": "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy once the requirement is settled; turning vague intent into an executable spec belongs to spec_author.",
+      "description": "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy once the requirement is settled. Use proactively before a multi-file change; turning vague intent into an executable spec belongs to spec_author.",
+      "preloadSkill": null,
       "configFile": "agents/engineering_planner.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Plans architecture and verification from repo evidence while staying read-only.",
       "primaryUse": "Map architecture, data flow, edge cases, invariants, test strategy, and files likely affected before broad changes.",
@@ -179,15 +320,17 @@
     {
       "name": "design_reviewer",
       "category": "design",
-      "description": "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual decision tradeoffs.",
-      "templateDescription": "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual decision tradeoffs.",
+      "description": "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual tradeoffs. Use proactively when a UI is built or reshaped; rendered checks and screenshots belong to frontend_verifier.",
+      "preloadSkill": "frontend-design",
       "configFile": "agents/design_reviewer.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Reviews design quality and tradeoffs while staying read-only before UI changes.",
       "primaryUse": "Critique plans, screens, UX hierarchy, accessibility, visual polish, and design-system fit before or after UI implementation.",
@@ -196,15 +339,17 @@
     {
       "name": "devex_auditor",
       "category": "developer-experience",
-      "description": "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks.",
-      "templateDescription": "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks.",
+      "description": "Developer-experience auditor for onboarding friction, time-to-hello-world, docs clarity, and first-run recovery. Use proactively when install, setup, or getting-started paths change; not for product strategy.",
+      "preloadSkill": null,
       "configFile": "agents/devex_auditor.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can create temporary local evidence while avoiding dependency installs and global setup.",
       "primaryUse": "Test onboarding, prerequisites, first-run flow, docs discoverability, error recovery, and time-to-hello-world friction.",
@@ -213,15 +358,17 @@
     {
       "name": "root_cause_debugger",
       "category": "debugging",
-      "description": "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes.",
-      "templateDescription": "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes.",
+      "description": "Systematic debugger that reproduces failures, traces data flow, and tests hypotheses before any fix. Use proactively for a bug, regression, failing test, or unexplained behavior; verifying the fix belongs to test_verifier.",
+      "preloadSkill": "systematic-debugging",
       "configFile": "agents/root_cause_debugger.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can run focused local checks and temporary logs while keeping production edits assigned to the main thread.",
       "primaryUse": "Reproduce failures, trace data flow, test hypotheses, identify root cause, and propose regression tests.",
@@ -230,15 +377,17 @@
     {
       "name": "qa_lead",
       "category": "quality",
-      "description": "QA lead for end-to-end bug finding, regression coverage, and re-verification plans.",
-      "templateDescription": "QA lead for end-to-end bug finding, regression coverage, and re-verification plans.",
+      "description": "QA lead for end-to-end bug finding, regression coverage, and re-verification plans. Use proactively when user-facing workflows changed and need scenario-based testing; running checks and verifying fixes belongs to test_verifier.",
+      "preloadSkill": null,
       "configFile": "agents/qa_lead.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can run project-native checks and temporary smoke evidence while avoiding global setup.",
       "primaryUse": "Exercise user-facing workflows, identify regressions, propose coverage, and verify fixes with exact scenarios.",
@@ -247,15 +396,18 @@
     {
       "name": "performance_auditor",
       "category": "performance",
-      "description": "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions.",
-      "templateDescription": "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions; search-facing metadata and indexing belongs to google_seo_auditor.",
+      "description": "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions. Use proactively when a change can affect load time, bundle size, or runtime cost; search-facing metadata and indexing belongs to google_seo_auditor.",
+      "preloadSkill": "web-quality-audit",
       "configFile": "agents/performance_auditor.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7", "chrome-devtools"],
+      "claudeMcp": [
+        "context7",
+        "chrome-devtools"
+      ],
       "risk": "medium",
       "defaultReason": "Can collect local performance evidence while keeping deploys and production load approval-gated.",
       "primaryUse": "Measure build size, web vitals, traces, resource budgets, expensive paths, and before/after regression evidence.",
@@ -264,15 +416,17 @@
     {
       "name": "google_seo_auditor",
       "category": "search-discoverability",
-      "description": "Google SEO auditor for crawlability, indexing, metadata, structured data, Core Web Vitals, and Search Console-ready fixes.",
-      "templateDescription": "Google SEO auditor for crawlability, indexing, metadata, structured data, and Search Console-ready fixes; Core Web Vitals measurement and regression work belongs to performance_auditor.",
+      "description": "Google SEO auditor for crawlability, indexing, metadata, structured data, sitemaps, canonicals, and Search Console-ready fixes. Use proactively when public pages or their metadata change; Core Web Vitals measurement belongs to performance_auditor.",
+      "preloadSkill": "seo",
       "configFile": "agents/google_seo_auditor.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Keeps SEO and Search Console guidance evidence-based and read-only before any site change.",
       "primaryUse": "Audit crawlability, indexability, metadata, structured data, sitemaps, canonicalization, hreflang, internal links, and Search Console-ready verification steps; Core Web Vitals measurement belongs to performance_auditor.",
@@ -281,15 +435,17 @@
     {
       "name": "docs_author",
       "category": "documentation",
-      "description": "Documentation author for Diataxis coverage, stale docs, release docs, and missing guide generation.",
-      "templateDescription": "Documentation author for Diataxis coverage, stale docs, release docs, and missing guide generation.",
+      "description": "Documentation author for Diataxis coverage, stale claims, release docs, and missing guides. Use proactively when behavior, install steps, or public copy changed and the docs must follow; code review belongs to code_reviewer.",
+      "preloadSkill": "documentation-and-adrs",
       "configFile": "agents/docs_author.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can draft docs from repo evidence while keeping publication approval-gated.",
       "primaryUse": "Audit docs coverage, find stale claims, draft tutorials/how-tos/reference/explanations, and align release notes with code.",
@@ -298,15 +454,17 @@
     {
       "name": "spec_author",
       "category": "planning",
-      "description": "Spec author for turning vague intent into executable specs with scope, evidence, and quality gates.",
-      "templateDescription": "Spec author for turning vague intent into executable specs with scope, evidence, edge cases, and quality gates; architecture and test strategy for a settled requirement belongs to engineering_planner.",
+      "description": "Spec author for turning vague intent into executable specs with scope, user impact, non-goals, edge cases, and quality gates. Use proactively when a request is too vague to implement safely; architecture and test strategy for a settled requirement belongs to engineering_planner.",
+      "preloadSkill": "ai-project-starter",
       "configFile": "agents/spec_author.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can draft repo-local specs while keeping implementation as a separate explicit step.",
       "primaryUse": "Convert vague requests into scoped specs with user impact, non-goals, technical plan, edge cases, and verification gates.",
@@ -315,15 +473,17 @@
     {
       "name": "code_reviewer",
       "category": "review",
-      "description": "Fresh-context senior review for diffs, PRs, and risky changes.",
-      "templateDescription": "Fresh-context senior code reviewer for diffs, PRs, and risky changes.",
+      "description": "Fresh-context senior code reviewer for diffs, pull requests, and risky changes. Use proactively before a change is merged, shipped, or reported done; it reports findings and never rewrites code.",
+      "preloadSkill": null,
       "configFile": "agents/code_reviewer.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Separates review from implementation and stays read-only.",
       "primaryUse": "Review correctness, regressions, security, maintainability, and missing tests.",
@@ -332,15 +492,19 @@
     {
       "name": "frontend_verifier",
       "category": "browser-verification",
-      "description": "Browser-oriented verifier for UI changes and visual regressions.",
-      "templateDescription": "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows.",
+      "description": "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows. Use proactively when rendered UI changed and needs screenshot, console, or interaction evidence; design judgment belongs to design_reviewer.",
+      "preloadSkill": "webapp-testing",
       "configFile": "agents/frontend_verifier.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7", "playwright", "chrome-devtools"],
+      "claudeMcp": [
+        "context7",
+        "playwright",
+        "chrome-devtools"
+      ],
       "risk": "medium",
       "defaultReason": "Browser evidence can require local screenshots or reports, but file edits remain discouraged.",
       "primaryUse": "Verify rendered UI, responsive layout, interaction states, overlap, overflow, and console errors.",
@@ -349,15 +513,17 @@
     {
       "name": "security_auditor",
       "category": "security",
-      "description": "Read-only security auditor for auth, secrets, API routes, data access, permissions, and abuse paths.",
-      "templateDescription": "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths.",
+      "description": "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths. Use proactively when a change touches authentication, authorization, secrets, connectors, or release artifacts; it reports findings and never edits.",
+      "preloadSkill": null,
       "configFile": "agents/security_auditor.toml",
       "sandboxMode": "read-only",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": true,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "low",
       "defaultReason": "Security review stays read-only and avoids printing credential material.",
       "primaryUse": "Audit auth, authorization, input validation, secrets, data access, dependencies, and abuse paths.",
@@ -366,15 +532,17 @@
     {
       "name": "test_verifier",
       "category": "verification",
-      "description": "Validation specialist for tests, lint/typecheck/build, smoke checks, and failure evidence.",
-      "templateDescription": "Validation specialist for lint, typecheck, tests, build, smoke checks, and failure evidence.",
+      "description": "Validation specialist for lint, typecheck, tests, build, smoke checks, and exact pass/fail evidence. Use proactively after any file change to prove it works, as the independent verifier; it does not edit production or test files.",
+      "preloadSkill": null,
       "configFile": "agents/test_verifier.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Verification can write local test/build outputs while avoiding production edits.",
       "primaryUse": "Run and summarize project-native checks and smoke tests with exact pass/fail evidence.",
@@ -383,15 +551,17 @@
     {
       "name": "release_verifier",
       "category": "release",
-      "description": "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates.",
-      "templateDescription": "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates.",
+      "description": "Release readiness verifier for git hygiene, changelog and version parity, artifacts, secret scans, and publish gates. Use proactively before a tag, release, publish, or deploy; it never performs the release itself.",
+      "preloadSkill": "shipping-and-launch",
       "configFile": "agents/release_verifier.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Release checks can inspect local artifacts while keeping publish actions approval-gated.",
       "primaryUse": "Check git status, release notes, package metadata, artifacts, secret scans, and publish blockers.",
@@ -400,15 +570,17 @@
     {
       "name": "codex_doctor",
       "category": "diagnostics",
-      "description": "Setup diagnostician for starter health, catalog drift, install-plan coverage, and safe next checks.",
-      "templateDescription": "Controlled setup diagnostician for Codex starter health, catalog drift, install-plan coverage, and safe next checks.",
+      "description": "Controlled setup diagnostician for AgentChef and Codex starter health, catalog drift, install-plan coverage, and safe next checks. Use proactively when install, config, MCP, or plugin state looks wrong; it changes nothing without approval.",
+      "preloadSkill": "agentchef-operator",
       "configFile": "agents/codex_doctor.toml",
       "sandboxMode": "workspace-write",
       "modelSelection": "worker",
       "modelReasoningEffort": "auto",
       "neverOverrideUserProfile": true,
       "webSearch": false,
-      "claudeMcp": ["context7"],
+      "claudeMcp": [
+        "context7"
+      ],
       "risk": "medium",
       "defaultReason": "Can run local validators and write temporary verification output while keeping real global writes approval-gated.",
       "primaryUse": "Diagnose starter health, catalog drift, install plan coverage, docs locale coverage, MCP defaults, and verification gaps.",

@@ -77,14 +77,14 @@ test("balanced, full, multi-session, and offline profiles preserve MCP capabilit
   assert.equal([...offline.values()].every((enabled) => enabled === false), true);
 });
 
-test("plugin registers only the reviewed SessionEnd process-hygiene hook", () => {
+test("plugin registers the reviewed SessionEnd process-hygiene hook first, next to the routing hint", () => {
   const pluginRoot = path.join(root, "plugins", "agentchef");
   const manifest = JSON.parse(fs.readFileSync(
     path.join(pluginRoot, ".codex-plugin", "plugin.json"),
     "utf8"
   ));
-  const hookPath = manifest.hooks?.[0];
-  assert.equal(hookPath, "./hooks/process-hygiene.json");
+  assert.deepEqual(manifest.hooks, ["./hooks/process-hygiene.json", "./hooks/routing-hint.json"]);
+  const hookPath = manifest.hooks[0];
 
   const hookConfig = JSON.parse(fs.readFileSync(
     path.join(pluginRoot, hookPath),

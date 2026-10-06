@@ -7,7 +7,12 @@
 //   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
 //   catalog/mcp-servers.json (claudeSource: plugin) -> plugins/agentchef/mcp/claude.mcp.json
 //   templates/codex/serena-pool.mjs -> plugins/agentchef/scripts/serena-pool.mjs
-// The Claude manifest carries its SessionEnd process-hygiene hook inline.
+//   catalog/routing-profiles.json -> the profile list in the adaptive-agent-routing reference
+//   catalog/routing-profiles.json + catalog/skills.json -> plugins/agentchef/scripts/routing-index.json
+//   scripts/lib/routing-recommendation.mjs -> plugins/agentchef/scripts/routing-recommendation.mjs
+//   codexRoutingHintHook -> plugins/agentchef/hooks/routing-hint.json
+// The Claude manifest carries its three hooks inline (Agent spawn guard,
+// routing hint, SessionEnd process hygiene).
 // Claude would also load a hooks/hooks.json on its own, and Codex reads its
 // hook from hooks/process-hygiene.json, so neither CLI loads the other's.
 // `--check` (used by npm run check) fails when a committed artifact drifts.
@@ -28,6 +33,12 @@ const claudePluginManifestPath = `${pluginDirectory}/.claude-plugin/plugin.json`
 const settingsFragmentPath = "templates/claude/settings.fragment.json";
 export const claudePluginMcpPath = `${pluginDirectory}/mcp/claude.mcp.json`;
 const pluginSerenaBridgePath = `${pluginDirectory}/scripts/serena-pool.mjs`;
+export const routingReferencePath = `${pluginDirectory}/skills/adaptive-agent-routing/references/global-working-agreements.md`;
+export const pluginRoutingEnginePath = `${pluginDirectory}/scripts/routing-recommendation.mjs`;
+export const pluginRoutingIndexPath = `${pluginDirectory}/scripts/routing-index.json`;
+export const codexRoutingHintHookPath = `${pluginDirectory}/hooks/routing-hint.json`;
+const routingReferenceStart = "<!-- agentchef:routing-profiles:start -->";
+const routingReferenceEnd = "<!-- agentchef:routing-profiles:end -->";
 const projectUrl = "https://github.com/ucsahinn/agentchef";
 
 function normalize(text) {
@@ -93,8 +104,64 @@ export const claudePluginHooks = Object.freeze({
         }
       ]
     }
+  ],
+  // The routing hint: one advisory line of catalog identifiers when the
+  // prompt matches a routing profile with high confidence
+  // (plugins/agentchef/scripts/routing-hint.mjs). The event has no matcher.
+  UserPromptSubmit: [
+    {
+      hooks: [
+        {
+          type: "command",
+          command: "node",
+          args: ["${CLAUDE_PLUGIN_ROOT}/scripts/routing-hint.mjs"],
+          timeout: 10
+        }
+      ]
+    }
   ]
 });
+
+// The same hint for Codex, as its own hook file next to process-hygiene.json.
+// The Windows variant references the plugin root through a variable only.
+export const codexRoutingHintHook = Object.freeze({
+  description: "On prompt submit, score the prompt against the AgentChef routing catalog in memory and add one advisory line of profile, skill, and role identifiers when a profile matches with high confidence; nothing is stored or sent, and the prompt is never blocked.",
+  hooks: {
+    UserPromptSubmit: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: "node \"$PLUGIN_ROOT/scripts/routing-hint.mjs\"",
+            commandWindows: "powershell.exe -NoProfile -NonInteractive -Command \"& node (Join-Path $env:PLUGIN_ROOT 'scripts/routing-hint.mjs')\"",
+            timeout: 10
+          }
+        ]
+      }
+    ]
+  }
+});
+
+// The hook's data: identifiers and match words only, so a tampered copy can
+// change which identifiers are hinted but cannot carry instructions.
+export function renderRoutingIndex(repoRoot) {
+  const routing = readJson(repoRoot, "catalog/routing-profiles.json");
+  const skillEntries = new Map((readJson(repoRoot, "catalog/skills.json").skills || []).map((skill) => [skill.name, skill]));
+  return {
+    schemaVersion: 1,
+    pluginVersion: readJson(repoRoot, "package.json").version,
+    cap: routing.delegationPolicy.autoSpawnCap,
+    profiles: routing.profiles.map((profile) => ({
+      id: profile.id,
+      match: { priority: profile.match.priority, phrases: profile.match.phrases, terms: profile.match.terms, excludeTerms: profile.match.excludeTerms },
+      autoSkill: profile.autoSkill,
+      autoSkillMode: skillEntries.get(profile.autoSkill)?.implicitInvocation === false ? "suggest" : "load",
+      verifier: profile.verifier,
+      autoVerify: profile.autoVerify,
+      agents: profile.agents
+    }))
+  };
+}
 
 // The MCP servers Claude Code gets from the plugin. Every entry runs through
 // node, the one command both platforms resolve the same way; npx packages go
@@ -115,11 +182,57 @@ export function renderClaudePluginMcp(repoRoot) {
   return { mcpServers };
 }
 
+// One bullet per profile, between two markers, so the reference the routing
+// skill loads cannot drift from the catalog (it used to be hand-copied).
+export function renderRoutingReference(repoRoot) {
+  const routing = readJson(repoRoot, "catalog/routing-profiles.json");
+  const skillEntries = new Map((readJson(repoRoot, "catalog/skills.json").skills || []).map((skill) => [skill.name, skill]));
+  const current = normalize(fs.readFileSync(path.join(repoRoot, routingReferencePath), "utf8"));
+  const start = current.indexOf(routingReferenceStart);
+  const end = current.indexOf(routingReferenceEnd);
+  if (start < 0 || end < 0 || end < start) throw new Error(`${routingReferencePath} is missing the routing-profiles markers`);
+  const code = (name) => `\`${name}\``;
+  const lines = routing.profiles.map((profile) => {
+    const skills = profile.skills.length ? profile.skills.map(code).join(", ") : "none";
+    const autoSkill = profile.autoSkill
+      ? `${code(profile.autoSkill)}${skillEntries.get(profile.autoSkill)?.implicitInvocation === false ? " (explicit-only: suggest, do not load)" : ""}`
+      : "none";
+    const verifier = `${code(profile.verifier)}${profile.autoVerify ? " (required after file changes)" : " (suggested)"}`;
+    const handoffs = (profile.crossDomainHandoffs || []).map((handoff) => ` Cross-domain: ${code(handoff.toCoordinator)} via ${handoff.via} when ${handoff.when.replace(/\.$/, "")}.`).join("");
+    return `- ${code(profile.id)}: agents ${profile.agents.map(code).join(", ")}; skills ${skills}; auto-skill ${autoSkill}; verifier ${verifier}.${handoffs}`;
+  });
+  const cap = routing.delegationPolicy.autoSpawnCap;
+  const body = [
+    routingReferenceStart,
+    `Rendered from \`catalog/routing-profiles.json\` by \`scripts/render-target-artifacts.mjs\`; do not edit by hand. A matched profile loads its auto-skill first (explicit-only skills are suggested instead), runs its verifier before a file-changing task is reported done when the verifier is required, and starts at most ${cap} agents per task without the user naming them.`,
+    "",
+    ...lines,
+    routingReferenceEnd
+  ].join("\n");
+  return `${current.slice(0, start)}${body}${current.slice(end + routingReferenceEnd.length)}`;
+}
+
+// The working agreement's routing lines come from the catalogs, so the rule
+// the model reads and the data the hint hook scores cannot disagree.
+export function workingAgreementSharedTokens(repoRoot = root) {
+  const routing = readJson(repoRoot, "catalog/routing-profiles.json");
+  const agents = readJson(repoRoot, "catalog/agents.json");
+  return {
+    SPAWN_WHEN: routing.delegationPolicy.spawnWhen.join("; "),
+    SKIP_WHEN: routing.delegationPolicy.skipWhen.join(", "),
+    AUTO_SPAWN_CAP: routing.delegationPolicy.autoSpawnCap,
+    AUTO_VERIFY_PROFILES: routing.profiles.filter((profile) => profile.autoVerify).map((profile) => `\`${profile.id}\``).join(", "),
+    WORKER_MODEL_CODEX: agents.workerModels.codex,
+    WORKER_MODEL_CLAUDE: agents.workerModels.claude
+  };
+}
+
 export function renderAllTargetArtifacts(repoRoot = root) {
   const outputs = new Map();
   const source = fs.readFileSync(path.join(repoRoot, "templates", "shared", "working-agreement.md"), "utf8");
+  const sharedTokens = workingAgreementSharedTokens(repoRoot);
   for (const target of Object.values(workingAgreementTargets)) {
-    outputs.set(target.output, `${renderWorkingAgreement(source, target.id).trimEnd()}\n`);
+    outputs.set(target.output, `${renderWorkingAgreement(source, target.id, sharedTokens).trimEnd()}\n`);
   }
   const catalog = readJson(repoRoot, "catalog/agents.json");
   const agentFileNames = [];
@@ -132,6 +245,12 @@ export function renderAllTargetArtifacts(repoRoot = root) {
   // The plugin carries its own copy of the bridge; identical bytes keep it on
   // the same pool manager as the Codex copy.
   outputs.set(pluginSerenaBridgePath, normalize(fs.readFileSync(path.join(repoRoot, "templates", "codex", "serena-pool.mjs"), "utf8")));
+  outputs.set(routingReferencePath, renderRoutingReference(repoRoot));
+  // The hook scores with a byte-identical copy of the engine and a rendered
+  // index, so the plugin has no dependency on the repository checkout.
+  outputs.set(pluginRoutingEnginePath, normalize(fs.readFileSync(path.join(repoRoot, "scripts", "lib", "routing-recommendation.mjs"), "utf8")));
+  outputs.set(pluginRoutingIndexPath, `${JSON.stringify(renderRoutingIndex(repoRoot), null, 2)}\n`);
+  outputs.set(codexRoutingHintHookPath, `${JSON.stringify(codexRoutingHintHook, null, 2)}\n`);
   const rules = fs.readFileSync(path.join(repoRoot, "templates", "codex", "rules", "default.rules"), "utf8");
   const permissions = emitClaudePermissions(rules);
   const mcpPermissions = emitClaudeMcpPermissions(readJson(repoRoot, "catalog/mcp-servers.json"));

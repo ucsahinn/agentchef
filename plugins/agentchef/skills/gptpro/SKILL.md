@@ -1,6 +1,6 @@
 ---
 name: gptpro
-description: Prepare a repository for a manual GPT Pro (ChatGPT Project) deep review as safe, architecture-aware, directly uploadable text bundles plus a convenience ZIP. Use to build or refresh GPT Pro Project context, upload a codebase to GPT Pro, split a monorepo into apps/packages/services/libs plus database and docs context, or create a safe external-model source snapshot.
+description: Prepare a repository for a manual GPT Pro (ChatGPT Project) deep review as safe, architecture-aware text bundles plus a ZIP. Use when asked to build or refresh GPT Pro Project context, upload a codebase to GPT Pro, or create a safe external-model source snapshot.
 ---
 # GPT Pro Project Context
 

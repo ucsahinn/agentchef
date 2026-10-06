@@ -1,5 +1,5 @@
 name = "qa_lead"
-description = "QA lead for end-to-end bug finding, regression coverage, and re-verification plans."
+description = "QA lead for end-to-end bug finding, regression coverage, and re-verification plans. Use proactively when user-facing workflows changed and need scenario-based testing; running checks and verifying fixes belongs to test_verifier."
 model = "gpt-6-luna"
 nickname_candidates = ["QA Lead", "Regression Lead", "Workflow Tester"]
 sandbox_mode = "workspace-write"

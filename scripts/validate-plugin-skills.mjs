@@ -4,6 +4,11 @@ import path from "node:path";
 
 const root = path.resolve(process.cwd());
 const failures = [];
+// Both CLIs list every skill description on every turn (Codex budgets about
+// 8,000 characters when the context size is unknown); the 18 pinned skills
+// add roughly 4,800, so the bundled ones stay under this total.
+const bundledDescriptionBudget = 3400;
+let bundledDescriptionChars = 0;
 
 const pluginManifestRel = "plugins/agentchef/.codex-plugin/plugin.json";
 const pluginManifestPath = path.join(root, pluginManifestRel);
@@ -161,6 +166,7 @@ if (!fs.existsSync(pluginManifestPath)) {
         if (description.length < 80 || description.length > 500) {
           failures.push(`${skillRel}/SKILL.md description should be 80-500 characters for reliable routing.`);
         }
+        bundledDescriptionChars += description.length;
         if (!/references\//.test(skillMdText) && !/references\\/.test(skillMdText)) {
           failures.push(`${skillRel}/SKILL.md must route to a references/ file.`);
         }
@@ -210,6 +216,10 @@ if (!fs.existsSync(pluginManifestPath)) {
       }
     }
   }
+}
+
+if (bundledDescriptionChars > bundledDescriptionBudget) {
+  failures.push(`Bundled skill descriptions total ${bundledDescriptionChars} characters; keep them within ${bundledDescriptionBudget} so the skill listing stays inside both CLIs' budgets.`);
 }
 
 if (failures.length > 0) {

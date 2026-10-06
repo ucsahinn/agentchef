@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyGitStatus, summarizeGitStatus } from "./lib/git-worktree.mjs";
+import { buildRoutingBoundary } from "./lib/routing-text.mjs";
 import {
   CliUsageError,
   installCliErrorBoundary,
@@ -515,7 +516,7 @@ function inspectRoutingBoard() {
       skillModes: [...new Set(profiles.map((profile) => profile.skillMode))].sort(),
       mcpModes: [...new Set(profiles.map((profile) => profile.mcpMode))].sort()
     },
-    boundary: "Routing profiles name visible prompt-shape matched specialists, but subagent spawning still requires the current runtime to permit delegation; destructive, credentialed, publishing, deployment, database, broad filesystem, and broad/destructive graph-indexing actions remain approval-gated."
+    boundary: buildRoutingBoundary(catalog.delegationPolicy)
   };
 }
 

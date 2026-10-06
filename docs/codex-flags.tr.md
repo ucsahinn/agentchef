@@ -42,8 +42,13 @@ npm run codex:routing -- --task "offline MCP profile"
 ```
 
 Sonuc sadece oneridir ve en fazla uc catalog route dondurur. Agirlikli katalog
-ifadeleri ve tum-kelime terimleri kullanir, Turkce karakterleri normalize eder,
-eslesen sinyalleri ve guven seviyesini gosterir. Esitlikte belgelenmis profil
+ifadeleri ve tum-kelime terimleri kullanir, Turkce karakterleri normalize eder
+(1.3.4 ile, noktasiz `ı` dahil), eslesen sinyalleri ve guven
+seviyesini gosterir. Guven, net bir onculuk (en az 12 puan ve ikinciden en az 3
+puan onde) veya guclu tek sinyal (en az 9 puan ve ikincinin en fazla yarisi)
+varsa `high` olur. 1.3.4 ile cikti her profilin Verifier ve Auto-skill
+alanlarini da gosterir ve tek satirlik bir `[hint]` ile biter;
+`npm run chef -- --routing --task "<istek>"` ayni board'u yazdirir. Esitlikte belgelenmis profil
 onceligi, sonra catalog sirasi kullanilir. Deterministiktir; gizli model cagrisi,
 agent baslatma, MCP acma veya onay ayari degisikligi yapmaz.
 

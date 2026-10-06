@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { normalize } from "./lib/routing-recommendation.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -61,7 +62,11 @@ const agents = readJson("catalog/agents.json");
 const mcp = readJson("catalog/mcp-servers.json");
 const skills = readJson("catalog/skills.json");
 const agentsTemplate = fs.readFileSync(path.join(root, "templates/codex/AGENTS.md"), "utf8");
-const routingBoardScript = fs.readFileSync(path.join(root, "scripts/codex-routing-board.mjs"), "utf8");
+// The board prints its policy and visibility sentences from scripts/lib/routing-text.mjs.
+const routingBoardScript = [
+  fs.readFileSync(path.join(root, "scripts/codex-routing-board.mjs"), "utf8"),
+  fs.readFileSync(path.join(root, "scripts/lib/routing-text.mjs"), "utf8")
+].join("\n");
 const routingReference = fs.readFileSync(path.join(root, "plugins/agentchef/skills/adaptive-agent-routing/references/global-working-agreements.md"), "utf8");
 
 const agentNames = validateNamedCatalog(agents.agents, "agent");
@@ -74,11 +79,14 @@ const localSkillNames = fs.existsSync(localSkillRoot)
       .map((entry) => entry.name))
   : new Set();
 const allowedSkills = new Set([...catalogSkillNames, ...localSkillNames]);
+const skillEntries = new Map((skills.skills || []).map((skill) => [skill.name, skill]));
+// The profiles whose verifier must run before a file-changing task is done.
+const expectedAutoVerify = ["data-systems", "frontend-ui", "mcp-connector-change", "release-or-publish", "security-sensitive"];
 const allowedDelegationModes = new Set(["conditional"]);
 const allowedSkillModes = new Set(["narrowest-owner"]);
 const allowedMcpModes = new Set(["use-when-available-and-approved", "optional", "none"]);
 
-if (routing.version !== "0.3.0") fail("routing profile catalog version must be 0.3.0.");
+if (routing.version !== "0.4.0") fail("routing profile catalog version must be 0.4.0.");
 if (!Array.isArray(routing.profiles) || routing.profiles.length < 10) {
   fail("routing profile catalog must define at least 10 enterprise task-shape profiles.");
 }
@@ -86,7 +94,17 @@ if (routing.delegationPolicy?.mode !== "conditional" || routing.delegationPolicy
   fail("routing catalog must define conditional delegation with capacity ceiling 10.");
 }
 if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) {
-  fail("routing catalog must normally cap one task at four agents.");
+  fail("routing catalog must cap one task at four workers.");
+}
+if (!Number.isInteger(routing.delegationPolicy?.autoSpawnCap) || routing.delegationPolicy.autoSpawnCap < 1 || routing.delegationPolicy.autoSpawnCap > 4) {
+  fail("routing catalog must set delegationPolicy.autoSpawnCap to an integer from 1 to 4.");
+}
+if (!Array.isArray(routing.delegationPolicy?.spawnWhen) || routing.delegationPolicy.spawnWhen.length < 4
+  || !routing.delegationPolicy.spawnWhen.some((entry) => /autoVerify/.test(entry))) {
+  fail("routing catalog spawnWhen must list the autoVerify condition and the three delegation conditions.");
+}
+if (!Array.isArray(routing.delegationPolicy?.skipWhen) || routing.delegationPolicy.skipWhen.length < 3) {
+  fail("routing catalog skipWhen must list at least three conditions.");
 }
 if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier"
   || routing.agentRuntimePolicy?.neverOverrideUserProfile !== true) {
@@ -94,9 +112,7 @@ if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier"
 }
 
 for (const required of [
-  "independent parallel work",
-  "noisy logs or research",
-  "the user explicitly requests delegation",
+  ...routing.delegationPolicy.spawnWhen,
   "Routing plan:",
   "Routing result:",
   "adaptive-agent-routing"
@@ -125,7 +141,7 @@ for (const required of [
 
 const seenIds = new Set();
 for (const profile of routing.profiles || []) {
-  for (const key of ["id", "title", "trigger", "match", "agents", "skills", "mcp", "flags", "delegationMode", "skillMode", "mcpMode", "evidence", "boundary", "owner", "primarySurface", "durability", "privilegeDelta", "validationGate", "rollback"]) {
+  for (const key of ["id", "title", "trigger", "match", "agents", "skills", "mcp", "flags", "delegationMode", "skillMode", "mcpMode", "verifier", "autoVerify", "autoSkill", "evidence", "boundary", "primarySurface", "durability", "privilegeDelta", "validationGate", "rollback"]) {
     if (!Object.prototype.hasOwnProperty.call(profile, key)) {
       fail(`routing profile missing ${key}: ${profile.id || "<unknown>"}`);
     }
@@ -155,7 +171,7 @@ for (const profile of routing.profiles || []) {
         fail(`routing profile match.${kind} entries must be [non-empty string, positive integer]: ${profile.id}`);
         continue;
       }
-      const normalized = signal[0].normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().trim();
+      const normalized = normalize(signal[0]);
       if (seenSignals.has(normalized)) fail(`routing profile match.${kind} has duplicate signal: ${profile.id} (${signal[0]})`);
       seenSignals.add(normalized);
     }
@@ -177,6 +193,19 @@ for (const profile of routing.profiles || []) {
 
   for (const server of profileMcp) {
     if (!mcpNames.has(server)) fail(`routing profile ${profile.id} references unknown MCP server: ${server}`);
+  }
+
+  // Who verifies, whether that is mandatory, and which skill loads first.
+  if (typeof profile.verifier !== "string" || !agentNames.has(normalizedIdentity(profile.verifier))) {
+    fail(`routing profile ${profile.id} verifier must name a cataloged specialist: ${profile.verifier}`);
+  }
+  if (typeof profile.autoVerify !== "boolean") fail(`routing profile autoVerify must be a boolean: ${profile.id}`);
+  if (profile.autoSkill !== null) {
+    if (typeof profile.autoSkill !== "string" || !profileSkills.includes(profile.autoSkill)) {
+      fail(`routing profile ${profile.id} autoSkill must be null or one of its own skills: ${profile.autoSkill}`);
+    } else if (skillEntries.get(profile.autoSkill)?.retired) {
+      fail(`routing profile ${profile.id} autoSkill names a retired skill: ${profile.autoSkill}`);
+    }
   }
 
   if (profileFlags.length === 0) {
@@ -216,7 +245,7 @@ for (const profile of routing.profiles || []) {
   if (!profile.boundary || profile.boundary.length < 40) {
     fail(`routing profile boundary must be explicit: ${profile.id}`);
   }
-  for (const key of ["owner", "primarySurface", "durability", "privilegeDelta", "validationGate", "rollback"]) {
+  for (const key of ["primarySurface", "durability", "privilegeDelta", "validationGate", "rollback"]) {
     if (typeof profile[key] !== "string" || profile[key].length < 12) {
       fail(`routing profile ${key} must be explicit: ${profile.id}`);
     }
@@ -241,6 +270,7 @@ for (const required of [
   "evidence-backed-research",
   "context-surface-decision",
   "bug-root-cause",
+  "code-review",
   "frontend-ui",
   "security-sensitive",
   "mcp-connector-change",
@@ -248,6 +278,10 @@ for (const required of [
   "starter-health"
 ]) {
   if (!seenIds.has(required)) fail(`routing profile catalog missing required profile: ${required}`);
+}
+const autoVerifyIds = (routing.profiles || []).filter((profile) => profile.autoVerify === true).map((profile) => profile.id).sort();
+if (JSON.stringify(autoVerifyIds) !== JSON.stringify(expectedAutoVerify)) {
+  fail(`autoVerify profiles must be exactly ${expectedAutoVerify.join(", ")}; found ${autoVerifyIds.join(", ") || "none"}.`);
 }
 
 if (failures.length > 0) {

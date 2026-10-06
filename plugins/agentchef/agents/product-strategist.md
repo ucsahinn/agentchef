@@ -1,6 +1,6 @@
 ---
 name: product-strategist
-description: "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation."
+description: "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation. Use proactively when a feature's value, scope, or smallest useful version is unclear; executable specs belong to spec_author."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
 model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash

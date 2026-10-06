@@ -25,8 +25,10 @@ kanıt işlerinde faydalıdır. Always-on servis değildir ve approval sınırla
 atlamak için kullanılmamalıdır.
 
 Büyük işlerde az sayıda odaklı ajan kullan ve write scope'larını ayır.
-Delegasyon denetlenebilir olsun diye `Agent plan`, `Agent started` ve
-`Agent result` bilgisini raporla.
+Delegasyon denetlenebilir olsun diye işten önce tek bir `Routing plan:` satırı,
+işten sonra tek bir `Routing result:` satırı raporla. 1.3.4 ile agent yalnızca bir autoVerify routing profili eşleşip dosyalar
+değiştiğinde, bağımsız paralel iş olduğunda, gürültülü log veya araştırma
+ayrılması gerektiğinde ya da kullanıcı açıkça delegasyon istediğinde başlatılır.
 
 ## Varsayilan MCP Siniri
 

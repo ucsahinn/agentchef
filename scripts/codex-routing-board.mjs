@@ -7,7 +7,8 @@ import {
   installCliErrorBoundary,
   requireCliValue
 } from "./lib/cli-error-contract.mjs";
-import { recommendProfiles } from "./lib/routing-recommendation.mjs";
+import { formatRoutingHint, recommendProfiles } from "./lib/routing-recommendation.mjs";
+import { buildRoutingBoundary, routingCliLine, routingLifecycleLines, routingPlanLine, routingPolicyLine, routingResultLine } from "./lib/routing-text.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -144,6 +145,24 @@ function coordinationFor(profiles) {
   };
 }
 if (options.profile && options.task) throw new CliUsageError("Use either --profile or --task, not both.");
+const skillsCatalog = readJson("catalog/skills.json");
+const skillEntries = new Map((skillsCatalog.skills || []).map((skill) => [skill.name, skill]));
+const packageVersion = readJson("package.json").version;
+const routingBoundary = buildRoutingBoundary(routing.delegationPolicy);
+
+// Explicit-only skills (implicitInvocation false) are suggested, never loaded.
+function hintEntryFor(recommendation) {
+  const profile = recommendation.profile;
+  return {
+    id: profile.id,
+    confidence: recommendation.confidence,
+    autoSkill: profile.autoSkill,
+    autoSkillMode: skillEntries.get(profile.autoSkill)?.implicitInvocation === false ? "suggest" : "load",
+    verifier: profile.verifier,
+    autoVerify: profile.autoVerify,
+    agents: profile.agents
+  };
+}
 const recommendations = options.task ? recommendProfiles(routing.profiles, options.task) : [];
 const profiles = options.profile
   ? routing.profiles.filter((profile) => profile.id === options.profile)
@@ -160,20 +179,20 @@ const report = {
   delegationPolicy: routing.delegationPolicy,
   agentRuntimePolicy: routing.agentRuntimePolicy,
   visibilityContract: {
-    routingPlan: "Routing plan: one compact initial line with selected agents, skills, MCPs, commands, and skips.",
-    routingResult: "Routing result: one compact final table or line with state and evidence for each selected surface.",
-    cli: "Use /agent in Codex CLI to inspect active agent threads, switch to one, or steer/close it.",
-    lifecycle: [
-      "Close completed subagent threads when the task no longer needs them.",
-      "Use /agent to inspect, switch, steer, or close agent threads before finalizing large work.",
-      "Use /ps to inspect background terminals and /stop to cancel terminal work started by the current session.",
-      "Close browser/MCP pages or sessions when the selected tool exposes a close operation.",
-      "If an external MCP process such as Serena persists after the task, report it and ask before killing processes or deleting state."
-    ],
-    boundary: "A route match recommends a specialist but spawns only for independent parallel work, noisy isolation, or explicit user-requested delegation."
+    routingPlan: routingPlanLine,
+    routingResult: routingResultLine,
+    cli: routingCliLine,
+    lifecycle: routingLifecycleLines,
+    boundary: routingBoundary
   },
   profileCount: profiles.length,
-  taskRecommendation: options.task ? { algorithm: "weighted-catalog-v1", task: options.task, recommendations: recommendations.map(({ profile, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence }) => ({ id: profile.id, title: profile.title, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence, advisory: true })) } : null,
+  taskRecommendation: options.task ? {
+    algorithm: "weighted-catalog-v2",
+    task: options.task,
+    recommendations: recommendations.map(({ profile, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence }) => ({ id: profile.id, title: profile.title, matchedTerms, matchedPhrases, excludedTerms, score, priority, confidence, advisory: true })),
+    // The same line the plugin's prompt-submit hook adds for a high-confidence match.
+    hint: recommendations.length > 0 ? formatRoutingHint(hintEntryFor(recommendations[0]), { version: packageVersion, cap: routing.delegationPolicy.autoSpawnCap }) : null
+  } : null,
   coordination: coordinationFor(profiles),
   profiles: profiles.map((profile) => ({ ...profile, workers: profile.agents.map(workerFor) }))
 };
@@ -190,15 +209,16 @@ if (options.json) {
       const signals = [...recommendation.matchedPhrases, ...recommendation.matchedTerms].join(", ");
       printWrapped(`${recommendation.profile.id}: ${recommendation.confidence} confidence; signals: ${signals}`, { prefix: "[signal] ", continuationPrefix: "         " });
     }
-    for (const recommendation of recommendations) printWrapped(`${recommendation.profile.id} — matched: ${recommendation.matchedTerms.join(", ")}`, { prefix: "[recommend] ", continuationPrefix: "            " });
+    for (const recommendation of recommendations) printWrapped(`${recommendation.profile.id} — matched: ${[...recommendation.matchedPhrases, ...recommendation.matchedTerms].join(", ")}`, { prefix: "[recommend] ", continuationPrefix: "            " });
+    if (report.taskRecommendation.hint) printWrapped(report.taskRecommendation.hint, { prefix: "[hint] ", continuationPrefix: "       " });
   }
-  printWrapped("Policy: route matches are recommendations; delegation is conditional; roles run on the catalog worker model and inherit reasoning effort.");
+  printWrapped(routingPolicyLine);
   console.log("");
   console.log("Routing visibility contract:");
-  printWrapped("Routing plan: selected agents, skills, MCPs, commands, and skips in one initial line.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Routing result: completion state and evidence in one final table or line.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Use /agent in Codex CLI to inspect active agent threads, switch to one, or steer/close it.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Boundary: routing profiles make specialists visible, not hidden permission to spawn agents or enable risky tools.", { prefix: "- ", continuationPrefix: "  " });
+  printWrapped(routingPlanLine, { prefix: "- ", continuationPrefix: "  " });
+  printWrapped(routingResultLine, { prefix: "- ", continuationPrefix: "  " });
+  printWrapped(routingCliLine, { prefix: "- ", continuationPrefix: "  " });
+  printWrapped(`Boundary: ${routingBoundary}`, { prefix: "- ", continuationPrefix: "  " });
   if (report.coordination.primaryCoordinator) {
     console.log("");
     printWrapped(`${report.coordination.primaryCoordinator.name} owns: ${report.coordination.primaryCoordinator.workers.join(", ")}`, { prefix: "Coordinator: ", continuationPrefix: "             " });
@@ -208,11 +228,7 @@ if (options.json) {
   }
   console.log("");
   console.log("Lifecycle hygiene:");
-  printWrapped("Close completed subagent threads when they are no longer needed.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Use /agent before finalizing large work to inspect, switch, steer, or close agent threads.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Use /ps for background terminals and /stop to cancel terminal work started by the current session.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("Close browser/MCP pages or sessions when the selected tool exposes a close operation.", { prefix: "- ", continuationPrefix: "  " });
-  printWrapped("If an external MCP process such as Serena persists after the task, report it and ask before killing processes or deleting state.", { prefix: "- ", continuationPrefix: "  " });
+  for (const line of routingLifecycleLines) printWrapped(line, { prefix: "- ", continuationPrefix: "  " });
   for (const profile of profiles) {
     console.log("");
     printWrapped(`${profile.title} (${profile.id})`, { prefix: "- ", continuationPrefix: "  " });
@@ -224,7 +240,8 @@ if (options.json) {
     printWrapped(profile.delegationMode, { prefix: "  Delegation mode: ", continuationPrefix: "    " });
     printWrapped(profile.skillMode, { prefix: "  Skill mode: ", continuationPrefix: "    " });
     printWrapped(profile.mcpMode, { prefix: "  MCP mode: ", continuationPrefix: "    " });
-    printWrapped(profile.owner, { prefix: "  Owner: ", continuationPrefix: "    " });
+    printWrapped(`${profile.verifier}${profile.autoVerify ? " (required after file changes)" : " (suggested)"}`, { prefix: "  Verifier: ", continuationPrefix: "    " });
+    printWrapped(profile.autoSkill ? `${profile.autoSkill}${skillEntries.get(profile.autoSkill)?.implicitInvocation === false ? " (explicit-only: suggested, not loaded)" : ""}` : "none", { prefix: "  Auto-skill: ", continuationPrefix: "    " });
     printWrapped(profile.primarySurface, { prefix: "  Surface: ", continuationPrefix: "    " });
     printWrapped(profile.durability, { prefix: "  Durability: ", continuationPrefix: "    " });
     printWrapped(profile.privilegeDelta, { prefix: "  Privilege delta: ", continuationPrefix: "    " });

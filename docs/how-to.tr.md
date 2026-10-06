@@ -68,34 +68,18 @@ skill'leri gösterir.
 
 ## Çalışma Modeli
 
-Bu kurulumu uzman bir yazılım ekibi gibi kullan:
+Bu kurulumu uzman bir yazılım ekibi gibi kullan. Hangi agent'ın hangi göreve
+uyduğu [Agent'lar](agents.tr.md) tablolarında tek yerde listelenir;
+`npm run chef -- --routing --task "<istek>"` bir istek için eşleşen routing
+profilini, verifier'ı ve auto-skill'i gösterir. Kararlar ve dosya değişiklikleri
+dağılmasın diye uygulamayı ana thread'de tut.
 
-1. Bilmediğin repo, büyük değişiklik veya mimari soru varsa `code_mapper` ile
-   başla.
-2. Davranışın prompt, `AGENTS.md`, skill, plugin, MCP, hook, memory, rule veya
-   config profiline mi ait olduğunu belirlemek için `context_architect` kullan.
-3. Güncel Codex, API, kütüphane, framework veya cloud davranışı için
-   `docs_researcher` kullan.
-4. Tekrar kullanılabilir prompt, başarı kriteri, skill brief'i ve instruction
-   sistemi için `prompt_architect` kullan.
-5. MCP server, app connector veya tool allowlist açmadan, kapatmadan veya debug
-   etmeden önce `mcp_integrator` kullan.
-6. Kararlar ve dosya değişiklikleri dağılmasın diye uygulamayı ana thread'de
-   tut.
-7. Lint, typecheck, test, build, smoke veya CI sorunu için `test_verifier`
-   kullan.
-8. Tarayıcıda UI kontrolü, screenshot, responsive layout, console hatası ve
-   etkileşim durumları için `frontend_verifier` kullan.
-9. Auth, secret, izinler, veri erişimi, API route, kriptografi veya abuse path
-   için `security_auditor` kullan.
-10. Starter sağlığı, catalog drift, install-plan, docs, MCP ve safe no-write
-    tanılama için `codex_doctor` kullan.
-11. Push, tag, release, paket, deploy veya public yayın öncesi
-   `release_verifier` kullan.
-
-Resmi Codex dokümanları subagent akışını açıkça tetiklenen paralel çalışma
-olarak anlatır. Bu starter o akış için ajan dosyalarını ve routing dilini verir;
-ama onayları, sandbox'ı ve connector auth sınırlarını kaldırmaz.
+Codex, sen doğrudan istediğinde ya da `AGENTS.md` veya bir skill yönergesi
+istediğinde delege eder. 1.3.4 ile çalışma sözleşmesi
+durumları sayar: bir autoVerify routing profili eşleşti ve dosyalar değişti;
+bağımsız paralel iş var; gürültülü log veya araştırma ayrılmalı; sen açıkça
+delegasyon istedin. Bu starter o akış için ajan dosyalarını ve routing dilini
+verir; ama onayları, sandbox'ı ve connector auth sınırlarını kaldırmaz.
 
 ## MCP Varsayılanları
 

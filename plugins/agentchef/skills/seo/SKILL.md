@@ -1,6 +1,6 @@
 ---
 name: seo
-description: Audit, implement, and verify evidence-backed search optimization for websites and web applications. Use for technical SEO, crawlability, indexing readiness, rendering, metadata, canonical and hreflang policy, structured data, content intent, internal linking, Core Web Vitals, local or international SEO, measurement design, and prioritized growth roadmaps.
+description: Audit, implement, and verify evidence-backed search optimization for websites. Use for technical SEO, crawlability, indexing, rendering, metadata, canonical and hreflang policy, structured data, internal linking, Core Web Vitals, local or international SEO, and prioritized growth roadmaps.
 ---
 
 # SEO
