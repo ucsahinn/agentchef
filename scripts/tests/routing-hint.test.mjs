@@ -93,6 +93,26 @@ test("prompt text with credential shapes never reaches stdout or state", () => {
   assert.ok(!all.includes("password"));
 });
 
+test("a missing or corrupt index, or a throwing decision, still ends with exit 0 and no output", () => {
+  // The hook reads the index next to itself, so a scratch copy of the hook and
+  // its engine gets a broken index.
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-hint-copy-"));
+  fs.copyFileSync(script, path.join(copy, "routing-hint.mjs"));
+  fs.copyFileSync(path.join(root, "plugins", "agentchef", "scripts", "routing-recommendation.mjs"), path.join(copy, "routing-recommendation.mjs"));
+  const input = JSON.stringify(prompt("yayına al: sürüm çıkar, etiket oluştur ve GitHub release yap"));
+  const runCopy = () => spawnSync(process.execPath, [path.join(copy, "routing-hint.mjs")], { input, encoding: "utf8", env: { ...process.env, CLAUDE_PLUGIN_DATA: copy } });
+  assert.deepEqual([runCopy().status, runCopy().stdout, runCopy().stderr], [0, "", ""], "missing index");
+  fs.writeFileSync(path.join(copy, "routing-index.json"), "{ not json");
+  assert.deepEqual([runCopy().status, runCopy().stdout, runCopy().stderr], [0, "", ""], "corrupt index");
+  const bad = { ...index, profiles: index.profiles.map((profile) => ({ ...profile, agents: ["ok; rm -rf"] })) };
+  fs.writeFileSync(path.join(copy, "routing-index.json"), JSON.stringify(bad));
+  assert.deepEqual([runCopy().status, runCopy().stdout, runCopy().stderr], [0, "", ""], "index with an invalid identifier");
+  // A profile whose match block throws inside decide() is swallowed too.
+  const throwing = { ...index, profiles: index.profiles.map((profile) => ({ ...profile, match: { ...profile.match, phrases: [["x", 1]], terms: [[null, 1]] } })) };
+  fs.writeFileSync(path.join(copy, "routing-index.json"), JSON.stringify(throwing));
+  assert.deepEqual([runCopy().status, runCopy().stdout, runCopy().stderr], [0, "", ""], "throwing decision");
+});
+
 test("the hook source stays inert: fixed imports, no process or network access, no blocking exit", () => {
   const imports = [...source.matchAll(/^import .* from "([^"]+)";$/gm)].map((match) => match[1]).sort();
   assert.deepEqual(imports, ["./routing-recommendation.mjs", "node:crypto", "node:fs", "node:os", "node:path", "node:url"]);

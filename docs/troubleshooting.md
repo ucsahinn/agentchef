@@ -10,7 +10,7 @@ connector.
 Run a preview first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
 ```
 
 Common checks:
@@ -113,7 +113,7 @@ If it reports managed file drift, the installed copy is stale even when the
 agent and MCP counts look right. Run repair first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
 .\scripts\install.ps1 -Repair
 ```
 
@@ -208,7 +208,7 @@ running:
 
 ```text
 Another operation is already in progress for <home>\.agentchef-operation.lock:
-claude-install (pid 12345, started...), but no process with that pid is
+claude-install (pid 12345, started ...), but no process with that pid is
 running on this machine, so the lock is probably left over from an interrupted
 run.
 ```

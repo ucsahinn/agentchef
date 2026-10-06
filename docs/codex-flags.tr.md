@@ -148,7 +148,7 @@ izole edilmiş, atılabilir ortamda kullan.
 
 ## Acik Tutulmasi Gereken Gelismis Ozellikler
 
-- `approval_policy = { granular = {... } }` ileri operatorler icin faydalidir;
+- `approval_policy = { granular = { ... } }` ileri operatorler icin faydalidir;
   bu starter daha kolay aciklanir ve audit edilir oldugu icin `on-request`
   kullanir.
 - `default_permissions` ve `[permissions.*]` beta permission-profile yuzeyidir.

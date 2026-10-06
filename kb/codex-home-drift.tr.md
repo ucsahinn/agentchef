@@ -25,7 +25,7 @@ kullanıcının gerçek global setup kanıtı sayma.
 Repair preview:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
 ```
 
 ## Durma Koşulları

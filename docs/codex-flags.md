@@ -151,7 +151,7 @@ externally sandboxed and disposable.
 
 ## Advanced Features To Keep Explicit
 
-- `approval_policy = { granular = {... } }` is useful for advanced operators,
+- `approval_policy = { granular = { ... } }` is useful for advanced operators,
   but this starter keeps `on-request` because it is easier to explain and audit.
 - `default_permissions` and `[permissions.*]` are beta permission-profile
   surfaces. Do not mix them with `sandbox_mode` and

@@ -190,7 +190,7 @@ hiçbirini saklamaz. Neyi okuyup sakladığı ve yazdığı
 `AGENTCHEF_ROUTING_HINT=off` onu kapatır.
 
 Her rolün `catalog/agents.json` içinde tetik biçiminde tek bir `description`
-metni ("Use proactively when...") vardır ve 13 rol bir skill'i önceden yükler:
+metni ("Use proactively when ...") vardır ve 13 rol bir skill'i önceden yükler:
 Claude Code bunu plugin agent dosyasındaki `skills:` frontmatter'ından okur;
 Codex rol dosyaları "Load the `<skill>` skill before starting" der.
 
@@ -232,7 +232,7 @@ yazmaz ve asla `bypassPermissions` üretmez.
 
 Hiçbir rolün araç listesinde `SendMessage` yoktur; bu yüzden bir rol çalışırken
 başka bir ajana mesaj atamaz. `Agent` aracını yalnızca koordinatör dosyaları,
-kendi katalog worker'larıyla `Agent(agentchef:<worker>,...)` biçiminde
+kendi katalog worker'larıyla `Agent(agentchef:<worker>, ...)` biçiminde
 listeler. Claude Code bu listeyi yalnızca koordinatör ana thread olarak
 çalıştığında (`claude --agent`) uygular; sıradan bir subagent olarak
 çalıştığında parantez içindeki adlar yok sayılır ve koordinatör herhangi bir

@@ -81,8 +81,8 @@ görev oluşturma yalnızca koordinasyon durumunu kaydeder; koordinatör ya da
 worker otomatik başlamaz.
 
 ```bash
-npm run coordination:board -- init --state.coordination-board.json
-npm run coordination:board -- create --state.coordination-board.json --id TASK-001 --title "API zaman asimini incele" --owner-coordinator backend_coordinator
+npm run coordination:board -- init --state .coordination-board.json
+npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "API zaman asimini incele" --owner-coordinator backend_coordinator
 ```
 
 1.3.0 ile (durum şeması v3) bir görev, onu kimin yürüttüğünü ve neyi
@@ -138,7 +138,7 @@ Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
 - `renew-lease --task <id> --minutes <1-1440> [--by <ajan>]`, sahip olmayan bir
   `--by` değerini reddeder.
 - `handoff --task <id> --source-coordinator <a> --target-coordinator <b> --question "<metin>" [--decision-needed "<metin>"]`
-  bir kimlik (`H1`, `H2`,...) ve zamanla bir handoff kaydeder. Kaynak ve hedef
+  bir kimlik (`H1`, `H2`, ...) ve zamanla bir handoff kaydeder. Kaynak ve hedef
   farklı katalog koordinatörleri olmalı, biri görevin sahip koordinatörü
   olmalıdır. `resolve-handoff --task <id> --handoff H1 --answer "<metin>"` onu
   çözer.

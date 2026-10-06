@@ -21,7 +21,7 @@ için tasarlandı.
 - Global command rule'ları dar kapsamlıdır ve read-only discovery ile lokal
   verification komutlarına ağırlık verir.
 - Alışıldık build, test, check, validate, dev ve status adları dahil, repo
-  tarafından kontrol edilen her `npm run...` komutu onay ister; çünkü arkasında
+  tarafından kontrol edilen her `npm run ...` komutu onay ister; çünkü arkasında
   çalışacak shell kodunu repo belirler. Tam olarak tanımlanmış read-only npm
   incelemeleri (`ls`, `outdated`, `view`) ile script çalıştırmayan, incelenmiş
   paket dry-run komutu izinli kalır.
@@ -483,13 +483,13 @@ object inspection'i kapsar. Sunlari prompt'a baglar:
 - global skill installation
 - package publishing
 - GitHub API operations; credential material basabilen auth status/token komutlari dahil
-- repo tarafından kontrol edilen bütün `npm run...` script çalıştırmaları
+- repo tarafından kontrol edilen bütün `npm run ...` script çalıştırmaları
 - broad `git config` value-dump komutlari ve raw, unredacted `gitleaks dir`
 - git commit, push, reset, checkout ve restore
 - repair apply ve managed plugin pruning
 - exact allowlist dışındaki ad-hoc `npx` package execution
 - bir ajanın pinned bir npx MCP paketini elle başlatması (`npx -y <pkg@ver>`,
-  `npx.cmd` veya `cmd.exe /c npx...`); Codex etkin MCP sunucularını bu
+  `npx.cmd` veya `cmd.exe /c npx ...`); Codex etkin MCP sunucularını bu
   kuralların dışında kendisi başlatır
 - uzak bir depoya bağlanan ve transport ya da credential helper çalıştırabilen
   `git ls-remote`

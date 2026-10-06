@@ -22,7 +22,7 @@ değil, kuralla ve tek satırlık bir yönlendirme ipucuyla. Güncellemek için
   engellemez, `AGENTCHEF_ROUTING_HINT=off` ile kapatılır. Bkz.
   [güvenlik modeli](security-model.tr.md) ve [PRIVACY](../PRIVACY.md).
 - **Roller.** Her rolün tetikleyici biçiminde tek açıklaması var ("Use
-  proactively when...") ve işinin gerektirdiği skill'i baştan yükler.
+  proactively when ...") ve işinin gerektirdiği skill'i baştan yükler.
   `npm run chef -- --routing --task "<istek>"` eşleşen profili ve ipucu
   satırını gösterir.
 

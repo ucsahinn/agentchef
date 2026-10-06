@@ -160,7 +160,7 @@ $errors
 PowerShell dry run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
 ```
 
 Bash dry run:
@@ -251,7 +251,7 @@ Run the real installer only after the user explicitly approves writes to the
 current user's Codex/Git setup:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
 ```
 
 Expected skill behavior is idempotent and quiet: already installed skills are

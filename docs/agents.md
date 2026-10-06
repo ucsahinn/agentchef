@@ -191,7 +191,7 @@ it; what it reads, stores, and prints is in the
 [security model](security-model.md#hooks). `AGENTCHEF_ROUTING_HINT=off`
 disables it.
 
-Each role has one trigger-style `description` ("Use proactively when...") in
+Each role has one trigger-style `description` ("Use proactively when ...") in
 `catalog/agents.json`, and 13 roles preload one skill: Claude Code reads it from
 the `skills:` frontmatter of the plugin agent file; Codex role files say "Load
 the `<skill>` skill before starting".
@@ -234,7 +234,7 @@ From 1.3.3:
 
 No role's tool list names `SendMessage`, so a role cannot message another
 agent while it works. Only coordinator files list the `Agent` tool, as
-`Agent(agentchef:<worker>,...)` with their own catalog workers. Claude Code
+`Agent(agentchef:<worker>, ...)` with their own catalog workers. Claude Code
 enforces that list only when the coordinator runs as the main thread
 (`claude --agent`); when it runs as an ordinary subagent, the names in the
 parentheses are ignored and the coordinator could spawn any agent type. From

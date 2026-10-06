@@ -161,7 +161,7 @@ $errors
 PowerShell dry run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
 ```
 
 Bash dry run:
@@ -253,7 +253,7 @@ Gerçek installer yalnızca kullanıcı mevcut Codex/Git setup'ına yazmayı aç
 onayladıktan sonra çalıştırılır:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
 ```
 
 Beklenen skill davranışı idempotent ve sessizdir: kurulu skill'ler `Skill

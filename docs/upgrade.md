@@ -281,7 +281,7 @@ PowerShell:
 git pull
 npm run check
 node scripts/plan-install.mjs --all --json
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
 .\scripts\install.ps1 -All -Interactive
 npm run verify:install:runtime -- --expect-skills
 ```

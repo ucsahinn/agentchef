@@ -46,7 +46,7 @@ bilerek o profili hedeflemesini istediğinde yönlendir.
 Claude hedefini asla örtük seçmez:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Target both -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Target both -WhatIf
 node scripts/plan-install.mjs --all --target claude --summary --redact-paths
 npm run chef -- --install --target both
 ```
@@ -72,7 +72,7 @@ eşleme [hedef yetenek haritasında](target-capability-map.tr.md).
 Yazmadan önce ön izle:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
 ```
 
 Installer'lari cagirmadan manifest-backed operasyon planini incele:
@@ -121,20 +121,20 @@ config'e asla yazmaz. `uvx` yoksa yalnızca o ilk semantic çağrı başarısız
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
 cd agentchef
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
 ```
 
 Soru sormayan otomasyon dostu kurulum:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All
 ```
 
 Mevcut global Codex kurulumunu onar:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair
 ```
 
 Repair modu, zaten Codex setup'i olan makineler icindir. AgentChef'in
@@ -624,7 +624,7 @@ Serena'yı ise paylaşılan havuz bridge'inin plugin içindeki kopyasıyla
 plugin sunucusunu ayrı kapatamaz (yalnızca `--strict-mcp-config` tüm
 sunucuları kapatır); bu yüzden plugin `playwright` ve `chrome-devtools`
 getirmez. Onları browser kanıtı gereken projeye ekle
-(`claude mcp add --scope project...`, bkz. [MCP Kataloğu](mcp-catalog.tr.md));
+(`claude mcp add --scope project ...`, bkz. [MCP Kataloğu](mcp-catalog.tr.md));
 orada üretilen izin kuralları Playwright'ın en riskli araçlarını reddeder.
 `verify-install-runtime --target claude` kendi `.claude.json` girdinin bir
 plugin sunucusunu gölgelediği uyarısını verirse kurucuyu `-AdoptMcp` /
@@ -646,7 +646,7 @@ Bash:
 ```bash
 CODEX_HOME="$PWD/tmp/codex-home" AGENTS_HOME="$PWD/tmp/agents-home" \
 CLAUDE_CONFIG_DIR="$PWD/tmp/claude-home" \
-./scripts/install.sh --force --dry-run
+  ./scripts/install.sh --force --dry-run
 ```
 
 Non-dry-run temp home'ları yalnızca bilerek smoke install yapmak istiyorsan
@@ -655,7 +655,7 @@ kullan. `tmp/` klasörünü de sadece bilerek oluşturduysan temizle.
 Zaten bir Codex setup'ın varsa once repair planina bak:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
 ```
 
 ### Portable Workspace OS Siniri
@@ -675,7 +675,7 @@ eklemeden once plani incele:
 $portableRoot = Join-Path $PWD ".agentchef-portable"
 $env:CODEX_HOME = Join-Path $portableRoot "codex"
 $env:AGENTS_HOME = Join-Path $portableRoot "agents"
-node.\scripts\repair-install.mjs --preview --redact-paths --json
+node .\scripts\repair-install.mjs --preview --redact-paths --json
 ```
 
 Bu klasore baskasinin home dizinini, `auth.json` dosyasini, hafiza motoru

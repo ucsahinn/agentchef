@@ -39,8 +39,6 @@ let stateForRun = null;
 function quietExit() {
   process.exitCode = 0;
 }
-process.on("uncaughtException", quietExit);
-process.on("unhandledRejection", quietExit);
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -238,5 +236,7 @@ function invokedDirectly() {
 }
 
 if (process.argv[1] && invokedDirectly()) {
+  process.on("uncaughtException", quietExit);
+  process.on("unhandledRejection", quietExit);
   main().catch(quietExit);
 }

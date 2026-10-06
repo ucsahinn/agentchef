@@ -22,7 +22,7 @@ Codex's `/hooks` and start a new Claude Code session.
   and can be turned off with `AGENTCHEF_ROUTING_HINT=off`. See
   [security model](security-model.md) and [PRIVACY](../PRIVACY.md).
 - **Roles.** Every role has one trigger-style description ("Use proactively
-  when...") and preloads the skill its work needs. `npm run chef -- --routing
+  when ...") and preloads the skill its work needs. `npm run chef -- --routing
   --task "<request>"` shows the matched profile and the hint line.
 
 ## v1.3.3 - 2026-10-05

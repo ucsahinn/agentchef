@@ -427,7 +427,7 @@ This file archives the Codex Chef 0.5.x release history. The current changelog l
   routing profiles, status board, and validators treat subagent delegation as
   explicit user/runtime authorization instead of hidden auto-spawn behavior.
 - Hardened the default command and MCP approval baseline: repository-controlled
-  `npm run...`, broad `git config`, raw `gitleaks dir`, and browser
+  `npm run ...`, broad `git config`, raw `gitleaks dir`, and browser
   request/response detail tools now prompt instead of being globally
   auto-approved.
 - Changed PowerShell and Bash installers to upsert only the Codex Chef plugin
@@ -468,7 +468,7 @@ This file archives the Codex Chef 0.5.x release history. The current changelog l
   and repair preview entry points, runtime parity, and Serena/MCP process-audit
   commands.
 - Extended Chef CLI validation and English/Turkish docs so the diagnostic menu,
-  parseable `npm run --silent... --json` path, log root, recent log metadata,
+  parseable `npm run --silent ... --json` path, log root, recent log metadata,
   and no-process-stop safety contract remain covered.
 
 ## 0.5.28 - 2026-06-20

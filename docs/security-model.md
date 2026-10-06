@@ -21,7 +21,7 @@ Codex safety model.
   a reviewed app-specific override changes them.
 - Global command rules are narrow and biased toward read-only discovery and
   local verification.
-- Every repository-controlled `npm run...` command prompts, including familiar
+- Every repository-controlled `npm run ...` command prompts, including familiar
   build, test, check, validate, dev, and status script names, because the
   repository controls the shell code behind them. Exact read-only npm
   inspections (`ls`, `outdated`, `view`) and the reviewed no-script package
@@ -492,13 +492,13 @@ inspection. It prompts for:
 - package publishing
 - GitHub API operations, including auth status/token commands that can expose
   credential material
-- every repository-controlled `npm run...` script execution
+- every repository-controlled `npm run ...` script execution
 - broad `git config` value-dump commands and raw, unredacted `gitleaks dir`
 - git commit, push, reset, checkout, and restore
 - repair apply and managed plugin pruning
 - ad-hoc `npx` package execution outside exact allowlisted helpers
 - an agent starting a pinned npx MCP package by hand (`npx -y <pkg@ver>`,
-  `npx.cmd`, or `cmd.exe /c npx...`); Codex starts enabled MCP servers itself,
+  `npx.cmd`, or `cmd.exe /c npx ...`); Codex starts enabled MCP servers itself,
   outside these rules
 - `git ls-remote`, which contacts a remote and can run a transport or
   credential helper

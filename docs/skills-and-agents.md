@@ -76,8 +76,8 @@ Use a user-chosen, repository-local state path. Initializing or creating a task
 records coordination state only; it does not start a coordinator or worker.
 
 ```bash
-npm run coordination:board -- init --state.coordination-board.json
-npm run coordination:board -- create --state.coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
+npm run coordination:board -- init --state .coordination-board.json
+npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
 ```
 
 Since 1.3.0 (state schema v3) a task can also name who works it and what it
@@ -133,7 +133,7 @@ and `cancelled`. The allowed moves:
 - `renew-lease --task <id> --minutes <1-1440> [--by <agent>]` refuses a `--by`
   that is not the owner.
 - `handoff --task <id> --source-coordinator <a> --target-coordinator <b> --question "<text>" [--decision-needed "<text>"]`
-  records a handoff with an id (`H1`, `H2`,...) and a time. Source and target
+  records a handoff with an id (`H1`, `H2`, ...) and a time. Source and target
   must be different catalog coordinators, and one of them must be the task's
   owner coordinator. `resolve-handoff --task <id> --handoff H1 --answer "<text>"`
   resolves it.

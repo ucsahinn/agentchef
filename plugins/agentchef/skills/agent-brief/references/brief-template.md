@@ -26,7 +26,7 @@ Repository agentchef: `catalog/mcp-servers.json`, `templates/codex/config.*.toml
 Outcome, Evidence, Changed scope, Risks, Open questions, Next verification.
 
 ## User's words
-"pc çok yavaşladı... canlı ve kullanılan hiçbirşeye dokunmadan hızlandır"
+"pc çok yavaşladı ... canlı ve kullanılan hiçbirşeye dokunmadan hızlandır"
 ```
 
 ## Handoff Template
@@ -34,7 +34,7 @@ Outcome, Evidence, Changed scope, Risks, Open questions, Next verification.
 ```markdown
 Outcome: the plugin ships context7 and serena only.
 Evidence: `node --test scripts/tests/mcp-launch.test.mjs` 4/4; fast 34/34.
-Changed scope: catalog/mcp-servers.json, templates/codex/config.unix.toml,...
+Changed scope: catalog/mcp-servers.json, templates/codex/config.unix.toml, ...
 Risks: a project that relied on the global Playwright must add it per project.
 Open questions: none.
 Next verification: open a new Claude session and run `claude mcp list`.
