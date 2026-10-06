@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { routingPolicyLine } from "./lib/routing-text.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -9,8 +10,6 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), 
 const installPlan = JSON.parse(fs.readFileSync(path.join(root, "manifests", "install-plan.json"), "utf8"));
 const routingProfiles = JSON.parse(fs.readFileSync(path.join(root, "catalog", "routing-profiles.json"), "utf8"));
 const mcpCatalog = JSON.parse(fs.readFileSync(path.join(root, "catalog", "mcp-servers.json"), "utf8"));
-const routingPolicyLine =
-  "Policy: task-shape routing names matching specialists, selects matching skills when applicable, and may spawn bounded local subagents when the current runtime permits delegation; risky actions remain approval-gated.";
 
 function posix(filePath) {
   return filePath.split(path.sep).join("/");

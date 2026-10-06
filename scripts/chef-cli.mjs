@@ -227,6 +227,14 @@ for (let index = 0; index < args.length; index += 1) {
     options.profile = value;
     index += 1;
   }
+  else if (arg === "--task") {
+    const value = args[index + 1];
+    if (!value || value.startsWith("-")) {
+      cliError("--task requires a task description. Example: npm run chef -- --routing --task \"failing test in CI\"", "--task bir görev açıklaması ister. Örnek: npm run chef -- --routing --task \"CI'da test başarısız\"");
+    }
+    options.task = value;
+    index += 1;
+  }
   else if (arg === "--target") {
     const value = args[index + 1];
     if (!value || value.startsWith("-")) {
@@ -263,6 +271,18 @@ if (options.profile && options.action !== "routing") {
   cliError(
     "--profile can only be used with --routing.",
     "--profile yalnızca --routing ile kullanılabilir."
+  );
+}
+if (options.task && options.action !== "routing") {
+  cliError(
+    "--task can only be used with --routing.",
+    "--task yalnızca --routing ile kullanılabilir."
+  );
+}
+if (options.task && options.profile) {
+  cliError(
+    "Use either --profile or --task with --routing, not both.",
+    "--routing ile --profile ya da --task kullanın, ikisini birden değil."
   );
 }
 if (options.cleanupStale && options.action !== "processes") {
@@ -1155,6 +1175,7 @@ Seçenekler:
   --no-log       Sıkı audit için repo-local CLI log dosyası oluşturmaz
   --repo-only    Status için kurulu runtime, global skill kökleri, Codex logları ve Codex CLI problarını atlar
   --profile ID   --routing ile tek routing profilini gösterir
+  --task METIN   --routing ile bir görev açıklamasını profillere eşler ve ipucu satırını gösterir
   --diagnose     --diagnostics kısa yolu
   --backup ID    Belirli AgentChef yedek arşivini inceler veya geri yükler
   --restore      --backup ID için geri yükleme preview'i; dosya kopyalamak için --apply ekle
@@ -1211,6 +1232,7 @@ Options:
   --no-log       Do not create repo-local CLI log files for strict audits
   --repo-only    Skip installed runtime, global skill roots, Codex logs, and Codex CLI probes for status
   --profile ID   Show one routing profile when used with --routing
+  --task TEXT    Match a task description to routing profiles and print the hint line, with --routing
   --diagnose     Alias for --diagnostics
   --backup ID    Inspect or restore a specific AgentChef backup archive
   --restore      Preview restore for --backup ID; add --apply to copy files back
@@ -4587,12 +4609,14 @@ function runInventory() {
 }
 
 function runRouting() {
-  const profileArgs = options.profile
-    ? ["--profile", options.profile]
-    : options.details
-      ? []
-      : ["--profile", "starter-health"];
-  if (!options.profile && !options.details && !options.json) {
+  const profileArgs = options.task
+    ? ["--task", options.task]
+    : options.profile
+      ? ["--profile", options.profile]
+      : options.details
+        ? []
+        : ["--profile", "starter-health"];
+  if (!options.task && !options.profile && !options.details && !options.json) {
     const profileCount = (readJson("catalog/routing-profiles.json").profiles || []).length;
     console.log(`${ICONS.info} ${localText(`${profileCount} routing profiles available; showing starter-health. Use --details for all.`, `${profileCount} routing profili var; starter-health gösteriliyor. Tümü için --details kullanın.`)}`);
   }

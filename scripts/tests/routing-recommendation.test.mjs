@@ -15,7 +15,7 @@ test("task routing is deterministic, weighted, bounded, and advisory-only", () =
   const first = run("--task", "MCP connector OAuth tool allowlist güvenlik", "--json");
   const second = run("--task", "MCP connector OAuth tool allowlist güvenlik", "--json");
   assert.deepEqual(first.taskRecommendation.recommendations, second.taskRecommendation.recommendations);
-  assert.equal(first.taskRecommendation.algorithm, "weighted-catalog-v1");
+  assert.equal(first.taskRecommendation.algorithm, "weighted-catalog-v2");
   assert.equal(first.taskRecommendation.recommendations[0].id, "mcp-connector-change");
   assert.equal(first.taskRecommendation.recommendations[0].confidence, "high");
   assert.ok(first.taskRecommendation.recommendations[0].matchedPhrases.includes("mcp connector"));

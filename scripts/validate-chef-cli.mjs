@@ -1692,7 +1692,7 @@ runCliSmoke("routing-profile-wrong-cwd", ["--routing", "--profile", "starter-hea
   "AgentChef enterprise routing board",
   "Profiles: 1",
   "starter-health",
-  "Owner:",
+  "Verifier:",
   "Validation:"
 ], { cwd: path.dirname(root) });
 const managedPreviewRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-managed-preview-"));

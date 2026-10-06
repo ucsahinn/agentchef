@@ -70,7 +70,7 @@ if (exists(routingReferenceRel)) {
 
 if (exists("catalog/routing-profiles.json")) {
   const routing = JSON.parse(read("catalog/routing-profiles.json"));
-  if (routing.version !== "0.3.0") fail("Routing catalog must use schema version 0.3.0.");
+  if (routing.version !== "0.4.0") fail("Routing catalog must use schema version 0.4.0.");
   if (routing.delegationPolicy?.mode !== "conditional") fail("Routing catalog must define conditional delegation.");
   if (routing.delegationPolicy?.capacityCeiling !== 10) fail("Routing capacity ceiling must preserve max_threads=10.");
   if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) fail("Recommended parallelism must cap normal routing at four agents.");

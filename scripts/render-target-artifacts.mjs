@@ -7,6 +7,7 @@
 //   .codex-plugin/plugin.json + agents/*.md -> .claude-plugin/plugin.json
 //   catalog/mcp-servers.json (claudeSource: plugin) -> plugins/agentchef/mcp/claude.mcp.json
 //   templates/codex/serena-pool.mjs -> plugins/agentchef/scripts/serena-pool.mjs
+//   catalog/routing-profiles.json -> the profile list in the adaptive-agent-routing reference
 // The Claude manifest carries its SessionEnd process-hygiene hook inline.
 // Claude would also load a hooks/hooks.json on its own, and Codex reads its
 // hook from hooks/process-hygiene.json, so neither CLI loads the other's.
@@ -28,6 +29,9 @@ const claudePluginManifestPath = `${pluginDirectory}/.claude-plugin/plugin.json`
 const settingsFragmentPath = "templates/claude/settings.fragment.json";
 export const claudePluginMcpPath = `${pluginDirectory}/mcp/claude.mcp.json`;
 const pluginSerenaBridgePath = `${pluginDirectory}/scripts/serena-pool.mjs`;
+export const routingReferencePath = `${pluginDirectory}/skills/adaptive-agent-routing/references/global-working-agreements.md`;
+const routingReferenceStart = "<!-- agentchef:routing-profiles:start -->";
+const routingReferenceEnd = "<!-- agentchef:routing-profiles:end -->";
 const projectUrl = "https://github.com/ucsahinn/agentchef";
 
 function normalize(text) {
@@ -115,6 +119,36 @@ export function renderClaudePluginMcp(repoRoot) {
   return { mcpServers };
 }
 
+// One bullet per profile, between two markers, so the reference the routing
+// skill loads cannot drift from the catalog (it used to be hand-copied).
+export function renderRoutingReference(repoRoot) {
+  const routing = readJson(repoRoot, "catalog/routing-profiles.json");
+  const skillEntries = new Map((readJson(repoRoot, "catalog/skills.json").skills || []).map((skill) => [skill.name, skill]));
+  const current = normalize(fs.readFileSync(path.join(repoRoot, routingReferencePath), "utf8"));
+  const start = current.indexOf(routingReferenceStart);
+  const end = current.indexOf(routingReferenceEnd);
+  if (start < 0 || end < 0 || end < start) throw new Error(`${routingReferencePath} is missing the routing-profiles markers`);
+  const code = (name) => `\`${name}\``;
+  const lines = routing.profiles.map((profile) => {
+    const skills = profile.skills.length ? profile.skills.map(code).join(", ") : "none";
+    const autoSkill = profile.autoSkill
+      ? `${code(profile.autoSkill)}${skillEntries.get(profile.autoSkill)?.implicitInvocation === false ? " (explicit-only: suggest, do not load)" : ""}`
+      : "none";
+    const verifier = `${code(profile.verifier)}${profile.autoVerify ? " (required after file changes)" : " (suggested)"}`;
+    const handoffs = (profile.crossDomainHandoffs || []).map((handoff) => ` Cross-domain: ${code(handoff.toCoordinator)} via ${handoff.via} when ${handoff.when.replace(/\.$/, "")}.`).join("");
+    return `- ${code(profile.id)}: agents ${profile.agents.map(code).join(", ")}; skills ${skills}; auto-skill ${autoSkill}; verifier ${verifier}.${handoffs}`;
+  });
+  const cap = routing.delegationPolicy.autoSpawnCap;
+  const body = [
+    routingReferenceStart,
+    `Rendered from \`catalog/routing-profiles.json\` by \`scripts/render-target-artifacts.mjs\`; do not edit by hand. A matched profile loads its auto-skill first (explicit-only skills are suggested instead), runs its verifier before a file-changing task is reported done when the verifier is required, and starts at most ${cap} agents per task without the user naming them.`,
+    "",
+    ...lines,
+    routingReferenceEnd
+  ].join("\n");
+  return `${current.slice(0, start)}${body}${current.slice(end + routingReferenceEnd.length)}`;
+}
+
 export function renderAllTargetArtifacts(repoRoot = root) {
   const outputs = new Map();
   const source = fs.readFileSync(path.join(repoRoot, "templates", "shared", "working-agreement.md"), "utf8");
@@ -132,6 +166,7 @@ export function renderAllTargetArtifacts(repoRoot = root) {
   // The plugin carries its own copy of the bridge; identical bytes keep it on
   // the same pool manager as the Codex copy.
   outputs.set(pluginSerenaBridgePath, normalize(fs.readFileSync(path.join(repoRoot, "templates", "codex", "serena-pool.mjs"), "utf8")));
+  outputs.set(routingReferencePath, renderRoutingReference(repoRoot));
   const rules = fs.readFileSync(path.join(repoRoot, "templates", "codex", "rules", "default.rules"), "utf8");
   const permissions = emitClaudePermissions(rules);
   const mcpPermissions = emitClaudeMcpPermissions(readJson(repoRoot, "catalog/mcp-servers.json"));
