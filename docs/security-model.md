@@ -219,9 +219,15 @@ profile still sets effort and the session you open keeps the model you chose.
 The model line changes no role boundary or approval gate.
 
 `max_threads = 10` is a concurrency capacity ceiling, not permission to fan
-out every task. Conditional routing normally uses one to four agents and only
-for independent parallel work, noisy evidence isolation, or explicit user
-delegation. Automatic role selection never overrides the user's active profile.
+out every task. Conditional routing normally uses one to four agents. From
+1.3.4 (not released yet), an agent starts only when one of these holds: an
+autoVerify routing profile matched and files changed, so its verifier runs
+before the task is reported done; independent parallel work exists; noisy logs
+or research should be isolated from the main thread; the user explicitly
+requests delegation. Trivial, strictly sequential, tightly coupled, and
+single-file work stays in the main thread, and at most 2 agents start per task
+without the user naming them. Automatic role selection never overrides the
+user's active profile.
 
 ## Install Planning And Collision Policy
 

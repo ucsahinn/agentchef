@@ -112,9 +112,7 @@ if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier"
 }
 
 for (const required of [
-  "independent parallel work",
-  "noisy logs or research",
-  "the user explicitly requests delegation",
+  ...routing.delegationPolicy.spawnWhen,
   "Routing plan:",
   "Routing result:",
   "adaptive-agent-routing"

@@ -25,21 +25,30 @@ Kaynaklar:
 | Tek seferlik gorev talimati | Prompt/thread context | Aktif prompt icinde kalir. |
 | Kalici calisma anlasmasi | `AGENTS.md` | Incelenmis global rehber kurulur; repo-local dosyalar yine onceliklidir. |
 | Tekrar kullanilabilir slash-like workflow | Skill | `SKILL.md` tercih edilir; bundle dagitilacaksa plugin'e konur. |
-| Uzman kritik veya kanit isi | Subagent | Bilerek delege edilir, sonucu kullanmadan once ozetlenir. |
+| Uzman kritik veya kanit isi | Subagent | Yalniz bir spawn kosulunda delege edilir (asagiya bak), sonucu kullanmadan once ozetlenir. |
 | Canli docs, browser, code navigation veya private servis | MCP/connectors | Auth isteyen veya genis connector'lar gorev gerekene kadar kapali kalir. |
 | Komut approval istisnasi | Rule | Dar tutulur; destructive, credential, publish veya release auto-allow olmaz. |
 | Lifecycle automation | Hook | Sadece incelenmis guardrail icindir; ana guvenlik siniri degildir. |
 | Push, release, deploy, external upload | Approval gate | `release_verifier` hazirlik kanitlar; aksiyon icin yine acik onay gerekir. |
 
-Subagent eslesmesi oneridir. Yalniz bagimsiz paralel is icin, gurultulu log
-veya arastirmayi ayirmak icin ya da kullanici acikca ajan istedigi icin spawn
-et. `max_threads = 10` birden fazla Codex penceresine kapasite birakir; normal
+Subagent eslesmesi oneridir. 1.3.4 ile (henuz yayimlanmadi) bir agent yalniz su
+kosullardan biri gecerliyse spawn edilir: bir autoVerify routing profili eslesti
+ve dosyalar degisti, boylece verifier'i gorev bitti denmeden once calisir;
+bagimsiz paralel is var; gurultulu log veya arastirma ana thread'den ayrilmali;
+kullanici acikca delegasyon istedi. Onemsiz, kesinlikle sirali, siki bagli ve
+delegasyonun koordinasyon maliyeti getirdigi tek dosyalik islerde spawn etme.
+Kullanici adlarini vermeden gorev basina en fazla 2 agent baslat.
+`max_threads = 10` birden fazla Codex penceresine kapasite birakir; normal
 fan-out bir ile dorttur. Routing'i bir kez `Routing plan:`, bir kez de
 `Routing result:` ile raporla; ajan/skill/MCP basina ayri lifecycle mesaji basma.
 
 Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-overlay.md).
 
 ## GStack Tarzi Workflow Mapping
+
+Tablo dis workflow adlarini AgentChef yuzeylerine map eder. Bir gorev icin hangi
+AgentChef agent'inin uygun oldugunu tek kaynaktan oku: [Agent'lar](agents.tr.md)
+tablolari veya `npm run chef -- --routing --task "<istek>"`.
 
 | Workflow | Iyi Codex karsiligi | Bu starter'da destek | Guvenlik siniri |
 | --- | --- | --- | --- |
@@ -107,17 +116,13 @@ ekle.
 
 ## Onerilen Starter Zinciri
 
-Ciddi islerde bu sirayi kullan:
-
-1. `product_strategist` veya `spec_author` hedefi netlestirir.
-2. Is genisse `context-budget-planner` kaynaklari ve handoff'u butceler.
-3. Karar açısından kritik kaynak araştırmasını `$agentchef:evidence-research`, arama
-   odaklı kanıt ve uygulamayı ise kapsamdaysa `$agentchef:seo` üstlenir.
-4. `engineering_planner` mimariyi, data flow'u ve testleri map eder.
-5. `code_mapper` genis edit oncesi repo kaniti toplar.
-6. Ana thread scoped degisikligi uygular.
-7. `code_reviewer`, `security_auditor`, `qa_lead` veya `test_verifier` riskli yuzeyi dogrular.
-8. Push/release istenirse `release_verifier` publish readiness kontrol eder.
+Ciddi islerde sira sudur: hedefi netlestir, degisikligi planla, repo kaniti
+topla, ana thread'de uygula, sonra riskli yuzeyi isi yapmamis bir agent ile
+dogrula. Hangi agent'in hangi adima uydugu [Agent'lar](agents.tr.md)
+tablolarinda tek yerde listelenir; `npm run chef -- --routing --task "<istek>"`
+bir istek icin eslesen profili, verifier'i ve auto-skill'i gosterir. Verifier
+gerektiren bir profil, dosyalar degistikten sonra o adimi zorunlu kilar (1.3.4
+ile, henuz yayimlanmadi).
 
 Ana thread sentez, editler, kullaniciya gorunen kararlar ve final kanittan
 sorumludur. Subagent'lar approval, sandbox, credential veya external-state

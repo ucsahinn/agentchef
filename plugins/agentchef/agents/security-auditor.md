@@ -1,6 +1,6 @@
 ---
 name: security-auditor
-description: "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths."
+description: "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths. Use proactively when a change touches authentication, authorization, secrets, connectors, or release artifacts; it reports findings and never edits."
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__plugin_agentchef_context7, mcp__context7
 model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash

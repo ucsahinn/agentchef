@@ -39,115 +39,115 @@ max_depth = 2
 job_max_runtime_seconds = 3600
 
 [agents.code_mapper]
-description = "Read-only explorer that maps files, call paths, and existing patterns."
+description = "Read-only explorer that maps files, call paths, ownership, and existing patterns. Use proactively before changing an unfamiliar repository or a broad surface; not for implementation or review."
 config_file = "agents/code_mapper.toml"
 
 [agents.docs_researcher]
-description = "Primary-source researcher for current docs, APIs, and version-sensitive facts."
+description = "Current-docs researcher for APIs, libraries, OpenAI/Codex behavior, standards, and version-sensitive facts. Use proactively when a claim depends on a current official source or a library version; not for implementation."
 config_file = "agents/docs_researcher.toml"
 
 [agents.context_architect]
-description = "Context strategist that decides what belongs in prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config."
+description = "Read-only strategist for where instructions belong: prompts, AGENTS.md, skills, plugins, MCP, hooks, memory, or config. Use proactively when a rule or workflow needs a durable home; not for writing the content itself."
 config_file = "agents/context_architect.toml"
 
 [agents.prompt_architect]
-description = "Prompt and instruction designer for reliable task briefs, mode contracts, and reusable workflows."
+description = "Read-only prompt and instruction designer for task briefs, mode contracts, and reusable agent workflows. Use proactively when a request is vague or multi-step and needs a plan before a brief; not for implementation."
 config_file = "agents/prompt_architect.toml"
 
 [agents.mcp_integrator]
-description = "MCP and connector planner for least-privilege tool exposure, auth boundaries, and troubleshooting."
+description = "Read-only MCP and connector planner for least-privilege tool exposure, auth boundaries, timeouts, and troubleshooting. Use proactively when an MCP server, tool allowlist, or connector changes; security review belongs to security_auditor."
 config_file = "agents/mcp_integrator.toml"
 
 [agents.product_strategist]
-description = "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation."
+description = "Product strategist for forcing questions, scope decisions, and 10-star alternatives before implementation. Use proactively when a feature's value, scope, or smallest useful version is unclear; executable specs belong to spec_author."
 config_file = "agents/product_strategist.toml"
 
 [agents.engineering_planner]
-description = "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy."
+description = "Engineering planner for architecture, data flow, diagrams, edge cases, and test strategy once the requirement is settled. Use proactively before a multi-file change; turning vague intent into an executable spec belongs to spec_author."
 config_file = "agents/engineering_planner.toml"
 
 [agents.design_reviewer]
-description = "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual decision tradeoffs."
+description = "Design reviewer for UX quality, AI-slop detection, design-system gaps, and visual tradeoffs. Use proactively when a UI is built or reshaped; rendered checks and screenshots belong to frontend_verifier."
 config_file = "agents/design_reviewer.toml"
 
 [agents.devex_auditor]
-description = "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks."
+description = "Developer-experience auditor for onboarding friction, time-to-hello-world, docs clarity, and first-run recovery. Use proactively when install, setup, or getting-started paths change; not for product strategy."
 config_file = "agents/devex_auditor.toml"
 
 [agents.root_cause_debugger]
-description = "Systematic debugger that investigates failures, traces data flow, and tests hypotheses before fixes."
+description = "Systematic debugger that reproduces failures, traces data flow, and tests hypotheses before any fix. Use proactively for a bug, regression, failing test, or unexplained behavior; verifying the fix belongs to test_verifier."
 config_file = "agents/root_cause_debugger.toml"
 
 [agents.qa_lead]
-description = "QA lead for end-to-end bug finding, regression coverage, and re-verification plans."
+description = "QA lead for end-to-end bug finding, regression coverage, and re-verification plans. Use proactively when user-facing workflows changed and need scenario-based testing; running checks and verifying fixes belongs to test_verifier."
 config_file = "agents/qa_lead.toml"
 
 [agents.performance_auditor]
-description = "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions."
+description = "Performance auditor for page speed, Core Web Vitals, resource budgets, and post-change regressions. Use proactively when a change can affect load time, bundle size, or runtime cost; search-facing metadata and indexing belongs to google_seo_auditor."
 config_file = "agents/performance_auditor.toml"
 
 [agents.google_seo_auditor]
-description = "Google SEO auditor for crawlability, indexing, metadata, structured data, Core Web Vitals, and Search Console-ready fixes."
+description = "Google SEO auditor for crawlability, indexing, metadata, structured data, sitemaps, canonicals, and Search Console-ready fixes. Use proactively when public pages or their metadata change; Core Web Vitals measurement belongs to performance_auditor."
 config_file = "agents/google_seo_auditor.toml"
 
 [agents.docs_author]
-description = "Documentation author for Diataxis coverage, stale docs, release docs, and missing guide generation."
+description = "Documentation author for Diataxis coverage, stale claims, release docs, and missing guides. Use proactively when behavior, install steps, or public copy changed and the docs must follow; code review belongs to code_reviewer."
 config_file = "agents/docs_author.toml"
 
 [agents.spec_author]
-description = "Spec author for turning vague intent into executable specs with scope, evidence, and quality gates."
+description = "Spec author for turning vague intent into executable specs with scope, user impact, non-goals, edge cases, and quality gates. Use proactively when a request is too vague to implement safely; architecture and test strategy for a settled requirement belongs to engineering_planner."
 config_file = "agents/spec_author.toml"
 
 [agents.code_reviewer]
-description = "Fresh-context senior review for diffs, PRs, and risky changes."
+description = "Fresh-context senior code reviewer for diffs, pull requests, and risky changes. Use proactively before a change is merged, shipped, or reported done; it reports findings and never rewrites code."
 config_file = "agents/code_reviewer.toml"
 
 [agents.frontend_verifier]
-description = "Browser-oriented verifier for UI changes and visual regressions."
+description = "Browser-oriented verifier for UI changes, visual regressions, responsive layout, and user flows. Use proactively when rendered UI changed and needs screenshot, console, or interaction evidence; design judgment belongs to design_reviewer."
 config_file = "agents/frontend_verifier.toml"
 
 [agents.security_auditor]
-description = "Read-only security auditor for auth, secrets, API routes, data access, permissions, and abuse paths."
+description = "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths. Use proactively when a change touches authentication, authorization, secrets, connectors, or release artifacts; it reports findings and never edits."
 config_file = "agents/security_auditor.toml"
 
 [agents.test_verifier]
-description = "Validation specialist for tests, lint/typecheck/build, smoke checks, and failure evidence."
+description = "Validation specialist for lint, typecheck, tests, build, smoke checks, and exact pass/fail evidence. Use proactively after any file change to prove it works, as the independent verifier; it does not edit production or test files."
 config_file = "agents/test_verifier.toml"
 
 [agents.release_verifier]
-description = "Release readiness verifier for git hygiene, changelog/version checks, artifacts, secret scans, and publish gates."
+description = "Release readiness verifier for git hygiene, changelog and version parity, artifacts, secret scans, and publish gates. Use proactively before a tag, release, publish, or deploy; it never performs the release itself."
 config_file = "agents/release_verifier.toml"
 
 [agents.codex_doctor]
-description = "Setup diagnostician for starter health, catalog drift, install-plan coverage, and safe next checks."
+description = "Controlled setup diagnostician for AgentChef and Codex starter health, catalog drift, install-plan coverage, and safe next checks. Use proactively when install, config, MCP, or plugin state looks wrong; it changes nothing without approval."
 config_file = "agents/codex_doctor.toml"
 
 [agents.backend_coordinator]
-description = "Backend coordinator that correlates bounded implementation, integration, debugging, and source-documentation evidence."
+description = "Use only for an explicit coordination-board task in the backend domain: briefs code_mapper, mcp_integrator, root_cause_debugger, and docs_researcher, merges their implementation, integration, debugging, and source evidence, and escalates to the parent session."
 config_file = "agents/backend_coordinator.toml"
 
 [agents.devops_coordinator]
-description = "DevOps coordinator that correlates operational performance, runtime health, setup diagnostics, and onboarding friction."
+description = "Use only for an explicit coordination-board task in the devops domain: briefs performance_auditor, codex_doctor, and devex_auditor, merges their performance, runtime-health, setup, and onboarding evidence, and escalates to the parent session."
 config_file = "agents/devops_coordinator.toml"
 
 [agents.leadership_coordinator]
-description = "Leadership coordinator that correlates architecture, planning, review, and release-readiness evidence."
+description = "Use only for an explicit coordination-board task in the leadership domain: briefs context_architect, engineering_planner, code_reviewer, and release_verifier, merges their architecture, planning, review, and release evidence, and escalates to the parent session."
 config_file = "agents/leadership_coordinator.toml"
 
 [agents.product_coordinator]
-description = "Product coordinator that correlates prompts, product framing, and executable specifications."
+description = "Use only for an explicit coordination-board task in the product domain: briefs prompt_architect, product_strategist, and spec_author, merges their prompt, framing, and specification evidence, and escalates to the parent session."
 config_file = "agents/product_coordinator.toml"
 
 [agents.qa_coordinator]
-description = "QA coordinator that correlates quality, verification, and security evidence."
+description = "Use only for an explicit coordination-board task in the QA domain: briefs qa_lead, test_verifier, and security_auditor, merges their quality, verification, and security evidence, and escalates to the parent session."
 config_file = "agents/qa_coordinator.toml"
 
 [agents.ui_coordinator]
-description = "UI coordinator that correlates rendered UI verification and product design review evidence."
+description = "Use only for an explicit coordination-board task in the UI domain: briefs frontend_verifier and design_reviewer, merges their rendered-UI and design-review evidence, and escalates to the parent session."
 config_file = "agents/ui_coordinator.toml"
 
 [agents.marketing_coordinator]
-description = "Marketing coordinator that correlates discoverability and content evidence."
+description = "Use only for an explicit coordination-board task in the marketing domain: briefs google_seo_auditor and docs_author, merges their discoverability and content evidence, and escalates to the parent session."
 config_file = "agents/marketing_coordinator.toml"
 
 [sandbox_workspace_write]

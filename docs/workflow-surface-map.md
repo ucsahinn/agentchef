@@ -25,15 +25,20 @@ References:
 | One-off task instruction | Prompt/thread context | Keep in the current prompt. |
 | Durable working agreement | `AGENTS.md` | Install reviewed global guidance; repo-local files still win. |
 | Reusable slash-like workflow | Skill | Prefer `SKILL.md`; package in a plugin when distributing the bundle. |
-| Specialist critique or evidence work | Subagent | Use explicit delegation, then summarize the result before relying on it. |
+| Specialist critique or evidence work | Subagent | Delegate only under a spawn condition (see below), then summarize the result before relying on it. |
 | Live docs, browser, code navigation, or private service access | MCP/connectors | Keep authenticated or broad connectors disabled until a task needs them. |
 | Command approval exception | Rule | Keep narrow; never auto-allow destructive, credential, publish, or release actions. |
 | Lifecycle automation | Hook | Use only for reviewed guardrails, not as the primary security boundary. |
 | Push, release, deploy, external upload | Approval gate | `release_verifier` can verify readiness; the action still needs explicit approval. |
 
-Subagent matching is advisory. Spawn only for independent parallel work, to
-isolate noisy logs or research, or because the user explicitly requested an
-agent. Keep the normal fan-out at one to four even though `max_threads = 10`
+Subagent matching is advisory. From 1.3.4 (not released yet), spawn an agent
+only when one of these holds: an autoVerify routing profile matched and files
+changed, so its verifier runs before the task is reported done; independent
+parallel work exists; noisy logs or research should be isolated from the main
+thread; the user explicitly requests delegation. Skip trivial work, strictly
+sequential work, tightly coupled work, and single-file work where delegation
+adds coordination cost. Start at most 2 agents per task without the user naming
+them. Keep the normal fan-out at one to four even though `max_threads = 10`
 preserves headroom for several Codex windows. Report routing once with
 `Routing plan:` and once with `Routing result:`; do not emit separate
 agent/skill/MCP lifecycle chatter.
@@ -41,6 +46,10 @@ agent/skill/MCP lifecycle chatter.
 Decision rationale: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-overlay.md).
 
 ## GStack-Style Workflow Mapping
+
+The table maps external workflow names to AgentChef surfaces. For which
+AgentChef agent fits a task, use the single source: the tables in
+[Agents](agents.md) or `npm run chef -- --routing --task "<request>"`.
 
 | Workflow | Good Codex mapping | Bundled starter support | Safety boundary |
 | --- | --- | --- | --- |
@@ -109,17 +118,13 @@ change a user's machine.
 
 ## Recommended Starter Chain
 
-Use this sequence for serious work:
-
-1. `product_strategist` or `spec_author` clarifies the target.
-2. `context-budget-planner` budgets sources and handoff when the task is broad.
-3. `$agentchef:evidence-research` handles a decision-critical source study, or `$agentchef:seo`
-   handles search-specific evidence and implementation, when either is in scope.
-4. `engineering_planner` maps architecture, data flow, and tests.
-5. `code_mapper` gathers repo evidence before broad edits.
-6. Main thread implements the scoped change.
-7. `code_reviewer`, `security_auditor`, `qa_lead`, or `test_verifier` verifies the risky surface.
-8. `release_verifier` checks publish readiness only when a push/release is requested.
+For serious work the order is: clarify the target, plan the change, gather repo
+evidence, implement in the main thread, then verify the risky surface with an
+agent that did not do the work. Which agent fits each step is listed once in the
+[Agents](agents.md) tables, and `npm run chef -- --routing --task "<request>"`
+shows the matching profile, verifier, and auto-skill for a request; a profile
+that requires a verifier makes that step mandatory once files changed (from
+1.3.4, not released yet).
 
 The main thread remains responsible for synthesis, edits, user-visible
 decisions, and final evidence. Subagents are not a way to bypass approvals,

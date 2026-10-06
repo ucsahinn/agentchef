@@ -67,7 +67,7 @@ const collisionPhrases = [
     ...(agents.agents || []).map((agent) => ({
       name: agent.name,
       domain: domainOf.get(agent.name) || "(none)",
-      text: `${agent.templateDescription || agent.description || ""} ${agent.primaryUse || ""}`
+      text: `${agent.description || ""} ${agent.primaryUse || ""}`
     }))
   ];
   for (const phrase of collisionPhrases) {

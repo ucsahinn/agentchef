@@ -48,8 +48,13 @@ npm run codex:routing -- --task "offline MCP profile"
 
 The result is advisory-only and returns at most three catalog routes. It uses
 catalog-owned weighted phrases and whole-word terms, normalizes Turkish
-characters, reports its matched signals and confidence, and resolves ties by
-documented profile priority then catalog order. It is deterministic—not a
+characters (from 1.3.4, not released yet, including the dotless `ı`), reports
+its matched signals and confidence, and resolves ties by documented profile
+priority then catalog order. Confidence is `high` for a clear lead (score of at
+least 12 and at least 3 ahead of the runner-up) or a strong single signal (score
+of at least 9 and the runner-up at most half of it). From 1.3.4 the output also
+shows each profile's Verifier and Auto-skill and ends with a one-line `[hint]`;
+`npm run chef -- --routing --task "<request>"` prints the same board. It is deterministic—not a
 hidden model call—and never spawns an agent, enables an MCP, or changes an
 approval setting. Use an explicit `--profile <id>` when you already know the
 route you want.

@@ -60,8 +60,12 @@ credentials, sessions, or local memory.
 
 The kit includes roles such as `code_mapper`, `root_cause_debugger`,
 `security_auditor`, `docs_author`, and `test_verifier`. They are not permanent
-background services. A matching role is guidance; the agent spawns a subagent
-only when the work can be split safely or you ask for delegation.
+background services. A matching role is guidance. From 1.3.4 (not released
+yet), a subagent starts only when one of four conditions holds: a routing
+profile that requires a verifier matched and files changed, independent parallel
+work exists, noisy logs or research should stay out of the main thread, or you
+explicitly ask for delegation. Trivial, strictly sequential, tightly coupled,
+and single-file work stays in the main session.
 
 [Meet every agent and see its real role file →](docs/agents.md)
 

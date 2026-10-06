@@ -1,6 +1,6 @@
 ---
 name: fetch
-description: Reconstruct an authorized reference website from a supplied URL with high visual, responsive, interaction, asset, and observable behavior fidelity. Use only when the user explicitly invokes $fetch or $agentchef:fetch for site reconstruction; do not use for JavaScript Fetch API help, generic scraping or archiving, credential capture, access bypass, or deployment.
+description: Reconstruct an authorized reference website from a supplied URL with high visual, responsive, interaction, and behavior fidelity. Use only when the user explicitly invokes $fetch or $agentchef:fetch; not for the JavaScript Fetch API, scraping, archiving, credential capture, or deployment.
 ---
 
 # Fetch

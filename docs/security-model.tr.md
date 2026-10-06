@@ -231,10 +231,14 @@ pinlemez; effort'u profil belirler, açtığın oturum seçtiğin modeli korur.
 Model satırı hiçbir role boundary veya approval gate'i değiştirmez.
 
 `max_threads = 10` concurrency kapasite tavanidir; her task'i fan-out etme izni
-degildir. Kosullu routing normalde bir ile dort ajan kullanir ve yalniz
-bagimsiz paralel is, gurultulu kaniti ayirma veya acik kullanici delegasyonu
-durumunda spawn eder. Otomatik rol secimi aktif kullanici profilini override
-etmez.
+degildir. Kosullu routing normalde bir ile dort ajan kullanir. 1.3.4 ile
+(henuz yayimlanmadi) bir agent yalniz su kosullardan biri gecerliyse baslar:
+bir autoVerify routing profili eslesti ve dosyalar degisti, boylece verifier'i
+gorev bitti denmeden once calisir; bagimsiz paralel is var; gurultulu log veya
+arastirma ana thread'den ayrilmali; kullanici acikca delegasyon istedi. Onemsiz,
+kesinlikle sirali, siki bagli ve tek dosyalik isler ana thread'de kalir;
+kullanici adlarini vermeden gorev basina en fazla 2 agent baslar. Otomatik rol
+secimi aktif kullanici profilini override etmez.
 
 ## Install Planlama ve Çakışma Politikası
 

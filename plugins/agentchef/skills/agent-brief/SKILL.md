@@ -13,6 +13,10 @@ field by field.
 
 - Before delegating work that changes files, runs commands, or must meet a
   stated result. A read-only lookup needs no brief.
+- A matched autoVerify routing profile (`security-sensitive`,
+  `release-or-publish`, `mcp-connector-change`, `frontend-ui`, `data-systems`)
+  makes its verifier mandatory once files changed: brief that verifier before
+  reporting done.
 - If the request is vague or has many steps, first make a plan with
   `prompt-architect` in its plan-only mode, then write the brief from that plan.
 - If the user asked for a board task, record its write scope there

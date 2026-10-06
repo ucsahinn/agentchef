@@ -1,5 +1,5 @@
 name = "security_auditor"
-description = "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths."
+description = "Read-only security auditor for auth, secrets, API routes, data access, permissions, cryptography, and abuse paths. Use proactively when a change touches authentication, authorization, secrets, connectors, or release artifacts; it reports findings and never edits."
 model = "gpt-6-luna"
 nickname_candidates = ["Security Auditor", "Auth Auditor", "Abuse Auditor"]
 sandbox_mode = "read-only"

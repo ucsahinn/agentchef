@@ -269,10 +269,17 @@ npm run chef -- --skills --plain --no-log
 npm run chef -- --routing --profile starter-health --plain --no-log
 ```
 
-Gercek canli aktivasyon ise oturum kanitidir: `$security-best-practices` gibi
-bir skill'i veya bundled local skill adini iceren no-write bir Codex turn'u
-baslat; asistanin aksiyondan once `Skill selected` yazdigini ve hedef
-`SKILL.md` dosyasini okudugunu dogrula.
+Gercek canli aktivasyon ise oturum kanitidir. Eslesmenin kendisi icin sunu calistir:
+
+```bash
+npm run chef -- --routing --task "<istek>"
+```
+
+Beklenen profili, Verifier ve Auto-skill alanlarini ve bir `[hint]` satirini
+gostermelidir (1.3.4 ile, henuz yayimlanmadi). Sonra bu istekle no-write bir
+Codex turn'u baslat; asistanin aksiyondan once bir `Routing plan:` satiri, sonda
+da bir `Routing result:` satiri yazdigini dogrula. `$security-best-practices` gibi
+yalnizca acikca istenen bir skill, sen adini yazana kadar yuklenmez, onerilir.
 
 Repo sağlığı, kurulu runtime drift'i, curated skill'ler, yapılandırılmış MCP'ler,
 Codex CLI/oturum, doctor kontrolleri, dikkat maddeleri ve sonraki adımı kısa bir

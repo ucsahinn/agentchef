@@ -267,10 +267,17 @@ npm run chef -- --skills --plain --no-log
 npm run chef -- --routing --profile starter-health --plain --no-log
 ```
 
-Actual live activation is session evidence: start a no-write Codex turn that
-names a skill such as `$security-best-practices` or a bundled local skill, then
-confirm the assistant prints `Skill selected` and reads the target `SKILL.md`
-before acting.
+Actual live activation is session evidence. For the match itself, run:
+
+```bash
+npm run chef -- --routing --task "<request>"
+```
+
+It must show the expected profile, its Verifier and Auto-skill, and a `[hint]`
+line (from 1.3.4, not released yet). Then start a no-write Codex turn with that
+request and confirm the assistant prints a `Routing plan:` line before acting
+and a `Routing result:` line at the end. An explicit-only skill such as
+`$security-best-practices` is suggested, not loaded, until you name it.
 
 For a compact end-user view of repo health, installed runtime drift, curated
 skills, configured MCPs, Codex CLI/login, doctor checks, attention items, and

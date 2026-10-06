@@ -59,7 +59,7 @@ Use OpenAI Docs for current Codex behavior, Context7 for current library APIs, s
 
 ## Visibility
 
-Start with one compact `Routing plan:` line containing chosen agents, skills, MCPs, commands, and skips. Finish with one `Routing result:` table or line containing completion states and evidence. Avoid separate `Agent started`, `Skill selected`, and `MCP selected` messages unless verbose telemetry is requested.
+Start with one compact `Routing plan:` line containing chosen agents, skills, MCPs, commands, and skips. Finish with one `Routing result:` table or line containing completion states and evidence. Avoid separate per-agent, per-skill, and per-MCP lifecycle messages unless verbose telemetry is requested.
 
 ## Enterprise UI Standards
 

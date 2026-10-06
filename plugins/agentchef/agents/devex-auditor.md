@@ -1,6 +1,6 @@
 ---
 name: devex-auditor
-description: "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks."
+description: "Developer-experience auditor for onboarding friction, time-to-hello-world, docs clarity, and first-run recovery. Use proactively when install, setup, or getting-started paths change; not for product strategy."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
 model: sonnet
 disallowedTools: NotebookEdit

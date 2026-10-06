@@ -8,7 +8,7 @@ import {
   CliUsageError,
   installCliErrorBoundary
 } from "./lib/cli-error-contract.mjs";
-import { claudePluginHooks } from "./render-target-artifacts.mjs";
+import { claudePluginHooks, workingAgreementSharedTokens } from "./render-target-artifacts.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "..");
@@ -273,7 +273,7 @@ function inspectClaudeTemplates(failures) {
   }
   try {
     const source = readText("templates/shared/working-agreement.md");
-    const rendered = `${renderWorkingAgreement(source, "claude").trimEnd()}\n`;
+    const rendered = `${renderWorkingAgreement(source, "claude", workingAgreementSharedTokens()).trimEnd()}\n`;
     const committed = readText("templates/claude/rules/agentchef-working-agreement.md").replace(/\r\n/g, "\n");
     if (rendered !== committed) failures.push("templates/claude/rules/agentchef-working-agreement.md is stale; run npm run render:targets");
   } catch (error) {

@@ -1,6 +1,6 @@
 ---
 name: test-verifier
-description: "Validation specialist for lint, typecheck, tests, build, smoke checks, and failure evidence."
+description: "Validation specialist for lint, typecheck, tests, build, smoke checks, and exact pass/fail evidence. Use proactively after any file change to prove it works, as the independent verifier; it does not edit production or test files."
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_agentchef_context7, mcp__context7
 model: sonnet
 disallowedTools: NotebookEdit

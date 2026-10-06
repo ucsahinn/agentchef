@@ -75,6 +75,13 @@ function yamlString(value) {
   return JSON.stringify(String(value));
 }
 
+// Claude Code injects the full content of a listed skill when the subagent
+// starts, so a role gets the skill its instructions name without the Skill
+// tool. Plugin skills are addressed by their namespaced name.
+function preloadLines(skill, pluginName) {
+  return skill ? ["skills:", `  - ${pluginName}:${skill}`] : [];
+}
+
 // A Claude subagent tools list is an allowlist, and one that names no mcp__
 // entry filters MCP tools out completely. A role is granted a server only when
 // catalog/agents.json says its instructions depend on that server.
@@ -94,9 +101,10 @@ export function emitWorkerAgent(agent, roleToml, { pluginName, workerModel }) {
   const frontmatter = [
     "---",
     `name: ${kebab(agent.name)}`,
-    `description: ${yamlString(agent.templateDescription || agent.description)}`,
+    `description: ${yamlString(agent.description)}`,
     `tools: ${tools.join(", ")}`,
     ...(workerModel ? [`model: ${workerModel}`] : []),
+    ...preloadLines(agent.preloadSkill, pluginName),
     `disallowedTools: ${disallowed.join(", ")}`,
     "---"
   ];
@@ -128,6 +136,7 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, worker
     `description: ${yamlString(coordinator.description)}`,
     `tools: ${readOnlyTools.join(", ")}, Agent(${coordinator.workers.map((worker) => `${pluginName}:${kebab(worker)}`).join(", ")})`,
     ...(workerModel ? [`model: ${workerModel}`] : []),
+    ...preloadLines(coordinator.preloadSkill, pluginName),
     "disallowedTools: Write, Edit, NotebookEdit, Bash",
     "---"
   ];

@@ -34,7 +34,7 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | --- | --- |
 | [`agentchef-operator`](../plugins/agentchef/skills/agentchef-operator/SKILL.md) | Installer veya güvenlik sınırlarını gevşetmeden bu starter'ı bakımlı tutmak için. |
 | [`context-budget-planner`](../plugins/agentchef/skills/context-budget-planner/SKILL.md) | Geniş işlerde kaynak, token kullanımı, compaction handoff ve doğrulama planlamak için. |
-| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | Varsayılan olarak spawn etmeden en dar agent, skill, MCP ve bekleme politikasını seçmek için. |
+| [`adaptive-agent-routing`](../plugins/agentchef/skills/adaptive-agent-routing/SKILL.md) | En dar agent, skill, MCP ve bekleme politikasını seçmek için. 1.3.4 ile (henüz yayımlanmadı) yalnızca dört katalog koşulundan biri geçerliyse agent başlatır, eşleşen profilin auto-skill'ini önce yükler ve `autoVerify` profillerinde verifier'ı zorunlu kılar. |
 | [`agent-brief`](../plugins/agentchef/skills/agent-brief/SKILL.md) | Orkestratörün başka bir ajana verdiği yedi alanlı brief'i (`coordination-board brief-check` ile denetlenir) ve geri dönen altı alanlı handoff'u (1.3.3 ile `coordination-board handoff-check` ile denetlenir) yazmak için; ekip protokolünü de tutar: Direct ve Team rotaları, görev başına en çok dört worker (koordinatör sayılmaz), birleştirme ve doğrulayan kuralları. |
 | [`external-review-workflow`](../plugins/agentchef/skills/external-review-workflow/SKILL.md) | Hiçbir şeyi otomatik yüklemeden secret-safe ve hash-pinned manuel review handoff'u hazırlamak için. |
 | [`gptpro`](../plugins/agentchef/skills/gptpro/SKILL.md) | Taze external-review snapshot'ını yükleme yapmadan architecture-aware GPT Pro Project metin bağlamına dönüştürmek için. |
@@ -89,6 +89,16 @@ değiştiremez.
   yükleyebilir. Yüklenmesi bir yetki vermez: AgentChef çalışma sözleşmesi,
   sen istemedikçe asla commit veya push yapılmamasını söyler ve bu kural
   skill'in kontrol listesinden önce gelir.
+
+### Yalnızca Açıkça İstenen Skill'ler
+
+`catalog/skills.json` içinde dört skill `implicitInvocation: false` taşır:
+`fetch`, `security-best-practices`, `security-threat-model` ve
+`improve-codebase-architecture`. Yalnızca sen adıyla istediğinde kullanılırlar.
+1.3.4 ile (henüz yayımlanmadı) auto-skill'i bunlardan biri olan bir routing
+profili (örneğin `security-best-practices` ile `security-sensitive`) skill'i
+kendiliğinden yüklemez; oturum bunu sana önerir. Yukarıdaki iki sabitlenmiş
+skill uyarısı geçerliliğini korur.
 
 ## 🧰 Katalogda Bulunan Diğer Workflow'lar
 

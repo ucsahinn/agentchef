@@ -149,11 +149,27 @@ export function renderRoutingReference(repoRoot) {
   return `${current.slice(0, start)}${body}${current.slice(end + routingReferenceEnd.length)}`;
 }
 
+// The working agreement's routing lines come from the catalogs, so the rule
+// the model reads and the data the hint hook scores cannot disagree.
+export function workingAgreementSharedTokens(repoRoot = root) {
+  const routing = readJson(repoRoot, "catalog/routing-profiles.json");
+  const agents = readJson(repoRoot, "catalog/agents.json");
+  return {
+    SPAWN_WHEN: routing.delegationPolicy.spawnWhen.join("; "),
+    SKIP_WHEN: routing.delegationPolicy.skipWhen.join(", "),
+    AUTO_SPAWN_CAP: routing.delegationPolicy.autoSpawnCap,
+    AUTO_VERIFY_PROFILES: routing.profiles.filter((profile) => profile.autoVerify).map((profile) => `\`${profile.id}\``).join(", "),
+    WORKER_MODEL_CODEX: agents.workerModels.codex,
+    WORKER_MODEL_CLAUDE: agents.workerModels.claude
+  };
+}
+
 export function renderAllTargetArtifacts(repoRoot = root) {
   const outputs = new Map();
   const source = fs.readFileSync(path.join(repoRoot, "templates", "shared", "working-agreement.md"), "utf8");
+  const sharedTokens = workingAgreementSharedTokens(repoRoot);
   for (const target of Object.values(workingAgreementTargets)) {
-    outputs.set(target.output, `${renderWorkingAgreement(source, target.id).trimEnd()}\n`);
+    outputs.set(target.output, `${renderWorkingAgreement(source, target.id, sharedTokens).trimEnd()}\n`);
   }
   const catalog = readJson(repoRoot, "catalog/agents.json");
   const agentFileNames = [];

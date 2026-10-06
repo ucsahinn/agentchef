@@ -300,9 +300,11 @@ AgentChef kuruluyken seçili bir hedefte harness skill'i veya rolü eksikse 1 il
 çıkar. Durumlar ve her biri için yapılacaklar [harness haritasında](harness-map.tr.md).
 
 Kurulu ve hazır skill'ler kendiliğinden çalışmaz. Kullanıcı skill adını
-yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer;
-canlı aktivasyon, asistanın `Skill selected` yazması ve işlemden önce ilgili
-`SKILL.md` dosyasını okumasıyla kanıtlanır.
+yazdığında veya iş skill açıklamasına açıkça uyduğunda Codex context'ine girer.
+Routing'in repo tarafındaki kanıtı
+`npm run chef -- --routing --task "<istek>"` komutudur; eşleşen profili ve bir
+`[hint]` satırını gösterir (1.3.4 ile, henüz yayımlanmadı); oturumda kanıt,
+asistanın işlemden önce yazdığı `Routing plan:` satırıdır.
 
 GitHub release, push veya workflow check'leri lokal GitHub authentication bayat
 oldugu icin fail ederse GitHub CLI veya Git Credential Manager'i kendi kurum politikaniza

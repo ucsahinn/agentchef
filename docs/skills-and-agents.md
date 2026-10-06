@@ -50,7 +50,12 @@ session you open keeps its own; see [Model Tiers](agents.md#model-tiers).
 Agents do not chat with each other. From 1.3.3 there are
 two routes, both at most two levels deep: Direct, where the main session briefs one to four specialists,
 and Team, where for a board task the main session briefs that task's
-coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff. Codex and
+coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff.
+From 1.3.4 (not released yet), an agent starts only when one of four conditions
+holds (a routing profile that requires a verifier matched and files changed;
+independent parallel work; noisy logs or research to isolate; you asked for it),
+and at most 2 agents start per task without you naming them; see
+[Routing profiles and automatic use](agents.md#routing-profiles-and-automatic-use). Codex and
 Claude Code have no direct tool between them; see
 [How Agents Talk To Each Other](agents.md#how-agents-talk-to-each-other).
 
@@ -157,6 +162,17 @@ and `cancelled`. The allowed moves:
 Routing profiles connect a task type with useful agents, skills, MCPs, checks,
 and safety boundaries. They help Codex choose a sensible route; they do not
 silently run every matching surface.
+
+From 1.3.4 (not released yet), `catalog/routing-profiles.json` (version 0.4.0)
+has 19 profiles, including the new `code-review` profile. Each profile names a
+verifier and an auto-skill. The verifier is required for the five `autoVerify`
+profiles (`security-sensitive`, `release-or-publish`, `mcp-connector-change`,
+`frontend-ui`, `data-systems`) once files changed, and only suggested for the
+rest. The auto-skill is loaded first, or suggested when the skill is explicit-only
+(see [Skills](skills.md#explicit-only-skills)). The profile list in the routing
+skill's `references/global-working-agreements.md` is rendered from the catalog,
+not hand-written. Prefer a single lookup for a request:
+`npm run chef -- --routing --task "<request>"`.
 
 ```bash
 npm run chef -- --routing

@@ -1,5 +1,5 @@
 name = "devex_auditor"
-description = "Developer-experience auditor for onboarding friction, TTHW, docs clarity, and magical-moment checks."
+description = "Developer-experience auditor for onboarding friction, time-to-hello-world, docs clarity, and first-run recovery. Use proactively when install, setup, or getting-started paths change; not for product strategy."
 model = "gpt-6-luna"
 nickname_candidates = ["DevEx Auditor", "Onboarding Auditor", "DX Auditor"]
 sandbox_mode = "workspace-write"

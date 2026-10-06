@@ -7,9 +7,12 @@ döndüreceği kanıt belli olan uzman bir rol.
 
 AgentChef 7 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
 planda sürekli çalışan servisler değildir ve her görevde topluca açılmaz. Bir
-rol, subagent başlatılmadan da ana oturuma yol gösterebilir. Delegasyon; işler
-bağımsız ilerleyebiliyorsa, gürültülü çıktıyı ana thread'den ayırmak gerekiyorsa
-veya sen açıkça paralel agent istiyorsan anlamlıdır.
+rol, subagent başlatılmadan da ana oturuma yol gösterebilir. 1.3.4 ile (henüz
+yayımlanmadı) bir agent yalnızca dört koşuldan biri geçerliyse başlatılır:
+verifier gerektiren bir routing profili eşleşti ve dosyalar değişti, bağımsız
+paralel iş var, gürültülü log veya araştırma ana thread'den ayrılmalı ya da sen
+açıkça delegasyon istedin (bkz. [Routing profilleri ve otomatik
+kullanım](#routing-profilleri-ve-otomatik-kullanım)).
 
 Resmi kaynaklar: [Codex subagent'ları](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 (eski `developers.openai.com/codex/subagents` adresi buraya yönlenir) ve
@@ -51,10 +54,12 @@ agent thread'ini incelemek ya da ona geçmek için `/agent` kullan. App veya IDE
 varsa subagent activity panelini aç; Codex'ten bir agent'ı yönlendirmesini,
 durdurmasını veya kapatmasını da isteyebilirsin.
 
-Routing yolu şöyledir:
+Routing yolu iki rotadır; ikisi de en fazla iki seviye derindir:
 
-`görev -> routing profili -> birincil koordinatör -> seçilen uzmanlar + dar skill/MCP'ler`
+- **Direct**: `görev -> routing profili -> ana oturum bir ila dört uzmana brief verir + dar skill/MCP'ler`
+- **Team**: senin oluşturduğun bir board görevi için `görev -> routing profili -> ana oturum o görevin koordinatörüne brief verir -> koordinatörün katalogdaki worker'ları`
 
+Yani koordinatör her zaman yolda değildir; yalnızca Team rotasında kullanılır.
 Alanlar arası iş, ana oturuma kısa bir handoff döndürür; başka bir koordinatör
 gerekip gerekmediğine ana oturum karar verir.
 
@@ -110,7 +115,7 @@ yapmamış bir ajan tarafından kontrol edilmelidir.
 | Agent | Ne zaman işe yarar? |
 | --- | --- |
 | [`docs_author`](../templates/codex/agents/docs_author.toml) | Dokümantasyon daha açık bir harita, eksik rehber, release güncellemesi veya stale-content temizliği istiyorsa. |
-| [`code_reviewer`](../templates/codex/agents/code_reviewer.toml) | Yeni bir göz doğruluk risklerine, regresyonlara ve eksik testlere bakmalıysa. |
+| [`code_reviewer`](../templates/codex/agents/code_reviewer.toml) | Yeni bir göz, merge edilmeden veya bitti denmeden önce bir diff'e ya da pull request'e doğruluk riskleri, regresyonlar ve eksik testler açısından bakmalıysa. |
 | [`google_seo_auditor`](../templates/codex/agents/google_seo_auditor.toml) | Public sayfalar crawlability, metadata, structured data ve Search Console hazırlığı istiyorsa. Core Web Vitals ölçümü `performance_auditor`'a aittir. |
 
 ## 🛡️ Sınırı Koru
@@ -123,9 +128,17 @@ yapmamış bir ajan tarafından kontrol edilmelidir.
 
 ## Seçim Nasıl Çalışıyor?
 
-1. Codex görev biçimini en dar ve faydalı rolle eşleştirir.
+1. Oturum görev biçimini bir routing profiliyle ve en dar faydalı rolle
+   eşleştirir.
 2. Bir eşleşme subagent başlatmayı **zorunlu kılmaz**. Ana oturum rolün
-   rehberliğini doğrudan kullanabilir.
+   rehberliğini doğrudan kullanabilir. Codex yalnızca sen doğrudan istediğinde
+   ya da `AGENTS.md` veya bir skill yönergesi istediğinde delege eder;
+   AgentChef'in çalışma sözleşmesi böyle bir yönergedir ve 1.3.4 ile (henüz
+   yayımlanmadı) dört spawn koşulu sayar: verifier gerektiren bir routing
+   profili eşleşti ve dosyalar değişti; bağımsız paralel iş var; gürültülü log
+   veya araştırma ana thread'den ayrılmalı; sen açıkça delegasyon istedin.
+   Önemsiz, kesinlikle sıralı, sıkı bağlı ve delegasyonun koordinasyon maliyeti
+   getirdiği tek dosyalık işlerde spawn etmez.
 3. Spawn edilen agent'lar mevcut onay ve sandbox sınırlarını miras alır.
 4. Aynı dosyalara dokunan paralel işler koordinasyon maliyeti yarattığı için
    write-heavy delegasyon sınırlı tutulur.
@@ -140,6 +153,58 @@ incelenen kanıt, çatışma, gereken karar ve açık doğrulama ihtiyacını i�
 bir parent-routed handoff ile `devops_coordinator` için ana oturuma döner.
 Customer support/onboarding rotası (`devops_coordinator` ile `devex_auditor`) da
 advisory'dir. Bu rotalar veritabanı, customer-account veya production erişimi vermez.
+
+### Routing profilleri ve otomatik kullanım
+
+1.3.4 ile (henüz yayımlanmadı) `catalog/routing-profiles.json` (sürüm 0.4.0)
+yeni `code-review` profili dahil 19 routing profili içerir. Her profil şunları
+belirtir:
+
+- bir **verifier**: işi bağımsız denetleyen rol. Beş `autoVerify` profilinde
+  (`security-sensitive`, `release-or-publish`, `mcp-connector-change`,
+  `frontend-ui`, `data-systems`) zorunludur: dosyalar değiştikten sonra görev
+  bitti denmeden önce verifier çalışır. Diğer profillerde verifier yalnızca
+  önerilir.
+- önce yüklenecek bir **auto-skill**. Yalnızca açıkça istenen bir skill
+  (`implicitInvocation: false`, bkz. [Skill'ler](skills.tr.md)) yüklenmez, sana
+  önerilir.
+
+Sen adlarını vermeden görev başına en fazla 2 agent başlar; adını verdiğin
+agent'lar sayılmaz ve görev başına dört worker sınırı geçerliliğini korur.
+Eşleşme tavsiyedir: işin agent gerektirip gerektirmediğine yine ana oturum karar
+verir.
+
+Bir istek için eşleşmeyi görmek üzere şunu çalıştır:
+
+```bash
+npm run chef -- --routing --task "<istek>"
+```
+
+Çıktı profili, Verifier ve Auto-skill alanlarını ve bir `[hint]` satırını (tek
+satırlık routing ipucu; bunu oturuma ekleyen hook güvenlik modelinde, commit C,
+anlatılır) yazar. Güven kuralları için [Codex Flag'leri](codex-flags.tr.md)
+sayfasına bak.
+
+Her rolün `catalog/agents.json` içinde tetik biçiminde tek bir `description`
+metni ("Use proactively when ...") vardır ve 13 rol bir skill'i önceden yükler:
+Claude Code bunu plugin agent dosyasındaki `skills:` frontmatter'ından okur;
+Codex rol dosyaları "Load the `<skill>` skill before starting" der.
+
+| Rol | Önceden yüklenen skill |
+| --- | --- |
+| `docs_researcher` | `evidence-research` |
+| `context_architect` | `context-budget-planner` |
+| `prompt_architect` | `prompt-architect` |
+| `mcp_integrator` | `mcp-builder` |
+| `design_reviewer` | `frontend-design` |
+| `root_cause_debugger` | `systematic-debugging` |
+| `performance_auditor` | `web-quality-audit` |
+| `google_seo_auditor` | `seo` |
+| `docs_author` | `documentation-and-adrs` |
+| `spec_author` | `ai-project-starter` |
+| `frontend_verifier` | `webapp-testing` |
+| `release_verifier` | `shipping-and-launch` |
+| `codex_doctor` | `agentchef-operator` |
 
 ### Aynı roller Claude Code'da
 

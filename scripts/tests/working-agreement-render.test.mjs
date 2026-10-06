@@ -4,6 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { renderWorkingAgreement, workingAgreementTargets } from "../lib/emitters/working-agreement.mjs";
+import { workingAgreementSharedTokens } from "../render-target-artifacts.mjs";
+const sharedTokens = workingAgreementSharedTokens();
 import { renderAllTargetArtifacts } from "../render-target-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -15,15 +17,15 @@ function normalize(text) {
 
 test("the shared working agreement renders both committed targets byte for byte", () => {
   for (const target of Object.values(workingAgreementTargets)) {
-    const rendered = `${renderWorkingAgreement(source, target.id).trimEnd()}\n`;
+    const rendered = `${renderWorkingAgreement(source, target.id, sharedTokens).trimEnd()}\n`;
     const committed = normalize(fs.readFileSync(path.join(root, target.output), "utf8"));
     assert.equal(normalize(rendered), committed, `${target.output} is stale; run npm run render:targets`);
   }
 });
 
 test("rendered agreements contain no target fences, unresolved tokens, or the other harness's launcher", () => {
-  const codex = renderWorkingAgreement(source, "codex");
-  const claude = renderWorkingAgreement(source, "claude");
+  const codex = renderWorkingAgreement(source, "codex", sharedTokens);
+  const claude = renderWorkingAgreement(source, "claude", sharedTokens);
   for (const [label, text] of [["codex", codex], ["claude", claude]]) {
     assert.doesNotMatch(text, /<!--\s*\/?target:/, `${label} leaks fence markers`);
     assert.doesNotMatch(text, /\{\{[A-Z_]+\}\}/, `${label} leaks template tokens`);
@@ -34,7 +36,7 @@ test("rendered agreements contain no target fences, unresolved tokens, or the ot
   assert.doesNotMatch(claude, /codex\.cmd/);
   assert.match(claude, /Anthropic/);
   assert.notEqual(codex, claude);
-  assert.throws(() => renderWorkingAgreement(source, "cursor"), /target/i);
+  assert.throws(() => renderWorkingAgreement(source, "cursor", sharedTokens), /target/i);
 });
 
 test("every generated artifact is current in the repository", () => {

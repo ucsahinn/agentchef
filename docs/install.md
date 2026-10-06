@@ -304,9 +304,11 @@ on a selected target. See the [harness map](harness-map.md) for the states and
 what to do about each.
 
 Installed and ready skills do not execute by themselves. A skill enters Codex
-context when the user names it or the task clearly matches its description;
-live activation is proven when the assistant prints `Skill selected` and reads
-the skill's `SKILL.md` before acting.
+context when the user names it or the task clearly matches its description.
+Repo-side proof of routing is
+`npm run chef -- --routing --task "<request>"`, which shows the matched profile
+and a `[hint]` line (from 1.3.4, not released yet); in a session, the proof is
+the `Routing plan:` line the assistant prints before acting.
 
 If GitHub release, push, or workflow checks fail because local GitHub
 authentication is stale, refresh GitHub CLI or Git Credential Manager according
