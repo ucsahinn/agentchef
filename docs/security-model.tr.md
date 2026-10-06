@@ -21,7 +21,7 @@ için tasarlandı.
 - Global command rule'ları dar kapsamlıdır ve read-only discovery ile lokal
   verification komutlarına ağırlık verir.
 - Alışıldık build, test, check, validate, dev ve status adları dahil, repo
-  tarafından kontrol edilen her `npm run ...` komutu onay ister; çünkü arkasında
+  tarafından kontrol edilen her `npm run...` komutu onay ister; çünkü arkasında
   çalışacak shell kodunu repo belirler. Tam olarak tanımlanmış read-only npm
   incelemeleri (`ls`, `outdated`, `view`) ile script çalıştırmayan, incelenmiş
   paket dry-run komutu izinli kalır.
@@ -232,7 +232,7 @@ Model satırı hiçbir role boundary veya approval gate'i değiştirmez.
 
 `max_threads = 10` concurrency kapasite tavanidir; her task'i fan-out etme izni
 degildir. Kosullu routing normalde bir ile dort ajan kullanir. 1.3.4 ile
-(henuz yayimlanmadi) bir agent yalniz su kosullardan biri gecerliyse baslar:
+bir agent yalniz su kosullardan biri gecerliyse baslar:
 bir autoVerify routing profili eslesti ve dosyalar degisti, boylece verifier'i
 gorev bitti denmeden once calisir; bagimsiz paralel is var; gurultulu log veya
 arastirma ana thread'den ayrilmali; kullanici acikca delegasyon istedi. Onemsiz,
@@ -483,13 +483,13 @@ object inspection'i kapsar. Sunlari prompt'a baglar:
 - global skill installation
 - package publishing
 - GitHub API operations; credential material basabilen auth status/token komutlari dahil
-- repo tarafından kontrol edilen bütün `npm run ...` script çalıştırmaları
+- repo tarafından kontrol edilen bütün `npm run...` script çalıştırmaları
 - broad `git config` value-dump komutlari ve raw, unredacted `gitleaks dir`
 - git commit, push, reset, checkout ve restore
 - repair apply ve managed plugin pruning
 - exact allowlist dışındaki ad-hoc `npx` package execution
 - bir ajanın pinned bir npx MCP paketini elle başlatması (`npx -y <pkg@ver>`,
-  `npx.cmd` veya `cmd.exe /c npx ...`); Codex etkin MCP sunucularını bu
+  `npx.cmd` veya `cmd.exe /c npx...`); Codex etkin MCP sunucularını bu
   kuralların dışında kendisi başlatır
 - uzak bir depoya bağlanan ve transport ya da credential helper çalıştırabilen
   `git ls-remote`
@@ -506,33 +506,74 @@ Codex, plugin hook'u çalışmadan önce tam kaynak hash'iyle incelenmesini ve
 güvenilir olarak işaretlenmesini ister. Claude Code'da böyle bir adım yoktur:
 plugin etkinleştirildiğinde hook'larını çalıştırır.
 
-Lokal plugin süreç hijyeni için her CLI'a bir tane olmak üzere dar kapsamlı tek
-bir `SessionEnd` hook'u tanımlar. Codex onu kendi manifesti üzerinden
-`hooks/process-hygiene.json` dosyasından okur. Claude Code onu
-`plugins/agentchef/.claude-plugin/plugin.json` içinde satır içi alır (exec
-biçimi,
+Lokal plugin üç incelenmiş hook taşır: `Agent` spawn guard'ı (araç çağrısından
+önce, yalnız Claude Code), oturum sonu süreç taraması ve 1.3.4 ile routing hint (prompt gönderilirken). Claude Code üçünü de
+`plugins/agentchef/.claude-plugin/plugin.json` içinden çalıştırır; Codex taramayı
+ve 1.3.4 ile routing hint'i, her biri `hooks/` altındaki
+kendi dosyasından çalıştırır. İki CLI de diğerinin hook'unu yüklemez. Claude
+manifesti `scripts/render-target-artifacts.mjs` ile üretilir; commit edilen kopya
+saparsa `npm run check` başarısız olur.
+
+**Oturum sonu süreç taraması.** Codex onu kendi manifesti üzerinden
+`hooks/process-hygiene.json` dosyasından okur. Claude Code onu satır içi alır
+(exec biçimi,
 `node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --runtime claude`,
 15 sn timeout, matcher yok); Claude'un kendiliğinden yükleyeceği
-`hooks/hooks.json` kullanılmaz ve iki CLI de diğerinin hook'unu yüklemez.
-Claude manifesti `scripts/render-target-artifacts.mjs` ile üretilir; commit
-edilen kopya saparsa `npm run check` başarısız olur. Hook prompt veya
-transcript metni okumaz ve context eklemez. Normal oturum sonunda yalnız tam
-Codex ya da Claude Code sahibinin lokal MCP alt süreçlerini yakalar, detached
-taramada 45 saniye bekler ve sahip zinciri gittikten sonra yalnız PID ile
-oluşturulma zamanı hâlâ eşleşen yakalanmış süreçleri durdurur. Subagent lifecycle
-olayları `SessionEnd` hook'unu çağırmaz. Eksik süreç metadata bilgisi, canlı
-sahip, yeni süreç ağacı veya PID yeniden kullanımı güvenli biçimde işlemi
-durdurur.
+`hooks/hooks.json` kullanılmaz. Hook prompt veya transcript metni okumaz ve
+context eklemez. Normal oturum sonunda yalnız tam Codex ya da Claude Code
+sahibinin lokal MCP alt süreçlerini yakalar, detached taramada 45 saniye bekler
+ve sahip zinciri gittikten sonra yalnız PID ile oluşturulma zamanı hâlâ eşleşen
+yakalanmış süreçleri durdurur. Subagent lifecycle olayları `SessionEnd`
+hook'unu çağırmaz. Eksik süreç metadata bilgisi, canlı sahip, yeni süreç ağacı
+veya PID yeniden kullanımı güvenli biçimde işlemi durdurur.
 
-Starter; otomatik `SessionStart` context injection'ını,
-`hookSpecificOutput.additionalContext` desenlerini, ilgisiz hook runtime'larını,
-plugin-bundled MCP/app yüzeylerini ve `Write` capability'sini reddetmeye devam
-eder. `scripts/security-audit.mjs` yalnız tam process-hygiene hook path ve
-komutunu allowlist'e alır; root hook klasörleri, başka nested `hooks/` path'leri,
-`scripts/hooks`, `.cursor/hooks`, `.kiro/hooks`, `.opencode` hook plugin'leri,
-template veya plugin bundle'ları açık review olmadan yeni hook eklerse fail
-eder. Hook dosya silmez, credential okumaz ve ilgisiz Node/Python süreçlerini
-temizlik adayı saymaz.
+**Routing hint (prompt gönderimi).** 1.3.4 ile prompt
+metnini okuyan tek hook budur ve modele context ekleyen tek hook da budur.
+Tasarım ve tehditler
+[ADR-007](decisions/007-routing-hint-hook-and-auto-verification.md) içindedir.
+Şu sözleri tutar:
+
+- Gönderilen prompt'u standart girdiden okur, bellekte plugin'in render edilmiş
+  routing kataloğu kopyasına
+  (`plugins/agentchef/scripts/routing-index.json`) karşı puanlar ve çıkar.
+  Prompt metnini, eşleşen kelimeleri veya çalışma dizinini hiçbir yerde tutmaz.
+- Yüksek güvenli bir eşleşmede tam olarak bir satır düz metin yazar; satır sabit
+  bir şablondan ve regex ile doğrulanmış katalog tanımlayıcılarından (profil,
+  skill, verifier, roller, spawn tavanı, plugin sürümü) üretilir, en fazla 300
+  karakterdir. Satır tavsiyedir; işin agent gerektirip gerektirmediğine model
+  yine kendisi karar verir.
+- Tek durumu, kullanıcının plugin-data veya geçici dizini altında, oturum
+  kimliğinin SHA-256 değeriyle adlandırılmış, profil tanımlayıcıları ve atlama
+  sayaçları içeren oturum başına bir dosyadır. Exclusive-create ve rename ile
+  yazılır; dizin ve dosya her okuma ve yazmadan önce symlink ve sahiplik
+  açısından kontrol edilir. Hook yalnız yedi günden eski kendi dosyalarını siler.
+- Her hata, düşük güvenli eşleşme, kısa veya sentetik tur, subagent turu ya da
+  `AGENTCHEF_ROUTING_HINT=off` çıkış kodu 0 ve çıktısız biter. Prompt'u asla
+  engellemez (çıkış kodu 2 ve JSON çıktısı yasaktır ve denetlenir) ve standart
+  hataya asla yazmaz.
+- Ağ veya alt süreç kodu yoktur; yalnız etkisiz Node modüllerini içe aktarır
+  (denetlenir).
+- Codex bir hook'a tanımının hash'iyle güvenir. Bu güven komut satırını
+  kapsar, çalıştırdığı betiği veya indeksi değil; onları plugin dizininin
+  izinleri ve kurulum kaynağı hash karşılaştırması
+  (`npm run chef -- --inventory`) korur. Claude Code'da hash incelemesi hiç yoktur.
+- Claude Code ve Codex bu tek satırı kendi debug log'larında veya
+  transcript'lerinde, kendi koşullarıyla kaydedebilir.
+
+Starter, hook context injection'ının diğer her biçimini reddetmeye devam eder:
+otomatik `SessionStart` injection'ı, `hookSpecificOutput.additionalContext`,
+ikinci bir prompt hook'u, ilgisiz hook runtime'ları, plugin-bundled MCP/app
+yüzeyleri ve `Write` capability'si. `scripts/security-audit.mjs` her hook olay
+adını yalnız ilgili incelenmiş dosya için allowlist'e alır, Codex hook dosyasını
+ve Claude manifestini renderer sabitleriyle birebir karşılaştırır, her
+`hooks/hooks.json` dosyasında fail eder ve `plugins/agentchef/hooks`
+klasörünün tam olarak iki incelenmiş dosyayı (`process-hygiene.json`,
+`routing-hint.json`) içermesini ister. Root hook klasörleri, başka nested
+`hooks/` path'leri, `scripts/hooks`, `.cursor/hooks`, `.kiro/hooks`, `.opencode`
+hook plugin'leri, template veya plugin bundle'ları açık review olmadan yeni hook
+eklerse de fail eder. Hook'lar routing hint'in kendi durum dosyaları dışında
+dosya silmez, credential okumaz ve ilgisiz Node/Python süreçlerini temizlik
+adayı saymaz.
 
 Resmi kaynaklar: https://developers.openai.com/codex/hooks ve
 https://code.claude.com/docs/en/hooks

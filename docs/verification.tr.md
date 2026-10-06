@@ -161,7 +161,7 @@ $errors
 PowerShell dry run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 ```
 
 Bash dry run:
@@ -217,7 +217,7 @@ ağaçlarını, bekleme süresindekileri, eski sahipsiz adayları ve ilgisiz
 Node/Python runtime'larını ayırır. Yazmasız tam hedefli temizlik ön izlemesi için
 `--cleanup-stale` ekle; yalnız `--cleanup-stale --apply` adayları durdurabilir.
 npm üzerinden parse edilebilir JSON için `npm run --silent chef --
---processes --json --no-log` kullan. Tam semantik ve SessionEnd trust adımı
+--processes --json --no-log` kullan. Tam semantik ve hook trust adımı
 [çoklu oturum süreç hijyeninde](process-hygiene.tr.md) açıklanır.
 
 `npm run chef -- --backups` backup archive metadata'sini global/user state'e
@@ -253,7 +253,7 @@ Gerçek installer yalnızca kullanıcı mevcut Codex/Git setup'ına yazmayı aç
 onayladıktan sonra çalıştırılır:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
 ```
 
 Beklenen skill davranışı idempotent ve sessizdir: kurulu skill'ler `Skill
@@ -276,7 +276,7 @@ npm run chef -- --routing --task "<istek>"
 ```
 
 Beklenen profili, Verifier ve Auto-skill alanlarini ve bir `[hint]` satirini
-gostermelidir (1.3.4 ile, henuz yayimlanmadi). Sonra bu istekle no-write bir
+gostermelidir (1.3.4 ile). Sonra bu istekle no-write bir
 Codex turn'u baslat; asistanin aksiyondan once bir `Routing plan:` satiri, sonda
 da bir `Routing result:` satiri yazdigini dogrula. `$security-best-practices` gibi
 yalnizca acikca istenen bir skill, sen adini yazana kadar yuklenmez, onerilir.

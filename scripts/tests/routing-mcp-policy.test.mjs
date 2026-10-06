@@ -41,6 +41,8 @@ const routingFiles = [
   "templates/codex/AGENTS.md",
   "scripts/codex-routing-board.mjs",
   "scripts/validate-routing-profiles.mjs",
+  "scripts/lib/routing-recommendation.mjs",
+  "scripts/lib/routing-text.mjs",
   "plugins/agentchef/skills/adaptive-agent-routing/references/global-working-agreements.md"
 ];
 

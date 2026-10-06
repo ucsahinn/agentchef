@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { claudePluginHooks } from "./render-target-artifacts.mjs";
+import { claudePluginHooks, codexRoutingHintHook } from "./render-target-artifacts.mjs";
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -121,6 +121,7 @@ function isPinnedPackageSpec(spec) {
 function isHookSurfacePath(rel) {
   if (rel === "templates/git/pre-commit") return false;
   if (rel === "plugins/agentchef/hooks/process-hygiene.json") return false;
+  if (rel === "plugins/agentchef/hooks/routing-hint.json") return false;
   return /(?:^|\/)hooks(?:\/|$)/i.test(rel)
     || /(?:^|\/)hooks\.json$/i.test(rel)
     || /^scripts\/hooks\//i.test(rel)
@@ -202,11 +203,20 @@ const forbiddenStatePatterns = [
   { name: "auth file", pattern: /(?:^|[\\/])(?:auth|credentials|cookies)\.(?:json|toml|txt)$/i }
 ];
 
+{
+  const hooksDirectory = path.join(root, "plugins", "agentchef", "hooks");
+  const names = fs.existsSync(hooksDirectory) ? fs.readdirSync(hooksDirectory).sort() : [];
+  if (JSON.stringify(names) !== JSON.stringify(["process-hygiene.json", "routing-hint.json"])) {
+    failures.push(`plugins/agentchef/hooks must hold exactly process-hygiene.json and routing-hint.json; found ${names.join(", ") || "nothing"}`);
+  }
+}
+
 for (const file of files) {
   const rel = posix(path.relative(root, file));
   const text = fs.readFileSync(file, "utf8");
   // The Claude manifest counts as reviewed only while its hooks are exactly the
-  // reviewed hooks the renderer emits (Agent spawn guard, SessionEnd hygiene); anything else fails below.
+  // reviewed hooks the renderer emits (Agent spawn guard, routing hint,
+  // SessionEnd hygiene); anything else fails below.
   const claudeManifestHooksReviewed = rel === "plugins/agentchef/.claude-plugin/plugin.json"
     && (() => {
       try {
@@ -215,18 +225,14 @@ for (const file of files) {
         return false;
       }
     })();
-  const reviewedProcessHygieneSurface = [
-    "plugins/agentchef/hooks/process-hygiene.json",
-    "plugins/agentchef/scripts/codex-process-hygiene.mjs",
-    "plugins/agentchef/scripts/agent-spawn-guard.mjs"
-  ].includes(rel) || claudeManifestHooksReviewed;
+
   // Decide on the parsed manifest: a key written with a JSON escape, such as
   // an escaped "s" in "hooks", still parses to hooks.
   const claudeManifestHasHooks = rel === "plugins/agentchef/.claude-plugin/plugin.json" && (() => {
     try { return Object.hasOwn(JSON.parse(text), "hooks"); } catch { return /hooks/.test(text); }
   })();
   if (claudeManifestHasHooks && !claudeManifestHooksReviewed) {
-    failures.push(`Claude plugin manifest hooks must be exactly the reviewed Agent spawn guard and SessionEnd process-hygiene hooks: ${rel}`);
+    failures.push(`Claude plugin manifest hooks must be exactly the reviewed Agent spawn guard, routing hint, and SessionEnd process-hygiene hooks: ${rel}`);
   }
 
   if (isHookSurfacePath(rel)) {
@@ -241,7 +247,7 @@ for (const file of files) {
           if (
             rel === "plugins/agentchef/.codex-plugin/plugin.json"
             && forbiddenKey === "hooks"
-            && JSON.stringify(plugin.hooks) === JSON.stringify(["./hooks/process-hygiene.json"])
+            && JSON.stringify(plugin.hooks) === JSON.stringify(["./hooks/process-hygiene.json", "./hooks/routing-hint.json"])
           ) {
             continue;
           }
@@ -258,19 +264,47 @@ for (const file of files) {
   }
 
   if (/^(?:templates|plugins)\//.test(rel)) {
+    // Each hook event name may appear only in the files reviewed for it (and
+    // in the Claude manifest while that manifest matches the renderer). The
+    // context-injection fields and foreign hook runtimes are allowed nowhere.
     const hookInjectionPatterns = [
-      /\b(?:SessionStart|PreCompact|SessionEnd)\b/,
-      /\bhookSpecificOutput\b/,
-      /\badditionalContext\b/,
-      /\bECC_SESSION_START_CONTEXT\b/,
-      /(?:^|[\\/])instincts[\\/]/i,
-      /\blearned skills?\b/i
+      { pattern: /\b(?:SessionStart|PreCompact|SessionEnd)\b/, allowed: ["plugins/agentchef/hooks/process-hygiene.json", "plugins/agentchef/scripts/codex-process-hygiene.mjs"], manifest: true },
+      { pattern: /\bUserPromptSubmit\b/, allowed: ["plugins/agentchef/hooks/routing-hint.json", "plugins/agentchef/scripts/routing-hint.mjs"], manifest: true },
+      { pattern: /\bPreToolUse\b/, allowed: ["plugins/agentchef/scripts/agent-spawn-guard.mjs"], manifest: true },
+      { pattern: /\bhookSpecificOutput\b/, allowed: [], manifest: false },
+      { pattern: /\badditionalContext\b/, allowed: [], manifest: false },
+      { pattern: /\bECC_SESSION_START_CONTEXT\b/, allowed: [], manifest: false },
+      { pattern: /(?:^|[\\/])instincts[\\/]/i, allowed: [], manifest: false },
+      { pattern: /\blearned skills?\b/i, allowed: [], manifest: false }
     ];
-    for (const [index, pattern] of hookInjectionPatterns.entries()) {
-      if (pattern.test(text)) {
-        if (reviewedProcessHygieneSurface && index === 0) continue;
-        failures.push(`Automatic hook/session context injection pattern found in ${rel}: ${pattern}`);
+    for (const { pattern, allowed, manifest } of hookInjectionPatterns) {
+      if (!pattern.test(text)) continue;
+      if (allowed.includes(rel) || (manifest && claudeManifestHooksReviewed)) continue;
+      failures.push(`Automatic hook/session context injection pattern found in ${rel}: ${pattern}`);
+    }
+  }
+
+  // The routing-hint hook file is compared to the renderer's constant exactly,
+  // so an appended command or a changed event cannot pass as reviewed.
+  if (rel === "plugins/agentchef/hooks/routing-hint.json") {
+    try {
+      if (JSON.stringify(JSON.parse(text)) !== JSON.stringify(codexRoutingHintHook)) {
+        failures.push("Routing hint hook file must equal the renderer's reviewed definition exactly.");
       }
+    } catch (error) {
+      failures.push(`Routing hint hook must be parseable JSON: ${error.message}`);
+    }
+  }
+
+  // The hook script may import only inert modules and must never be able to
+  // block a prompt, write to stderr, or reach a process or the network.
+  if (rel === "plugins/agentchef/scripts/routing-hint.mjs") {
+    const allowedImports = new Set(["./routing-recommendation.mjs", "node:crypto", "node:fs", "node:os", "node:path", "node:url"]);
+    for (const match of text.matchAll(/^import .* from "([^"]+)";$/gm)) {
+      if (!allowedImports.has(match[1])) failures.push(`Routing hint hook imports an unreviewed module: ${match[1]}`);
+    }
+    for (const forbidden of ["child_process", "node:http", "node:https", "node:net", "node:dns", "node:tls", "worker_threads", "fetch(", "exitCode = 2", "exit(2)", "transcript_path", "console.error", "process.stderr", "import("]) {
+      if (text.includes(forbidden)) failures.push(`Routing hint hook must not contain ${forbidden}.`);
     }
   }
 

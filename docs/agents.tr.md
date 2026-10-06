@@ -7,8 +7,7 @@ döndüreceği kanıt belli olan uzman bir rol.
 
 AgentChef 7 koordinasyon rolü ve 21 uzman worker rolü içerir. Bunlar arka
 planda sürekli çalışan servisler değildir ve her görevde topluca açılmaz. Bir
-rol, subagent başlatılmadan da ana oturuma yol gösterebilir. 1.3.4 ile (henüz
-yayımlanmadı) bir agent yalnızca dört koşuldan biri geçerliyse başlatılır:
+rol, subagent başlatılmadan da ana oturuma yol gösterebilir. 1.3.4 ile bir agent yalnızca dört koşuldan biri geçerliyse başlatılır:
 verifier gerektiren bir routing profili eşleşti ve dosyalar değişti, bağımsız
 paralel iş var, gürültülü log veya araştırma ana thread'den ayrılmalı ya da sen
 açıkça delegasyon istedin (bkz. [Routing profilleri ve otomatik
@@ -133,8 +132,7 @@ yapmamış bir ajan tarafından kontrol edilmelidir.
 2. Bir eşleşme subagent başlatmayı **zorunlu kılmaz**. Ana oturum rolün
    rehberliğini doğrudan kullanabilir. Codex yalnızca sen doğrudan istediğinde
    ya da `AGENTS.md` veya bir skill yönergesi istediğinde delege eder;
-   AgentChef'in çalışma sözleşmesi böyle bir yönergedir ve 1.3.4 ile (henüz
-   yayımlanmadı) dört spawn koşulu sayar: verifier gerektiren bir routing
+   AgentChef'in çalışma sözleşmesi böyle bir yönergedir ve 1.3.4 ile dört spawn koşulu sayar: verifier gerektiren bir routing
    profili eşleşti ve dosyalar değişti; bağımsız paralel iş var; gürültülü log
    veya araştırma ana thread'den ayrılmalı; sen açıkça delegasyon istedin.
    Önemsiz, kesinlikle sıralı, sıkı bağlı ve delegasyonun koordinasyon maliyeti
@@ -156,7 +154,7 @@ advisory'dir. Bu rotalar veritabanı, customer-account veya production erişimi 
 
 ### Routing profilleri ve otomatik kullanım
 
-1.3.4 ile (henüz yayımlanmadı) `catalog/routing-profiles.json` (sürüm 0.4.0)
+1.3.4 ile `catalog/routing-profiles.json` (sürüm 0.4.0)
 yeni `code-review` profili dahil 19 routing profili içerir. Her profil şunları
 belirtir:
 
@@ -181,12 +179,18 @@ npm run chef -- --routing --task "<istek>"
 ```
 
 Çıktı profili, Verifier ve Auto-skill alanlarını ve bir `[hint]` satırını (tek
-satırlık routing ipucu; bunu oturuma ekleyen hook güvenlik modelinde, commit C,
+satırlık routing ipucu; bunu oturuma ekleyen hook güvenlik modelinde
 anlatılır) yazar. Güven kuralları için [Codex Flag'leri](codex-flags.tr.md)
 sayfasına bak.
 
+1.3.4 ile canlı bir oturumda bu ipucu satırı plugin'in
+prompt gönderiminde çalışan hook'undan gelir; hook prompt'u bellekte puanlar ve
+hiçbirini saklamaz. Neyi okuyup sakladığı ve yazdığı
+[güvenlik modelinde](security-model.tr.md#hooks) anlatılır.
+`AGENTCHEF_ROUTING_HINT=off` onu kapatır.
+
 Her rolün `catalog/agents.json` içinde tetik biçiminde tek bir `description`
-metni ("Use proactively when ...") vardır ve 13 rol bir skill'i önceden yükler:
+metni ("Use proactively when...") vardır ve 13 rol bir skill'i önceden yükler:
 Claude Code bunu plugin agent dosyasındaki `skills:` frontmatter'ından okur;
 Codex rol dosyaları "Load the `<skill>` skill before starting" der.
 
@@ -228,7 +232,7 @@ yazmaz ve asla `bypassPermissions` üretmez.
 
 Hiçbir rolün araç listesinde `SendMessage` yoktur; bu yüzden bir rol çalışırken
 başka bir ajana mesaj atamaz. `Agent` aracını yalnızca koordinatör dosyaları,
-kendi katalog worker'larıyla `Agent(agentchef:<worker>, ...)` biçiminde
+kendi katalog worker'larıyla `Agent(agentchef:<worker>,...)` biçiminde
 listeler. Claude Code bu listeyi yalnızca koordinatör ana thread olarak
 çalıştığında (`claude --agent`) uygular; sıradan bir subagent olarak
 çalıştığında parantez içindeki adlar yok sayılır ve koordinatör herhangi bir

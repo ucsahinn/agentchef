@@ -1,0 +1,1827 @@
+{
+  "schemaVersion": 1,
+  "pluginVersion": "1.3.4",
+  "cap": 2,
+  "profiles": [
+    {
+      "id": "repo-map-before-change",
+      "match": {
+        "priority": 40,
+        "phrases": [
+          [
+            "repository map",
+            10
+          ],
+          [
+            "codebase map",
+            10
+          ],
+          [
+            "before broad change",
+            8
+          ],
+          [
+            "kod haritasi",
+            10
+          ],
+          [
+            "map the repository",
+            10
+          ],
+          [
+            "map the codebase",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "repository",
+            4
+          ],
+          [
+            "repo",
+            4
+          ],
+          [
+            "architecture",
+            4
+          ],
+          [
+            "refactor",
+            3
+          ],
+          [
+            "ownership",
+            4
+          ],
+          [
+            "unfamiliar",
+            3
+          ],
+          [
+            "haritala",
+            5
+          ],
+          [
+            "mimari",
+            4
+          ],
+          [
+            "harita",
+            5
+          ],
+          [
+            "sahiplik",
+            4
+          ],
+          [
+            "haritasini",
+            5
+          ],
+          [
+            "haritasi",
+            5
+          ],
+          [
+            "kod tabani",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "context-budget-planner",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "code_mapper",
+        "engineering_planner"
+      ]
+    },
+    {
+      "id": "current-docs-research",
+      "match": {
+        "priority": 45,
+        "phrases": [
+          [
+            "official docs",
+            10
+          ],
+          [
+            "current documentation",
+            9
+          ],
+          [
+            "version sensitive",
+            9
+          ],
+          [
+            "resmi belge",
+            9
+          ]
+        ],
+        "terms": [
+          [
+            "codex",
+            3
+          ],
+          [
+            "openai",
+            5
+          ],
+          [
+            "api",
+            4
+          ],
+          [
+            "library",
+            4
+          ],
+          [
+            "standard",
+            4
+          ],
+          [
+            "docs",
+            4
+          ],
+          [
+            "documentation",
+            4
+          ],
+          [
+            "guncel",
+            5
+          ],
+          [
+            "dokumantasyon",
+            4
+          ],
+          [
+            "surum",
+            4
+          ],
+          [
+            "resmi",
+            4
+          ],
+          [
+            "belgeler",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": null,
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "docs_researcher"
+      ]
+    },
+    {
+      "id": "evidence-backed-research",
+      "match": {
+        "priority": 50,
+        "phrases": [
+          [
+            "deep research",
+            12
+          ],
+          [
+            "market review",
+            10
+          ],
+          [
+            "evidence synthesis",
+            12
+          ],
+          [
+            "source ledger",
+            10
+          ],
+          [
+            "derin arastirma",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "research",
+            5
+          ],
+          [
+            "literature",
+            5
+          ],
+          [
+            "market",
+            5
+          ],
+          [
+            "evidence",
+            5
+          ],
+          [
+            "sources",
+            4
+          ],
+          [
+            "comparison",
+            4
+          ],
+          [
+            "uncertainty",
+            4
+          ],
+          [
+            "arastirma",
+            5
+          ],
+          [
+            "kanit",
+            5
+          ],
+          [
+            "kaynak",
+            4
+          ],
+          [
+            "karsilastirma",
+            4
+          ],
+          [
+            "arastir",
+            5
+          ],
+          [
+            "kaynaklar",
+            4
+          ],
+          [
+            "karsilastir",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "evidence-research",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "docs_researcher",
+        "product_strategist"
+      ]
+    },
+    {
+      "id": "context-surface-decision",
+      "match": {
+        "priority": 55,
+        "phrases": [
+          [
+            "context surface",
+            12
+          ],
+          [
+            "agents md",
+            10
+          ],
+          [
+            "config profile",
+            10
+          ],
+          [
+            "where should",
+            7
+          ],
+          [
+            "nereye yazilmali",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "prompt",
+            4
+          ],
+          [
+            "agents",
+            5
+          ],
+          [
+            "config",
+            5
+          ],
+          [
+            "profile",
+            4
+          ],
+          [
+            "skill",
+            4
+          ],
+          [
+            "plugin",
+            4
+          ],
+          [
+            "hook",
+            4
+          ],
+          [
+            "memory",
+            4
+          ],
+          [
+            "rule",
+            4
+          ],
+          [
+            "context",
+            5
+          ],
+          [
+            "nereye",
+            5
+          ],
+          [
+            "kilavuz",
+            3
+          ],
+          [
+            "ayar",
+            4
+          ],
+          [
+            "kural",
+            4
+          ],
+          [
+            "hafiza",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "prompt-architect",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "context_architect",
+        "prompt_architect"
+      ]
+    },
+    {
+      "id": "bug-root-cause",
+      "match": {
+        "priority": 65,
+        "phrases": [
+          [
+            "root cause",
+            12
+          ],
+          [
+            "failing test",
+            12
+          ],
+          [
+            "failing ci",
+            12
+          ],
+          [
+            "bug report",
+            10
+          ],
+          [
+            "test basarisiz",
+            12
+          ],
+          [
+            "hata ayikla",
+            10
+          ],
+          [
+            "kok neden",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "bug",
+            7
+          ],
+          [
+            "regression",
+            7
+          ],
+          [
+            "failure",
+            6
+          ],
+          [
+            "failing",
+            6
+          ],
+          [
+            "test",
+            4
+          ],
+          [
+            "ci",
+            6
+          ],
+          [
+            "debug",
+            6
+          ],
+          [
+            "incident",
+            6
+          ],
+          [
+            "hata",
+            7
+          ],
+          [
+            "bozuk",
+            6
+          ],
+          [
+            "coktu",
+            7
+          ],
+          [
+            "calismiyor",
+            6
+          ],
+          [
+            "calismiyo",
+            6
+          ],
+          [
+            "patladi",
+            6
+          ],
+          [
+            "hatasi",
+            6
+          ],
+          [
+            "hatayi",
+            6
+          ],
+          [
+            "basarisiz",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "systematic-debugging",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "root_cause_debugger",
+        "qa_lead",
+        "test_verifier"
+      ]
+    },
+    {
+      "id": "bounded-feature",
+      "match": {
+        "priority": 40,
+        "phrases": [
+          [
+            "new feature",
+            12
+          ],
+          [
+            "implement feature",
+            10
+          ],
+          [
+            "add feature",
+            10
+          ],
+          [
+            "yeni ozellik",
+            12
+          ],
+          [
+            "ozellik ekle",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "add",
+            4
+          ],
+          [
+            "build",
+            5
+          ],
+          [
+            "implement",
+            6
+          ],
+          [
+            "extend",
+            5
+          ],
+          [
+            "feature",
+            6
+          ],
+          [
+            "gelistir",
+            6
+          ],
+          [
+            "ekle",
+            5
+          ],
+          [
+            "uygula",
+            5
+          ],
+          [
+            "ozellik",
+            6
+          ],
+          [
+            "gelistirme",
+            5
+          ],
+          [
+            "ekleyelim",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "test-driven-development",
+      "autoSkillMode": "load",
+      "verifier": "code_reviewer",
+      "autoVerify": false,
+      "agents": [
+        "spec_author",
+        "engineering_planner",
+        "test_verifier",
+        "code_reviewer"
+      ]
+    },
+    {
+      "id": "data-systems",
+      "match": {
+        "priority": 75,
+        "phrases": [
+          [
+            "data lineage",
+            16
+          ],
+          [
+            "data catalog",
+            15
+          ],
+          [
+            "data quality",
+            15
+          ],
+          [
+            "source evidence",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "data",
+            8
+          ],
+          [
+            "documentation",
+            5
+          ],
+          [
+            "lineage",
+            9
+          ],
+          [
+            "catalog",
+            8
+          ],
+          [
+            "quality",
+            8
+          ],
+          [
+            "evidence",
+            4
+          ],
+          [
+            "veri",
+            8
+          ],
+          [
+            "dokumantasyon",
+            5
+          ],
+          [
+            "soyagaci",
+            9
+          ],
+          [
+            "katalog",
+            8
+          ],
+          [
+            "kalite",
+            8
+          ],
+          [
+            "kanit",
+            4
+          ]
+        ],
+        "excludeTerms": [
+          "readme",
+          "adr",
+          "release notes",
+          "changelog"
+        ]
+      },
+      "autoSkill": null,
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": true,
+      "agents": [
+        "docs_researcher"
+      ]
+    },
+    {
+      "id": "frontend-ui",
+      "match": {
+        "priority": 55,
+        "phrases": [
+          [
+            "user interface",
+            11
+          ],
+          [
+            "browser evidence",
+            10
+          ],
+          [
+            "responsive layout",
+            10
+          ],
+          [
+            "ui polish",
+            10
+          ],
+          [
+            "ekran goruntusu",
+            10
+          ],
+          [
+            "kullanici arayuzu",
+            11
+          ]
+        ],
+        "terms": [
+          [
+            "frontend",
+            7
+          ],
+          [
+            "ui",
+            7
+          ],
+          [
+            "ux",
+            7
+          ],
+          [
+            "browser",
+            6
+          ],
+          [
+            "screenshot",
+            6
+          ],
+          [
+            "responsive",
+            6
+          ],
+          [
+            "accessibility",
+            6
+          ],
+          [
+            "rendered",
+            5
+          ],
+          [
+            "arayuz",
+            7
+          ],
+          [
+            "tasarim",
+            6
+          ],
+          [
+            "ekran",
+            4
+          ],
+          [
+            "buton",
+            6
+          ],
+          [
+            "sayfa",
+            4
+          ],
+          [
+            "gorunum",
+            5
+          ],
+          [
+            "duzen",
+            4
+          ],
+          [
+            "css",
+            6
+          ],
+          [
+            "mobil",
+            5
+          ],
+          [
+            "arayuzdeki",
+            7
+          ],
+          [
+            "arayuzu",
+            7
+          ],
+          [
+            "mobilde",
+            5
+          ],
+          [
+            "goruntusuyle",
+            5
+          ],
+          [
+            "goruntusu",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "frontend-design",
+      "autoSkillMode": "load",
+      "verifier": "frontend_verifier",
+      "autoVerify": true,
+      "agents": [
+        "design_reviewer",
+        "frontend_verifier",
+        "performance_auditor"
+      ]
+    },
+    {
+      "id": "security-sensitive",
+      "match": {
+        "priority": 90,
+        "phrases": [
+          [
+            "threat model",
+            14
+          ],
+          [
+            "security review",
+            14
+          ],
+          [
+            "input validation",
+            12
+          ],
+          [
+            "access control",
+            12
+          ],
+          [
+            "guvenlik incelemesi",
+            14
+          ],
+          [
+            "tehdit modeli",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "security",
+            9
+          ],
+          [
+            "auth",
+            9
+          ],
+          [
+            "authorization",
+            9
+          ],
+          [
+            "secret",
+            9
+          ],
+          [
+            "permission",
+            8
+          ],
+          [
+            "crypto",
+            8
+          ],
+          [
+            "vulnerability",
+            9
+          ],
+          [
+            "guvenlik",
+            9
+          ],
+          [
+            "kimlik",
+            8
+          ],
+          [
+            "yetki",
+            8
+          ],
+          [
+            "parola",
+            8
+          ],
+          [
+            "tehdit",
+            9
+          ],
+          [
+            "sizinti",
+            8
+          ],
+          [
+            "sifre",
+            8
+          ],
+          [
+            "yetkilendirme",
+            8
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "security-best-practices",
+      "autoSkillMode": "suggest",
+      "verifier": "security_auditor",
+      "autoVerify": true,
+      "agents": [
+        "security_auditor",
+        "code_reviewer"
+      ]
+    },
+    {
+      "id": "mcp-connector-change",
+      "match": {
+        "priority": 85,
+        "phrases": [
+          [
+            "mcp connector",
+            15
+          ],
+          [
+            "tool allowlist",
+            14
+          ],
+          [
+            "tool exposure",
+            14
+          ],
+          [
+            "oauth callback",
+            12
+          ],
+          [
+            "mcp sunucusu",
+            15
+          ]
+        ],
+        "terms": [
+          [
+            "mcp",
+            12
+          ],
+          [
+            "connector",
+            10
+          ],
+          [
+            "allowlist",
+            10
+          ],
+          [
+            "timeout",
+            8
+          ],
+          [
+            "oauth",
+            10
+          ],
+          [
+            "server",
+            4
+          ],
+          [
+            "tools",
+            5
+          ],
+          [
+            "baglanti",
+            8
+          ],
+          [
+            "arac",
+            5
+          ],
+          [
+            "izin",
+            5
+          ],
+          [
+            "sunucu",
+            4
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "mcp-builder",
+      "autoSkillMode": "load",
+      "verifier": "security_auditor",
+      "autoVerify": true,
+      "agents": [
+        "mcp_integrator",
+        "security_auditor"
+      ]
+    },
+    {
+      "id": "code-review",
+      "match": {
+        "priority": 60,
+        "phrases": [
+          [
+            "code review",
+            14
+          ],
+          [
+            "review this pr",
+            14
+          ],
+          [
+            "review the pr",
+            14
+          ],
+          [
+            "review the diff",
+            14
+          ],
+          [
+            "pull request review",
+            12
+          ],
+          [
+            "kod incelemesi",
+            14
+          ],
+          [
+            "kodu incele",
+            14
+          ],
+          [
+            "pr incele",
+            14
+          ],
+          [
+            "diff incele",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "review",
+            6
+          ],
+          [
+            "reviewer",
+            6
+          ],
+          [
+            "diff",
+            7
+          ],
+          [
+            "pr",
+            6
+          ],
+          [
+            "pull",
+            4
+          ],
+          [
+            "incele",
+            6
+          ],
+          [
+            "inceleme",
+            5
+          ],
+          [
+            "gozden",
+            5
+          ]
+        ],
+        "excludeTerms": [
+          "gpt pro",
+          "external review",
+          "second model",
+          "dis inceleme"
+        ]
+      },
+      "autoSkill": null,
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ]
+    },
+    {
+      "id": "release-or-publish",
+      "match": {
+        "priority": 95,
+        "phrases": [
+          [
+            "github release",
+            16
+          ],
+          [
+            "release readiness",
+            14
+          ],
+          [
+            "create tag",
+            14
+          ],
+          [
+            "push origin",
+            12
+          ],
+          [
+            "open pr",
+            12
+          ],
+          [
+            "merge pr",
+            12
+          ],
+          [
+            "pr ac",
+            12
+          ],
+          [
+            "pr birlestir",
+            12
+          ],
+          [
+            "yayina al",
+            14
+          ],
+          [
+            "surum cikar",
+            14
+          ],
+          [
+            "etiket olustur",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "commit",
+            8
+          ],
+          [
+            "push",
+            9
+          ],
+          [
+            "tag",
+            10
+          ],
+          [
+            "release",
+            11
+          ],
+          [
+            "publish",
+            10
+          ],
+          [
+            "deploy",
+            10
+          ],
+          [
+            "package",
+            7
+          ],
+          [
+            "artifact",
+            7
+          ],
+          [
+            "yayin",
+            11
+          ],
+          [
+            "surum",
+            7
+          ],
+          [
+            "etiket",
+            10
+          ],
+          [
+            "gonder",
+            7
+          ],
+          [
+            "yayinla",
+            10
+          ],
+          [
+            "dagit",
+            8
+          ],
+          [
+            "birlestir",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "shipping-and-launch",
+      "autoSkillMode": "load",
+      "verifier": "release_verifier",
+      "autoVerify": true,
+      "agents": [
+        "release_verifier",
+        "test_verifier",
+        "security_auditor"
+      ]
+    },
+    {
+      "id": "seo-web-quality",
+      "match": {
+        "priority": 60,
+        "phrases": [
+          [
+            "core web vitals",
+            15
+          ],
+          [
+            "structured data",
+            12
+          ],
+          [
+            "canonical url",
+            12
+          ],
+          [
+            "seo audit",
+            12
+          ],
+          [
+            "arama motoru",
+            12
+          ],
+          [
+            "site haritasi",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "seo",
+            12
+          ],
+          [
+            "sitemap",
+            10
+          ],
+          [
+            "hreflang",
+            10
+          ],
+          [
+            "canonical",
+            10
+          ],
+          [
+            "metadata",
+            8
+          ],
+          [
+            "crawlability",
+            10
+          ],
+          [
+            "lighthouse",
+            9
+          ],
+          [
+            "vitals",
+            8
+          ],
+          [
+            "arama",
+            5
+          ],
+          [
+            "indeks",
+            8
+          ],
+          [
+            "indeksleme",
+            8
+          ],
+          [
+            "meta",
+            6
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "seo",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "google_seo_auditor",
+        "performance_auditor",
+        "frontend_verifier"
+      ]
+    },
+    {
+      "id": "onboarding-support",
+      "match": {
+        "priority": 75,
+        "phrases": [
+          [
+            "onboarding support",
+            18
+          ],
+          [
+            "setup diagnostics",
+            16
+          ],
+          [
+            "recovery guidance",
+            15
+          ],
+          [
+            "first successful outcome",
+            15
+          ],
+          [
+            "ilk kurulum",
+            14
+          ],
+          [
+            "sorun giderme",
+            12
+          ],
+          [
+            "kullanici destegi",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "onboarding",
+            10
+          ],
+          [
+            "support",
+            10
+          ],
+          [
+            "setup",
+            7
+          ],
+          [
+            "diagnostics",
+            8
+          ],
+          [
+            "recovery",
+            8
+          ],
+          [
+            "guidance",
+            7
+          ],
+          [
+            "customer",
+            7
+          ],
+          [
+            "destek",
+            10
+          ],
+          [
+            "kurulum",
+            8
+          ],
+          [
+            "kurtarma",
+            8
+          ],
+          [
+            "yardim",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": null,
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "devex_auditor"
+      ]
+    },
+    {
+      "id": "docs-and-adrs",
+      "match": {
+        "priority": 50,
+        "phrases": [
+          [
+            "release notes",
+            12
+          ],
+          [
+            "readme update",
+            12
+          ],
+          [
+            "setup guide",
+            10
+          ],
+          [
+            "public copy",
+            10
+          ],
+          [
+            "surum notlari",
+            12
+          ],
+          [
+            "readme guncelle",
+            12
+          ],
+          [
+            "karar kaydi",
+            10
+          ]
+        ],
+        "terms": [
+          [
+            "readme",
+            10
+          ],
+          [
+            "adr",
+            10
+          ],
+          [
+            "docs",
+            8
+          ],
+          [
+            "documentation",
+            8
+          ],
+          [
+            "guide",
+            7
+          ],
+          [
+            "changelog",
+            9
+          ],
+          [
+            "copy",
+            6
+          ],
+          [
+            "dokuman",
+            8
+          ],
+          [
+            "belge",
+            7
+          ],
+          [
+            "kilavuz",
+            8
+          ],
+          [
+            "notlar",
+            6
+          ],
+          [
+            "belgele",
+            8
+          ],
+          [
+            "dokumante",
+            8
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "documentation-and-adrs",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "docs_author",
+        "devex_auditor"
+      ]
+    },
+    {
+      "id": "external-deep-review",
+      "match": {
+        "priority": 65,
+        "phrases": [
+          [
+            "external review",
+            14
+          ],
+          [
+            "second model",
+            12
+          ],
+          [
+            "manual handoff",
+            12
+          ],
+          [
+            "repository snapshot",
+            10
+          ],
+          [
+            "dis inceleme",
+            14
+          ],
+          [
+            "ikinci model",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "external",
+            7
+          ],
+          [
+            "review",
+            5
+          ],
+          [
+            "snapshot",
+            8
+          ],
+          [
+            "handoff",
+            8
+          ],
+          [
+            "second",
+            5
+          ],
+          [
+            "model",
+            4
+          ],
+          [
+            "harici",
+            7
+          ],
+          [
+            "inceleme",
+            5
+          ],
+          [
+            "devir",
+            7
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "external-review-workflow",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "code_reviewer",
+        "security_auditor",
+        "test_verifier"
+      ]
+    },
+    {
+      "id": "gptpro-project-context",
+      "match": {
+        "priority": 88,
+        "phrases": [
+          [
+            "gpt pro project",
+            20
+          ],
+          [
+            "gpt pro context",
+            18
+          ],
+          [
+            "gpt pro baglam",
+            18
+          ],
+          [
+            "context bundle",
+            14
+          ],
+          [
+            "baglam paketi",
+            14
+          ],
+          [
+            "subsystem zip",
+            14
+          ],
+          [
+            "proje zip",
+            14
+          ]
+        ],
+        "terms": [
+          [
+            "gpt",
+            8
+          ],
+          [
+            "pro",
+            4
+          ],
+          [
+            "context",
+            8
+          ],
+          [
+            "bundle",
+            7
+          ],
+          [
+            "zip",
+            7
+          ],
+          [
+            "baglam",
+            9
+          ],
+          [
+            "paketi",
+            6
+          ],
+          [
+            "subsystem",
+            6
+          ],
+          [
+            "proje",
+            4
+          ]
+        ],
+        "excludeTerms": [
+          "gpt pro report",
+          "gpt pro raporu",
+          "report verify",
+          "raporu dogrula"
+        ]
+      },
+      "autoSkill": "gptpro",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ]
+    },
+    {
+      "id": "gptpro-report-verification",
+      "match": {
+        "priority": 90,
+        "phrases": [
+          [
+            "gpt pro report",
+            20
+          ],
+          [
+            "gpt pro raporu",
+            20
+          ],
+          [
+            "report verify",
+            17
+          ],
+          [
+            "raporu dogrula",
+            17
+          ],
+          [
+            "returned findings",
+            14
+          ],
+          [
+            "canli kodla dogrula",
+            16
+          ]
+        ],
+        "terms": [
+          [
+            "gpt",
+            8
+          ],
+          [
+            "pro",
+            4
+          ],
+          [
+            "report",
+            9
+          ],
+          [
+            "rapor",
+            9
+          ],
+          [
+            "verify",
+            9
+          ],
+          [
+            "dogrula",
+            9
+          ],
+          [
+            "findings",
+            7
+          ],
+          [
+            "bulgulari",
+            7
+          ],
+          [
+            "canli",
+            5
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "gptpro-handoff",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "code_reviewer",
+        "test_verifier"
+      ]
+    },
+    {
+      "id": "starter-health",
+      "match": {
+        "priority": 70,
+        "phrases": [
+          [
+            "starter health",
+            14
+          ],
+          [
+            "managed file drift",
+            14
+          ],
+          [
+            "runtime verification",
+            12
+          ],
+          [
+            "process hygiene",
+            12
+          ],
+          [
+            "kurulum sagligi",
+            14
+          ],
+          [
+            "durum kontrolu",
+            12
+          ]
+        ],
+        "terms": [
+          [
+            "health",
+            7
+          ],
+          [
+            "runtime",
+            7
+          ],
+          [
+            "drift",
+            8
+          ],
+          [
+            "install",
+            5
+          ],
+          [
+            "repair",
+            7
+          ],
+          [
+            "process",
+            5
+          ],
+          [
+            "diagnostic",
+            7
+          ],
+          [
+            "recovery",
+            7
+          ],
+          [
+            "kurulum",
+            5
+          ],
+          [
+            "durum",
+            4
+          ],
+          [
+            "onar",
+            7
+          ],
+          [
+            "surec",
+            5
+          ],
+          [
+            "sapma",
+            8
+          ],
+          [
+            "onarim",
+            7
+          ]
+        ],
+        "excludeTerms": []
+      },
+      "autoSkill": "agentchef-operator",
+      "autoSkillMode": "load",
+      "verifier": "test_verifier",
+      "autoVerify": false,
+      "agents": [
+        "codex_doctor",
+        "test_verifier"
+      ]
+    }
+  ]
+}

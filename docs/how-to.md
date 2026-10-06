@@ -14,9 +14,9 @@ PowerShell:
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
 cd agentchef
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 node scripts/plan-install.mjs --all --json --redact-paths
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
 ```
 
 Bash or WSL:
@@ -75,7 +75,7 @@ profile, verifier, and auto-skill for a request. Keep implementation in the
 main thread so decisions and edits stay coherent.
 
 Codex delegates when you ask for it directly or when `AGENTS.md` or a skill
-instruction asks for it. From 1.3.4 (not released yet), the working agreement
+instruction asks for it. From 1.3.4, the working agreement
 names the cases: an autoVerify routing profile matched and files changed;
 independent parallel work exists; noisy logs or research should be isolated; you
 explicitly request delegation. This starter gives you the agent files and

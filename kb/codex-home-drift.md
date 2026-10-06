@@ -25,7 +25,7 @@ that result as proof of the user's real global setup.
 Repair preview:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
 ```
 
 ## Stop Conditions

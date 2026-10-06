@@ -43,7 +43,7 @@ npm run codex:routing -- --task "offline MCP profile"
 
 Sonuc sadece oneridir ve en fazla uc catalog route dondurur. Agirlikli katalog
 ifadeleri ve tum-kelime terimleri kullanir, Turkce karakterleri normalize eder
-(1.3.4 ile, henuz yayimlanmadi, noktasiz `ı` dahil), eslesen sinyalleri ve guven
+(1.3.4 ile, noktasiz `ı` dahil), eslesen sinyalleri ve guven
 seviyesini gosterir. Guven, net bir onculuk (en az 12 puan ve ikinciden en az 3
 puan onde) veya guclu tek sinyal (en az 9 puan ve ikincinin en fazla yarisi)
 varsa `high` olur. 1.3.4 ile cikti her profilin Verifier ve Auto-skill
@@ -148,7 +148,7 @@ izole edilmiş, atılabilir ortamda kullan.
 
 ## Acik Tutulmasi Gereken Gelismis Ozellikler
 
-- `approval_policy = { granular = { ... } }` ileri operatorler icin faydalidir;
+- `approval_policy = { granular = {... } }` ileri operatorler icin faydalidir;
   bu starter daha kolay aciklanir ve audit edilir oldugu icin `on-request`
   kullanir.
 - `default_permissions` ve `[permissions.*]` beta permission-profile yuzeyidir.

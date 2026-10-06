@@ -47,7 +47,7 @@ target, and asks you to confirm it. Direct installer runs and non-interactive
 runs never select the Claude target implicitly:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Target both -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Target both -WhatIf
 node scripts/plan-install.mjs --all --target claude --summary --redact-paths
 npm run chef -- --install --target both
 ```
@@ -73,7 +73,7 @@ is in the [target capability map](target-capability-map.md).
 Preview without writing:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 ```
 
 Inspect the manifest-backed operation plan without invoking either installer:
@@ -121,20 +121,20 @@ Install after the preview is correct:
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
 cd agentchef
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
 ```
 
 Automation-friendly install without questions:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All
 ```
 
 Repair an existing global Codex setup:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair
 ```
 
 Repair mode is for machines that already have a Codex setup. It previews or
@@ -265,8 +265,12 @@ hook. Start a new Codex session after install or refresh, open `/hooks`, inspect
 the exact source/hash, and trust it only when it matches this repository. Hook
 trust is intentionally not bypassed by the installer. Claude Code gets the same
 hook from the `agentchef` plugin manifest and runs it once the plugin is
-enabled; inspect it with `/hooks`. See
-[multi-session process hygiene](process-hygiene.md) for profiles, audit fields,
+enabled; inspect it with `/hooks`. From 1.3.4, the plugin adds
+a second Codex hook, `hooks/routing-hint.json`, which also needs trust in
+`/hooks`: Codex trusts a hook by the hash of its definition, which covers the
+command line, not the script or index it runs (`npm run chef -- --inventory`
+compares the installed plugin with the install source). Claude Code needs a new
+session. See [multi-session process hygiene](process-hygiene.md) for profiles, audit fields,
 the 45-second grace period, and the separately gated cleanup command.
 
 `Skill status & catalog` separates commit-pinned upstream skills, bundled/direct
@@ -307,7 +311,7 @@ Installed and ready skills do not execute by themselves. A skill enters Codex
 context when the user names it or the task clearly matches its description.
 Repo-side proof of routing is
 `npm run chef -- --routing --task "<request>"`, which shows the matched profile
-and a `[hint]` line (from 1.3.4, not released yet); in a session, the proof is
+and a `[hint]` line (from 1.3.4); in a session, the proof is
 the `Routing plan:` line the assistant prints before acting.
 
 If GitHub release, push, or workflow checks fail because local GitHub
@@ -617,7 +621,7 @@ the shared pool bridge with `--project-root ${CLAUDE_PROJECT_DIR}`. `/mcp` and
 `mcp__plugin_agentchef_<server>__<tool>`. Claude Code cannot disable one plugin
 server on its own (only `--strict-mcp-config` turns every server off), so the
 plugin does not ship `playwright` or `chrome-devtools`; add them to a project
-that needs browser evidence (`claude mcp add --scope project ...`, see
+that needs browser evidence (`claude mcp add --scope project...`, see
 [MCP Catalog](mcp-catalog.md)), where the generated permission rules deny
 Playwright's riskiest tools. If
 `verify-install-runtime --target claude` warns that your own `.claude.json`
@@ -640,7 +644,7 @@ Bash:
 ```bash
 CODEX_HOME="$PWD/tmp/codex-home" AGENTS_HOME="$PWD/tmp/agents-home" \
 CLAUDE_CONFIG_DIR="$PWD/tmp/claude-home" \
-  ./scripts/install.sh --force --target=both --dry-run
+./scripts/install.sh --force --target=both --dry-run
 ```
 
 `npm run dev:assert-scratch` refuses to continue when any of the three homes
@@ -666,7 +670,7 @@ review the plan before adding `--apply`:
 $portableRoot = Join-Path $PWD ".agentchef-portable"
 $env:CODEX_HOME = Join-Path $portableRoot "codex"
 $env:AGENTS_HOME = Join-Path $portableRoot "agents"
-node .\scripts\repair-install.mjs --preview --redact-paths --json
+node.\scripts\repair-install.mjs --preview --redact-paths --json
 ```
 
 Do not reuse another person's home, copy `auth.json`, memory-engine notes,
@@ -677,7 +681,7 @@ install only after reviewing its backup-backed plan.
 If you already have a Codex setup, inspect the repair plan first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
 ```
 
 If repair is clean, continue with the normal install command. Existing

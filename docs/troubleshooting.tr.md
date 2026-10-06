@@ -9,7 +9,7 @@ isteyen connector'ı bilinçli seçene kadar tanı komutlarını read-only tut.
 Önce ön izleme al:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 ```
 
 Temel kontroller:
@@ -112,7 +112,7 @@ Managed file drift raporlanırsa agent ve MCP sayıları doğru görünse bile k
 kopya eskidir. Önce repair çalıştır:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
 .\scripts\install.ps1 -Repair
 ```
 
@@ -211,7 +211,7 @@ o sürecin hâlâ çalışıp çalışmadığını söyler:
 
 ```text
 Another operation is already in progress for <home>\.agentchef-operation.lock:
-claude-install (pid 12345, started ...), but no process with that pid is
+claude-install (pid 12345, started...), but no process with that pid is
 running on this machine, so the lock is probably left over from an interrupted
 run.
 ```

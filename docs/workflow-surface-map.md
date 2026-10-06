@@ -31,7 +31,7 @@ References:
 | Lifecycle automation | Hook | Use only for reviewed guardrails, not as the primary security boundary. |
 | Push, release, deploy, external upload | Approval gate | `release_verifier` can verify readiness; the action still needs explicit approval. |
 
-Subagent matching is advisory. From 1.3.4 (not released yet), spawn an agent
+Subagent matching is advisory. From 1.3.4, spawn an agent
 only when one of these holds: an autoVerify routing profile matched and files
 changed, so its verifier runs before the task is reported done; independent
 parallel work exists; noisy logs or research should be isolated from the main
@@ -90,7 +90,7 @@ AgentChef agent fits a task, use the single source: the tables in
 | Large skills and agents catalog | Reviewed `catalog/skills.json` and `catalog/agents.json` with validation gates. | Importing broad cross-harness catalogs wholesale. |
 | Manifest-driven install | `manifests/install-plan.json` plus `scripts/plan-install.mjs`. | Hidden global writes or install behavior not shown in the plan preview. |
 | Doctor/status commands | `npm run codex:doctor` and JSON output. | Reading user secrets or mutating global Codex state during diagnostics. |
-| Plugin distribution | Local `agentchef` plugin with one exact, trust-gated SessionEnd process hook. | Context-injecting hooks, broad MCP, or external auth. |
+| Plugin distribution | Local `agentchef` plugin with three reviewed hooks: the Agent spawn guard, the SessionEnd process sweep, and, from 1.3.4, the prompt-submit routing hint (one catalog-identifier line, no stored prompt text). | Any other context-injecting hook, broad MCP, or external auth. |
 | Legacy command compatibility | Documentation that maps slash-like names to Codex surfaces. | 80+ command shims or deprecated prompt wrappers. |
 | Security/runtime hardening | Gitleaks, workflow hardening, MCP least privilege, install backups, and owner-scoped stale-MCP cleanup after a grace period. | Broad cleanup, auto-publish, token scraping, or broad command allow rules. |
 
@@ -123,8 +123,7 @@ evidence, implement in the main thread, then verify the risky surface with an
 agent that did not do the work. Which agent fits each step is listed once in the
 [Agents](agents.md) tables, and `npm run chef -- --routing --task "<request>"`
 shows the matching profile, verifier, and auto-skill for a request; a profile
-that requires a verifier makes that step mandatory once files changed (from
-1.3.4, not released yet).
+that requires a verifier makes that step mandatory once files changed (from 1.3.4).
 
 The main thread remains responsible for synthesis, edits, user-visible
 decisions, and final evidence. Subagents are not a way to bypass approvals,

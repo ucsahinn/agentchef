@@ -89,6 +89,11 @@ ister. Plugin kurulduktan veya yenilendikten sonra yeni Codex oturumu aç,
 `/hooks` ekranında tam kaynak ile hash'i incele ve yalnız bu repoyla eşleşiyorsa
 güven. Kurulum kısayolu olarak `--dangerously-bypass-hook-trust` kullanma.
 
+1.3.4 ile plugin her CLI için ayrıca prompt gönderiminde
+çalışan bir routing hint kaydeder (Codex'te `hooks/routing-hint.json`). Süreç
+hijyeninin parçası değildir ve `/hooks` içinde ayrıca güvenilir; neyi okuduğu,
+sakladığı ve yazdığı [güvenlik modelinde](security-model.tr.md#hooks) anlatılır.
+
 Resmî kaynaklar:
 
 - [Codex hooks](https://developers.openai.com/codex/hooks)

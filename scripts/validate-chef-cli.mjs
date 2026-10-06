@@ -1790,7 +1790,7 @@ for (const [file, snippets] of Object.entries({
     "npm run chef -- --status --repo-only --no-log",
     "operator documentation",
     "Skills teach the agent how to handle a focused job",
-    "the agent spawns a subagent"
+    "a subagent starts only when one of four conditions holds"
   ],
   "README.tr.md": [
     "npm run chef",
@@ -1801,7 +1801,7 @@ for (const [file, snippets] of Object.entries({
     "npm run chef -- --status --repo-only --no-log",
     "operatör dokümantasyonunda",
     "Skill, ajana belirli bir işi hangi adımlarla yapacağını anlatır",
-    "ajan ancak iş"
+    "subagent yalnızca dört koşuldan biri geçerliyse başlar"
   ],
   "docs/verification.md": [
     "npm run validate:chef-cli",
@@ -1861,7 +1861,7 @@ for (const [file, snippets] of Object.entries({
     "Serena/MCP process-audit",
     "/agent",
     "Installed and ready skills do not execute by themselves",
-    "live activation is",
+    "in a session, the proof is",
     "GitHub CLI or Git Credential Manager",
     "organization policy"
   ],
@@ -1895,7 +1895,7 @@ for (const [file, snippets] of Object.entries({
     "Serena/MCP surec",
     "/agent",
     "Kurulu ve hazır skill'ler kendiliğinden çalışmaz",
-    "canlı aktivasyon",
+    "oturumda kanıt",
     "GitHub CLI veya Git Credential Manager",
     "kendi kurum politikaniza"
   ],

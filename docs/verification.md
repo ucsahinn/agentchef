@@ -160,7 +160,7 @@ $errors
 PowerShell dry run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 ```
 
 Bash dry run:
@@ -217,7 +217,7 @@ trees, old unowned candidates, and unrelated Node/Python runtimes. Add
 `--cleanup-stale` for a no-write exact cleanup preview; only
 `--cleanup-stale --apply` can stop candidates. For parseable JSON through npm,
 use `npm run --silent chef -- --processes --json --no-log`. Full semantics and
-the SessionEnd trust step are in
+the hook trust step are in
 [multi-session process hygiene](process-hygiene.md).
 
 `npm run chef -- --backups` lists backup archive metadata without touching
@@ -251,7 +251,7 @@ Run the real installer only after the user explicitly approves writes to the
 current user's Codex/Git setup:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
 ```
 
 Expected skill behavior is idempotent and quiet: already installed skills are
@@ -274,7 +274,7 @@ npm run chef -- --routing --task "<request>"
 ```
 
 It must show the expected profile, its Verifier and Auto-skill, and a `[hint]`
-line (from 1.3.4, not released yet). Then start a no-write Codex turn with that
+line (from 1.3.4 ). Then start a no-write Codex turn with that
 request and confirm the assistant prints a `Routing plan:` line before acting
 and a `Routing result:` line at the end. An explicit-only skill such as
 `$security-best-practices` is suggested, not loaded, until you name it.

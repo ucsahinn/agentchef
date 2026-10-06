@@ -21,13 +21,13 @@ targets include:
 Preview first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair -WhatIf
 ```
 
 Then apply only after reviewing the plan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Repair
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -Repair
 ```
 
 ## What Repair Must Preserve

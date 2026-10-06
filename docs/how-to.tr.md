@@ -13,9 +13,9 @@ PowerShell:
 ```powershell
 git clone https://github.com/ucsahinn/agentchef.git
 cd agentchef
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 node scripts/plan-install.mjs --all --json --redact-paths
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -Interactive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -Interactive
 ```
 
 Bash veya WSL:
@@ -75,7 +75,7 @@ profilini, verifier'ı ve auto-skill'i gösterir. Kararlar ve dosya değişiklik
 dağılmasın diye uygulamayı ana thread'de tut.
 
 Codex, sen doğrudan istediğinde ya da `AGENTS.md` veya bir skill yönergesi
-istediğinde delege eder. 1.3.4 ile (henüz yayımlanmadı) çalışma sözleşmesi
+istediğinde delege eder. 1.3.4 ile çalışma sözleşmesi
 durumları sayar: bir autoVerify routing profili eşleşti ve dosyalar değişti;
 bağımsız paralel iş var; gürültülü log veya araştırma ayrılmalı; sen açıkça
 delegasyon istedin. Bu starter o akış için ajan dosyalarını ve routing dilini

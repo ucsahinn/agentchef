@@ -5,7 +5,7 @@ function run(command, args, options = {}) {
   return spawnSync(command, args, {
     encoding: "utf8",
     windowsHide: true,
-    ...options
+...options
   });
 }
 
@@ -22,10 +22,10 @@ if (staged.status !== 0) {
 }
 
 const blockedPaths = staged.stdout
-  .split(/\r?\n/)
-  .map((line) => line.trim())
-  .filter(Boolean)
-  .filter((file) => /(^|[\\/])(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx|kdbx|sqlite|sqlite3|db|dump)$)/i.test(file));
+.split(/\r?\n/)
+.map((line) => line.trim())
+.filter(Boolean)
+.filter((file) => /(^|[\\/])(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx|kdbx|sqlite|sqlite3|db|dump)$)/i.test(file));
 
 if (blockedPaths.length > 0) {
   console.error("Blocked staged secret-like or local-state files:");

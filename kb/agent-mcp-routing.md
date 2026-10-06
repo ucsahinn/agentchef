@@ -26,8 +26,7 @@ not bypass approvals.
 
 For large work, use a small set of focused agents and keep write scopes
 separate. Report one `Routing plan:` line before the work and one
-`Routing result:` line after it so the delegation is auditable. From 1.3.4 (not
-released yet), start an agent only when an autoVerify routing profile matched
+`Routing result:` line after it so the delegation is auditable. From 1.3.4, start an agent only when an autoVerify routing profile matched
 and files changed, independent parallel work exists, noisy logs or research
 should be isolated, or the user explicitly requests delegation.
 

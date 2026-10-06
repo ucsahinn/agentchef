@@ -1,6 +1,6 @@
 {
   "name": "agentchef",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Security-first AgentChef workflows for setup maintenance, planning, review, reconstruction, and verification.",
   "author": {
     "name": "AgentChef",
@@ -77,6 +77,20 @@
               "claude"
             ],
             "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/routing-hint.mjs"
+            ],
+            "timeout": 10
           }
         ]
       }

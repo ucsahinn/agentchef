@@ -1,0 +1,17 @@
+{
+  "description": "On prompt submit, score the prompt against the AgentChef routing catalog in memory and add one advisory line of profile, skill, and role identifiers when a profile matches with high confidence; nothing is stored or sent, and the prompt is never blocked.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/routing-hint.mjs\"",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"& node (Join-Path $env:PLUGIN_ROOT 'scripts/routing-hint.mjs')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

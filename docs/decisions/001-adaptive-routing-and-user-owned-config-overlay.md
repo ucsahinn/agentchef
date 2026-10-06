@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Partly superseded by [ADR-007](007-routing-hint-hook-and-auto-verification.md): routing stays conditional, but the catalog now states when a verifier is mandatory and the plugin hints the model per prompt.
 
 ## Date
 

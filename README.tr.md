@@ -61,7 +61,7 @@ lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 Kit; `code_mapper`, `root_cause_debugger`, `security_auditor`, `docs_author`
 ve `test_verifier` gibi uzman roller içeriyor. Bunlar arka planda sürekli
 çalışan servisler değil. Bir rolün görevle eşleşmesi yol gösterir. 1.3.4 ile
-(henüz yayımlanmadı) subagent yalnızca dört koşuldan biri geçerliyse başlar:
+subagent yalnızca dört koşuldan biri geçerliyse başlar:
 verifier gerektiren bir routing profili eşleşti ve dosyalar değişti, bağımsız
 paralel iş var, gürültülü log veya araştırma ana thread'den ayrılmalı ya da sen
 açıkça delegasyon istedin. Önemsiz, kesinlikle sıralı, sıkı bağlı ve tek

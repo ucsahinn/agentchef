@@ -7,7 +7,7 @@ boundaries, and evidence to return.
 
 AgentChef includes 7 coordination roles and 21 specialist worker roles. They
 are not background services and they do not all run on every task. A role can
-guide the main session without being spawned. From 1.3.4 (not released yet),
+guide the main session without being spawned. From 1.3.4,
 an agent is started only when one of four conditions holds: a routing profile
 that requires a verifier matched and files changed, independent parallel work
 exists, noisy logs or research should stay out of the main thread, or you
@@ -133,7 +133,7 @@ becomes done.
 2. A match does **not** force a subagent. The main session can use the role's
    guidance directly. Codex delegates only when you ask for it directly or when
    `AGENTS.md` or a skill instruction asks for it; AgentChef's working agreement
-   is such an instruction, and from 1.3.4 (not released yet) it names four spawn
+   is such an instruction, and from 1.3.4 it names four spawn
    conditions: a routing profile that requires a verifier matched and files
    changed; independent parallel work exists; noisy logs or research should be
    isolated from the main thread; you explicitly request delegation. It skips
@@ -157,7 +157,7 @@ customer-account, or production access.
 
 ### Routing profiles and automatic use
 
-From 1.3.4 (not released yet), `catalog/routing-profiles.json` (version 0.4.0)
+From 1.3.4, `catalog/routing-profiles.json` (version 0.4.0)
 has 19 routing profiles, including the new `code-review` profile. Each profile
 names:
 
@@ -182,10 +182,16 @@ npm run chef -- --routing --task "<request>"
 
 It prints the profile, its Verifier and Auto-skill, and a `[hint]` line (the
 one-line routing hint; the hook that injects it into a session is covered in
-the security model, commit C). See [Codex Flags](codex-flags.md) for the
+the security model). See [Codex Flags](codex-flags.md) for the
 confidence rules.
 
-Each role has one trigger-style `description` ("Use proactively when ...") in
+From 1.3.4, in a live session that hint line comes from the
+plugin's prompt-submit hook, which scores the prompt in memory and stores none of
+it; what it reads, stores, and prints is in the
+[security model](security-model.md#hooks). `AGENTCHEF_ROUTING_HINT=off`
+disables it.
+
+Each role has one trigger-style `description` ("Use proactively when...") in
 `catalog/agents.json`, and 13 roles preload one skill: Claude Code reads it from
 the `skills:` frontmatter of the plugin agent file; Codex role files say "Load
 the `<skill>` skill before starting".
@@ -228,7 +234,7 @@ From 1.3.3:
 
 No role's tool list names `SendMessage`, so a role cannot message another
 agent while it works. Only coordinator files list the `Agent` tool, as
-`Agent(agentchef:<worker>, ...)` with their own catalog workers. Claude Code
+`Agent(agentchef:<worker>,...)` with their own catalog workers. Claude Code
 enforces that list only when the coordinator runs as the main thread
 (`claude --agent`); when it runs as an ordinary subagent, the names in the
 parentheses are ignored and the coordinator could spawn any agent type. From

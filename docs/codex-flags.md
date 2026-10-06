@@ -48,7 +48,7 @@ npm run codex:routing -- --task "offline MCP profile"
 
 The result is advisory-only and returns at most three catalog routes. It uses
 catalog-owned weighted phrases and whole-word terms, normalizes Turkish
-characters (from 1.3.4, not released yet, including the dotless `ı`), reports
+characters (from 1.3.4, including the dotless `ı`), reports
 its matched signals and confidence, and resolves ties by documented profile
 priority then catalog order. Confidence is `high` for a clear lead (score of at
 least 12 and at least 3 ahead of the runner-up) or a strong single signal (score
@@ -151,7 +151,7 @@ externally sandboxed and disposable.
 
 ## Advanced Features To Keep Explicit
 
-- `approval_policy = { granular = { ... } }` is useful for advanced operators,
+- `approval_policy = { granular = {... } }` is useful for advanced operators,
   but this starter keeps `on-request` because it is easier to explain and audit.
 - `default_permissions` and `[permissions.*]` are beta permission-profile
   surfaces. Do not mix them with `sandbox_mode` and

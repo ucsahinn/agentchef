@@ -539,7 +539,7 @@ if (fs.existsSync(pluginManifest)) {
       failures.push(`Plugin manifest must not declare ${forbiddenKey}; authenticated surfaces stay disabled by default.`);
     }
   }
-  const expectedHooks = ["./hooks/process-hygiene.json"];
+  const expectedHooks = ["./hooks/process-hygiene.json", "./hooks/routing-hint.json"];
   if (JSON.stringify(plugin.hooks || []) !== JSON.stringify(expectedHooks)) {
     failures.push(`Plugin manifest hooks must be exactly: ${expectedHooks.join(", ")}`);
   }

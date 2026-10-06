@@ -51,7 +51,7 @@ Agents do not chat with each other. From 1.3.3 there are
 two routes, both at most two levels deep: Direct, where the main session briefs one to four specialists,
 and Team, where for a board task the main session briefs that task's
 coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff.
-From 1.3.4 (not released yet), an agent starts only when one of four conditions
+From 1.3.4, an agent starts only when one of four conditions
 holds (a routing profile that requires a verifier matched and files changed;
 independent parallel work; noisy logs or research to isolate; you asked for it),
 and at most 2 agents start per task without you naming them; see
@@ -76,8 +76,8 @@ Use a user-chosen, repository-local state path. Initializing or creating a task
 records coordination state only; it does not start a coordinator or worker.
 
 ```bash
-npm run coordination:board -- init --state .coordination-board.json
-npm run coordination:board -- create --state .coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
+npm run coordination:board -- init --state.coordination-board.json
+npm run coordination:board -- create --state.coordination-board.json --id TASK-001 --title "Investigate API timeout" --owner-coordinator backend_coordinator
 ```
 
 Since 1.3.0 (state schema v3) a task can also name who works it and what it
@@ -133,7 +133,7 @@ and `cancelled`. The allowed moves:
 - `renew-lease --task <id> --minutes <1-1440> [--by <agent>]` refuses a `--by`
   that is not the owner.
 - `handoff --task <id> --source-coordinator <a> --target-coordinator <b> --question "<text>" [--decision-needed "<text>"]`
-  records a handoff with an id (`H1`, `H2`, ...) and a time. Source and target
+  records a handoff with an id (`H1`, `H2`,...) and a time. Source and target
   must be different catalog coordinators, and one of them must be the task's
   owner coordinator. `resolve-handoff --task <id> --handoff H1 --answer "<text>"`
   resolves it.
@@ -163,7 +163,7 @@ Routing profiles connect a task type with useful agents, skills, MCPs, checks,
 and safety boundaries. They help Codex choose a sensible route; they do not
 silently run every matching surface.
 
-From 1.3.4 (not released yet), `catalog/routing-profiles.json` (version 0.4.0)
+From 1.3.4, `catalog/routing-profiles.json` (version 0.4.0)
 has 19 profiles, including the new `code-review` profile. Each profile names a
 verifier and an auto-skill. The verifier is required for the five `autoVerify`
 profiles (`security-sensitive`, `release-or-publish`, `mcp-connector-change`,

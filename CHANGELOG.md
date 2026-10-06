@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.3.4 - 2026-10-06
 
-Planned as 1.3.4: skills and roles are used when a request needs them, by
+Skills and roles are used when a request needs them, by
 rule and by a one-line routing hint, instead of by guesswork.
 
 - Routing catalog 0.4.0 (`catalog/routing-profiles.json`): every profile names
@@ -32,6 +32,22 @@ rule and by a one-line routing hint, instead of by guesswork.
 - `catalog/skills.json`: `implicitInvocation: false` marks the skills that are
   only used when the user asks for them (fetch, security-best-practices,
   security-threat-model, improve-codebase-architecture).
+- Routing hint hook (both CLIs): on prompt submit,
+  `plugins/agentchef/scripts/routing-hint.mjs` scores the prompt in memory
+  against the plugin's rendered copy of the routing catalog and, on a
+  high-confidence match, adds one line of catalog identifiers (profile, skill
+  to load or suggest, verifier, roles, auto-spawn cap) to the model's context.
+  It keeps no prompt text or matched words, prints nothing on low confidence,
+  short or synthetic turns, inside subagents, or on any error, never blocks a
+  prompt, never writes to stderr, and remembers only which profiles it already
+  hinted in the session (a per-user state file of identifiers and counters that
+  it alone cleans up). `AGENTCHEF_ROUTING_HINT=off` disables it. Claude Code
+  gets it inline in the plugin manifest; Codex from `hooks/routing-hint.json`
+  (trust it in `/hooks`). The security audit now allowlists each hook event
+  name per reviewed file, compares the Codex hook file and the Claude manifest
+  to the renderer's definitions exactly, requires `plugins/agentchef/hooks` to
+  hold exactly the two reviewed files, and checks that the hook script imports
+  only inert modules.
 
 ## 1.3.3 - 2026-10-05
 
@@ -72,7 +88,7 @@ actually enforces.
   `Açık sorular`, `Unresolved questions`, `Next verification need`, and
   `Sonraki doğrulama`.
 - Claude Code spawn guard: Claude Code applies a coordinator's
-  `Agent(<worker>, ...)` list only under `claude --agent`; as a subagent the
+  `Agent(<worker>,...)` list only under `claude --agent`; as a subagent the
   list is ignored. The plugin now ships a `PreToolUse` hook on the `Agent`
   tool (`scripts/agent-spawn-guard.mjs`) that refuses a spawn by an AgentChef
   coordinator outside its workers (named in full, `agentchef:<worker>`, since a
@@ -243,7 +259,7 @@ Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
     and `gptpro-handoff` descriptions are shortened to fit.
 - Approval rules (`templates/codex/rules/default.rules`):
   - An agent starting a pinned npx MCP package by hand (`npx -y <pkg@ver>`,
-    `npx.cmd`, `cmd.exe /c npx ...`) is now `prompt` for every bundled
+    `npx.cmd`, `cmd.exe /c npx...`) is now `prompt` for every bundled
     package; Chrome DevTools, sequential-thinking, and Playwright were
     `allow`. Codex still starts enabled MCP servers itself, outside these
     rules.
@@ -433,10 +449,10 @@ Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
     a report-intake procedure, a `bundles:` line and "say when a file is
     missing" rule in the template, and a triage record format that the skill's
     completion criteria now require.
-- `node scripts/external-review-cli.mjs review pack ...` (the form printed by the
+- `node scripts/external-review-cli.mjs review pack...` (the form printed by the
   CLI's own usage text and taught by `external-review-workflow`) failed with
   `Unknown review option: pack` when run directly; only the `npm run chef --
-  review ...` dispatch worked. The CLI now accepts an optional leading `review`.
+  review...` dispatch worked. The CLI now accepts an optional leading `review`.
 - `review pack` secret scan: credential assignments with a prefixed name
   (`POSTGRES_PASSWORD`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `master_password`)
   are now caught by the generic scanners; Stripe `sk_live_`/`sk_test_` and
@@ -652,7 +668,7 @@ Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
 - Keep the files a kept `config.toml` still points at when removing the Codex
   target. A config merged into your own settings stays after removal and
   still references the Serena bridge and the agent role files. Removing
-  those left Codex warning "Ignoring malformed agent role definition ...
+  those left Codex warning "Ignoring malformed agent role definition...
   must point to an existing file" for every role on each session (measured)
   and starting a Serena entry whose bridge was gone. Such files now stay as
   `kept-referenced`; once you drop the tables, a second removal deletes them.
@@ -872,7 +888,7 @@ Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
   Codex runs them inside its OS sandbox and Claude Code does not, and an
   explicit allow rule also skips Claude Code's own read-only flag analysis.
   Measured on Claude Code 2.1.282 with harmless marker files:
-  `node --check --require ./x.js` ran `x.js`, `git log --output=f` wrote `f`,
+  `node --check --require./x.js` ran `x.js`, `git log --output=f` wrote `f`,
   and `rg --pre` passed the permission layer; `git ls-remote --upload-pack`
   runs a local command. Claude-only `ask` rules now guard `rg --pre`,
   `git diff/log/show --output` and `--ext-diff`, and `gitleaks --report-path`
@@ -1062,7 +1078,7 @@ Fixes found on the first live 1.2.2 → 1.3.0 upgrade:
   MCP entries, and `deny` is never changed.
 
 - Point the external-review skill and the CLI usage at a command that resolves.
-  Both told people to run `chef review ...`, but the package is private with no
+  Both told people to run `chef review...`, but the package is private with no
   bin entry and the skill installs into other repositories, so every step failed
   at the first line. The validator now checks for the runnable form.
 - Drop `Codex` from three bundled skill descriptions. Those descriptions are the

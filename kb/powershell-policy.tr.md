@@ -6,7 +6,7 @@ gösteriyorsa bu makaleyi kullan.
 ## Güvenli Başlatma Komutu
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 ```
 
 `Bypass` yalnızca bu PowerShell süreci için geçerlidir. Makine genelindeki
@@ -18,7 +18,7 @@ Eski konsollar Unicode veya emoji karakterlerini kötü gösteriyorsa plain outp
 kullan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf -PlainOutput
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf -PlainOutput
 ```
 
 ## Durma Koşulları

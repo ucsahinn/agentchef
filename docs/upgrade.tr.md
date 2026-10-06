@@ -233,6 +233,25 @@ düzenlediysen uygulamadan önce önizlemeyi kontrol et.
 [Model Katmanları](agents.tr.md#model-katmanları) iki katmanı ve
 `workerModels` değerinin nasıl değiştirileceğini anlatır.
 
+## 1.3.4 Sürümüne Geçiş
+
+1.3.4 ile `agentchef` plugin'i iki CLI için prompt
+gönderiminde çalışan bir routing hint ekler. Her prompt'u bellekte okur ve
+yüksek güvenli eşleşmede katalog tanımlayıcılarından tek satır ekler; neyi
+okuyup sakladığı için [güvenlik modeline](security-model.tr.md#hooks) bak.
+
+```powershell
+npm run chef -- --update            # önizleme
+npm run chef -- --update --apply    # inceledikten sonra uygula
+```
+
+- Codex: yeni oturum aç, `/hooks` ekranını aç ve `hooks/routing-hint.json`
+  dosyasının bu repoyla eşleştiğini kontrol edip güven. Güvenene kadar Codex onu
+  çalıştırmaz.
+- Claude Code: yeni oturum aç; güncellenen plugin etkin olduğunda hook çalışır.
+- Hint'i kapatmak için CLI'ı başlatan ortamda `AGENTCHEF_ROUTING_HINT=off`
+  ayarla.
+
 ## Güvenli Upgrade Akışı
 
 1. Repo güncellemesini çek.
@@ -263,7 +282,7 @@ Manuel PowerShell:
 git pull
 npm run check
 node scripts/plan-install.mjs --all --json
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -All -WhatIf
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File.\scripts\install.ps1 -All -WhatIf
 .\scripts\install.ps1 -All -Interactive
 npm run verify:install:runtime -- --expect-skills
 ```

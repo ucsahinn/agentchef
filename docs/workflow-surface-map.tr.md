@@ -31,7 +31,7 @@ Kaynaklar:
 | Lifecycle automation | Hook | Sadece incelenmis guardrail icindir; ana guvenlik siniri degildir. |
 | Push, release, deploy, external upload | Approval gate | `release_verifier` hazirlik kanitlar; aksiyon icin yine acik onay gerekir. |
 
-Subagent eslesmesi oneridir. 1.3.4 ile (henuz yayimlanmadi) bir agent yalniz su
+Subagent eslesmesi oneridir. 1.3.4 ile bir agent yalniz su
 kosullardan biri gecerliyse spawn edilir: bir autoVerify routing profili eslesti
 ve dosyalar degisti, boylece verifier'i gorev bitti denmeden once calisir;
 bagimsiz paralel is var; gurultulu log veya arastirma ana thread'den ayrilmali;
@@ -89,7 +89,7 @@ tablolari veya `npm run chef -- --routing --task "<istek>"`.
 | Buyuk skills ve agents katalogu | Validasyonlu `catalog/skills.json` ve `catalog/agents.json`. | Genis cross-harness kataloglari komple import etmez. |
 | Manifest-driven install | `manifests/install-plan.json` ve `scripts/plan-install.mjs`. | Plan preview'da gorunmeyen global write yok. |
 | Doctor/status komutlari | `npm run codex:doctor` ve JSON cikti. | Diagnostic sirasinda user secret okumaz veya global Codex state yazmaz. |
-| Plugin dagitimi | Tam hedefli, trust-gated tek SessionEnd süreç hook'u olan lokal `agentchef` plugin'i. | Context ekleyen hook, genis MCP veya external auth yok. |
+| Plugin dagitimi | Üç incelenmiş hook taşıyan lokal `agentchef` plugin'i: Agent spawn guard'ı, SessionEnd süreç taraması ve 1.3.4 ile prompt gönderiminde çalışan routing hint (katalog tanımlayıcılarından tek satır, prompt metni saklanmaz). | Başka hiçbir context ekleyen hook, genis MCP veya external auth yok. |
 | Legacy command uyumlulugu | Slash-like adlari Codex yuzeylerine map eden dokuman. | 80+ command shim veya deprecated prompt wrapper yok. |
 | Security/runtime hardening | Gitleaks, workflow hardening, MCP least privilege, install backup ve bekleme sonrası sahiplik kapsamlı stale-MCP temizliği. | Genis cleanup, auto-publish, token scraping veya genis command allow rule yok. |
 
@@ -122,7 +122,7 @@ dogrula. Hangi agent'in hangi adima uydugu [Agent'lar](agents.tr.md)
 tablolarinda tek yerde listelenir; `npm run chef -- --routing --task "<istek>"`
 bir istek icin eslesen profili, verifier'i ve auto-skill'i gosterir. Verifier
 gerektiren bir profil, dosyalar degistikten sonra o adimi zorunlu kilar (1.3.4
-ile, henuz yayimlanmadi).
+ile).
 
 Ana thread sentez, editler, kullaniciya gorunen kararlar ve final kanittan
 sorumludur. Subagent'lar approval, sandbox, credential veya external-state
