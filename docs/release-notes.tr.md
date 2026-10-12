@@ -2,6 +2,39 @@
 
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
+## v1.3.5 - 2026-10-12
+
+AgentChef 1.3.5 Serena havuzunu port aralığı rezerve edilmiş bir makinede de
+başlatır, Claude Code'da yalnız geri alınamayan işler için sorar ve Codex'i
+`gpt-6-luna` ile çalıştırır. Güncellemek için `npm run chef -- --update
+--apply`; sonra iki CLI'da da yeni oturum aç.
+
+### Neler Değişti
+
+- **Serena havuzu.** Windows hiçbir listede görünmeyen port aralıkları rezerve
+  eder; bir makinede türetilen aralığın tamamı bağlanamadı ve her oturum
+  `serena CONNECTION_CLOSED` bildirdi. Tercih edilen port bağlanamayınca
+  yönetici artık sabit bir yedek port dizisini yürür, ilk boş portu bağlar ve
+  onu `~/.codex/serena-pool/port` altına yazar; köprüler önce bu kaydı okur,
+  aynı anda başlayan iki yönetici tek portta buluşur.
+  `AGENTCHEF_SERENA_POOL_PORT` hâlâ tercih edilen porttur. `codex-status`
+  tercih edilen portu, bu makinenin onu bağlayıp bağlayamadığını ve yanıt
+  veren yöneticiyi gösteren bir `Serena havuzu:` satırı basar.
+- **Claude ask kuralları.** Claude Code her `permissions.ask` kuralında, her
+  izin modunda (`bypassPermissions` dahil) sorar; parçanın taşıdığı 186 ask
+  kuralı 186 soruydu. Artık 56 kural taşır: force, delete ve mirror push;
+  dal, etiket, depo ve release silme; `gh auth` ve token komutları; yayınlama;
+  `Stop-Process`; deploy, destroy, migrate, seed, prune, release, reset ve
+  repair betikleri. Diğer her prompt ve soru soran tarayıcı araçları ne izinli
+  ne sorulu; seçtiğin izin modu karar verir. Güncelleme düşürülen kuralları
+  `settings.json` içinden alışıldık yedekle emekliye ayırır; senin zaten
+  sildiğin bir kural geri eklenmek ya da eksik sayılmak yerine serbest
+  bırakılır.
+- **Codex modeli.** `config.toml` `model` ve `review_model` için `gpt-6-luna`
+  yazar; rol dosyaları işçilerini zaten onunla çalıştırıyordu.
+- **Yönlendirme ipucu.** Başka bir Claude oturumundan iletilen mesaj artık
+  yönlendirme ipucu üretmez.
+
 ## v1.3.4 - 2026-10-06
 
 AgentChef 1.3.4 bir skill'i ya da rolü istek gerektirdiğinde kullanır: tahminle

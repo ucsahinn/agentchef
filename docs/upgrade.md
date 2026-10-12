@@ -224,6 +224,27 @@ effort stays inherited. If you edited an installed role file, check the
 preview before applying. [Model Tiers](agents.md#model-tiers) explains the
 two tiers and how to change `workerModels`.
 
+## Upgrading To 1.3.5
+
+```powershell
+npm run chef -- --update            # preview
+npm run chef -- --update --apply    # apply after review
+```
+
+- Serena pool: the updated bridge binds a fallback port when the preferred
+  one is reserved and records it under `~/.codex/serena-pool/port`. Start a
+  new session in both CLIs; `npm run codex:status` shows the port it chose on
+  its `Serena pool:` line. If you had set `AGENTCHEF_SERENA_POOL_PORT` as a
+  workaround, it is still honored as the preferred port.
+- Claude Code ask rules: the fragment drops 130 of its 186 ask rules. The
+  preview lists the rules the update retires from `~/.claude/settings.json`
+  (backed up under `~/.claude/agentchef/backups/`); a rule you had already
+  removed is released from the receipt and no longer reported as missing.
+  Rules you added yourself are not touched.
+- Codex model: the config templates now set `model` and `review_model` to
+  `gpt-6-luna`. The preview shows the `config.toml` merge before anything is
+  written.
+
 ## Upgrading To 1.3.4
 
 From 1.3.4, the `agentchef` plugin adds a prompt-submit

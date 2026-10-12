@@ -233,6 +233,28 @@ düzenlediysen uygulamadan önce önizlemeyi kontrol et.
 [Model Katmanları](agents.tr.md#model-katmanları) iki katmanı ve
 `workerModels` değerinin nasıl değiştirileceğini anlatır.
 
+## 1.3.5 Sürümüne Geçiş
+
+```powershell
+npm run chef -- --update            # önizleme
+npm run chef -- --update --apply    # inceledikten sonra uygula
+```
+
+- Serena havuzu: güncellenen köprü tercih edilen port rezerve edildiğinde
+  yedek bir port bağlar ve onu `~/.codex/serena-pool/port` altına yazar. İki
+  CLI'da da yeni oturum aç; `npm run codex:status` seçtiği portu
+  `Serena havuzu:` satırında gösterir. Geçici çözüm olarak
+  `AGENTCHEF_SERENA_POOL_PORT` ayarladıysan hâlâ tercih edilen port olarak
+  kullanılır.
+- Claude Code ask kuralları: parça 186 ask kuralının 130'unu düşürür.
+  Önizleme, güncellemenin `~/.claude/settings.json` içinden emekliye ayıracağı
+  kuralları listeler (yedek `~/.claude/agentchef/backups/` altına alınır);
+  zaten sildiğin bir kural makbuzdan serbest bırakılır ve artık eksik
+  raporlanmaz. Kendi eklediğin kurallara dokunulmaz.
+- Codex modeli: config şablonları artık `model` ve `review_model` için
+  `gpt-6-luna` yazar. Önizleme, hiçbir şey yazılmadan `config.toml`
+  birleştirmesini gösterir.
+
 ## 1.3.4 Sürümüne Geçiş
 
 1.3.4 ile `agentchef` plugin'i iki CLI için prompt
