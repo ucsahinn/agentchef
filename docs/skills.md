@@ -14,7 +14,7 @@ reference.
 
 Official Codex reference: [Build skills](https://developers.openai.com/codex/skills)
 
-## 🍱 Eleven Bundled Workflows
+## 🍱 Twelve Bundled Workflows
 
 These live in the `agentchef` plugin and travel with the repository. The
 installer places them in the plugin source
@@ -45,6 +45,8 @@ install or enable it. To use namespaced calls such as
 | [`seo`](../plugins/agentchef/skills/seo/SKILL.md) | Audit, implement, and verify technical, rendering, structured-data, content-intent, international, local, performance, and measurement work without inventing rankings or indexing evidence. |
 | [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Frame decision questions, search and appraise current sources, trace claims, explain disagreement and uncertainty, and package reproducible research. |
 | [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Turn Mermaid source into editable Excalidraw, SVG, PNG, and Markdown assets without network access. |
+
+| [`team-conductor`](../plugins/agentchef/skills/team-conductor/SKILL.md) | Explicitly supervise an experimental Claude-to-Codex team run through user-gated plan, integration, verification, and merge steps. |
 
 ## ✅ Eighteen Reviewed Full-Install Skills
 

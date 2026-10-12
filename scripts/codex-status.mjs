@@ -1430,6 +1430,42 @@ const status = failures.length > 0
     ? "attention"
     : "ok";
 
+function inspectTeamMode() {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, "catalog/subscription-team-mode.json"), "utf8"));
+  const stateFile = process.env.AGENTCHEF_BOARD_STATE;
+  let lastRun = null;
+  if (stateFile) {
+    const runDir = path.join(path.dirname(path.resolve(stateFile)), "team-runs");
+    try {
+      const runs = fs.readdirSync(runDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+        .map((entry) => ({ name: entry.name, mtime: fs.statSync(path.join(runDir, entry.name)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime);
+      for (const run of runs) {
+        try {
+          const record = JSON.parse(fs.readFileSync(path.join(runDir, run.name), "utf8"));
+          if (typeof record.runId === "string") {
+            lastRun = record.runId;
+            break;
+          }
+        } catch {
+          // Ignore malformed local records and continue to the newest readable run.
+        }
+      }
+    } catch {
+      // No board state or team run directory means no prior run is known.
+    }
+  }
+  return {
+    inspected: true,
+    enabled: process.env.AGENTCHEF_TEAM_MODE === "experimental",
+    stability: catalog.stability,
+    lastRun
+  };
+}
+
+const teamMode = inspectTeamMode();
+
 const report = {
   schemaVersion: "agentchef.status.v1",
   generatedAt: new Date().toISOString(),
@@ -1441,6 +1477,7 @@ const report = {
   beyin,
   serenaPool,
   codexDoctor,
+  teamMode,
   codexCliRuntime,
   skillInventory,
   skillsContext,
@@ -1469,6 +1506,7 @@ if (options.json) {
 } else {
   if (!progressEnabled) console.log(localText("AgentChef status", "AgentChef durumu"));
   console.log(`${localText("Overall", "Genel")}: ${stateText(report.status)}`);
+  console.log(`${localText("Team mode", "Takım modu")}: ${teamMode.enabled ? localText("enabled", "açık") : localText("disabled", "kapalı")} (${teamMode.stability}) - ${localText("last run", "son koşu")}: ${teamMode.lastRun || localText("none", "yok")}`);
   if (options.details) {
     console.log(`${localText("Use", "Kullanım")}: ${cliQuickStart.interactiveMenu} (${localText("or", "veya")} ${cliQuickStart.auditMode} ${localText("for no repo-local log", "repo-local log istemiyorsanız")})`);
     console.log(`${localText("Numbered menu", "Numaralı menü")}: ${cliQuickStart.numberedActions ? localText("yes", "evet") : localText("no", "hayır")}; ${localText("write actions require --apply or typed confirmation", "yazan işlemler --apply veya yazılı onay ister")}.`);

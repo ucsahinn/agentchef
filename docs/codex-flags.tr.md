@@ -72,6 +72,16 @@ agent, skill, uzak OpenAI docs, built-in memory, hook ve app yüzeylerini korur.
 | `codex debug models` | Codex'in gördüğü model kataloğunu inceler. |
 | `codex execpolicy check` | Kuralları bir komut üzerinde test eder. |
 
+## Deneysel Takım Worker Flag'leri
+
+AgentChef'in opt-in takım modu etkileşimsiz worker'ları ayrı worktree'lerde
+`codex exec` ile başlatır. Windows'ta Codex `.cmd` shim'i bu invocation
+yolunda tırnaklı `-c` değerlerini reddeder. Basit override'ları tırnaksız
+argüman olarak verin; örneğin `-c approval_policy=never` ve
+`-c windows.sandbox=unelevated`. Değerlerin çevresine shell tırnağı eklemeyin.
+Takım motoru offline profili ve rol sandbox tavanını kullanır; `--full-auto`
+veya `--approve-for-me` kullanmamalıdır.
+
 Sahiplik farkındalıklı AgentChef süreç komutları:
 
 ```bash

@@ -21,6 +21,45 @@ AgentChef'e ait hazır akışlar
 altında durur. Public katalog isteğe bağlı seçenekleri de gösterir; katalogda
 yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
+## Deneysel Takım Koşuları
+
+Yalnız açık çağrılan `team-conductor` skill'i etkileşimli Claude Code
+oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Bu özellik
+deneyseldir ve varsayılan olarak kapalıdır. Opt-in için süreç ortamına
+`AGENTCHEF_TEAM_MODE=experimental` verin; skill bunu sizin yerinize açmaz.
+[team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
+kullanıcı kapılarının işleyişini açıklar.
+
+Komutları AgentChef depo kökünden çalıştırın:
+
+| Komut | Amaç |
+| --- | --- |
+| `plan` | Brief, rol ve kapsamı doğrulayıp planlı koşu oluşturur |
+| `start` | Kullanıcının başlatma kapısını tüketip gözetmen ve worker'ları başlatır |
+| `status` / `watch` | Worker ve olay durumunu okur |
+| `collect` | Handoff, gerçek değişiklik ve pano kanıtını doğrular |
+| `integrate` | Worker dallarını entegrasyon dalında birleştirip kontrolleri çalıştırır |
+| `verify` | Entegrasyonda bağımsız, salt-okunur `test_verifier` çalıştırır |
+| `merge` | Kullanıcının merge kapısını tüketip ilk dala birleştirir |
+| `abort` / `cleanup` | Sahip olunan worker'ları durdurur / seçilen kaynakları geri alır |
+| `doctor` | Gereksinimleri ve son koşuyu inceler |
+
+CLI biçimi: `node scripts/team-run.mjs <command> --state <board.json> --json`.
+Çıkış kodları: 0 başarı, 1 ret/işlem hatası, 2 kullanım hatası, 3 eksik ya
+da geçersiz kullanıcı kapısı, 4 kısmi tamamlanma. Koşu kaydı
+`<state-directory>/team-runs/<runId>.json` konumundadır. Entegrasyon dalı
+`takim/<runId>`, worker dalları `takim/<runId>-<TASK>`, varsayılan worktree
+kökü deponun kardeşi `.agentchef-worktrees/<runId>/` dizinidir (depo dışında,
+geçici dizin değil).
+
+Desteklenen ortam değişkenleri: `AGENTCHEF_TEAM_MODE`,
+`AGENTCHEF_TEAM_MAX_WORKERS`, `AGENTCHEF_TEAM_WORKTREE_ROOT`,
+`AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND` ve
+`AGENTCHEF_BOARD_STATE`. Worker'lar push yapamaz veya başka agent açamaz.
+Kullanım sınırı worker'ı raporlama için bekletir; bu sürümde devam ettirme
+yoktur. Codex sürecinin sahibi motordur; terminal sekmesi yalnızca izleyicidir.
+Koşuyu durdurmak için `abort`, kaynak temizliği için ayrıca `cleanup` isteyin.
+
 ## Plugins
 
 Yerel plugin, AgentChef'e ait akışları birlikte kurup güncelleyebilmek için

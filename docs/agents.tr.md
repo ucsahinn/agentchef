@@ -426,6 +426,32 @@ ve [agent teams](https://code.claude.com/docs/en/agent-teams) ile
   `SendMessage` ekler; böylece agent'lar brief ve handoff dışında konuşabilir.
   AgentChef agent teams'in kapalı olduğunu varsayar.
 
+### Claude Conductor ve Codex Worker'ları (Deneysel Takım Modu)
+
+AgentChef 1.5.0, etkileşimli Claude Code oturumunun sınırlı Codex `exec`
+worker'larını yönetmesi için yalnız açık çağrılan `team-conductor` skill'ini
+sunar. Özellik deneyseldir ve yalnız bu sürece `AGENTCHEF_TEAM_MODE=experimental`
+verilirse açılır. Claude planlar ve raporlar; worker agent'ları doğrudan
+başlatmaz. 1-4 allowlist worker'ının her biri ayrı worktree alır; kullanıcı
+onayları, entegrasyon kararı ve rapor ana oturumun sorumluluğundadır.
+
+Çalıştırmadan önce [takım koşusu protokolünü](skills-and-agents.tr.md#deneysel-takım-koşuları)
+ve [team-conductor skill'ini](../plugins/agentchef/skills/team-conductor/SKILL.md)
+okuyun. Skill doctor kontrolü yapar, her görev için kontrol edilmiş bir
+`agent-brief` hazırlar, planı ve tam `baslat <runId>` sohbet cümlesini gösterir;
+sonra durumu, toplamayı, entegrasyonu ve bağımsız salt-okunur doğrulamayı izler.
+Verdict'i ve merge öncesi tam `birlestir <runId>` cümlesini sunar. Motor sohbet
+kapısının dayandığı onay dosyasını hiçbir zaman yazmaz.
+
+Worker'lar yeni agent açamaz, push yapamaz veya başka worker'ın kapsamını
+değiştiremez. Takım modu rol allowlist'i ve sandbox tavanları
+[`catalog/subscription-team-mode.json`](../catalog/subscription-team-mode.json)
+içindedir; `test_verifier` salt-okunurdur. Görünür terminal sekmesi yalnızca
+olay izleyicisidir; Codex alt sürecinin sahibi gözetmendir. İstenen durdurma
+için `abort`, `cleanup` ise yalnızca kullanıcı isterse kullanılır. Süreç
+sahipliği için [Takım Koşusu Worker'ları](process-hygiene.tr.md#takım-koşusu-workerları)
+bölümüne bakın.
+
 ## AgentSpace Sahipliği, Knowledge ve Worker Güvenliği
 
 | Koordinatör | Sınırlı uzman worker'lar |

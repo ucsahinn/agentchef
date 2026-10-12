@@ -20,6 +20,46 @@ The bundled workflows live under
 The public catalog also lists optional skills; being listed does not mean every
 skill is installed automatically.
 
+## Team Runs (Experimental)
+
+The explicit-only `team-conductor` skill lets an interactive Claude Code
+session coordinate 1-4 bounded Codex workers. This is experimental and disabled
+by default. Set `AGENTCHEF_TEAM_MODE=experimental` in the process environment
+to opt in; the skill never enables it for you. See the
+[team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
+for the user-gated operating procedure.
+
+Run commands from the AgentChef repository root:
+
+| Command | Purpose |
+| --- | --- |
+| `plan` | Validate briefs, roles, scopes, and create a planned run |
+| `start` | Consume the user's start gate and launch the supervisor and workers |
+| `status` / `watch` | Read worker and event state |
+| `collect` | Validate handoffs, actual changes, and board evidence |
+| `integrate` | Merge worker branches on the integration branch and run checks |
+| `verify` | Run independent, read-only `test_verifier` against integration |
+| `merge` | Consume the user's merge gate and merge into the original branch |
+| `abort` / `cleanup` | Stop owned workers / reclaim selected run resources |
+| `doctor` | Inspect prerequisites and the last run |
+
+CLI shape: `node scripts/team-run.mjs <command> --state <board.json> --json`.
+Exit codes are 0 success, 1 refused/operational failure, 2 usage error, 3
+missing or invalid user gate, and 4 partial completion. A run record is stored
+at `<state-directory>/team-runs/<runId>.json`. The integration branch is
+`takim/<runId>`, worker branches are `takim/<runId>-<TASK>`, and the default
+worktree root is the repository sibling
+`.agentchef-worktrees/<runId>/` (outside the repo and not in a temporary
+directory).
+
+Supported environment controls are `AGENTCHEF_TEAM_MODE`,
+`AGENTCHEF_TEAM_MAX_WORKERS`, `AGENTCHEF_TEAM_WORKTREE_ROOT`,
+`AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND`, and
+`AGENTCHEF_BOARD_STATE`. Workers cannot push or spawn more agents. A usage limit
+pauses a worker for reporting; resume is not available in this release. The
+engine owns the Codex process; the terminal tab is only a viewer. Use `abort`
+to stop a run and request `cleanup` separately.
+
 ## Plugins
 
 The local plugin packages AgentChef's own workflows so they can be installed

@@ -425,6 +425,32 @@ Claude Code (checked 2026-10-05 against
   in-process teammates, so agents could talk outside the brief and handoff.
   AgentChef assumes agent teams are off.
 
+### Claude Conductor With Codex Workers (Experimental Team Mode)
+
+AgentChef 1.5.0 includes an explicit-only `team-conductor` skill for an
+interactive Claude Code session to supervise bounded Codex `exec` workers. The
+feature is experimental and stays disabled unless
+`AGENTCHEF_TEAM_MODE=experimental` is set for that process. Claude plans and
+reports; it does not spawn worker agents directly. Each of 1-4 allowlisted
+workers gets a separate worktree and the main session remains responsible for
+the user gates, integration decision, and report.
+
+Read the [team run protocol](skills-and-agents.md#team-runs-experimental) and
+the [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
+before enabling a run. The skill checks the doctor, writes one checked
+`agent-brief` per task, presents the plan and exact `baslat <runId>` chat gate,
+then supervises status, collection, integration, and independent read-only
+verification. It presents the verdict and exact `birlestir <runId>` gate before
+merge. The engine never writes the chat gate's backing approval file.
+
+Workers cannot spawn more agents, push, or edit another worker's scope. The
+team-mode role allowlist and sandbox ceilings in
+[`catalog/subscription-team-mode.json`](../catalog/subscription-team-mode.json)
+keep `test_verifier` read-only. The visible terminal pane is an event viewer;
+the supervisor owns the Codex child. Use `abort` for a requested stop and
+`cleanup` only when the user asks. See
+[`Team Run Workers`](process-hygiene.md#team-run-workers) for process ownership.
+
 ## AgentSpace Ownership, Knowledge, And Worker Safety
 
 | Coordinator | Bounded specialist workers |

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderWorkingAgreement } from "./lib/emitters/working-agreement.mjs";
+import { validateCatalog as validateTeamModeCatalog } from "./validate-subscription-team-mode.mjs";
 import {
   CliUsageError,
   installCliErrorBoundary
@@ -327,6 +328,31 @@ for (const required of [
   if (!exists(required)) failures.push(`Missing required source file: ${required}`);
 }
 
+function inspectTeamMode(failures) {
+  const catalogPath = path.join(root, "catalog/subscription-team-mode.json");
+  const validatorPath = path.join(root, "scripts/validate-subscription-team-mode.mjs");
+  const catalog = fs.existsSync(catalogPath) ? JSON.parse(fs.readFileSync(catalogPath, "utf8")) : null;
+  if (!catalog) {
+    failures.push("Missing team-mode contract catalog.");
+    return { contract: { id: "team-mode.contract", status: "fail", roleTomlCount: 0, errors: ["catalog missing"] } };
+  }
+  const errors = validateTeamModeCatalog(catalog, root);
+  if (!fs.existsSync(validatorPath)) errors.push("Missing team-mode contract validator.");
+  const roleTomlCount = (catalog.workers?.allowedRoleIds || []).filter((roleId) => {
+    const role = JSON.parse(fs.readFileSync(path.join(root, "catalog/agents.json"), "utf8")).agents.find((entry) => entry.name === roleId);
+    return role && fs.existsSync(path.join(root, "templates/codex", role.configFile));
+  }).length;
+  if (errors.length) failures.push(...errors.map((error) => `Team mode contract: ${error}`));
+  return {
+    contract: {
+      id: "team-mode.contract",
+      status: errors.length === 0 ? "ok" : "fail",
+      roleTomlCount,
+      errors
+    }
+  };
+}
+
 let report;
 try {
   const packageJson = readJson("package.json");
@@ -352,6 +378,7 @@ try {
     docs: inspectDocs(failures),
     installPlan: inspectInstallPlan(failures),
     claudeTemplates: inspectClaudeTemplates(failures),
+    teamMode: inspectTeamMode(failures),
     globalTargets: inspectGlobalTargets(),
     warnings,
     failures

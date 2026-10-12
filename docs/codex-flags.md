@@ -75,6 +75,16 @@ route you want.
 | `codex debug models` | Inspect the model catalog Codex sees. |
 | `codex execpolicy check` | Test rules against a command. |
 
+## Experimental Team Worker Flags
+
+AgentChef's opt-in team mode launches non-interactive workers with `codex exec`
+from isolated worktrees. On Windows, the Codex `.cmd` shim rejects quoted
+`-c` values in this invocation path. Pass simple overrides as unquoted
+arguments, for example `-c approval_policy=never` and
+`-c windows.sandbox=unelevated`; do not add shell quotes around the values.
+The team engine uses the offline profile and role-bounded sandbox and must not
+use `--full-auto` or `--approve-for-me`.
+
 AgentChef's ownership-aware process commands are:
 
 ```bash

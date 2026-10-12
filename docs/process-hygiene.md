@@ -136,6 +136,19 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --run
 Official reference:
 [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
+## Team Run Workers
+
+An experimental team run has one detached `team-run supervise` owner per run.
+It starts and tracks the Codex children, refreshes task leases, and writes
+heartbeat/event state. A visible Windows Terminal tab runs only the read-only
+`team-run watch` viewer. Closing that tab does not stop the worker.
+
+The process-hygiene sweep must treat the supervisor and its worker tree as an
+owned team run, not as an orphan candidate. Stop workers through
+`team-run abort`; never use taskkill or Stop-Process. Cleanup of worktrees,
+branches, or logs is a separate user-requested `team-run cleanup` operation.
+Worker timeout or usage-limit state is recorded for the conductor to report.
+
 ## Operational Notes
 
 - New profile defaults affect new sessions; they do not reconfigure MCP trees

@@ -14,7 +14,7 @@ ayrı gösterir.
 
 Resmi Codex kaynağı: [Skill oluşturma](https://developers.openai.com/codex/skills)
 
-## 🍱 Repo İle Gelen On Bir Workflow
+## 🍱 Repo İle Gelen On İki Workflow
 
 Bu skill'ler `agentchef` plugin'inin içindedir ve repo ile birlikte gelir.
 Installer onları `AGENTS_HOME/plugins/sources/agentchef/skills/<ad>` plugin
@@ -43,6 +43,8 @@ ile kurup yeni bir Codex oturumu başlatmak gerekir.
 | [`seo`](../plugins/agentchef/skills/seo/SKILL.md) | Ranking veya indexing kanıtı uydurmadan teknik SEO, rendering, structured data, content intent, uluslararası/lokal SEO, performans ve ölçüm işlerini audit etmek, uygulamak ve doğrulamak için. |
 | [`evidence-research`](../plugins/agentchef/skills/evidence-research/SKILL.md) | Karar sorusunu çerçevelemek, güncel kaynakları arayıp değerlendirmek, claim'leri izlenebilir tutmak, görüş ayrılıklarını ve belirsizliği açıklamak, yeniden üretilebilir araştırma paketi hazırlamak için. |
 | [`offline-diagram-triplet`](../plugins/agentchef/skills/offline-diagram-triplet/SKILL.md) | Mermaid kaynağını network kullanmadan editable Excalidraw, SVG, PNG ve Markdown asset'lerine çevirmek için. |
+
+| [`team-conductor`](../plugins/agentchef/skills/team-conductor/SKILL.md) | Kullanıcı kapılarıyla deneysel Claude-Codex takım koşusunu planlama, entegrasyon, doğrulama ve merge adımlarından geçirerek yönetmek için. |
 
 ## ✅ Full Install İçin İncelenmiş On Sekiz Skill
 

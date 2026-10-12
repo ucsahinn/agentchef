@@ -131,6 +131,20 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-process-hygiene.mjs --session-end --run
 Resmî kaynak:
 [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
+## Takım Koşusu Worker'ları
+
+Deneysel takım koşusunda her koşunun ayrık bir `team-run supervise` sahibi
+vardır. Codex alt süreçlerini başlatıp izler, görev kiralarını yeniler ve
+heartbeat/olay durumunu yazar. Görünür Windows Terminal sekmesi yalnızca
+salt-okunur `team-run watch` izleyicisini çalıştırır. Sekmeyi kapatmak worker'ı
+durdurmaz.
+
+Süreç hijyeni taraması gözetmeni ve worker ağacını sahipsiz aday saymamalıdır.
+Worker'ları `team-run abort` ile durdurun; taskkill veya Stop-Process
+kullanmayın. Worktree, dal veya log temizliği ayrı ve kullanıcının istediği
+`team-run cleanup` işlemidir. Worker timeout veya kullanım sınırı durumu
+conductor'ın raporlaması için kaydedilir.
+
 ## Operasyon Notları
 
 - Yeni profil varsayılanları yeni oturumları etkiler; zaten çalışan MCP

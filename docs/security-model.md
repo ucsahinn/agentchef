@@ -602,6 +602,22 @@ https://code.claude.com/docs/en/hooks
 Operational contract:
 [multi-session process hygiene](process-hygiene.md).
 
+### Team Mode Boundaries
+
+Team mode is experimental and disabled unless the launching process has
+`AGENTCHEF_TEAM_MODE=experimental`. The `team-conductor` skill is
+explicit-only; it cannot opt itself in. The interactive Claude session plans
+and gates the run while the engine starts 1-4 allowlisted Codex `exec` workers
+in separate worktrees. The engine reads the user's single-use start and merge
+gates and never creates their backing files. The worker sandbox is the stricter
+of its role TOML and the team-mode ceiling; `test_verifier` is read-only.
+
+Workers cannot push, spawn agents, or edit outside their assigned scope. The
+detached supervisor owns the Codex children; a visible terminal pane only
+renders events, so closing it does not stop a worker. Use the team `abort`
+command for requested stops. `cleanup` is a separate, explicit operation.
+Usage limits pause work for reporting; resume is not available in this release.
+
 ## Git Hygiene
 
 Global Git guards are optional because they modify the user's Git defaults.
