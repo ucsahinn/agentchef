@@ -45,7 +45,7 @@ const READ_ONLY_MODE_VERSION = "read-only-mode-v2";
 // that reports a different launch profile, or an update would never apply.
 // It includes this file's own content: a change to the manager's code (a new
 // endpoint, a fix) must also replace a manager started from the older file.
-const MANAGER_PROFILE = `${SERENA_SOURCE}:${READ_ONLY_MODE_VERSION}:${crypto.createHash("sha256").update(fs.readFileSync(fileURLToPath(import.meta.url))).digest("hex").slice(0, 16)}`;
+export const MANAGER_PROFILE = `${SERENA_SOURCE}:${READ_ONLY_MODE_VERSION}:${crypto.createHash("sha256").update(fs.readFileSync(fileURLToPath(import.meta.url))).digest("hex").slice(0, 16)}`;
 
 function readOnlyModeYaml() {
   return [
@@ -205,6 +205,57 @@ export function poolPort() {
   return parsed;
 }
 
+// Windows reserves port ranges that no listing shows (Hyper-V, WSL, WinNAT
+// exclusions); on one machine every port from 44787 to 48715 refused to bind,
+// so the derived port could never be used. When the preferred port cannot be
+// bound, the manager walks a fixed sequence of fallback ports and records the
+// one it bound in the state directory, where the bridges read it. The
+// sequence is the same for every manager of one state directory, so two
+// managers started at once reach the same port and the second one finds the
+// first instead of running beside it.
+const PORT_FLOOR = 1024;
+const PORT_SPAN = 65535 - PORT_FLOOR + 1;
+const PORT_SCAN_STRIDE = 1009;
+const PORT_SCAN_LIMIT = 256;
+let activePort = null;
+
+export function fallbackPort(preferred, step) {
+  return PORT_FLOOR + ((preferred - PORT_FLOOR + step * PORT_SCAN_STRIDE) % PORT_SPAN);
+}
+
+function managerPort() {
+  return activePort ?? poolPort();
+}
+
+function portRecordPath() {
+  return path.join(stateDirectory(), "port");
+}
+
+// The port the running manager recorded, or null. The profile inside is not
+// checked here: an older manager's record still leads the bridge to it, and
+// the bridge replaces that manager.
+export function recordedPort() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(portRecordPath(), "utf8"));
+    return Number.isInteger(parsed.port) && parsed.port >= PORT_FLOOR && parsed.port <= 65535 ? parsed.port : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePortRecord(port) {
+  const target = portRecordPath();
+  const temporary = `${target}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify({ port, profile: MANAGER_PROFILE, pid: process.pid })}\n`, { encoding: "utf8", mode: 0o600 });
+  fs.renameSync(temporary, target);
+}
+
+function clearPortRecord() {
+  try {
+    if (JSON.parse(fs.readFileSync(portRecordPath(), "utf8")).pid === process.pid) fs.unlinkSync(portRecordPath());
+  } catch { /* another manager's record, or none */ }
+}
+
 function loadOrCreateToken() {
   const directory = stateDirectory();
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -224,12 +275,12 @@ function loadOrCreateToken() {
   }
 }
 
-function requestJson({ pathName, method = "GET", body, token, timeoutMs = 1500 }) {
+function requestJson({ pathName, method = "GET", body, token, timeoutMs = 1500, port = null }) {
   const serialized = body === undefined ? null : JSON.stringify(body);
   return new Promise((resolve, reject) => {
     const request = http.request({
       hostname: "127.0.0.1",
-      port: poolPort(),
+      port: port ?? managerPort(),
       path: pathName,
       method,
       timeout: timeoutMs,
@@ -260,26 +311,33 @@ function requestJson({ pathName, method = "GET", body, token, timeoutMs = 1500 }
   });
 }
 
-async function ensureManager(token) {
-  let health = null;
-  try {
-    health = await requestJson({ pathName: "/health", token, timeoutMs: 350 });
-  } catch (error) {
-    // A manager answers but rejects this token: it belongs to another state
-    // directory. Starting a second one on the same port can only fail.
-    if (error?.statusCode === 401) {
-      throw new Error(`Port ${poolPort()} is held by a Serena pool manager with a different state directory; set AGENTCHEF_SERENA_POOL_PORT to another port.`);
-    }
+// A pool manager that answers at the recorded or the preferred port, or
+// null. A reply without the pool's shape comes from some other local service
+// and is never treated as a manager, so it is never told to shut down.
+async function findManager(token, timeoutMs) {
+  for (const port of new Set([recordedPort(), poolPort()].filter(Boolean))) {
+    try {
+      const health = await requestJson({ port, pathName: "/health", token, timeoutMs });
+      if (health?.ok === true && typeof health.profile === "string") return { port, health };
+    } catch { /* a dead port, a manager of another state directory (401), or another service */ }
   }
-  if (health?.profile === MANAGER_PROFILE) return;
-  if (health) {
+  return null;
+}
+
+async function ensureManager(token) {
+  const found = await findManager(token, 350);
+  if (found?.health.profile === MANAGER_PROFILE) {
+    activePort = found.port;
+    return;
+  }
+  if (found) {
     // An older manager: stop it (it stops the backends it started) and wait
-    // until its port is free before starting the current one.
-    try { await requestJson({ pathName: "/shutdown", method: "POST", token, timeoutMs: 1500 }); } catch { /* already gone */ }
+    // until it is gone before starting the current one.
+    try { await requestJson({ port: found.port, pathName: "/shutdown", method: "POST", token, timeoutMs: 1500 }); } catch { /* already gone */ }
     const stopDeadline = Date.now() + 10000;
     while (Date.now() < stopDeadline) {
       try {
-        await requestJson({ pathName: "/health", token, timeoutMs: 300 });
+        await requestJson({ port: found.port, pathName: "/health", token, timeoutMs: 300 });
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch { break; }
     }
@@ -289,17 +347,15 @@ async function ensureManager(token) {
   });
   child.unref();
   const deadline = Date.now() + 5000;
-  let lastError;
   while (Date.now() < deadline) {
-    try {
-      await requestJson({ pathName: "/health", token, timeoutMs: 500 });
+    const ready = await findManager(token, 500);
+    if (ready?.health.profile === MANAGER_PROFILE) {
+      activePort = ready.port;
       return;
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 80));
     }
+    await new Promise((resolve) => setTimeout(resolve, 80));
   }
-  throw new Error(`Serena pool manager did not become ready: ${lastError?.message || "unknown error"}`);
+  throw new Error(`Serena pool manager did not become ready (preferred port ${poolPort()}, recorded port ${recordedPort() ?? "none"}); set AGENTCHEF_SERENA_POOL_PORT to a free port if this persists.`);
 }
 
 function writeStdio(message) {
@@ -572,6 +628,33 @@ export async function recoverFromStartupExit(pool, projectRoot, operation) {
   throw new Error("Pinned Serena startup retry exhausted unexpectedly.");
 }
 
+// Binds the manager to the preferred port or, when the system holds that
+// port, to the next free port in the fallback sequence. Returns null when a
+// manager of this profile already answers on a port that refused to bind: it
+// won the race and this process is not needed.
+async function bindManager(server, token) {
+  const preferred = poolPort();
+  let lastError = null;
+  for (let step = 0; step < PORT_SCAN_LIMIT; step += 1) {
+    const port = fallbackPort(preferred, step);
+    lastError = await new Promise((resolve) => {
+      const onError = (error) => resolve(error);
+      server.once("error", onError);
+      server.listen({ host: "127.0.0.1", port }, () => {
+        server.removeListener("error", onError);
+        resolve(null);
+      });
+    });
+    if (!lastError) return port;
+    if (!["EADDRINUSE", "EACCES"].includes(lastError.code)) throw lastError;
+    try {
+      const health = await requestJson({ port, pathName: "/health", token, timeoutMs: 500 });
+      if (health?.profile === MANAGER_PROFILE) return null;
+    } catch { /* a reserved port, a manager of another state directory, or another service: try the next */ }
+  }
+  throw new Error(`no bindable port among ${PORT_SCAN_LIMIT} candidates from ${preferred} (${lastError.message})`);
+}
+
 async function runManager() {
   const token = loadOrCreateToken();
   const pool = createSerenaPool({ startBackend: launchSerena, stopBackend: stopSerena });
@@ -582,7 +665,12 @@ async function runManager() {
     stopping = true;
     clearInterval(timer);
     server.close();
+    // Keep-alive sockets from the bridges would keep this process, and its
+    // port, alive after the pool is gone.
+    server.closeAllConnections();
+    clearPortRecord();
     await pool.close();
+    process.exit(0);
   };
   const server = http.createServer(async (request, response) => {
     lastRequestAt = Date.now();
@@ -590,8 +678,8 @@ async function runManager() {
     if (unauthorized) { response.writeHead(401).end(JSON.stringify({ error: "Unauthorized." })); return; }
     if (request.method === "GET" && request.url === "/health") { response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, profile: MANAGER_PROFILE })); return; }
     if (request.method === "POST" && request.url === "/shutdown") {
-      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true }));
-      void shutdown(server);
+      // The reply is flushed before the sockets are closed.
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true }), () => void shutdown(server));
       return;
     }
     if (request.method === "POST" && request.url === "/release-client") {
@@ -634,11 +722,24 @@ async function runManager() {
     });
   }, 60_000);
   timer.unref();
+  let port;
+  try {
+    port = await bindManager(server, token);
+  } catch (error) {
+    process.stderr.write(`Serena pool manager could not listen: ${error.message}\n`);
+    await pool.close();
+    process.exit(1);
+  }
+  if (port === null) {
+    await pool.close();
+    process.exit(0);
+  }
+  writePortRecord(port);
   server.on("error", (error) => {
-    process.stderr.write(`Serena pool manager could not listen on port ${poolPort()}: ${error.message}\n`);
+    process.stderr.write(`Serena pool manager failed on port ${port}: ${error.message}\n`);
+    clearPortRecord();
     void pool.close().finally(() => process.exit(1));
   });
-  server.listen({ host: "127.0.0.1", port: poolPort() });
   process.once("SIGTERM", () => void shutdown(server));
   process.once("SIGINT", () => void shutdown(server));
 }

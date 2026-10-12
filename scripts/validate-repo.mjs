@@ -148,6 +148,7 @@ const requiredFiles = [
   "scripts/scan-supply-chain-iocs.mjs",
   "scripts/security-audit.mjs",
   "scripts/lib/approval-rules.mjs",
+  "scripts/lib/serena-pool-probe.mjs",
   "plugins/agentchef/.codex-plugin/plugin.json",
   "plugins/agentchef/skills/agentchef-operator/SKILL.md",
   "plugins/agentchef/skills/agentchef-operator/references/repo-maintenance.md",

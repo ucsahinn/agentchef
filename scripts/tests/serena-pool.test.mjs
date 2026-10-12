@@ -20,12 +20,13 @@ function waitFor(condition, timeoutMs = 6000) {
   });
 }
 
-function managerRequest(port, token, pathName) {
+function managerRequest(port, token, pathName, method = pathName === "/health" ? "GET" : "POST") {
   return new Promise((resolve, reject) => {
-    const request = http.request({ hostname: "127.0.0.1", port, path: pathName, method: "POST", headers: { authorization: `Bearer ${token}` } }, (response) => {
+    const request = http.request({ hostname: "127.0.0.1", port, path: pathName, method, timeout: 2000, headers: { authorization: `Bearer ${token}` } }, (response) => {
       response.resume();
       response.on("end", () => response.statusCode === 200 ? resolve() : reject(new Error(`Manager returned ${response.statusCode}.`)));
     });
+    request.once("timeout", () => request.destroy(new Error(`Manager on ${port} did not answer ${pathName}.`)));
     request.once("error", reject);
     request.end();
   });
@@ -205,39 +206,187 @@ test("MCP notification acknowledgements may be empty while retaining the downstr
   });
 });
 
-test("stdio bridge exposes the safe tool surface without starting Serena on MCP initialization", async () => {
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-bridge-"));
-  const port = 48_000 + Math.floor(Math.random() * 1_000);
+// A port the operating system handed out and released: free a moment ago.
+// A random port from a fixed range was reserved by Windows on one machine
+// (every port from 44787 to 48715), so the manager could never bind it.
+async function freeLoopbackPort() {
+  const { server, port } = await listenLoopback();
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  return port;
+}
+
+function startBridge(home, env = {}) {
   const bridge = spawn(process.execPath, [fileURLToPath(moduleUrl), "bridge"], {
     cwd: home,
-    env: { ...process.env, CODEX_HOME: home, AGENTCHEF_SERENA_POOL_PORT: String(port) },
+    env: { ...process.env, CODEX_HOME: home, ...env },
     stdio: ["pipe", "pipe", "pipe"]
   });
   const replies = [];
+  let stderr = "";
   let buffer = "";
   bridge.stdout.setEncoding("utf8");
+  bridge.stderr.setEncoding("utf8");
+  bridge.stderr.on("data", (chunk) => { stderr += chunk; });
   bridge.stdout.on("data", (chunk) => {
     buffer += chunk;
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() || "";
-    for (const line of lines) replies.push(JSON.parse(line));
+    for (const line of lines) if (line.trim()) replies.push(JSON.parse(line));
   });
   bridge.stdin.write('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n');
   bridge.stdin.write('{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n');
   bridge.stdin.write('{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n');
+  return { bridge, replies, stderr: () => stderr };
+}
+
+// The manager outlives the test; it is stopped through the port it recorded.
+// A failed shutdown must not replace the assertion that failed before it.
+async function stopManager(home) {
+  let record = null;
+  try { record = JSON.parse(fs.readFileSync(path.join(home, "serena-pool", "port"), "utf8")); } catch { /* no manager started */ }
+  if (!record) return null;
   try {
-    await waitFor(() => replies.length === 2);
+    const token = fs.readFileSync(path.join(home, "serena-pool", "token"), "utf8").trim();
+    await managerRequest(record.port, token, "/shutdown");
+  } catch { /* already gone */ }
+  return record;
+}
+
+test("stdio bridge exposes the safe tool surface without starting Serena on MCP initialization", async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-bridge-"));
+  const port = await freeLoopbackPort();
+  const { bridge, replies, stderr } = startBridge(home, { AGENTCHEF_SERENA_POOL_PORT: String(port) });
+  try {
+    await waitFor(() => replies.length === 2).catch((error) => { throw new Error(`${error.message} stderr: ${stderr()}`); });
     assert.equal(replies[0].result.serverInfo.name, "serena-project-pool");
     assert.deepEqual(replies[1].result.tools.map((tool) => tool.name), [
       "get_current_config", "initial_instructions", "list_memories", "read_memory",
       "search_for_pattern", "find_symbol", "find_declaration", "find_implementations",
       "find_referencing_symbols", "get_symbols_overview", "get_diagnostics_for_file"
     ]);
+    const record = JSON.parse(fs.readFileSync(path.join(home, "serena-pool", "port"), "utf8"));
+    assert.equal(record.port, port, "a free preferred port is used as is");
   } finally {
     bridge.stdin.end();
-    const token = fs.readFileSync(path.join(home, "serena-pool", "token"), "utf8").trim();
-    await managerRequest(port, token, "/shutdown");
+    await stopManager(home);
   }
+});
+
+test("the manager falls back to the next port in the sequence when the preferred one cannot bind, and records it", async () => {
+  const { fallbackPort } = await import(moduleUrl.href);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-fallback-"));
+  // Another process holds the preferred port, as a Windows port reservation does.
+  const blocker = await listenLoopback();
+  const { bridge, replies, stderr } = startBridge(home, { AGENTCHEF_SERENA_POOL_PORT: String(blocker.port) });
+  try {
+    await waitFor(() => replies.length === 2).catch((error) => { throw new Error(`${error.message} stderr: ${stderr()}`); });
+    assert.equal(replies[1].result.tools.length, 11, "the bridge works through the fallback port");
+    const record = JSON.parse(fs.readFileSync(path.join(home, "serena-pool", "port"), "utf8"));
+    assert.notEqual(record.port, blocker.port);
+    const sequence = Array.from({ length: 8 }, (_, step) => fallbackPort(blocker.port, step));
+    assert.ok(sequence.slice(1).includes(record.port), `recorded port ${record.port} comes from the fallback sequence ${sequence.join(", ")}`);
+    assert.ok(Number.isInteger(record.pid) && typeof record.profile === "string");
+    // A second bridge finds the recorded manager instead of starting another.
+    const second = startBridge(home, { AGENTCHEF_SERENA_POOL_PORT: String(blocker.port) });
+    try {
+      await waitFor(() => second.replies.length === 2).catch((error) => { throw new Error(`${error.message} stderr: ${second.stderr()}`); });
+      assert.deepEqual(JSON.parse(fs.readFileSync(path.join(home, "serena-pool", "port"), "utf8")), record, "the record is unchanged: one manager");
+    } finally {
+      second.bridge.stdin.end();
+    }
+  } finally {
+    bridge.stdin.end();
+    const record = await stopManager(home);
+    await new Promise((resolve, reject) => blocker.server.close((error) => error ? reject(error) : resolve()));
+    if (record) {
+      // The record belongs to the manager that wrote it and goes with it.
+      const token = fs.readFileSync(path.join(home, "serena-pool", "token"), "utf8").trim();
+      await waitFor(() => !fs.existsSync(path.join(home, "serena-pool", "port")), 3000);
+      await assert.rejects(managerRequest(record.port, token, "/health"));
+    }
+  }
+});
+
+test("two bridges that start at once with an unbindable preferred port end up on one manager", async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-race-"));
+  const blocker = await listenLoopback();
+  const env = { AGENTCHEF_SERENA_POOL_PORT: String(blocker.port) };
+  const first = startBridge(home, env);
+  const second = startBridge(home, env);
+  try {
+    await Promise.all([first, second].map((entry) => waitFor(() => entry.replies.length === 2, 8000).catch((error) => { throw new Error(`${error.message} stderr: ${entry.stderr()}`); })));
+    const record = JSON.parse(fs.readFileSync(path.join(home, "serena-pool", "port"), "utf8"));
+    const token = fs.readFileSync(path.join(home, "serena-pool", "token"), "utf8").trim();
+    await managerRequest(record.port, token, "/health");
+    // The loser of the race exits without a record of its own: after the
+    // winner stops, nothing of this profile answers on the next candidates.
+    await managerRequest(record.port, token, "/shutdown");
+    await waitFor(() => !fs.existsSync(path.join(home, "serena-pool", "port")), 3000);
+    const { fallbackPort } = await import(moduleUrl.href);
+    // Candidate 0 is the blocker, which answers nothing; the rest must refuse.
+    for (let step = 1; step < 8; step += 1) {
+      await assert.rejects(managerRequest(fallbackPort(blocker.port, step), token, "/health"), `no manager left on candidate ${step}`);
+    }
+  } finally {
+    first.bridge.stdin.end();
+    second.bridge.stdin.end();
+    await stopManager(home);
+    await new Promise((resolve, reject) => blocker.server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("the status probe reports the preferred port, whether it binds, and the manager's fallback port", async () => {
+  const { probeSerenaPool } = await import(new URL("../lib/serena-pool-probe.mjs", import.meta.url).href);
+  const probeFile = fileURLToPath(new URL("../lib/serena-pool-probe.mjs", import.meta.url));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-probe-"));
+  // The probe reads the bridge installed in the home; an identical copy has the manager's profile.
+  fs.copyFileSync(fileURLToPath(moduleUrl), path.join(home, "serena-pool.mjs"));
+  const probe = (env) => {
+    const run = spawnSync(process.execPath, [probeFile, "--codex-home", home], { encoding: "utf8", env: { ...process.env, CODEX_HOME: home, ...env } });
+    assert.equal(run.status, 0, run.stderr);
+    return JSON.parse(run.stdout);
+  };
+  const blocker = await listenLoopback();
+  const env = { AGENTCHEF_SERENA_POOL_PORT: String(blocker.port) };
+  try {
+    const idle = probe(env);
+    assert.deepEqual([idle.inspected, idle.preferredPort, idle.preferredPortState, idle.recordedPort, idle.manager, idle.fallback], [true, blocker.port, "in_use", null, { port: null, state: "none" }, true]);
+    const free = probe({ AGENTCHEF_SERENA_POOL_PORT: String(await freeLoopbackPort()) });
+    assert.equal(free.preferredPortState, "free");
+
+    const { bridge, replies, stderr } = startBridge(home, env);
+    try {
+      await waitFor(() => replies.length === 2).catch((error) => { throw new Error(`${error.message} stderr: ${stderr()}`); });
+      const running = probe(env);
+      assert.equal(running.preferredPortState, "in_use");
+      assert.notEqual(running.recordedPort, blocker.port);
+      assert.deepEqual(running.manager, { port: running.recordedPort, state: "current" });
+      assert.ok(!JSON.stringify(running).includes(fs.readFileSync(path.join(home, "serena-pool", "token"), "utf8").trim()), "the token never appears in the report");
+    } finally {
+      bridge.stdin.end();
+      await stopManager(home);
+    }
+    assert.equal((await probeSerenaPool({ codexHome: fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-probe-empty-")) })).inspected, false, "a home without the bridge is not inspected");
+  } finally {
+    await new Promise((resolve, reject) => blocker.server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("the fallback sequence is deterministic, stays in the user port range, and leaves a blocked 4000-port range quickly", async () => {
+  const { fallbackPort } = await import(moduleUrl.href);
+  assert.equal(fallbackPort(44923, 0), 44923, "the preferred port comes first");
+  for (const preferred of [1024, 44923, 65535]) {
+    const seen = new Set();
+    for (let step = 0; step < 256; step += 1) {
+      const port = fallbackPort(preferred, step);
+      assert.ok(port >= 1024 && port <= 65535, `${port} is a user port`);
+      seen.add(port);
+    }
+    assert.equal(seen.size, 256, "no candidate repeats");
+  }
+  // Measured dead block on a Windows 11 machine: 44787 to 48715.
+  const escape = Array.from({ length: 256 }, (_, step) => fallbackPort(44923, step)).findIndex((port) => port < 44787 || port > 48715);
+  assert.ok(escape > 0 && escape <= 5, `leaves the block in ${escape} steps`);
 });
 
 test("a tool call is answered with the client's own request id", async () => {
@@ -245,7 +394,7 @@ test("a tool call is answered with the client's own request id", async () => {
   // (always 2); spreading it over the client's id answered every call as id 2,
   // so a client waited out the tool timeout for any other id.
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "serena-pool-call-id-"));
-  const port = 49_000 + Math.floor(Math.random() * 1_000);
+  const port = await freeLoopbackPort();
   const source = fs.readFileSync(fileURLToPath(moduleUrl), "utf8");
   const constant = (name) => {
     const start = source.indexOf(`const ${name} = "`) + `const ${name} = "`.length;
@@ -311,7 +460,7 @@ test("the pooled Serena backend starts in a read-only mode that removes every wr
   assert.match(source, /"--context", "codex", "--add-mode", readOnlyModePath\(\)/);
   // A manager started by an older file must be replaced, or this never applies.
   assert.match(source, /JSON\.stringify\(\{ ok: true, profile: MANAGER_PROFILE \}\)/);
-  assert.match(source, /if \(health\?\.profile === MANAGER_PROFILE\) return;/);
+  assert.match(source, /if \(found\?\.health\.profile === MANAGER_PROFILE\) \{/);
   // A code-only change to the manager must also change the profile.
   assert.match(source, /const MANAGER_PROFILE = `[^`]*createHash\("sha256"\)\.update\(fs\.readFileSync\(fileURLToPath\(import\.meta\.url\)\)\)/);
   assert.ok(source.indexOf('pathName: "/shutdown"') > source.indexOf("async function ensureManager"), "a stale manager is shut down before a new one starts");

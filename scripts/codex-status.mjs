@@ -1310,6 +1310,48 @@ function inspectBeyin() {
 }
 const beyin = inspectBeyin();
 
+// The Serena pool manager binds a loopback port derived from the installed
+// bridge; Windows reserves port ranges that no listing shows, and on such a
+// machine every session reported Serena as "connection closed" while every
+// other check was green. The probe (scripts/lib/serena-pool-probe.mjs) reads
+// the installed bridge's preferred port, tries to bind it, and asks a running
+// manager for its health; it starts nothing and prints no token.
+function inspectSerenaPool() {
+  if (options.skipRuntime || !options.inspectCodex) {
+    return { inspected: false, status: "skipped", note: "Skipped with the runtime checks." };
+  }
+  const probe = path.join(scriptDir, "lib", "serena-pool-probe.mjs");
+  const result = run(process.execPath, [probe, "--codex-home", options.codexHome], {
+    env: { ...process.env, CODEX_HOME: options.codexHome },
+    timeout: 15000
+  });
+  let parsed = null;
+  try { parsed = JSON.parse(String(result.stdout || "").trim() || "null"); } catch { /* reported below */ }
+  if (result.error || !parsed) {
+    return { inspected: false, status: "attention", warnings: [`Serena pool probe could not run: ${result.error?.message || (result.stderr || "").trim() || `exit ${result.status}`}`] };
+  }
+  if (!parsed.inspected) return { inspected: false, status: "skipped", note: parsed.note };
+  const facts = { ...parsed, bridge: redact(parsed.bridge) };
+  const warnings = [];
+  let summary;
+  if (facts.manager.state === "current") {
+    summary = facts.manager.port === facts.preferredPort
+      ? localText(`manager running on port ${facts.manager.port}`, `yönetici ${facts.manager.port} portunda çalışıyor`)
+      : localText(`manager running on port ${facts.manager.port} (fallback; port ${facts.preferredPort} cannot be bound on this machine)`, `yönetici ${facts.manager.port} portunda çalışıyor (yedek; ${facts.preferredPort} portu bu makinede bağlanamıyor)`);
+  } else if (facts.manager.state === "older") {
+    summary = localText(`a manager from an older bridge answers on port ${facts.manager.port}; the next session replaces it`, `${facts.manager.port} portunda eski köprüden bir yönetici yanıt veriyor; sonraki oturum onu değiştirir`);
+  } else if (facts.preferredPortState === "free") {
+    summary = localText(`no manager running; port ${facts.preferredPort} is free and the first semantic tool call starts it`, `yönetici çalışmıyor; ${facts.preferredPort} portu boş, ilk semantik araç çağrısı başlatır`);
+  } else if (facts.fallback) {
+    summary = localText(`no manager running; port ${facts.preferredPort} cannot be bound on this machine (${facts.preferredPortState}), the manager will take the next free port`, `yönetici çalışmıyor; ${facts.preferredPort} portu bu makinede bağlanamıyor (${facts.preferredPortState}), yönetici sıradaki boş portu alır`);
+  } else {
+    summary = localText(`Serena cannot start: port ${facts.preferredPort} cannot be bound on this machine (${facts.preferredPortState}) and the installed bridge has no port fallback`, `Serena başlayamaz: ${facts.preferredPort} portu bu makinede bağlanamıyor (${facts.preferredPortState}) ve kurulu köprüde port yedeği yok`);
+    warnings.push(`Serena pool: port ${facts.preferredPort} cannot be bound (${facts.preferredPortState}) and the installed serena-pool.mjs has no port fallback; update AgentChef (npm run chef -- --update) or set AGENTCHEF_SERENA_POOL_PORT to a free port for both CLIs.`);
+  }
+  return { ...facts, status: warnings.length > 0 ? "attention" : "ok", summary, warnings };
+}
+const serenaPool = inspectSerenaPool();
+
 const codexDoctor = summarizeCodexDoctor();
 const skipGlobalMetadata = skipInstalledRuntimeAndCliMetadata();
 const skillInventory = inspectSkillInventory(skipGlobalMetadata);
@@ -1356,6 +1398,7 @@ const failures = [
 const warnings = [
   ...(runtime.report?.warnings || []),
   ...(codexDoctor.warnings || []),
+  ...(serenaPool.warnings || []),
   ...(codexCliRuntime.ambientWarnings || [])
 ];
 const nonBlockingWarningPatterns = [
@@ -1396,6 +1439,7 @@ const report = {
   runtimeInstallState,
   claudeTarget,
   beyin,
+  serenaPool,
   codexDoctor,
   codexCliRuntime,
   skillInventory,
@@ -1520,6 +1564,11 @@ if (options.json) {
   }
   if (beyin.inspected) {
     console.log(`Beyin: ${stateText(beyin.status)} - ${beyin.health || beyin.headline}`);
+  }
+  if (serenaPool.inspected) {
+    console.log(`${localText("Serena pool", "Serena havuzu")}: ${stateText(serenaPool.status)} - ${serenaPool.summary}`);
+  } else if (serenaPool.status === "attention") {
+    console.log(`${localText("Serena pool", "Serena havuzu")}: ${stateText("attention")} - ${translateStatusMessage(serenaPool.warnings[0])}`);
   }
   if (!runtime.report?.skills?.inspected && skillInventory.inspected) {
     console.log(`${localText("Skills", "Skill'ler")}: ${skillInventory.installed} ${localText("total installed across global roots", "global köklerde toplam kurulu")} (${skillInventory.expected} AgentChef managed, ${skillInventory.missing.length} ${localText("missing", "eksik")}, ${skillInventory.extraCount} ${localText("other/user-installed", "diğer/kullanıcı kurulu")})`);

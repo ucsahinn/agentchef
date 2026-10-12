@@ -213,6 +213,7 @@ if (repoOnlyResult.error) {
     const repoOnly = JSON.parse(repoOnlyResult.stdout);
     if (repoOnly.runtime?.status !== "skipped") fail("codex status --repo-only must skip installed runtime checks.");
     if (repoOnly.codexDoctor?.status !== "skipped") fail("codex status --repo-only must skip direct Codex doctor checks.");
+    if (repoOnly.serenaPool?.status !== "skipped" || repoOnly.serenaPool?.inspected !== false) fail("codex status --repo-only must skip the Serena pool port probe.");
     if (repoOnly.codexCliRuntime?.status !== "skipped") fail("codex status --repo-only must skip Codex CLI probes.");
   } catch (error) {
     fail(`codex status repo-only alias did not emit parseable JSON: ${error.message}`);
