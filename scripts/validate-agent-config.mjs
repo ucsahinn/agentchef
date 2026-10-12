@@ -216,7 +216,7 @@ if (!fs.existsSync(catalogPath)) {
     if (!catalog.officialReference?.startsWith("https://developers.openai.com/codex/config-reference")) {
       fail("catalog/agents.json must point at the official Codex config reference.");
     }
-    if (catalog.defaults?.model !== "gpt-5.5") fail("catalog/agents.json defaults.model must stay gpt-5.5.");
+    if (catalog.defaults?.model !== "gpt-6-luna") fail("catalog/agents.json defaults.model must stay gpt-6-luna.");
     if (catalog.defaults?.maxThreads !== 10) fail("catalog/agents.json defaults.maxThreads must stay 10.");
     if (catalog.defaults?.maxDepth !== 2) fail("catalog/agents.json defaults.maxDepth must stay 2 for bounded coordinator-to-worker delegation.");
     if (catalog.defaults?.jobMaxRuntimeSeconds !== 3600) {
