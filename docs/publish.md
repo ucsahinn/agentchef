@@ -4,6 +4,8 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
+Development version **v1.5.0** is not a release candidate; team execution is still disabled.
+
 ## Before Commit Or Push
 
 ```bash

@@ -1,5 +1,10 @@
 # Release Notes
 
+## v1.5.0 - 2026-10-12
+
+This release line is under development. Team execution remains disabled; the
+catalog describes an experimental contract only.
+
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.3.5 - 2026-10-12

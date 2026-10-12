@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0 - 2026-10-12
+
+Team mode v2 contract catalog and disabled experimental execution gate.
+
 ## 1.3.5 - 2026-10-12
 
 The Serena pool starts on a machine whose port range is reserved, Claude Code

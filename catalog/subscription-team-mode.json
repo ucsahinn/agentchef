@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "stability": "experimental",
+  "execution": {
+    "enabled": false,
+    "optInEnv": "AGENTCHEF_TEAM_MODE=experimental",
+    "engineGeneratesApprovals": false,
+    "roleModeCeilings": {
+      "root_cause_debugger": "workspace-write",
+      "docs_author": "workspace-write",
+      "spec_author": "workspace-write",
+      "qa_lead": "workspace-write",
+      "code_mapper": "read-only",
+      "docs_researcher": "read-only",
+      "context_architect": "read-only",
+      "prompt_architect": "read-only",
+      "mcp_integrator": "read-only",
+      "product_strategist": "read-only",
+      "engineering_planner": "read-only",
+      "design_reviewer": "read-only",
+      "devex_auditor": "read-only",
+      "performance_auditor": "read-only",
+      "google_seo_auditor": "read-only",
+      "code_reviewer": "read-only",
+      "frontend_verifier": "read-only",
+      "security_auditor": "read-only",
+      "test_verifier": "read-only",
+      "release_verifier": "read-only",
+      "codex_doctor": "read-only"
+    }
+  },
+  "conductor": {
+    "type": "interactive-session",
+    "spawnsWorkersDirectly": false,
+    "editsWorkerScopeDuringRun": false
+  },
+  "workers": {
+    "command": "codex exec --json",
+    "promptTransport": "stdin",
+    "minWorkers": 1,
+    "maxWorkers": 4,
+    "maxDepth": 1,
+    "workerMayPush": false,
+    "isolation": "git-worktree-per-worker",
+    "defaultProfile": "offline",
+    "allowedRoleIds": [
+      "code_mapper", "docs_researcher", "context_architect", "prompt_architect", "mcp_integrator", "product_strategist", "engineering_planner", "design_reviewer", "devex_auditor", "root_cause_debugger", "qa_lead", "performance_auditor", "google_seo_auditor", "docs_author", "spec_author", "code_reviewer", "frontend_verifier", "security_auditor", "test_verifier", "release_verifier", "codex_doctor"
+    ]
+  },
+  "verification": {
+    "roleId": "test_verifier",
+    "sandboxMode": "read-only",
+    "branch": "integration-branch"
+  },
+  "approval": {
+    "startFile": "{runId}.baslat.json",
+    "mergeFile": "{runId}.birlestir.json",
+    "sentenceForStart": "baslat <runId>",
+    "sentenceForMerge": "birlestir <runId>",
+    "sentenceForPushApproval": "onayla TASK-x",
+    "validityDays": 7,
+    "singleUse": true,
+    "plannedAtMustPrecedeApproval": true
+  },
+  "limits": {
+    "workerMinutes": 60,
+    "idleWarningMinutes": 15,
+    "idleStopMinutes": 30,
+    "leaseMinutes": 60,
+    "leaseRenewMinutes": 20,
+    "ramPerWorkerMb": 1536
+  },
+  "branches": {
+    "integrationPrefix": "takim/",
+    "workerBranchFormat": "takim/{runId}/{taskId}",
+    "worktreeRootFormat": "{repoParent}/.agentchef-worktrees/{runId}",
+    "rejectTemp": true,
+    "rejectInsideRepository": true
+  }
+}

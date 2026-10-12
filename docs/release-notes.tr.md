@@ -1,5 +1,10 @@
 # Sürüm Notları
 
+## v1.5.0 - 2026-10-12
+
+Bu sürüm hattı geliştirme aşamasındadır. Takım yürütmesi kapalıdır; katalog
+yalnızca deneysel sözleşmeyi tanımlar.
+
 Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.3.5 - 2026-10-12

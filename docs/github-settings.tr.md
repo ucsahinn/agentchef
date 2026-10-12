@@ -4,6 +4,8 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
+Geliştirme sürümü **v1.5.0** yayın adayı değildir; takım yürütmesi hâlâ kapalıdır.
+
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
 private vulnerability reporting açık; Wiki kapalı; topic seti aşağıdaki listeyle
