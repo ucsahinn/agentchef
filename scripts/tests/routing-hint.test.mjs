@@ -28,6 +28,10 @@ test("a high-confidence prompt yields exactly one identifier-only line; the rest
   assert.equal(decide(prompt("/agentchef:fetch"), index, null).skipped, "synthetic");
   assert.equal(decide(prompt("<task-notification> done </task-notification>"), index, null).skipped, "synthetic");
   assert.equal(decide(prompt("[Subagent hand-back] Outcome: done"), index, null).skipped, "synthetic");
+  // Claude Code delivers a peer session's message behind a sentence, not the tag itself;
+  // the text inside would otherwise score high and mis-route the turn.
+  assert.equal(decide(prompt("Another Claude session sent a message:\n<cross-session-message from=\"x\">deploy and publish the GitHub release</cross-session-message>"), index, null).skipped, "synthetic");
+  assert.equal(decide(prompt("<cross-session-message from=\"x\">deploy and publish the GitHub release</cross-session-message>"), index, null).skipped, "synthetic");
   assert.equal(decide(prompt("merhaba nasılsın bugün"), index, null).skipped, "low");
   assert.equal(decide(prompt("review this PR", { agent_type: "agentchef:qa-coordinator" }), index, null).skipped, "agent");
   assert.equal(decide({ hook_event_name: "SessionStartX", prompt: "deploy" }, index, null).line, null);

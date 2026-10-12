@@ -26,10 +26,13 @@ const STDIN_DEADLINE_MS = 2000;
 const MIN_PROMPT_CHARS = 8;
 const MIN_PROMPT_TOKENS = 2;
 // A prompt that starts like one of these is a synthetic turn (a tool result,
-// an agent report, a system notice), not something the user typed.
+// an agent report, a system notice, a message from another session), not
+// something the user typed. Claude Code wraps a peer session's message in a
+// sentence before the tag, so the sentence is listed too.
 const SYNTHETIC_PREFIXES = [
   "<task-notification>", "<agent-message", "<command-name>", "<local-command-stdout>",
-  "<system-reminder", "[subagent hand-back]", "[system notification", "<cross-session-message"
+  "<system-reminder", "[subagent hand-back]", "[system notification", "<cross-session-message",
+  "another claude session sent a message"
 ];
 const COMMAND_PREFIXES = ["/", "$", "!"];
 
