@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { buildExecArgs, classifyFailure, parseExecEvent, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
+import { buildExecArgs, buildViewerPaneArgs, classifyFailure, parseExecEvent, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "fake-codex", "fake-codex.cjs");
 
@@ -31,9 +31,15 @@ test("usage limits classify known quota messages", () => {
 
 test("buildExecArgs uses stdin prompt, resume syntax and never adds approval bypass flags", () => {
   const args = buildExecArgs({ worktree: "C:/work tree", sandbox: "workspace-write", schema: "schema.json", output: "final.json", resumeThreadId: "thr-1", platform: "win32" });
-  assert.deepEqual(args, ["exec", "resume", "thr-1", "--json", "-C", "C:/work tree", "-s", "workspace-write", "-m", "gpt-6-luna", "-p", "offline", "--output-schema", "schema.json", "-o", "final.json", "-c", "features.multi_agent=false", "-c", 'approval_policy="never"', "-c", 'windows.sandbox="unelevated"', "--ignore-rules", "-"]);
+  assert.deepEqual(args, ["exec", "resume", "thr-1", "--json", "-C", "C:/work tree", "-s", "workspace-write", "-m", "gpt-6-luna", "-p", "offline", "--output-schema", "schema.json", "-o", "final.json", "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", "windows.sandbox=unelevated", "--ignore-rules", "-"]);
   assert.equal(args.includes("--approve-for-me"), false);
   assert.equal(args.includes("--full-auto"), false);
+});
+
+test("viewer pane argv does not contain shell command separators", () => {
+  const args = buildViewerPaneArgs({ worktree: "C:/work tree", runId: "R-test", taskId: "TASK-045" });
+  assert.deepEqual(args, ["-w", "0", "new-tab", "--title", "R-test TASK-045", "node", path.join("C:/work tree", "scripts", "team-run.mjs"), "watch", "--run", "R-test", "--task", "TASK-045"]);
+  assert.equal(args.some((value) => value.includes(";")), false);
 });
 
 test("workerEnv sets six team variables, removes BEYIN_CHILD and preserves BEYIN_AGENT", () => {

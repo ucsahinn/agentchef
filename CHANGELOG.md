@@ -1,8 +1,15 @@
 # Changelog
 
 ## 1.5.0 - 2026-10-12
+Team mode v2 adds a disabled-by-default experimental team runner with isolated Codex workers, approval-gated start and merge, collection, integration, verification, and supervision.
 
-Team mode v2 contract catalog and disabled experimental execution gate.
+- TASK-039: Add the v2 team-mode contract, validator, and 1.5.0 skeleton.
+- TASK-040: Add Codex exec workers with JSONL event and usage capture.
+- TASK-041: Add team runtime state, approvals, prompts, and coordination helpers.
+- TASK-042: Add team run planning, supervision, status, and abort flows.
+- TASK-043: Add collection, integration, verification, merge, and cleanup.
+- TASK-044: Add the Claude conductor skill, status reporting, and paired docs.
+- TASK-045: Complete package checks, release notes, and Windows Codex argument handling.
 
 ## 1.3.5 - 2026-10-12
 

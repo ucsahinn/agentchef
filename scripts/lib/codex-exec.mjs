@@ -31,8 +31,8 @@ export function parseExecEvent(line, result) {
 export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile = "offline", schema, output, resumeThreadId, platform = process.platform }) {
   const args = ["exec"];
   if (resumeThreadId) args.push("resume", resumeThreadId);
-  args.push("--json", "-C", worktree, "-s", sandbox, "-m", model, "-p", profile, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", 'approval_policy="never"');
-  if (platform === "win32") args.push("-c", 'windows.sandbox="unelevated"', "--ignore-rules");
+  args.push("--json", "-C", worktree, "-s", sandbox, "-m", model, "-p", profile, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never");
+  if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
   args.push("-");
   return args;
 }
@@ -43,11 +43,16 @@ export function workerEnv({ runId, taskId, worktree, role, boardState }, env = p
   return result;
 }
 
+export function buildViewerPaneArgs({ worktree, runId, taskId, title = `${runId} ${taskId}` }) {
+  return ["-w", "0", "new-tab", "--title", title, "node", path.join(worktree, "scripts", "team-run.mjs"), "watch", "--run", runId, "--task", taskId];
+}
+
 export function openViewerPane({ worktree, runId, taskId, title = `${runId} ${taskId}`, env = process.env, platform = process.platform } = {}) {
   if (env.AGENTCHEF_TEAM_PANE === "off" || platform !== "win32") return null;
   const wt = resolveWindowsCli("wt", env);
   if (!wt) return null;
-  const invocation = wt.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(wt, ["-w", "0", "new-tab", "--title", title, "node", path.join(worktree, "scripts", "team-run.mjs"), "watch", "--run", runId, "--task", taskId]) : { command: wt, args: ["-w", "0", "new-tab", "--title", title, "node", path.join(worktree, "scripts", "team-run.mjs"), "watch", "--run", runId, "--task", taskId] };
+  const args = buildViewerPaneArgs({ worktree, runId, taskId, title });
+  const invocation = wt.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(wt, args) : { command: wt, args };
   try { spawn(invocation.command, invocation.args, { detached: true, stdio: "ignore", windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments }).unref(); return true; } catch { return null; }
 }
 
