@@ -713,7 +713,8 @@ Bilerek kalanlar:
   eder. `[mcp_servers.serena]` ve `[agents.*]` tablolarını kaldır ya da bir
   yedeği geri yükle, sonra kaldırmayı yeniden çalıştır.
 - Üretilen MCP profilleri (`full`, `multi-session`, `offline`).
-- `CODEX_HOME/serena-pool`, yani iki hedefin paylaştığı havuz token'ı.
+- `CODEX_HOME/serena-pool`, yani iki hedefin paylaştığı havuz token'ı ve
+  çalışan yöneticinin port kaydı.
 - İsteğe bağlı Git guard'ları. Bunları kurulumda yazdırılan makbuzla geri
   yükle.
 - Bütün yedek arşivleri.

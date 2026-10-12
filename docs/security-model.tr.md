@@ -108,7 +108,9 @@ Bu starter'ın kuralları:
   `.claude.json` yedeklendikten sonra kaldırır.
 - Claude Code'da sunucu başına araç izin listesi yoktur; bu yüzden Codex
   kararları katalogdan üretilen izin kurallarına dönüşür: `approve` → `allow`,
-  `prompt` → `ask`; codebase-memory'nin `delete_project`, `index_repository`,
+  `prompt` → kural yok (Claude Code her `ask` kuralını her izin modunda sorar;
+  sorgulu bir tarayıcı aracı kullanıcının seçtiği izin moduna bırakılır);
+  codebase-memory'nin `delete_project`, `index_repository`,
   `ingest_traces` ve `manage_adr` araçları ile Playwright'ın
   `browser_run_code_unsafe`, `browser_evaluate` ve `browser_file_upload`
   araçları için `deny`. Playwright kuralları düz `mcp__playwright__<tool>`
@@ -495,7 +497,19 @@ object inspection'i kapsar. Sunlari prompt'a baglar:
   `git ls-remote`
 - `--require` / `--import` modüllerini yine de yükleyen `node --check`
 - ilk argüman olarak `rg --pre` ve `rg --pre-glob` (önek kuralı sonrasını
-  görmez; Claude Code kuralları `--pre` için her konumda sorar)
+  görmez)
+
+Claude Code her `permissions.ask` kuralını `bypassPermissions` dahil her izin
+modunda sorar; yani her biri kullanıcının elle yanıtladığı bir sorudur. Üretilen
+Claude fragment'ı bu yüzden yalnızca geri alınamayan ya da makineden dışarı
+çıkan işlemlerin sorularını tutar: force, delete ve mirror push, dal ve etiket
+silme, depo ve sürüm silme, `gh auth` ve token komutları, yayınlama,
+`Stop-Process` ve deploy, destroy, migrate, seed, prune, release, reset ya da
+repair yapan depo betikleri. Yukarıdaki diğer Codex sorguları (commit, düz
+push, bağımlılık kurulumu, dosya silme, `rg --pre` gibi seçenek korumaları)
+Claude Code'da ne izinli ne de sorulur; kullanıcının seçtiği izin modu karar
+verir. Kullanıcının `settings.json`'dan sildiği bir ask kuralı sonraki
+güncellemede geri eklenmek ya da eksik sayılmak yerine receipt'ten bırakılır.
 
 Resmi kaynak: https://developers.openai.com/codex/rules
 

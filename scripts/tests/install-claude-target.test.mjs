@@ -436,3 +436,29 @@ test("a Claude plugin cache that differs from the source is reinstalled at the s
   assert.deepEqual(calls.slice(-2), ["plugin uninstall", "plugin install"], "a stale same-version cache is reinstalled");
   fs.rmSync(state.home, { recursive: true, force: true });
 });
+
+test("an ask rule the user removed and the fragment no longer wants is released from the receipt on update, and the file is left alone", () => {
+  const state = fixture();
+  run(state, ["--apply"]);
+  const settingsPath = path.join(state.claudeHome, "settings.json");
+  const receiptPath = path.join(state.claudeHome, "agentchef", "receipts", "claude-settings-merge-receipt.json");
+  const installed = readJson(receiptPath);
+  // A rule an earlier release recorded; the user deleted it from the file and the fragment stopped carrying it.
+  const stale = "Bash(git commit *)";
+  assert.ok(!readJson(settingsPath).permissions.ask.includes(stale), "the fragment no longer asks for a commit");
+  writeReceipt(receiptPath, { ...installed, entries: [...installed.entries, { kind: "array-item", pointer: pointerFor(["permissions", "ask"]), valueSha256: valueSha256(stale), preview: stale }] });
+  const before = fs.readFileSync(settingsPath, "utf8");
+
+  const plain = run(state, ["--apply"]);
+  assert.equal(plain.outcome.results.find((result) => result.id === "claude-settings-merge").status, "current");
+  assert.ok(readJson(receiptPath).entries.some((entry) => entry.preview === stale), "a plain install does not touch ownership");
+
+  const updated = run(state, ["--apply", "--refresh-managed"]);
+  const result = updated.outcome.results.find((candidate) => candidate.id === "claude-settings-merge");
+  assert.deepEqual([result.status, result.released], ["current", 1]);
+  assert.equal(fs.readFileSync(settingsPath, "utf8"), before, "settings.json is byte-identical");
+  assert.ok(!readJson(settingsPath).permissions.ask.includes(stale), "the rule is not added back");
+  assert.ok(!readJson(receiptPath).entries.some((entry) => entry.preview === stale), "the receipt let the rule go");
+  assert.equal(readJson(receiptPath).entries.length, installed.entries.length, "every other entry stays");
+  fs.rmSync(state.home, { recursive: true, force: true });
+});

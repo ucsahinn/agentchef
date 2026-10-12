@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.3.5 - 2026-10-12
+
+The Serena pool starts on a machine whose port range is reserved, Claude Code
+asks only about what cannot be taken back, and Codex runs on `gpt-6-luna`.
+
+- Serena pool port fallback. Windows reserves port ranges that no listing
+  shows (Hyper-V, WSL, WinNAT exclusions); on one machine every port from
+  44787 to 48715 refused to bind, which covers the whole derived range, so
+  every session reported `serena CONNECTION_CLOSED` while every other check
+  was green. When the preferred port cannot be bound, the manager now walks a
+  fixed sequence of fallback ports (the preferred port, then every 1009th
+  port above it), binds the first free one, and records it in
+  `CODEX_HOME/serena-pool/port`; the bridges read that record before the
+  preferred port. The sequence is the same for every manager of one state
+  directory, so two managers started at once reach the same port and the
+  second one finds the first instead of running beside it. A reply at the
+  preferred port that is not a pool manager (another service, a manager of
+  another state directory) is skipped instead of being shut down or reported
+  as an error. On shutdown the manager closes its keep-alive sockets and
+  exits, so a stopped manager no longer holds its port while a bridge keeps a
+  connection open. `AGENTCHEF_SERENA_POOL_PORT` is still the preferred port.
+  `scripts/tests/serena-pool.test.mjs` takes its ports from the operating
+  system instead of a fixed range, and a failed shutdown in a test's cleanup
+  no longer hides the assertion that failed first.
+- `codex-status` prints a `Serena pool:` line from a read-only probe
+  (`scripts/lib/serena-pool-probe.mjs`): the installed bridge's preferred
+  port, whether this machine can bind it, the recorded manager port, and
+  whether a manager answers. It is an attention item only when the port
+  cannot be bound and the installed bridge has no fallback.
+- Claude ask rules: Claude Code asks on every `permissions.ask` rule in every
+  permission mode, including `bypassPermissions`, so the 176 ask rules the
+  fragment carried (every Codex prompt plus the option guards) were 176
+  questions per kind of command, and the ones the user deleted came back on
+  the next update and were counted as missing by `codex-status`. The
+  generated fragment now keeps 56 ask rules, the ones for what cannot be taken
+  back or leaves the machine (force, delete, and mirror pushes; branch, tag,
+  repository, and release deletion; `gh auth` and token commands; publishing;
+  `Stop-Process`; the deploy, destroy, migrate, seed, prune, release, reset,
+  and repair scripts). The other prompts, and the ten prompted browser tools
+  of Playwright and chrome-devtools (navigate, screenshot, snapshot, close,
+  network requests), are neither allowed nor asked on Claude Code; `deny`
+  rules are unchanged. The previous full lists are gone: `emitClaudePermissions`
+  and `emitClaudeMcpPermissions` emit only this ask list, and no install flag
+  brings the old one back. On an update (`--refresh-managed`, which
+  `npm run chef -- --update --apply` passes), a dropped rule still in
+  `settings.json` is retired with the usual backup, a dropped rule the user
+  already removed is released from the merge receipt, and the Claude target
+  check no longer reports a rule the fragment dropped as missing.
+- Codex main model: `templates/codex/config.{windows,unix}.toml` set `model`
+  and `review_model` to `gpt-6-luna` (was `gpt-5.5`); `catalog/agents.json`
+  `defaults.model` and its validator follow.
+- Routing hint hook: Claude Code delivers a message from another session
+  behind the sentence "Another Claude session sent a message:", not behind
+  the `<cross-session-message>` tag the synthetic-turn guard knew. The text
+  inside scored like a user prompt and produced a `release-or-publish` hint
+  for a peer's status report. The sentence is now a synthetic prefix.
+
 ## 1.3.4 - 2026-10-06
 
 Skills and roles are used when a request needs them, by

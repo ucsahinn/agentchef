@@ -2,6 +2,39 @@
 
 This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
+## v1.3.5 - 2026-10-12
+
+AgentChef 1.3.5 starts the Serena pool on a machine whose port range is
+reserved, asks on Claude Code only about what cannot be taken back, and runs
+Codex on `gpt-6-luna`. Update with `npm run chef -- --update --apply`, then
+start a new session in both CLIs.
+
+### What Changed
+
+- **Serena pool.** Windows reserves port ranges that no listing shows, and on
+  one machine the whole derived range refused to bind, so every session
+  reported `serena CONNECTION_CLOSED`. When the preferred port cannot be
+  bound, the manager now walks a fixed sequence of fallback ports, binds the
+  first free one, and records it under `~/.codex/serena-pool/port`; the
+  bridges read that record first, and two managers started at once meet on
+  one port. `AGENTCHEF_SERENA_POOL_PORT` is still the preferred port.
+  `codex-status` prints a `Serena pool:` line with the preferred port, whether
+  this machine can bind it, and the manager that answers.
+- **Claude ask rules.** Claude Code asks on every `permissions.ask` rule in
+  every permission mode, including `bypassPermissions`, so the 186 ask rules
+  the fragment carried were 186 questions. It now carries 56: force, delete,
+  and mirror pushes; branch, tag, repository, and release deletion; `gh auth`
+  and token commands; publishing; `Stop-Process`; and the deploy, destroy,
+  migrate, seed, prune, release, reset, and repair scripts. Every other
+  prompt, and the prompted browser tools, are neither allowed nor asked; the
+  permission mode you chose decides. The update retires the dropped rules
+  from `settings.json` with the usual backup, and a rule you already removed
+  is released instead of added back or counted as missing.
+- **Codex model.** `config.toml` sets `model` and `review_model` to
+  `gpt-6-luna`; the role files already ran their workers on it.
+- **Routing hint.** A message relayed from another Claude session no longer
+  produces a routing hint.
+
 ## v1.3.4 - 2026-10-06
 
 AgentChef 1.3.4 uses a skill or a role when a request needs it, by rule and by

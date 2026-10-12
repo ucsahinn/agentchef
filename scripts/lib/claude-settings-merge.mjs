@@ -47,6 +47,10 @@ export function planSettingsMerge(current, fragment, { previousEntries = [], ret
   const entries = [];
   const skipped = [];
   const retired = [];
+  // Rules this install recorded, no longer wants, and that are already gone
+  // from the file (the user removed them): their receipt entries are released
+  // so they are neither re-added nor reported as missing.
+  const released = [];
 
   // Rules AgentChef added last time, by list, so a superseded one can be taken
   // back. `deny` is deliberately absent: it is never widened or narrowed here.
@@ -114,6 +118,11 @@ export function planSettingsMerge(current, fragment, { previousEntries = [], ret
           if (!owned.has(valueSha256(value))) continue;
           retirable.add(value);
         }
+        const presentHashes = new Set(existingRules.map((rule) => valueSha256(String(rule))));
+        for (const [hash, preview] of owned) {
+          if (wantedSet.has(preview) || presentHashes.has(hash)) continue;
+          released.push({ pointer: pointerFor(["permissions", list]), valueSha256: hash, preview });
+        }
       }
       const removals = [...retirable];
       if (additions.length === 0 && removals.length === 0) continue;
@@ -166,5 +175,5 @@ export function planSettingsMerge(current, fragment, { previousEntries = [], ret
       }
     }
   }
-  return { next, entries, skipped, retired, changed: entries.length > 0 || retired.length > 0 };
+  return { next, entries, skipped, retired, released, changed: entries.length > 0 || retired.length > 0 };
 }

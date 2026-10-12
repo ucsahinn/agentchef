@@ -1,8 +1,8 @@
 # Windows-first AgentChef.
 # Copy to ~/.codex/config.toml with scripts/install.ps1.
 
-model = "gpt-5.5"
-review_model = "gpt-5.5"
+model = "gpt-6-luna"
+review_model = "gpt-6-luna"
 model_reasoning_effort = "medium"
 model_reasoning_summary = "auto"
 model_verbosity = "medium"

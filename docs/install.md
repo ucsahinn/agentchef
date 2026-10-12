@@ -715,7 +715,8 @@ What stays, by design:
   `[mcp_servers.serena]` and `[agents.*]` tables, or restore a backup, then run
   the removal again.
 - The generated MCP profiles (`full`, `multi-session`, `offline`).
-- `CODEX_HOME/serena-pool`, the pool token both targets share.
+- `CODEX_HOME/serena-pool`, the pool token both targets share and the port
+  record of the running manager.
 - Optional Git guards. Restore them with the receipt printed at install time.
 - Every backup archive.
 
