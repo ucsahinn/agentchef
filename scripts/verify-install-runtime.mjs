@@ -1043,12 +1043,20 @@ function inspectClaudeRuntime(failures, warnings) {
       failures.push(`Claude merge target unreadable: ${redact(mergeReceipt.target)} (${error.message})`);
       return { receipt: redact(mergeReceiptPath), status: "target-unreadable" };
     }
-    const entries = inspectReceipt(mergeReceipt, document);
+    // A permission rule the current fragment no longer carries is released,
+    // not missing: the user removed it and the next update lets it go.
+    const fragment = readJson("templates/claude/settings.fragment.json").permissions || {};
+    const stillWanted = (entry) => {
+      const list = ["allow", "ask"].find((name) => entry.pointer === `/permissions/${name}`);
+      return !list || (fragment[list] || []).includes(entry.preview);
+    };
+    const entries = inspectReceipt(mergeReceipt, document).map((entry) => (entry.status === "missing" && entry.kind === "array-item" && !stillWanted(entry) ? { ...entry, status: "released" } : entry));
     const missing = entries.filter((entry) => entry.status === "missing" && entry.kind !== "container");
+    const released = entries.filter((entry) => entry.status === "released");
     const changed = entries.filter((entry) => entry.status === "changed");
     if (missing.length > 0) failures.push(`${missing.length} recorded entr${missing.length === 1 ? "y is" : "ies are"} missing from ${redact(mergeReceipt.target)}; rerun the installer with --target claude.`);
     if (changed.length > 0) warnings.push(`${changed.length} AgentChef entr${changed.length === 1 ? "y was" : "ies were"} changed by the user in ${redact(mergeReceipt.target)}; they are kept as user content.`);
-    return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
+    return { receipt: redact(mergeReceiptPath), target: redact(mergeReceipt.target), entries: entries.length, missing: missing.length, released: released.length, changed: changed.length, status: missing.length > 0 ? "missing-entries" : changed.length > 0 ? "user-changed" : "current" };
   });
   // AgentChef never overwrites an MCP entry the user defined, so a user entry
   // with the same name as an AgentChef default silently wins. Say so: the

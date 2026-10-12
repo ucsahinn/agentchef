@@ -401,7 +401,22 @@ export function applyClaudeInstall(options, plan) {
         }
         const receiptPath = path.join(receiptsRoot, `${action.id}-receipt.json`);
         const previous = readReceipt(receiptPath);
+        const released = action.plan.released || [];
         if (!action.plan.changed) {
+          // The file is left alone; a rule the user removed and the fragment
+          // no longer wants is only let go from the receipt, so it is neither
+          // added back later nor reported as missing.
+          if (previous && released.length > 0) {
+            const receiptBackup = backupInto(backupRoot, backupRoots, receiptPath);
+            journal.recordBackup(receiptBackup);
+            journal.prepareMutation({ target: receiptPath, backup: receiptBackup });
+            fs.rmSync(receiptPath);
+            writeReceipt(receiptPath, { ...previous, entries: mergeReceiptEntries(previous, [], released) });
+            journal.markApplied(receiptPath);
+            installed.receipts.push(receiptPath);
+            results.push({ id: action.id, status: "current", released: released.length });
+            continue;
+          }
           results.push({ id: action.id, status: "current" });
           if (previous) installed.receipts.push(receiptPath);
           continue;
@@ -417,7 +432,7 @@ export function applyClaudeInstall(options, plan) {
           target: action.destination,
           beforeSha256: before,
           afterSha256: fileSha256(action.destination),
-          entries: mergeReceiptEntries(previous, action.plan.entries, action.plan.retired || []),
+          entries: mergeReceiptEntries(previous, action.plan.entries, [...(action.plan.retired || []), ...released]),
           backupPath: backup
         });
         const receiptBackup = fs.existsSync(receiptPath) ? backupInto(backupRoot, backupRoots, receiptPath) : null;

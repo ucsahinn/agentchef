@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { emitClaudeAgents } from "../lib/emitters/claude-agents.mjs";
 import { emitClaudePermissions, parseCodexRules } from "../lib/emitters/claude-permissions.mjs";
+import { emitClaudeMcpPermissions } from "../lib/emitters/claude-mcp-permissions.mjs";
 import { renderClaudePluginManifest } from "../render-target-artifacts.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -84,37 +85,74 @@ test("Claude permissions are derived from the Codex rules without wildcard grant
   assert.ok(!Object.hasOwn(permissions, "deny") || permissions.deny.every((rule) => /^[A-Za-z]+\(.+\)$/.test(rule)));
 });
 
-test("allow rules that can run code or write files carry an ask guard, or are asked outright", () => {
+test("the ask list keeps only the questions for what cannot be taken back or leaves the machine", () => {
+  const { permissions } = emitClaudePermissions(rulesText);
+  assert.ok(permissions.allow.length > permissions.ask.length, "the allow list is untouched by the ask filter");
+  // The 56 rules a user kept on 2026-10-07 after deleting 134 of the 190 the
+  // 1.3.0 install had written: the measured definition of "critical".
+  const scripts = ["db:drop", "db:migrate", "delete", "deploy", "destroy", "drop", "migrate", "prune", "publish", "release", "remove", "repair:install -- --apply", "repair:install -- --prune-managed-plugin-extras", "reset", "seed", "ship", "truncate", "wipe"];
+  const expected = [
+    ...["login", "logout", "refresh", "setup-git", "switch", "token"].map((verb) => `Bash(gh auth ${verb} *)`),
+    "Bash(gh config get *token*)", "Bash(gh release delete *)", "Bash(gh repo delete *)",
+    "Bash(git branch --delete *)", "Bash(git branch -D *)",
+    "Bash(git push * -f *)", "Bash(git push *--delete*)", "Bash(git push *--force*)", "Bash(git push *--mirror*)",
+    "Bash(git tag --delete *)", "Bash(git tag -d *)",
+    "Bash(npm publish *)", ...scripts.map((script) => `Bash(npm run ${script} *)`),
+    "Bash(npm.cmd publish *)", ...scripts.map((script) => `Bash(npm.cmd run ${script} *)`),
+    "PowerShell(Stop-Process *)"
+  ];
+  assert.deepEqual(permissions.ask, expected);
+  assert.equal(permissions.ask.length, 56);
+  for (const dropped of ["Bash(git push *)", "Bash(git commit *)", "Bash(npm install *)", "Bash(rm *)", "Bash(rg *--pre*)", "Bash(node --check *)", "Bash(npx.cmd skills list *)", "Bash(gh auth status *)", "Bash(npm run *)"]) {
+    assert.equal(permissions.ask.includes(dropped), false, `${dropped} no longer asks`);
+    assert.equal(permissions.allow.includes(dropped), false, `${dropped} is not auto-allowed either`);
+  }
+  assert.deepEqual(permissions.allow.filter((rule) => permissions.ask.includes(rule)), []);
+});
+
+test("no MCP ask rule is emitted; a prompted tool is neither allowed nor asked, deny is unchanged", () => {
+  const mcpCatalog = JSON.parse(fs.readFileSync(path.join(root, "catalog", "mcp-servers.json"), "utf8"));
+  const rules = emitClaudeMcpPermissions(mcpCatalog);
+  const prompted = mcpCatalog.servers.flatMap((server) =>
+    Object.entries(server.toolApprovals || {}).filter(([, decision]) => decision === "prompt").map(([tool]) => tool));
+  assert.ok(prompted.length >= 10, "the catalog still prompts the browser tools on Codex");
+  assert.deepEqual(rules.ask, []);
+  assert.ok(rules.deny.includes("mcp__playwright__browser_run_code_unsafe"));
+  assert.ok(!rules.allow.includes("mcp__playwright__browser_navigate"), "a prompted tool is not auto-allowed either");
+  assert.ok(rules.allow.length > 0);
+  assert.deepEqual(rules.allow.filter((rule) => rules.deny.includes(rule)), []);
+});
+
+test("an allow rule that can run code or write files is still guarded or demoted, without a question", () => {
   const rulesText = fs.readFileSync(path.join(root, "templates", "codex", "rules", "default.rules"), "utf8");
   const { permissions } = emitClaudePermissions(rulesText);
-  // Each was measured to run code or write a file through its allow rule.
+  // Each was measured to run code or write a file through its allow rule. The
+  // guard outranks the allow rule by not being allowed; it is not a question.
   for (const [allowed, guard] of [
     ["Bash(rg *)", "Bash(rg *--pre*)"],
     ["Bash(git diff *)", "Bash(git diff *--output*)"],
     ["Bash(git log *)", "Bash(git log *--output*)"],
-    ["Bash(git show *)", "Bash(git show *--output*)"]
+    ["Bash(git show *)", "Bash(git show *--output*)"],
+    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks * -r=*)"],
+    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks *--log-opts*)"],
+    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--no-ignore-scripts*)"],
+    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--pack-destination*)"]
   ]) {
     assert.ok(permissions.allow.includes(allowed), `${allowed} stays usable`);
-    assert.ok(permissions.ask.includes(guard), `${guard} must outrank ${allowed}`);
+    assert.equal(permissions.allow.includes(guard), false, `${guard} is never allowed`);
+    assert.equal(permissions.ask.includes(guard), false, `${guard} is not a question`);
   }
+  // The token guard is the one option guard that leaves the machine's secrets.
+  assert.ok(permissions.allow.includes("Bash(gh config get *)"));
+  assert.ok(permissions.ask.includes("Bash(gh config get *token*)"));
   for (const demoted of ["Bash(node --check *)", "Bash(git ls-remote *)"]) {
     assert.equal(permissions.allow.includes(demoted), false, `${demoted} must not be auto-allowed`);
-    assert.ok(permissions.ask.includes(demoted));
+    assert.equal(permissions.ask.includes(demoted), false, `${demoted} is not a question`);
   }
   // npx prefers a matching package in the project's node_modules, so a
   // repository can supply the code a launch runs.
   assert.deepEqual(permissions.allow.filter((rule) => /\bnpx(\.cmd)? /.test(rule)), [], "no npx launch is auto-allowed");
-  assert.ok(permissions.ask.includes("Bash(npx.cmd skills list *)"));
-  for (const [allowed, guard] of [
-    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks * -r=*)"],
-    ["Bash(gitleaks detect --redact --no-banner --no-git --verbose *)", "Bash(gitleaks *--log-opts*)"],
-    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--no-ignore-scripts*)"],
-    ["Bash(npm pack --dry-run --json --ignore-scripts *)", "Bash(npm pack *--pack-destination*)"],
-    ["Bash(gh config get *)", "Bash(gh config get *token*)"]
-  ]) {
-    assert.ok(permissions.allow.includes(allowed), `${allowed} stays usable`);
-    assert.ok(permissions.ask.includes(guard), `${guard} must outrank ${allowed}`);
-  }
+  assert.equal(permissions.ask.includes("Bash(npx.cmd skills list *)"), false);
 });
 
 test("the Claude plugin manifest mirrors the Codex manifest version and lists every agent file", () => {

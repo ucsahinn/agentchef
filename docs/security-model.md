@@ -116,7 +116,9 @@ Rules used in this starter:
   after a backup of `.claude.json`.
 - Claude Code has no per-server tool allowlist, so the Codex decisions become
   permission rules generated from the catalog: `approve` → `allow`, `prompt` →
-  `ask`, and `deny` for codebase-memory's `delete_project`, `index_repository`,
+  no rule (Claude Code asks on every `ask` rule in every permission mode, so a
+  prompted browser tool is left to the permission mode the user chose), and
+  `deny` for codebase-memory's `delete_project`, `index_repository`,
   `ingest_traces`, and `manage_adr` plus Playwright's
   `browser_run_code_unsafe`, `browser_evaluate`, and `browser_file_upload`.
   Playwright's rules use the plain `mcp__playwright__<tool>` names, so the deny
@@ -504,7 +506,20 @@ inspection. It prompts for:
   credential helper
 - `node --check`, which still loads `--require` / `--import` modules
 - `rg --pre` and `rg --pre-glob` as the first argument (a prefix rule sees
-  nothing later; the Claude Code rules ask on `--pre` anywhere)
+  nothing later)
+
+Claude Code asks on every `permissions.ask` rule in every permission mode,
+including `bypassPermissions`, so each one is a question the user answers by
+hand. The generated Claude fragment therefore keeps only the prompts for what
+cannot be taken back or leaves the machine: force, delete, and mirror pushes,
+branch and tag deletion, repository and release deletion, `gh auth` and token
+commands, publishing, `Stop-Process`, and the repository scripts that deploy,
+destroy, migrate, seed, prune, release, reset, or repair. Every other Codex
+prompt above (a commit, a plain push, a dependency install, a file removal,
+the option guards such as `rg --pre`) is neither allowed nor asked on Claude
+Code; the permission mode the user chose decides. An ask rule the user removed
+from `settings.json` is released from the receipt on the next update instead
+of being added back or counted as missing.
 
 Official reference: https://developers.openai.com/codex/rules
 

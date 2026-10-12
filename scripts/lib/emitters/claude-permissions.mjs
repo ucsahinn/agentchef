@@ -77,6 +77,31 @@ const claudeDemotedToAsk = [
 // needs these launches as Bash commands; every npx launch asks.
 const claudeDemotedPrefixes = ["Bash(npx ", "Bash(npx.cmd ", "Bash(cmd.exe /c npx "];
 
+// Claude Code asks on every `ask` rule in every permission mode, including
+// bypassPermissions, so each ask rule is a question the user answers by hand.
+// The default profile keeps the questions for what cannot be taken back or
+// leaves the machine: force, delete and mirror pushes, branch and tag
+// deletion, repository and release deletion, credential commands, publishing,
+// stopping processes, and the repository scripts that deploy, destroy,
+// migrate, seed, prune, release, reset, or repair. Every other Codex prompt
+// (a commit, a plain push, a dependency install, a file removal) and the
+// option guards above are left to the permission mode the user chose. The
+// `full` profile keeps all of them; nothing selects it at install time yet.
+const criticalAskRules = [
+  /^PowerShell\(Stop-Process \*\)$/,
+  /^Bash\(gh (repo|release) delete \*\)$/,
+  /^Bash\(gh auth (login|logout|refresh|setup-git|switch|token) \*\)$/,
+  /^Bash\(gh config get \*token\*\)$/,
+  /^Bash\(git branch (-D|--delete) \*\)$/,
+  /^Bash\(git tag (-d|--delete) \*\)$/,
+  /^Bash\(npm(\.cmd)? publish \*\)$/,
+  /^Bash\(npm(\.cmd)? run (publish|deploy|destroy|drop|db:drop|wipe|truncate|delete|db:migrate|migrate|prune|release|remove|reset|seed|ship|repair:install -- --apply|repair:install -- --prune-managed-plugin-extras) \*\)$/
+];
+// A plain push is an ordinary step; only the forms that rewrite or remove
+// remote history keep asking.
+const criticalAskNarrowing = {
+  "Bash(git push *)": ["Bash(git push *--force*)", "Bash(git push * -f *)", "Bash(git push *--delete*)", "Bash(git push *--mirror*)"]
+};
 export function emitClaudePermissions(rulesText) {
   const allow = new Set();
   const ask = new Set();
@@ -100,10 +125,15 @@ export function emitClaudePermissions(rulesText) {
   }
   // A rule that appears in both sets keeps the stricter decision.
   for (const rule of ask) allow.delete(rule);
+  // Claude Code asks on every ask rule in every permission mode, so only the
+  // prompts for what cannot be taken back or leaves the machine become
+  // questions; the other prompts, and the option guards, are neither allowed
+  // nor asked and the user's permission mode decides.
+  const askRules = [...ask].flatMap((rule) => criticalAskNarrowing[rule] ?? (criticalAskRules.some((pattern) => pattern.test(rule)) ? [rule] : []));
   return {
     permissions: {
       allow: [...allow].sort(),
-      ask: [...ask].sort()
+      ask: askRules.sort()
     },
     skipped
   };

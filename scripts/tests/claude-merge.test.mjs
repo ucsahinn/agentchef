@@ -271,3 +271,22 @@ test("a user's own ask rule still wins over an AgentChef allow", () => {
   assert.deepEqual(plan.next.permissions.ask, [rule]);
   assert.equal(plan.next.permissions.allow?.includes(rule) ?? false, false);
 });
+
+test("an ask rule the fragment dropped and the user already removed is released from the receipt, not re-added", () => {
+  const dropped = "Bash(git commit *)";
+  const kept = "Bash(git push *--force*)";
+  const first = planSettingsMerge({}, { permissions: { ask: [dropped, kept] } });
+  assert.deepEqual(first.next.permissions.ask, [dropped, kept]);
+  // The user deletes the commit question; the next release stops asking for it.
+  const userPruned = { permissions: { ask: [kept] } };
+  const second = planSettingsMerge(userPruned, { permissions: { ask: [kept] } }, { previousEntries: first.entries, retire: true });
+  assert.deepEqual(second.next.permissions.ask, [kept], "nothing is added back");
+  assert.equal(second.changed, false, "the file is left alone");
+  assert.deepEqual(second.retired, [], "nothing was in the file to retire");
+  assert.deepEqual(second.released.map((entry) => entry.preview), [dropped], "the receipt lets the rule go");
+  // Without retire (a plain install) ownership is not consulted, and a wanted rule is never released.
+  assert.deepEqual(planSettingsMerge(userPruned, { permissions: { ask: [kept] } }, { previousEntries: first.entries }).released, []);
+  const stillWanted = planSettingsMerge(userPruned, { permissions: { ask: [dropped, kept] } }, { previousEntries: first.entries, retire: true });
+  assert.deepEqual(stillWanted.released, []);
+  assert.deepEqual(stillWanted.next.permissions.ask, [kept, dropped], "a rule the fragment still wants is added back");
+});
