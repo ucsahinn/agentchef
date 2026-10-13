@@ -1,5 +1,17 @@
 # Release Notes
 
+## v1.5.1 - 2026-10-13
+
+AgentChef 1.5.1 hardens the experimental team runner after its first multi-role live runs. Collection scans only added diff lines, rejects unsafe worker content per worker instead of stopping the whole run, survives long worker evidence, and reuses an existing delivery commit. Worker prompts carry a configurable language and Windows test guidance. Execution remains opt-in and disabled by default; start and merge still require separate human approvals.
+
+### What Changed
+
+- **Collection.** Only added diff lines are scanned for secret-like content, with file and line diagnostics and never the value. A rejected worker is marked `rejected_content` and releases its lease while the other workers are still collected. The report and board evidence are validated before the delivery commit, board evidence is truncated to the board limit, an existing delivery commit on a clean worktree is reused, and untracked files are listed individually for the write-scope check.
+- **Worker prompts.** `workers.language` in the team-mode contract sets the language of worker progress messages and handoffs while code, paths, and commands stay verbatim. On Windows, workers are told to run Node tests with `--test-isolation=none` because the Codex sandbox blocks child processes.
+- **Docs.** The operator guides document approval gates, recovery and rollback, worker lease outcomes, constrained Codex resume, and platform process handling. The Turkish 1.5.0 release notes are re-encoded.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.5.0 - 2026-10-12
 
 AgentChef 1.5.0 adds an experimental, opt-in team runner. A Claude conductor plans isolated Codex worker tasks, then collects and integrates their changes for independent verification. Execution remains disabled unless `AGENTCHEF_TEAM_MODE=experimental` is set; start and merge require separate human approvals. The runner does not push or publish.
@@ -8,8 +20,6 @@ AgentChef 1.5.0 adds an experimental, opt-in team runner. A Claude conductor pla
 
 - **Team runs.** The conductor skill and `team:run` CLI support planning, supervised Codex workers, status, collection, integration, independent verification, and approval-gated merge. Each worker uses its own Git worktree and bounded sandbox; execution is opt-in and disabled by default.
 - **Safety and visibility.** The team-mode contract validator checks role and sandbox limits. Run records, worker events, and usage are available for review, and Windows Codex configuration arguments are passed without TOML quotes that the .cmd shim cannot preserve.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.3.5 - 2026-10-12
 

@@ -23,6 +23,14 @@ yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
 ## Deneysel Takım Koşuları
 
+Worker'lar tüm ilerleme mesajlarını ve handoff metnini
+`catalog/subscription-team-mode.json` içindeki `workers.language` dilinde yazar
+(varsayılan: `tr`); kodu, yolları ve komutları olduğu gibi bırakır. Windows'ta
+Node testlerini `node --test --test-isolation=none <files>` ile (Node.js 22.8
+veya sonrası) çalıştırın; sandbox test çalıştırıcısının alt süreçlerini
+`spawn EPERM` ile engelleyebilir. Bu komut da başarısız olursa bunu kod hatası
+saymayın, Risks bölümünde bildirin.
+
 Yalnız açık çağrılan `team-conductor` skill'i etkileşimli Claude Code
 oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Bu özellik
 deneyseldir ve varsayılan olarak kapalıdır. Opt-in için süreç ortamına
@@ -70,6 +78,29 @@ toplanır. Entegrasyon `--check` komutları entegrasyon worktree'sinde yerel ana
 süreç olarak çalışır; koşuyu başlatmadan önce bunları çalıştırılabilir kod gibi
 inceleyin. Motorun entegrasyon ve son birleştirme işlemlerinde Git hook'ları
 devre dışı bırakılır.
+
+Iki ayri, tek kullanimlik kullanici kapisi vardir. `plan` sonrasinda
+koordinator plani gosterip tam olarak `baslat <runId>` sohbet cumlesini ister;
+basarili dogrulamadan sonra `birlestir <runId>` ister. Beyin onay kancasi ilgili
+JSON dosyasini durum dizininin `approvals/` altina yazar; motor yalnizca okur
+ve onayi tuketir. Onay kosu ve kapiyla eslesmeli, `approvedAt` ilgili
+`plannedAt` zamanindan sonra olmali ve yedi gunden eski olmamalidir. Motor onay
+dosyasi olusturmaz. Eksik, eski veya eslesmeyen kapi 3 koduyla cikar; kapiyi
+asmak icin yeniden denemeyin.
+
+Codex devam cagrisinda kayitli thread ve worktree kullanilir; yalnizca `-c`,
+`--json`, `-m`, `-o`/`--output-schema` ve stdin (`-`) secenekleri verilir.
+Resume bayraklariyla dizin, sandbox veya profil degistirilmez. Windows alt
+surecleri gizli konsolda calisir; istege bagli izleyici Windows Terminal'i
+(`wt`, cozumlenmis exe takma adi dahil) kullanir. POSIX worker'lari kendi
+surec grubunda calisir.
+
+Toplanamayan, zaman asimina ugrayan veya yazma kapsamini ihlal eden worker
+gorevlerinin kiralari serbest birakilir. Yazma yetkili worker Git degisikligi
+uretemeden biterse kasitli olarak `failed` isaretlenir; incelenebilir commit
+yoktur. Salt-okunur worker rapor dondurur ve yazma kirasi almaz. Worker baska
+subagent acamaz; ek uzmanlik istegini `needs: <rol> - <neden>` biciminde
+koordinatorune dondurmelidir.
 
 ## Plugins
 

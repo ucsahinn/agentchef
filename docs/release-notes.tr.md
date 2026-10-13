@@ -1,15 +1,25 @@
-# S?r?m Notlar?
+# Sürüm Notları
+
+## v1.5.1 - 2026-10-13
+
+AgentChef 1.5.1, ilk çok rollü canlı koşulardan sonra deneysel takım yürütücüsünü sağlamlaştırır. Toplama yalnız eklenen diff satırlarını tarar, güvensiz işçi içeriğini tüm koşuyu durdurmak yerine işçi başına reddeder, uzun işçi kanıtında çökmez ve var olan teslim commit'ini yeniden kullanır. İşçi promptları yapılandırılabilir bir dil ve Windows test rehberi taşır. Yürütme isteğe bağlı ve varsayılan olarak kapalı kalır; başlatma ve birleştirme yine ayrı insan onayı ister.
+
+### Neler Değişti
+
+- **Toplama.** Sır benzeri içerik için yalnız eklenen diff satırları taranır; tanı dosya ve satır verir, değeri asla vermez. Reddedilen işçi `rejected_content` olarak işaretlenir ve kirasını bırakır; diğer işçiler toplanmaya devam eder. Rapor ve pano kanıtı teslim commit'inden önce doğrulanır, pano kanıtı pano sınırına kırpılır, temiz worktree'deki var olan teslim commit'i yeniden kullanılır ve izlenmeyen dosyalar yazma kapsamı denetimi için tek tek listelenir.
+- **İşçi promptları.** Takım sözleşmesindeki `workers.language` işçi ilerleme mesajlarının ve handoff'un dilini belirler; kod, yol ve komutlar olduğu gibi kalır. Windows'ta işçilere Node testlerini `--test-isolation=none` ile koşmaları söylenir, çünkü Codex sandbox'ı alt süreçleri engeller.
+- **Belgeler.** Operatör rehberleri onay kapılarını, kurtarma ve geri almayı, işçi kira sonuçlarını, kısıtlı Codex resume davranışını ve platform süreç yönetimini anlatır. Türkçe 1.5.0 sürüm notları yeniden kodlandı.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.5.0 - 2026-10-12
 
-AgentChef 1.5.0 deneysel, iste?e ba?l? bir tak?m y?r?t?c?s? ekler. Claude g?zetmeni, yal?t?lm?? Codex i??i g?revlerini planlar; ard?ndan de?i?iklikleri toplar ve ba??ms?z do?rulama i?in b?t?nle?tirir. Y?r?tme `AGENTCHEF_TEAM_MODE=experimental` ayarlanmad?k?a kapal?d?r; ba?latma ve birle?tirme ayr? insan onay? ister. Y?r?t?c? push veya yay?n yapmaz.
+AgentChef 1.5.0 deneysel, isteğe bağlı bir takım yürütücüsü ekler. Claude gözetmeni, yalıtılmış Codex işçi görevlerini planlar; ardından değişiklikleri toplar ve bağımsız doğrulama için bütünleştirir. Yürütme `AGENTCHEF_TEAM_MODE=experimental` ayarlanmadıkça kapalıdır; başlatma ve birleştirme ayrı insan onayı ister. Yürütücü push veya yayın yapmaz.
 
-### Neler De?i?ti
+### Neler Değişti
 
-- **Tak?m ko?ular?.** G?zetmen skill'i ve `team:run` CLI; planlama, g?zetimli Codex i??ileri, durum, toplama, b?t?nle?tirme, ba??ms?z do?rulama ve onayl? birle?tirmeyi destekler. Her i??i kendi Git worktree'sinde ve s?n?rl? sandbox'ta ?al???r; y?r?tme varsay?lan olarak kapal? ve iste?e ba?l?d?r.
-- **G?venlik ve g?r?n?rl?k.** Tak?m s?zle?mesi do?rulay?c?s? rol ve sandbox s?n?rlar?n? denetler. Ko?u kay?tlar?, i??i olaylar? ve kullan?m bilgisi incelenebilir. Windows Codex yap?land?rma arg?manlar? .cmd shim'in koruyamad??? TOML t?rnaklar? olmadan aktar?l?r.
-
-Bu sayfa kullan?c?lar?n ?imdi kurmas? gereken s?r?m? anlat?r. Eski m?hendislik ge?mi?i [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) i?inde korunur; b?ylece public s?r?m rehberi b?y?yen bir ar?ive d?n??meden g?ncel kal?r.
+- **Takım koşuları.** Gözetmen skill'i ve `team:run` CLI; planlama, gözetimli Codex işçileri, durum, toplama, bütünleştirme, bağımsız doğrulama ve onaylı birleştirmeyi destekler. Her işçi kendi Git worktree'sinde ve sınırlı sandbox'ta çalışır; yürütme varsayılan olarak kapalı ve isteğe bağlıdır.
+- **Güvenlik ve görünürlük.** Takım sözleşmesi doğrulayıcısı rol ve sandbox sınırlarını denetler. Koşu kayıtları, işçi olayları ve kullanım bilgisi incelenebilir. Windows Codex yapılandırma argümanları .cmd shim'in koruyamadığı TOML tırnakları olmadan aktarılır.
 
 ## v1.3.5 - 2026-10-12
 

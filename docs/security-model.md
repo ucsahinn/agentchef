@@ -611,6 +611,7 @@ and gates the run while the engine starts 1-4 allowlisted Codex `exec` workers
 in separate worktrees. The engine reads the user's single-use start and merge
 gates and never creates their backing files. The worker sandbox is the stricter
 of its role TOML and the team-mode ceiling; `test_verifier` is read-only.
+Team collection and integration scan only added diff lines for secret-like content, so unchanged context lines do not cause a rejection.
 
 Workers cannot push, spawn agents, or edit outside their assigned scope. The
 detached supervisor owns the Codex children; a visible terminal pane only
@@ -622,6 +623,19 @@ Read-only workers have no write-path scope or coordination-board lease. Start
 rolls back worktrees, newly-created branches, and task states if setup or the
 supervisor startup heartbeat fails. Engine-created worktrees use an empty Git
 hooks directory so repository checkout hooks do not run during setup.
+
+There are 21 allowlisted specialist worker roles. Each worker's effective
+sandbox is the stricter of the role template and the team-mode ceiling; the
+contract caps the general worker sandbox at `workspace-write`, and several
+roles are capped at `read-only`. `danger-full-access` is rejected. Runs allow
+one to four workers, with maximum nesting depth one; workers cannot spawn more
+agents and must return further-role requests as `needs: <role> - <why>`.
+`codex exec resume` uses only `-c`, `--json`, `-m`, `-o`,
+`--output-schema`, and stdin (`-`); resume does not accept directory, sandbox,
+or profile switches. Start and merge approvals are separate, single-use
+records written by the Beyin hook; the engine reads and consumes them, checks
+that approval follows the relevant plan timestamp, and rejects approvals older
+than seven days.
 
 ## Git Hygiene
 

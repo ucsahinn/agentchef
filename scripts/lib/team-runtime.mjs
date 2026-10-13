@@ -6,12 +6,13 @@ import { execFileSync } from "node:child_process";
 import { secretLikeCategory } from "./secret-classifier.mjs";
 import { parseBrief, parseHandoff } from "./agent-brief.mjs";
 import * as board from "./coordination-runtime.mjs";
+import { isProcessAlive, processCreatedAt } from "./codex-exec.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const CONTRACT = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/subscription-team-mode.json"),"utf8"));
 const AGENTS = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/agents.json"),"utf8"));
 const RUN_MOVES = { planned:["running","aborted","failed"], running:["paused","collected","aborted","failed"], paused:["running","collected","aborted","failed"], collected:["integrated","aborted","failed"], integrated:["verified","aborted","failed"], verified:["merged","aborted","failed"], merged:[], aborted:[], failed:[] };
-const WORKER_MOVES = { planned:["queued","aborted"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted"], running:["finished","failed","paused_limit","timed_out","aborted"], finished:["collected","scope_violation","failed"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[] };
+const WORKER_MOVES = { planned:["queued","aborted"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted"], running:["finished","failed","paused_limit","timed_out","aborted"], finished:["collected","scope_violation","failed","rejected_content"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[], rejected_content:[] };
 const fail = (message) => { throw new Error(message); };
 const clone = (value) => structuredClone(value);
 export function loadTeamContract(file = path.join(ROOT,"catalog/subscription-team-mode.json")) { return JSON.parse(fs.readFileSync(file,"utf8")); }
@@ -50,6 +51,28 @@ export function writeRunRecord(file, record) {
   return next;
 }
 export function updateRunRecord(file, mutator) { const lock=board.acquireCoordinationStateLock(file); try { const r=readRunRecord(file); const n=mutator(clone(r)); return writeRunRecord(file,n); } finally { lock.release(); } }
+export function acquireTeamOperationLock(file) {
+  fs.mkdirSync(path.dirname(file),{recursive:true});
+  for(let attempt=0;attempt<2;attempt+=1) {
+    const nonce=crypto.randomUUID(), lockedAt=new Date().toISOString();
+    let fd;
+    try { fd=fs.openSync(file,"wx"); }
+    catch(error) {
+      if(error.code!=="EEXIST"||attempt!==0) throw error;
+      let owner; try { owner=JSON.parse(fs.readFileSync(file,"utf8")); } catch {}
+      const current=owner?.pid&&Number.isInteger(owner.pid)?processCreatedAt(owner.pid):null;
+      const stale=Boolean(owner?.pid&&((owner.createdAt&&current&&current!==owner.createdAt)||!isProcessAlive(owner.pid)));
+      if(!stale) throw error;
+      try { fs.rmSync(file); } catch { throw error; }
+      continue;
+    }
+    try { fs.writeFileSync(fd,JSON.stringify({pid:process.pid,createdAt:processCreatedAt(process.pid),lockedAt,nonce})); }
+    catch(error) { try { fs.closeSync(fd); } catch {} try { if(JSON.parse(fs.readFileSync(file,"utf8")).nonce===nonce) fs.rmSync(file); } catch {} throw error; }
+    fs.closeSync(fd);
+    return { nonce, lockedAt, release() { try { if(JSON.parse(fs.readFileSync(file,"utf8")).nonce===nonce) fs.rmSync(file); } catch {} } };
+  }
+  throw new Error("Could not acquire team operation lock.");
+}
 export function readApproval(stateDir, runId, type) {
   if(!["baslat","birlestir"].includes(type)) fail("Unknown approval type.");
   const file=path.join(stateDir,"approvals",`${runId}.${type}.json`); try { return JSON.parse(fs.readFileSync(file,"utf8")); } catch(e) { if(e.code==="ENOENT"||e instanceof SyntaxError) return null; throw e; }
@@ -68,6 +91,19 @@ export function consumeApproval(file, consumer) {
     return n;
   } finally { lock.release(); }
 }
+export function consumeApprovalWith(file, consumer, commit) {
+  const lock=board.acquireCoordinationStateLock(file);
+  try {
+    const original=fs.readFileSync(file,"utf8"), approval=JSON.parse(original);
+    if(approval.kullanildi) fail("Approval has already been consumed.");
+    const consumed={...approval,kullanildi:new Date().toISOString(),kullanan:String(consumer)};
+    const write=(value)=>{const temp=`${file}.${crypto.randomUUID()}.tmp`;try{fs.writeFileSync(temp,value,{flag:"wx"});fs.renameSync(temp,file);}finally{try{fs.rmSync(temp,{force:true});}catch{}}};
+    write(`${JSON.stringify(consumed,null,2)}\n`);
+    try { commit(consumed); }
+    catch(error) { write(original); throw error; }
+    return consumed;
+  } finally { lock.release(); }
+}
 export function assertTeamTextSafe(text) { const category=secretLikeCategory(String(text??"")); if(category) fail(`Team content contains a ${category} and was rejected.`); return String(text??""); }
 const BRIEF_KEYS=["goal","evidence","scope","boundaries","doneWhen","returnFormat","userWords"];
 function formatBrief(brief) {
@@ -78,14 +114,20 @@ function formatBrief(brief) {
   const labels={goal:"Goal",evidence:"Evidence",scope:"Write scope",boundaries:"Boundaries",doneWhen:"Done when",returnFormat:"Return format",userWords:"User's words"};
   return BRIEF_KEYS.map(k=>`### ${labels[k]}\n${values[k]}`).join("\n\n");
 }
-const TEAM_RULES=`## Team rules\n- Work only in your assigned worktree and write scope.\n- Do not commit, push, checkout, create worktrees, or create branches.\n- Do not spawn agents; if needed, write needs: <role> - <why>.\n- Do not install packages or change global settings.\n- Never print, repeat, or persist secrets.\n- Your final response must be only JSON matching the output schema.`;
-export function composeWorkerPrompt({roleInstructions="",runId,taskId,role,brief}) {
+function teamRules(language, platform) {
+  const configured = language ?? CONTRACT.workers.language;
+  const languageName = configured || "tr";
+  const displayLanguage = languageName === "tr" ? "Turkish" : languageName;
+  const windowsRule = platform === "win32" ? "\n- On Windows the sandbox blocks child processes spawned by the Node test runner; run tests as `node --test --test-isolation=none <files>`; never conclude the code is broken from a `spawn EPERM`; report it under Risks if even that fails" : "";
+  return `## Team rules\n- Work only in your assigned worktree and write scope.\n- Do not commit, push, checkout, create worktrees, or create branches.\n- Do not spawn agents; if needed, write needs: <role> - <why>.\n- Do not install packages or change global settings.\n- Never print, repeat, or persist secrets.\n- Write every progress message and the handoff text in ${displayLanguage}; keep code, paths and commands verbatim.${windowsRule}\n- Your final response must be only JSON matching the output schema.`;
+}
+export function composeWorkerPrompt({roleInstructions="",runId,taskId,role,brief,language,platform=process.platform}) {
   for(const x of [roleInstructions,runId,taskId,role]) assertTeamTextSafe(x);
   const parsed=parseBrief(typeof brief==="string"?brief:BRIEF_KEYS.map(k=>`${({goal:"Goal",evidence:"Evidence",scope:"Write scope",boundaries:"Boundaries",doneWhen:"Done when",returnFormat:"Return format",userWords:"User's words"})[k]}: ${brief?.[k]??""}`).join("\n"));
   if(!parsed.ok) fail(`Brief missing fields: ${parsed.missing.join(", ")}.`);
-  return [roleInstructions.trim(),`# Team run ${runId} - ${taskId} (${role})`,`## Brief\n${formatBrief(parsed.fields)}`,TEAM_RULES,`## Return contract\nReturn exactly: outcome, evidence[], changedScope[], risks[], openQuestions[], needs[{role,why}], nextVerification, verdict (pass|partial|blocked|warn|fail), mutationCheck{claimedPaths[],outsideScope}.`].filter(Boolean).join("\n\n");
+  return [roleInstructions.trim(),`# Team run ${runId} - ${taskId} (${role})`,`## Brief\n${formatBrief(parsed.fields)}`,teamRules(language, platform),`## Return contract\nReturn exactly: outcome, evidence[], changedScope[], risks[], openQuestions[], needs[{role,why}], nextVerification, verdict (pass|partial|blocked|warn|fail), mutationCheck{claimedPaths[],outsideScope}.`].filter(Boolean).join("\n\n");
 }
-export function composeVerifierPrompt({runId,brief,checks=[]}) { const list=checks.length?checks.map((check)=>`- ${check}`).join("\n"):"- No commands were specified. Compare the integration diff with the worker briefs and inspect relevant files."; return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Reading files and running read-only commands such as git, cat, and Get-Content is allowed. Do not edit files.","Verdict must be pass, warn, partial, blocked, or fail. Use warn only when checks are inconclusive but safe to proceed with explicit limitations.",`Checks:\n${list}`].join("\n\n"); }
+export function composeVerifierPrompt({runId,brief,checks=[],language,platform=process.platform}) { const list=checks.length?checks.map((check)=>`- ${check}`).join("\n"):"- No commands were specified. Compare the integration diff with the worker briefs and inspect relevant files."; return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Reading files and running read-only commands such as git, cat, and Get-Content is allowed. Do not edit files.","Verdict must be pass, warn, partial, blocked, or fail. Use warn only when checks are inconclusive but safe to proceed with explicit limitations.",teamRules(language, platform).replace("## Team rules", "## Verifier rules"),`Checks:\n${list}`].join("\n\n"); }
 export function parseWorkerHandoff(value) {
   let data=value;
   if(typeof value==="string") { const fenced=value.match(/```(?:json)?\s*([\s\S]*?)```/i); try { data=JSON.parse(fenced?.[1]??value); } catch { const p=parseHandoff(value); return {ok:p.ok,fields:p.fields,missing:p.missing}; } }
@@ -111,7 +153,7 @@ export const mergeAbort=(repo)=>git(["merge","--abort"],repo);
 export const diffStat=(cwd=ROOT)=>git(["-c","core.quotePath=false","diff","--no-ext-diff","--no-textconv","--stat"],cwd);
 export const diffFull=(cwd=ROOT)=>git(["diff"],cwd);
 export function changedPaths(cwd=ROOT) {
-  const fields=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer",windowsHide:true}).toString("utf8").split("\0"), paths=[];
+  const fields=execFileSync("git",["status","--porcelain","-z","--untracked-files=all"],{cwd,encoding:"buffer",windowsHide:true}).toString("utf8").split("\0"), paths=[];
   for(let i=0;i<fields.length;i++){const entry=fields[i];if(!entry)continue;const status=entry.slice(0,2);paths.push(entry.slice(3));if(status.includes("R")||status.includes("C")){const previous=fields[++i];if(previous)paths.push(previous);}}
   return [...new Set(paths)];
 }

@@ -36,6 +36,7 @@
   },
   "workers": {
     "command": "codex exec --json",
+    "language": "tr",
     "promptTransport": "stdin",
     "minWorkers": 1,
     "maxWorkers": 4,
