@@ -75,6 +75,16 @@ route you want.
 | `codex debug models` | Inspect the model catalog Codex sees. |
 | `codex execpolicy check` | Test rules against a command. |
 
+## Experimental Team Worker Flags
+
+AgentChef's opt-in team mode launches non-interactive workers with `codex exec`
+from isolated worktrees. On Windows, the Codex `.cmd` shim rejects quoted
+`-c` values in this invocation path. Pass simple overrides as unquoted
+arguments, for example `-c approval_policy=never` and
+`-c windows.sandbox=unelevated`; do not add shell quotes around the values.
+The team engine uses the offline profile and role-bounded sandbox and must not
+use `--full-auto` or `--approve-for-me`.
+
 AgentChef's ownership-aware process commands are:
 
 ```bash
@@ -85,6 +95,15 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 
 The first two are read-only. The last command is the separately gated exact
 cleanup path; see [multi-session process hygiene](process-hygiene.md).
+
+`codex exec resume` has a different option set. The engine uses the worker
+worktree as the process working directory, passes the role sandbox with
+`-c sandbox_mode=<mode>`, and supplies model, JSON schema, and output file with
+the resume options `-m`, `--output-schema`, and `-o`. Resume does not accept
+`-C`, `-s`, or `-p`; it reuses the saved profile. On Windows, `-c
+windows.sandbox=unelevated` and `--ignore-rules` remain supported. The current
+team runner reports usage-limited workers as paused; automatic continuation is
+not available in this release.
 
 ## Runtime Verification Behavior
 

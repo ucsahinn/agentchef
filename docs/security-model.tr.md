@@ -595,6 +595,30 @@ https://code.claude.com/docs/en/hooks
 Operasyon sözleşmesi:
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md).
 
+### Takım Modu Sınırları
+
+Takım modu deneyseldir ve yalnız başlatan süreçte
+`AGENTCHEF_TEAM_MODE=experimental` varsa açılır. `team-conductor` skill'i yalnız
+açık çağrılır; kendisi opt-in yapamaz. Etkileşimli Claude oturumu koşuyu
+planlayıp kapıları yönetirken motor ayrı worktree'lerde 1-4 allowlist Codex
+`exec` worker'ı başlatır. Motor kullanıcının tek kullanımlık başlatma ve merge
+kapılarını okur; bunların dayandığı dosyaları oluşturmaz. Worker sandbox'ı rol
+TOML'ı ile takım modu tavanının daha kısıtlayıcısıdır; `test_verifier`
+salt-okunurdur.
+
+Worker'lar push yapamaz, agent açamaz veya atanmış kapsamları dışında yazamaz.
+Ayrık gözetmen Codex alt süreçlerinin sahibidir; görünür terminal sekmesi
+yalnızca olayları gösterir, kapatılması worker'ı durdurmaz. İstenen durdurma
+için takımın `abort` komutunu kullanın. `cleanup` ayrı ve açık bir işlemdir.
+Kullanım sınırına ulaşılması işi raporlama için bekletir; bu sürümde devam
+ettirme yoktur.
+
+Salt-okunur worker'ların yazma yolu kapsamı veya koordinasyon panosu kirası
+yoktur. Kurulum ya da gözetmen başlangıç heartbeat'i başarısız olursa
+başlatma işlemi oluşturduğu worktree'leri, yeni dalları ve kart durumlarını
+geri alır. Motorun oluşturduğu worktree'ler, kurulum sırasında depo checkout
+kancalarının çalışmaması için boş bir Git hooks dizini kullanır.
+
 ## Git Hijyeni
 
 Global Git guard'ları opsiyoneldir çünkü kullanıcının global Git default'larını

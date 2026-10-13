@@ -72,6 +72,16 @@ agent, skill, uzak OpenAI docs, built-in memory, hook ve app yüzeylerini korur.
 | `codex debug models` | Codex'in gördüğü model kataloğunu inceler. |
 | `codex execpolicy check` | Kuralları bir komut üzerinde test eder. |
 
+## Deneysel Takım Worker Flag'leri
+
+AgentChef'in opt-in takım modu etkileşimsiz worker'ları ayrı worktree'lerde
+`codex exec` ile başlatır. Windows'ta Codex `.cmd` shim'i bu invocation
+yolunda tırnaklı `-c` değerlerini reddeder. Basit override'ları tırnaksız
+argüman olarak verin; örneğin `-c approval_policy=never` ve
+`-c windows.sandbox=unelevated`. Değerlerin çevresine shell tırnağı eklemeyin.
+Takım motoru offline profili ve rol sandbox tavanını kullanır; `--full-auto`
+veya `--approve-for-me` kullanmamalıdır.
+
 Sahiplik farkındalıklı AgentChef süreç komutları:
 
 ```bash
@@ -82,6 +92,15 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 
 İlk iki komut yazmasızdır. Son komut ayrıca onaylı tam hedefli temizlik yoludur;
 ayrıntı için [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
+
+`codex exec resume` farklı seçenekler kabul eder. Motor worker worktree'sini
+süreç çalışma dizini olarak kullanır, rol sandbox'ını `-c
+sandbox_mode=<mode>` ile; model, JSON şeması ve çıktı dosyasını resume
+seçenekleri `-m`, `--output-schema` ve `-o` ile verir. Resume `-C`, `-s` veya
+`-p` kabul etmez; kaydedilmiş profili kullanır. Windows'ta `-c
+windows.sandbox=unelevated` ve `--ignore-rules` desteklenir. Mevcut takım
+motoru kullanım sınırına ulaşan worker'ı duraklatır; bu sürüm otomatik
+devam ettirmez.
 
 ## Runtime Dogrulama Davranisi
 

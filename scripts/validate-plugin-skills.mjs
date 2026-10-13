@@ -22,7 +22,8 @@ const expectedBundledSkills = new Set([
   "gptpro",
   "gptpro-handoff",
   "offline-diagram-triplet",
-  "seo"
+  "seo",
+  "team-conductor"
 ]);
 
 function posix(filePath) {

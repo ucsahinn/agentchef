@@ -1,0 +1,7 @@
+interface:
+  display_name: "Team Conductor"
+  short_description: "Run bounded experimental Codex worker teams from Claude."
+  default_prompt: "Use $team-conductor to plan and supervise an experimental team run with explicit user gates."
+
+policy:
+  allow_implicit_invocation: false

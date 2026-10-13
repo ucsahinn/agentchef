@@ -1,6 +1,15 @@
-# Sürüm Notları
+# S?r?m Notlar?
 
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+## v1.5.0 - 2026-10-12
+
+AgentChef 1.5.0 deneysel, iste?e ba?l? bir tak?m y?r?t?c?s? ekler. Claude g?zetmeni, yal?t?lm?? Codex i??i g?revlerini planlar; ard?ndan de?i?iklikleri toplar ve ba??ms?z do?rulama i?in b?t?nle?tirir. Y?r?tme `AGENTCHEF_TEAM_MODE=experimental` ayarlanmad?k?a kapal?d?r; ba?latma ve birle?tirme ayr? insan onay? ister. Y?r?t?c? push veya yay?n yapmaz.
+
+### Neler De?i?ti
+
+- **Tak?m ko?ular?.** G?zetmen skill'i ve `team:run` CLI; planlama, g?zetimli Codex i??ileri, durum, toplama, b?t?nle?tirme, ba??ms?z do?rulama ve onayl? birle?tirmeyi destekler. Her i??i kendi Git worktree'sinde ve s?n?rl? sandbox'ta ?al???r; y?r?tme varsay?lan olarak kapal? ve iste?e ba?l?d?r.
+- **G?venlik ve g?r?n?rl?k.** Tak?m s?zle?mesi do?rulay?c?s? rol ve sandbox s?n?rlar?n? denetler. Ko?u kay?tlar?, i??i olaylar? ve kullan?m bilgisi incelenebilir. Windows Codex yap?land?rma arg?manlar? .cmd shim'in koruyamad??? TOML t?rnaklar? olmadan aktar?l?r.
+
+Bu sayfa kullan?c?lar?n ?imdi kurmas? gereken s?r?m? anlat?r. Eski m?hendislik ge?mi?i [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) i?inde korunur; b?ylece public s?r?m rehberi b?y?yen bir ar?ive d?n??meden g?ncel kal?r.
 
 ## v1.3.5 - 2026-10-12
 

@@ -64,6 +64,14 @@
       "reason": "Bundled local plugin skill for the fixed task brief and handoff contract between agents, checked by coordination-board brief-check."
     },
     {
+      "name": "team-conductor",
+      "category": "agent-coordination",
+      "install": false,
+      "directInstall": true,
+      "directTarget": "${AGENTS_HOME}/plugins/sources/agentchef/skills/team-conductor",
+      "reason": "Bundled local plugin skill for explicit, approval-gated experimental Codex worker team runs conducted from Claude Code."
+    },
+    {
       "name": "context-budget-planner",
       "category": "context-engineering",
       "install": false,

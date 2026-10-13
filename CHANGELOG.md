@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.0 - 2026-10-12
+Team mode v2 adds a disabled-by-default experimental team runner with isolated Codex workers, approval-gated start and merge, collection, integration, verification, and supervision.
+
+- TASK-039: Add the v2 team-mode contract, validator, and 1.5.0 skeleton.
+- TASK-040: Add Codex exec workers with JSONL event and usage capture.
+- TASK-041: Add team runtime state, approvals, prompts, and coordination helpers.
+- TASK-042: Add team run planning, supervision, status, and abort flows.
+- TASK-043: Add collection, integration, verification, merge, and cleanup.
+- TASK-044: Add the Claude conductor skill, status reporting, and paired docs.
+- TASK-045: Complete package checks, release notes, and Windows Codex argument handling.
+- Fix review findings: persist Codex event output as it arrives, handle closed prompt pipes, and pass the correct AgentChef root and board path to the viewer.
+- Fix supervisor lease and worker settlement paths, collect read-only worker reports without commits, and align approval timing and worker branch names with the contract.
+- DUZELTME-6: Stop POSIX worker process groups with creation-time checks, and hide Windows child process consoles.
+- Disable Git hooks for engine merge operations and document that integration checks execute as local host processes.
+- Fix second-review and live-run findings: correct opt-in diagnostics, Windows Terminal alias discovery, NUL-safe status paths, transactional start rollback, read-only scope and lease handling, warning verdict support, Codex resume arguments, and supervisor test cleanup.
+- Fix third-review and live-run findings: retry blocked or partial verification from the integrated state, include verifier evidence in reports, clear stale run controls, release leases for uncollectable workers, serialize starts, stop the identified supervisor tree on rollback, and make the viewer exit when its worker finishes. Keep a write worker with no Git changes failed: the collection contract requires an inspectable commit for integration.
+- Fix fourth-review findings: recover stale start locks, keep aborted cards restartable, identify POSIX child processes during rollback, release failed-worker leases, write verifier evidence only for passing verdicts, discard stale verifier output, return one JSON document for watched status, and report post-merge worktree cleanup failures without misreporting the merge.
+- Fix Linux team-run cleanup detection for exited supervisor zombies and resolve Windows CLI aliases using Windows PATH semantics on every host.
+
 ## 1.3.5 - 2026-10-12
 
 The Serena pool starts on a machine whose port range is reserved, Claude Code

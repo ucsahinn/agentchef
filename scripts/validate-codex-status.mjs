@@ -20,6 +20,9 @@ if (!statusSource.includes("explicit invocation remains available only through a
 }
 
 function run(args, extra = {}) {
+  const env = { ...(extra.env || process.env) };
+  delete env.AGENTCHEF_TEAM_MODE;
+  delete env.AGENTCHEF_BOARD_STATE;
   return spawnSync(process.execPath, [
     "scripts/codex-status.mjs",
     "--codex-home",
@@ -32,7 +35,7 @@ function run(args, extra = {}) {
     stdio: ["ignore", "pipe", "pipe"],
     timeout: scaledTimeout(120000),
     windowsHide: true,
-    env: extra.env || process.env
+    env
   });
 }
 
@@ -278,6 +281,12 @@ if (failures.length === 0) {
 }
 
 if (report) {
+  if (report.teamMode?.inspected !== true || typeof report.teamMode?.enabled !== "boolean" || report.teamMode?.stability !== "experimental") {
+    fail("codex status must report inspected team mode state and experimental stability.");
+  }
+  if (!(report.teamMode?.lastRun === null || typeof report.teamMode?.lastRun === "string")) {
+    fail("codex status team mode lastRun must be a run filename or null.");
+  }
   if (report.schemaVersion !== "agentchef.status.v1") {
     fail("codex status schemaVersion drifted.");
   }
@@ -610,7 +619,7 @@ if (textResult.error) {
 } else if (textResult.status !== 0) {
   fail(`codex status text validation exited ${textResult.status}: ${(textResult.stderr || textResult.stdout).trim()}`);
 } else {
-  for (const required of ["AgentChef status", "Overall:", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
+  for (const required of ["AgentChef status", "Overall:", "Team mode: disabled (experimental) - last run: none", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
     if (!textResult.stdout.includes(required)) fail(`codex status text output missing: ${required}`);
   }
   for (const hiddenByDefault of ["Target Codex home:", "Ambient Codex:", "Enterprise routing:", "Effective controls:", "Context budget:", "Token-safe profile:", "MCP setup note:"]) {

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 
 const failures = [];
 
@@ -30,6 +31,13 @@ if (failures.length === 0) {
 }
 
 if (report) {
+  if (report.teamMode?.contract?.status !== "ok") {
+    fail("codex doctor must report a passing team-mode.contract check.");
+  }
+  const teamWorkerRoleCount = JSON.parse(fs.readFileSync("catalog/agents.json", "utf8")).agents.length;
+  if (report.teamMode?.contract?.roleTomlCount !== teamWorkerRoleCount) {
+    fail("codex doctor team-mode.contract must validate each cataloged role TOML.");
+  }
   if (report.schemaVersion !== "agentchef.doctor.v1") {
     fail("codex doctor schemaVersion drifted.");
   }

@@ -52,14 +52,25 @@ function runNodeCheck(relativePath) {
 }
 
 function runCliSmoke(name, cliArgs, expectedSnippets, extra = {}) {
+  const requestedEnv = extra.env || {};
+  const childEnv = {
+    ...process.env,
+    ...requestedEnv
+  };
+  const forceColor = String(childEnv.FORCE_COLOR || "").toLowerCase();
+  if (
+    forceColor !== ""
+    && forceColor !== "0"
+    && forceColor !== "false"
+    && !Object.hasOwn(requestedEnv, "NO_COLOR")
+  ) {
+    delete childEnv.NO_COLOR;
+  }
   const result = spawnSync(process.execPath, [path.join(root, "scripts/chef-cli.mjs"), ...cliArgs], {
     cwd: extra.cwd || root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: {
-      ...process.env,
-      ...(extra.env || {})
-    },
+    env: childEnv,
     windowsHide: true,
     timeout: extra.timeout || 180000
   });
