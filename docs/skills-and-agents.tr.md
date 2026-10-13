@@ -23,6 +23,14 @@ yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
 ## Deneysel Takım Koşuları
 
+Worker'lar tüm ilerleme mesajlarını ve handoff metnini
+`catalog/subscription-team-mode.json` içindeki `workers.language` dilinde yazar
+(varsayılan: `tr`); kodu, yolları ve komutları olduğu gibi bırakır. Windows'ta
+Node testlerini `node --test --test-isolation=none <files>` ile (Node.js 22.8
+veya sonrası) çalıştırın; sandbox test çalıştırıcısının alt süreçlerini
+`spawn EPERM` ile engelleyebilir. Bu komut da başarısız olursa bunu kod hatası
+saymayın, Risks bölümünde bildirin.
+
 Yalnız açık çağrılan `team-conductor` skill'i etkileşimli Claude Code
 oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Bu özellik
 deneyseldir ve varsayılan olarak kapalıdır. Opt-in için süreç ortamına

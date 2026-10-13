@@ -41,7 +41,8 @@ for (const roleId of Object.keys(ceilings)) if (!roles.has(roleId)) errors.push(
 
 exactKeys(catalog.conductor, ["type", "spawnsWorkersDirectly", "editsWorkerScopeDuringRun"], "conductor", errors);
 if (catalog.conductor?.type !== "interactive-session" || catalog.conductor?.spawnsWorkersDirectly !== false || catalog.conductor?.editsWorkerScopeDuringRun !== false) errors.push("conductor contract is invalid");
-exactKeys(catalog.workers, ["command", "promptTransport", "minWorkers", "maxWorkers", "maxDepth", "workerMayPush", "isolation", "defaultProfile", "allowedRoleIds"], "workers", errors);
+exactKeys(catalog.workers, ["command", "language", "promptTransport", "minWorkers", "maxWorkers", "maxDepth", "workerMayPush", "isolation", "defaultProfile", "allowedRoleIds"], "workers", errors);
+if (typeof catalog.workers?.language !== "string" || !/^[a-z]{2}$/i.test(catalog.workers.language)) errors.push("workers.language must be a two-letter language code");
 if (catalog.workers?.command !== "codex exec --json" || catalog.workers?.promptTransport !== "stdin" || catalog.workers?.minWorkers !== 1 || catalog.workers?.maxWorkers !== 4 || catalog.workers?.maxDepth !== 1 || catalog.workers?.workerMayPush !== false || catalog.workers?.isolation !== "git-worktree-per-worker" || catalog.workers?.defaultProfile !== "offline") errors.push("workers contract is invalid");
 if (JSON.stringify([...(catalog.workers?.allowedRoleIds || [])].sort()) !== JSON.stringify([...roles.keys()].sort())) errors.push("workers.allowedRoleIds must exactly match catalog roles");
 exactKeys(catalog.verification, ["roleId", "sandboxMode", "branch"], "verification", errors);
