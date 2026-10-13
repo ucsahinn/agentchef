@@ -623,6 +623,19 @@ rolls back worktrees, newly-created branches, and task states if setup or the
 supervisor startup heartbeat fails. Engine-created worktrees use an empty Git
 hooks directory so repository checkout hooks do not run during setup.
 
+There are 21 allowlisted specialist worker roles. Each worker's effective
+sandbox is the stricter of the role template and the team-mode ceiling; the
+contract caps the general worker sandbox at `workspace-write`, and several
+roles are capped at `read-only`. `danger-full-access` is rejected. Runs allow
+one to four workers, with maximum nesting depth one; workers cannot spawn more
+agents and must return further-role requests as `needs: <role> - <why>`.
+`codex exec resume` uses only `-c`, `--json`, `-m`, `-o`,
+`--output-schema`, and stdin (`-`); resume does not accept directory, sandbox,
+or profile switches. Start and merge approvals are separate, single-use
+records written by the Beyin hook; the engine reads and consumes them, checks
+that approval follows the relevant plan timestamp, and rejects approvals older
+than seven days.
+
 ## Git Hygiene
 
 Global Git guards are optional because they modify the user's Git defaults.

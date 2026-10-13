@@ -138,6 +138,12 @@ Official reference:
 
 ## Team Run Workers
 
+The serialized start lock prevents concurrent starts for one run. A lock whose
+owner is dead or whose PID has been reused is recovered; a live owner's lock
+fails closed with its path and PID when available. If start receives SIGINT or
+SIGTERM, or setup fails, it rolls back the worktrees, newly created branches,
+and task state created by that start attempt, then releases only its own lock.
+
 An experimental team run has one detached `team-run supervise` owner per run.
 It starts and tracks the Codex children, refreshes task leases, and writes
 heartbeat/event state. A visible Windows Terminal tab runs only the read-only
