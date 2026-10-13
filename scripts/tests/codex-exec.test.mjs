@@ -6,7 +6,7 @@ import test from "node:test";
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { buildExecArgs, buildViewerPaneArgs, classifyFailure, parseExecEvent, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
+import { buildExecArgs, buildViewerPaneArgs, classifyFailure, parseExecEvent, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "fake-codex", "fake-codex.cjs");
 
@@ -74,6 +74,13 @@ test("stopChild signals only the supplied child and requires identity for Window
   assert.equal(signalled, 0);
   assert.equal(stopChild(child, { platform: "linux" }), true);
   assert.equal(signalled, 1);
+});
+
+test("processCreatedAt reads a POSIX process start identity", () => {
+  if (process.platform === "win32") return;
+  const identity = processCreatedAt(process.pid);
+  assert.equal(typeof identity, "string"); assert.ok(identity.length > 0);
+  assert.equal(processCreatedAt(2147483000), null);
 });
 
 test("resolveCodexCommand honors explicit command before Windows PATH lookup", () => {

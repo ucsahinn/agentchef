@@ -104,8 +104,12 @@ function childProcessTree(rootPid) {
   return [{ pid: rootPid, createdAt: childProcessIdentity(rootPid).createdAt, depth: 0 }, ...result];
 }
 export function processCreatedAt(pid, platform = process.platform) {
-  if (platform !== "win32" || !Number.isInteger(pid)) return null;
-  try { return childProcessIdentity(pid)?.createdAt || null; } catch { return null; }
+  if (!Number.isInteger(pid)) return null;
+  if (platform === "win32") { try { return childProcessIdentity(pid)?.createdAt || null; } catch { return null; } }
+  try {
+    const value = execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return value || null;
+  } catch { return null; }
 }
 export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, onActivity = () => {}, env = process.env, platform = process.platform, spawnImpl = spawn }) {
   fs.mkdirSync(runDir, { recursive: true });

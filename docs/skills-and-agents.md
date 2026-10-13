@@ -44,6 +44,10 @@ Run commands from the AgentChef repository root:
 | `doctor` | Inspect prerequisites and the last run |
 
 CLI shape: `node scripts/team-run.mjs <command> --state <board.json> --json`.
+`status --watch-seconds N --json` returns one JSON document containing a
+`snapshots` array; text mode prints one readable snapshot per interval. A start
+lock with a dead or reused PID is recovered automatically; active-lock errors
+include the lock path and owner PID when available.
 Exit codes are 0 success, 1 refused/operational failure, 2 usage error, 3
 missing or invalid user gate, and 4 partial completion. A run record is stored
 at `<state-directory>/team-runs/<runId>.json`. The integration branch is

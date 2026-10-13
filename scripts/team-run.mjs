@@ -153,13 +153,27 @@ function startCommand(options) {
   const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "start.lock");
   fs.mkdirSync(path.dirname(lock), { recursive: true });
   let fd; const lockNonce = crypto.randomUUID();
-  try { fd = fs.openSync(lock, "wx"); fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, createdAt: processCreatedAt(process.pid), nonce: lockNonce })); }
-  catch (error) { if (error.code === "EEXIST") throw new Error("Another start operation is already active for this run."); throw error; }
+  const lockedAt = now();
+  try { fd = fs.openSync(lock, "wx"); fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, createdAt: processCreatedAt(process.pid), lockedAt, nonce: lockNonce })); }
+  catch (error) {
+    if (error.code === "EEXIST") {
+      let owner;
+      try { owner = JSON.parse(fs.readFileSync(lock, "utf8")); } catch {}
+      const current = owner?.pid && Number.isInteger(owner.pid) ? processCreatedAt(owner.pid) : null;
+      if (owner?.pid && owner.createdAt && current && current !== owner.createdAt) { try { fs.rmSync(lock); } catch {} return startCommand(options); }
+      if (owner?.pid && !isPidAlive(owner.pid)) { try { fs.rmSync(lock); } catch {} return startCommand(options); }
+      throw new Error(`Another start operation owns lock ${lock}${owner?.pid ? ` (pid ${owner.pid})` : " (owner unavailable)"}.`);
+    }
+    throw error;
+  }
   finally { if (fd !== undefined) fs.closeSync(fd); }
-  try { return startCommandLocked(options); }
-  finally { try { if (JSON.parse(fs.readFileSync(lock, "utf8")).nonce === lockNonce) fs.rmSync(lock); } catch { /* lock was already removed or replaced */ } }
+  let interrupted = false;
+  const onSignal = () => { interrupted = true; };
+  process.on("SIGINT", onSignal); process.on("SIGTERM", onSignal);
+  try { return startCommandLocked(options, () => interrupted, lockedAt); }
+  finally { process.off("SIGINT", onSignal); process.off("SIGTERM", onSignal); try { if (JSON.parse(fs.readFileSync(lock, "utf8")).nonce === lockNonce) fs.rmSync(lock); } catch { /* lock was already removed or replaced */ } }
 }
-function startCommandLocked(options) {
+function startCommandLocked(options, wasInterrupted = () => false, lockedAt = now()) {
   ensureExperimentEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
   const approval = readApproval(path.dirname(path.resolve(options.state)), run.runId, "baslat");
   if (!approvalIsValid(approval, { runId: run.runId, tur: "baslat", plannedAt: run.plannedAt, now: now() })) { const e = new Error("A valid start approval is required."); e.code = "approval-required"; e.exitCode = 3; throw e; }
@@ -170,7 +184,12 @@ function startCommandLocked(options) {
   if (run.status !== "planned") throw new Error(`Cannot start run in ${run.status} state.`);
   const controlDir = path.join(path.dirname(file), run.runId, "control");
   fs.mkdirSync(controlDir, { recursive: true });
-  for (const name of ["abort.json", "pause.json"]) try { fs.rmSync(path.join(controlDir, name)); } catch (error) { if (error.code !== "ENOENT") throw error; }
+  for (const name of ["abort.json", "pause.json"]) try {
+    const controlFile = path.join(controlDir, name);
+    const control = JSON.parse(fs.readFileSync(controlFile, "utf8"));
+    if (Date.parse(control.requestedAt) >= Date.parse(lockedAt)) continue;
+    fs.rmSync(controlFile);
+  } catch (error) { if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error; }
   const createdBranches = [], createdWorktrees = [], activatedTasks = [], generatedFiles = [];
   let supervisor = null;
   const runDir = path.join(path.dirname(file), run.runId), emptyHooks = path.join(runDir, "empty-hooks");
@@ -197,15 +216,16 @@ function startCommandLocked(options) {
     updateRunRecord(file, (current) => ({ ...transitionRun(current, "running"), startedAt: now(), supervisor: { pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid), heartbeatAt: null }, history: [...current.history, { at: now(), event: "started" }] }));
     const deadline = Date.now() + 10_000;
     let heartbeatSeen = false;
-    while (Date.now() < deadline) { const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
+    while (Date.now() < deadline) { if (wasInterrupted()) throw new Error("Start interrupted; rollback was requested."); const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
     if (!heartbeatSeen) throw new Error("Supervisor did not publish its startup heartbeat within 10 seconds.");
     const consumedStart = consumeApproval(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`);
     updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } }));
     output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
   } catch (error) {
     if (supervisor?.pid) {
-      const identity = readRun(options.state, run.runId).supervisor?.createdAt;
+      const identity = processCreatedAt(supervisor.pid) || readRun(options.state, run.runId).supervisor?.createdAt;
       if (identity && processCreatedAt(supervisor.pid) === identity) stopChild({ pid: supervisor.pid, agentChefCmdShim: true, kill: () => { try { process.kill(supervisor.pid); return true; } catch { return false; } } }, { createdAt: identity, cmdShim: true });
+      else process.stderr.write(`Could not confirm supervisor identity for pid ${supervisor.pid}; it was left running.\n`);
       const stopBy = Date.now() + 3000;
       while (Date.now() < stopBy && isPidAlive(supervisor.pid)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
     }
@@ -215,7 +235,7 @@ function startCommandLocked(options) {
     try { fs.rmdirSync(run.worktreeRoot); } catch { /* retain any unrelated or non-empty directory */ }
     for (const name of ["abort.json", "pause.json"]) try { fs.rmSync(path.join(controlDir, name)); } catch { /* best effort after rollback */ }
     for (const taskId of activatedTasks) try { transitionTask(options.state, { taskId, status: "todo", reason: "Team run start rolled back." }); } catch {}
-    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, cmdShim: null, processCreatedAt: null, status: "planned", startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
+    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, idleWarningAt: null, status: "planned", startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
     throw error;
   }
 }
@@ -240,6 +260,7 @@ async function statusCommand(options) {
   const watchSeconds = Number(options["watch-seconds"] || 0);
   if (!Number.isInteger(watchSeconds) || watchSeconds < 0 || watchSeconds > 3600) throw new CliUsageError("--watch-seconds must be an integer from 0 to 3600.");
   const deadline = Date.now() + watchSeconds * 1000;
+  const snapshots = [];
   do {
   const run = readRun(options.state, options.run);
   const supervisorAge = run.supervisor.heartbeatAt ? Date.now() - Date.parse(run.supervisor.heartbeatAt) : Infinity;
@@ -252,9 +273,11 @@ async function statusCommand(options) {
     const outside = changed.filter((file) => !pathWithinScope(file, worker.writeScope));
     if (outside.length) warnings.push({ taskId: worker.taskId, outsideScope: outside });
   }
-  output({ ok: true, run, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, warnings }, options.json);
+  const snapshot = { ok: true, run, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, warnings };
+  if (options.json) snapshots.push(snapshot); else output(snapshot, false);
   if (Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, Math.min(1000, deadline - Date.now())));
   } while (Date.now() < deadline);
+  if (options.json) output(watchSeconds ? { ok: true, snapshots } : snapshots[0], true);
   return 0;
 }
 function isPidAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
@@ -331,6 +354,7 @@ function superviseCommand(options) {
       let failure = message;
       try { assertTeamTextSafe(failure); } catch { failure = "supervisor error omitted by content safety filter"; }
       try { updateRunRecord(file, (current) => ({ ...current, status: "failed", failure, history: [...current.history, { at: now(), event: "supervisor_tick_failed" }], workers: current.workers.map((worker) => active.has(worker.taskId) ? { ...worker, status: "failed", failure, finishedAt: now() } : worker) })); } catch { /* the original supervisor failure is already fail-closed */ }
+      for (const taskId of active.keys()) releaseFailedWorkerLease(options.state, taskId);
       active.clear();
     }
   };
@@ -373,9 +397,8 @@ function abortWorkers(state, file, run, reason) {
   for (const w of run.workers) {
     if (["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status)) {
       stopRecordedWorker(w);
-      try { transitionTask(state, { taskId: w.taskId, status: "cancelled", reason }); } catch { /* already terminal or unavailable */ }
       try { transitionTask(state, { taskId: w.taskId, status: "todo", reason: "Team run work was aborted; release its lease." }); } catch { /* task may already be terminal */ }
-    }
+    } else if (["failed", "timed_out", "scope_violation", "aborted"].includes(w.status)) releaseFailedWorkerLease(state, w.taskId);
   }
   updateRunRecord(file, (current) => ({ ...current, status: "aborted", workers: current.workers.map((w) => ["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status) ? { ...w, status: "aborted", finishedAt: now(), failure: reason } : w), history: [...current.history, { at: now(), event: "aborted", reason }] }));
 }
@@ -390,6 +413,12 @@ function stopRecordedWorker(worker) {
 function abortCommand(options) {
   const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
   const reason = options.reason || "cancelled by conductor"; assertTeamTextSafe(reason);
+  const startLock = path.join(path.dirname(file), run.runId, "start.lock");
+  if (fs.existsSync(startLock)) {
+    const controlDir = path.join(path.dirname(file), run.runId, "control"); fs.mkdirSync(controlDir, { recursive: true });
+    fs.writeFileSync(path.join(controlDir, "abort.json"), JSON.stringify({ runId: run.runId, reason, requestedAt: now() }, null, 2));
+    output({ ok: true, requested: "abort", runId: run.runId, deferred: true }, options.json); return 0;
+  }
   if (run.status === "planned" || !isPidAlive(run.supervisor?.pid)) { abortWorkers(options.state, file, run, reason); output({ ok: true, requested: "abort", runId: run.runId }, options.json); return 0; }
   const controlDir = path.join(path.dirname(file), run.runId, "control"); fs.mkdirSync(controlDir, { recursive: true });
   fs.writeFileSync(path.join(controlDir, "abort.json"), JSON.stringify({ runId: run.runId, reason, requestedAt: now() }, null, 2));
@@ -439,6 +468,9 @@ function workerFinalPath(run, worker) {
 function releaseFailedWorkerLease(state, taskId) {
   try { transitionTask(state, { taskId, status: "todo", reason: "Worker did not produce a collectable change; release its lease." }); } catch { /* already transitioned or terminal */ }
 }
+function releaseRunFailedLeases(state, run) {
+  for (const worker of run.workers) if (["failed", "timed_out", "scope_violation", "aborted"].includes(worker.status)) releaseFailedWorkerLease(state, worker.taskId);
+}
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   if (!["running", "paused"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
@@ -446,7 +478,7 @@ function collectCommand(options) {
   if (options.task && !selected.length) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   let partial = false;
   for (const worker of selected) {
-    if (worker.status !== "finished") { partial = true; continue; }
+    if (worker.status !== "finished") { partial = true; if (["failed", "timed_out", "scope_violation", "aborted"].includes(worker.status)) releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const final = workerFinalPath(run, worker);
     if (!final) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "final handoff file is missing"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     let handoff;
@@ -457,6 +489,7 @@ function collectCommand(options) {
     if (outside.length) {
       partial = true;
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "scope_violation"), changedPaths: changed, outsideScope: [...new Set([...outside, ...handoff.mutationCheck.outsideScope])], verdict: handoff.verdict, failure: "actual worktree changes exceed the declared write scope" } : item), history: [...current.history, { at: now(), event: "scope_violation", taskId: worker.taskId }] }));
+      releaseFailedWorkerLease(options.state, worker.taskId);
       continue;
     }
     if (worker.sandbox === "read-only") {
@@ -575,11 +608,10 @@ async function verifyCommand(options) {
     try { verdict = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data.verdict; } catch (error) { failure = error.message; }
   }
   const handoff = result.exitCode === 0 && fs.existsSync(final) ? (() => { try { return parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; } catch { return null; } })() : null;
+  try { fs.rmSync(final, { force: true }); } catch {}
   const reportId = `verification-${run.runId}.md`, reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
   fs.writeFileSync(path.join(reportDir, reportId), `# Independent verification\n\nVerdict: ${verdict}\n\nOutcome: ${handoff?.outcome || "Verifier did not provide a valid handoff."}\n\nEvidence:\n${(handoff?.evidence || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nRisks:\n${(handoff?.risks || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nChecks: ${run.checks.join(", ") || "No commands specified; integration diff compared with briefs."}\n\n${failure || "No execution failure."}\n`, "utf8");
-  for (const worker of run.workers) {
-    addEvidence(options.state, { taskId: worker.taskId, evidence: `verified-by: test_verifier - ${verdict}` });
-  }
+  if (verdict === "pass" || verdict === "warn") for (const worker of run.workers) addEvidence(options.state, { taskId: worker.taskId, evidence: `verified-by: test_verifier - ${verdict}` });
   updateRunRecord(file, (current) => ({ ...(verdict === "pass" || verdict === "warn" ? transitionRun(current, "verified") : current), verification: { verdict, reportId, threadId: result.threadId || null, at: now(), failure, integrationCommit }, history: [...current.history, { at: now(), event: "verification_complete", verdict }] }));
   output({ ok: verdict === "pass" || verdict === "warn", run: readRun(options.state, options.run) }, options.json);
   return verdict === "pass" || verdict === "warn" ? 0 : 4;
@@ -606,7 +638,7 @@ function mergeCommand(options) {
   catch (error) { try { git(["merge", "--abort"], run.repo); } catch {} throw new Error(`Integration merge failed and was aborted: ${error.message}`); }
   const consumedMerge = consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
   updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, history: [...current.history, { at: now(), event: "merged" }] }));
-  if (!options["keep-worktrees"]) removeWorktrees(run);
+  if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run merged; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
 function cleanupCommand(options) {

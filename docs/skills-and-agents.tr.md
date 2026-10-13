@@ -45,6 +45,10 @@ Komutları AgentChef depo kökünden çalıştırın:
 | `doctor` | Gereksinimleri ve son koşuyu inceler |
 
 CLI biçimi: `node scripts/team-run.mjs <command> --state <board.json> --json`.
+`status --watch-seconds N --json` tek JSON belgesi icinde `snapshots` dizisi
+dondurur; metin modu her aralikta okunabilir bir durum yazar. Sahipsiz veya
+PID'si yeniden kullanilmis start kilidi otomatik kurtarilir; etkin kilit hatasi
+kilit yolunu ve varsa sahip PID'sini bildirir.
 Çıkış kodları: 0 başarı, 1 ret/işlem hatası, 2 kullanım hatası, 3 eksik ya
 da geçersiz kullanıcı kapısı, 4 kısmi tamamlanma. Koşu kaydı
 `<state-directory>/team-runs/<runId>.json` konumundadır. Entegrasyon dalı

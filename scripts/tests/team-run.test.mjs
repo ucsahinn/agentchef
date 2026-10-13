@@ -223,6 +223,18 @@ test("start rollback clears stale controls, preserves approval, and permits retr
   await waitForSupervisorStopped(state, runId);
 });
 
+test("start recovers an orphaned lock and retries successfully", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-stale-lock-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-stale-lock"; initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId });
+  const lock = path.join(path.dirname(state), "team-runs", runId, "start.lock"); fs.mkdirSync(path.dirname(lock), { recursive: true });
+  fs.writeFileSync(lock, JSON.stringify({ pid: 2147483000, createdAt: "2000-01-01T00:00:00.000Z", nonce: "orphan" }));
+  validApproval(state, runId, "baslat", run.plannedAt);
+  const started = runCli(state, "start", ["--run", runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
+  assert.equal(fs.existsSync(lock), false);
+  await waitForWorker(state, runId); await waitForSupervisorStopped(state, runId);
+});
+
 test("collect detects actual outside-scope mutations and leaves the card out of review", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-scope-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
@@ -232,7 +244,8 @@ test("collect detects actual outside-scope mutations and leaves the card out of 
   await waitForWorker(state, run.runId);
   const result = runCli(state, "collect", ["--run", run.runId], env); assert.equal(result.status, 4);
   assert.equal(result.json.run.workers[0].status, "scope_violation");
-  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].status, "in_progress");
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].status, "todo");
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].leaseUntil, null);
   await waitForSupervisorStopped(state, run.runId);
 });
 
@@ -318,6 +331,8 @@ test("usage limits pause the run and abort reaches a slow worker", async (t) => 
   assert.equal(abort.status, 0, abort.stderr || abort.stdout);
   const aborted = await waitForRunStatus(slowState, slow.run.runId, "aborted");
   assert.equal(aborted.workers[0].status, "aborted");
+  const abortedTask = JSON.parse(fs.readFileSync(slowState, "utf8")).tasks[0];
+  assert.equal(abortedTask.status, "todo"); assert.equal(abortedTask.leaseUntil, null);
   await waitForSupervisorStopped(slowState, slow.run.runId);
 });
 
@@ -341,6 +356,19 @@ test("supervisor renews the worker lease through the imported coordination helpe
   assert.ok(Date.parse(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].leaseUntil) > Date.parse(initialLease));
   assert.equal(runCli(state, "abort", ["--run", run.runId, "--reason", "finish lease test"], env).status, 0);
   await waitForRunStatus(state, run.runId, "aborted");
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test("timed-out workers release their card lease during collection", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-timeout-lease-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-timeout-lease", scenario: "slow" });
+  env.AGENTCHEF_TEAM_IDLE_KILL_MINUTES = "0.001";
+  validApproval(state, run.runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  const timedOut = await waitForWorker(state, run.runId);
+  assert.equal(timedOut.workers[0].status, "timed_out");
+  assert.equal(runCli(state, "collect", ["--run", run.runId], env).status, 4);
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].leaseUntil, null);
   await waitForSupervisorStopped(state, run.runId);
 });
 
@@ -372,11 +400,13 @@ test("failed independent verifier can be retried and doctor emits JSON checks", 
   record.status = "integrated"; record.workers[0].status = "integrated"; record.integration = { merged: [record.workers[0].taskId], conflicts: [], checks: [], ok: true }; fs.writeFileSync(recordPath, JSON.stringify(record));
   const verified = runCli(state, "verify", ["--run", run.runId], env); assert.equal(verified.status, 4, verified.stderr || verified.stdout);
   assert.equal(verified.json.run.status, "integrated");
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].evidence.some((entry) => /verified-by:/.test(entry.text || entry)), false);
   const report = fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", `verification-${run.runId}.md`), "utf8");
   assert.match(report, /Outcome: fixture complete/); assert.match(report, /read-only fixture evidence/); assert.match(report, /fixture risk/);
   env.FAKE_CODEX_SCENARIO = "verifier-pass";
   const retried = runCli(state, "verify", ["--run", run.runId], env); assert.equal(retried.status, 0, retried.stderr || retried.stdout);
   assert.equal(retried.json.run.status, "verified");
+  assert.ok(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].evidence.some((entry) => /verified-by: test_verifier - pass/.test(entry.text || entry)));
   const rejected = runCli(state, "merge", ["--run", run.runId], env); assert.notEqual(rejected.status, 0);
   validApproval(state, run.runId, "birlestir", run.plannedAt);
   const merged = runCli(state, "merge", ["--run", run.runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
@@ -384,6 +414,15 @@ test("failed independent verifier can be retried and doctor emits JSON checks", 
   assert.ok(doctor.json && Array.isArray(doctor.json.checks));
   assert.equal(doctor.json.checks.find((entry) => entry.id === "codex.login").status, "fail");
   assert.doesNotThrow(() => JSON.parse(doctor.stdout));
+});
+
+test("status watch JSON emits one parseable document with all snapshots", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-watch-json-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-watch-json" });
+  const result = runCli(state, "status", ["--run", run.runId, "--watch-seconds", "1", "--json"], env);
+  assert.equal(result.status, 0, result.stderr); const parsed = JSON.parse(result.stdout);
+  assert.ok(parsed.snapshots.length >= 1); assert.ok(parsed.snapshots.every((snapshot) => snapshot.run.runId === run.runId));
 });
 
 test("warning verdict remains verifiable and can merge only with the explicit flag", async (t) => {
@@ -401,6 +440,10 @@ test("warning verdict remains verifiable and can merge only with the explicit fl
   const runApproval = runCli(state, "status", ["--run", run.runId], env).json.run;
   validApproval(state, run.runId, "birlestir", runApproval.plannedAt);
   assert.notEqual(runCli(state, "merge", ["--run", run.runId], env).status, 0);
+  const failCleanup = path.join(temp, "fail-worktree-remove.cjs");
+  fs.writeFileSync(failCleanup, `const cp=require("node:child_process");const original=cp.execFileSync;cp.execFileSync=function(command,args,...rest){if(command==="git"&&args?.[0]==="worktree"&&args?.[1]==="remove")throw new Error("fixture cleanup failure");return original.call(this,command,args,...rest)};`);
+  env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--require=${failCleanup}`].filter(Boolean).join(" ");
   const merged = runCli(state, "merge", ["--run", run.runId, "--accept-warn"], env);
   assert.equal(merged.status, 0, merged.stderr || merged.stdout); assert.equal(merged.json.run.status, "merged");
+  assert.match(merged.json.cleanupWarning, /worktree cleanup failed/);
 });
