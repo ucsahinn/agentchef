@@ -10,7 +10,7 @@ import { CliUsageError, emitCliError, redactCliPaths } from "./lib/cli-error-con
 import { isProcessAlive, openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild } from "./lib/codex-exec.mjs";
 import { cmdShimInvocation, resolveWindowsCli } from "./lib/platform-command.mjs";
 import {
-  assignTask, assertTeamTextSafe, approvalIsValid, consumeApproval, createTask,
+  acquireTeamOperationLock, assignTask, assertTeamTextSafe, approvalIsValid, consumeApprovalWith, createTask,
   addEvidence, attachReport, effectiveSandbox, headCommit, loadTeamContract, maxConcurrency, parseWorkerHandoff,
   composeWorkerPrompt, composeVerifierPrompt, renderHandoffMarkdown, readApproval,
   readRoleToml, readRunRecord, renewLease, setBrief, transitionRun,
@@ -26,7 +26,7 @@ const COMMANDS = {
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
   integrate: ["run", "state", "check"], verify: ["run", "state", "max-minutes", "detach"],
-  merge: ["run", "state", "accept-warn", "skip-conflicted", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state"],
+  merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state"],
   cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
   doctor: ["state"]
 };
@@ -47,7 +47,7 @@ function parse(argv) {
     if (!token.startsWith("--")) throw new CliUsageError(`Unexpected argument: ${token}`);
     const key = token.slice(2);
     if (!accepted.has(key)) throw new CliUsageError(`${command} does not accept --${key}.`);
-    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "skip-conflicted", "keep-worktrees", "detach"].includes(key)) { options[key] = true; continue; }
+    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach"].includes(key)) { options[key] = true; continue; }
     const value = rest[i + 1];
     if (!value || value === "--json" || (value.startsWith("--") && accepted.has(value.slice(2)))) throw new CliUsageError(`--${key} requires a value.`);
     if (key === "check") (options.check ||= []).push(value); else options[key] = value;
@@ -151,27 +151,14 @@ function planCommand(options) {
 function approvalPath(state, id) { return path.join(path.dirname(path.resolve(state)), "approvals", `${id}.baslat.json`); }
 function startCommand(options) {
   const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "start.lock");
-  fs.mkdirSync(path.dirname(lock), { recursive: true });
-  let fd; const lockNonce = crypto.randomUUID();
-  const lockedAt = now();
-  try { fd = fs.openSync(lock, "wx"); fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, createdAt: processCreatedAt(process.pid), lockedAt, nonce: lockNonce })); }
-  catch (error) {
-    if (error.code === "EEXIST") {
-      let owner;
-      try { owner = JSON.parse(fs.readFileSync(lock, "utf8")); } catch {}
-      const current = owner?.pid && Number.isInteger(owner.pid) ? processCreatedAt(owner.pid) : null;
-      if (owner?.pid && owner.createdAt && current && current !== owner.createdAt) { try { fs.rmSync(lock); } catch {} return startCommand(options); }
-      if (owner?.pid && !isPidAlive(owner.pid)) { try { fs.rmSync(lock); } catch {} return startCommand(options); }
-      throw new Error(`Another start operation owns lock ${lock}${owner?.pid ? ` (pid ${owner.pid})` : " (owner unavailable)"}.`);
-    }
-    throw error;
-  }
-  finally { if (fd !== undefined) fs.closeSync(fd); }
+  let operation;
+  try { operation = acquireTeamOperationLock(lock); }
+  catch (error) { if (error.code === "EEXIST") throw new Error(`Another start operation owns lock ${lock}.`); throw error; }
   let interrupted = false;
   const onSignal = () => { interrupted = true; };
   process.on("SIGINT", onSignal); process.on("SIGTERM", onSignal);
-  try { return startCommandLocked(options, () => interrupted, lockedAt); }
-  finally { process.off("SIGINT", onSignal); process.off("SIGTERM", onSignal); try { if (JSON.parse(fs.readFileSync(lock, "utf8")).nonce === lockNonce) fs.rmSync(lock); } catch { /* lock was already removed or replaced */ } }
+  try { return startCommandLocked(options, () => interrupted, operation.lockedAt); }
+  finally { process.off("SIGINT", onSignal); process.off("SIGTERM", onSignal); operation.release(); }
 }
 function startCommandLocked(options, wasInterrupted = () => false, lockedAt = now()) {
   ensureExperimentEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
@@ -218,8 +205,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
     let heartbeatSeen = false;
     while (Date.now() < deadline) { if (wasInterrupted()) throw new Error("Start interrupted; rollback was requested."); const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
     if (!heartbeatSeen) throw new Error("Supervisor did not publish its startup heartbeat within 10 seconds.");
-    const consumedStart = consumeApproval(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`);
-    updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } }));
+    consumeApprovalWith(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`, (consumedStart) => updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } })));
     output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
   } catch (error) {
     if (supervisor?.pid) {
@@ -625,10 +611,17 @@ function removeWorktrees(run) {
   return removed;
 }
 function mergeCommand(options) {
+  const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "merge.lock");
+  let operation;
+  try { operation = acquireTeamOperationLock(lock); }
+  catch (error) { if (error.code === "EEXIST") throw new Error(`Another merge operation owns lock ${lock}.`); throw error; }
+  try { return mergeCommandLocked(options); } finally { operation.release(); }
+}
+function mergeCommandLocked(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   const approval = readApproval(path.dirname(path.resolve(options.state)), run.runId, "birlestir");
   if (!run.verification?.at || !approvalIsValid(approval, { runId: run.runId, tur: "birlestir", plannedAt: run.verification.at, now: now() })) { const error = new Error("A valid merge approval is required."); error.code = "approval-required"; error.exitCode = 3; throw error; }
-  if (run.workers.some((worker) => worker.status === "conflict") && !options["skip-conflicted"]) throw new Error("A run with conflicted workers cannot be merged.");
+  if (run.workers.some((worker) => worker.status === "conflict")) throw new Error("A run with conflicted workers cannot be merged.");
   if (run.status !== "verified" || !["pass", "warn"].includes(run.verification?.verdict) || (run.verification.verdict === "warn" && !options["accept-warn"])) throw new Error("Merge requires a passing verification or --accept-warn for a warning verdict.");
   if (git(["status", "--porcelain=v1"], run.repo) || git(["branch", "--show-current"], run.repo) !== run.baseBranch) throw new Error("Merge requires a clean repository on the recorded base branch.");
   const worktreeCommit = git(["rev-parse", "HEAD"], run.integrationWorktree), branchCommit = git(["rev-parse", run.integrationBranch], run.repo);
@@ -636,8 +629,12 @@ function mergeCommand(options) {
   const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
   try { git(["-c", `core.hooksPath=${emptyHooks}`, "merge", "--no-ff", run.integrationBranch], run.repo); }
   catch (error) { try { git(["merge", "--abort"], run.repo); } catch {} throw new Error(`Integration merge failed and was aborted: ${error.message}`); }
-  const consumedMerge = consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
-  updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, history: [...current.history, { at: now(), event: "merged" }] }));
+  try {
+    consumeApprovalWith(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`, (consumedMerge) => updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, history: [...current.history, { at: now(), event: "merged" }] })));
+  } catch (error) {
+    try { git(["merge", "--abort"], run.repo); } catch { /* preserve the state update failure as the primary result */ }
+    throw error;
+  }
   if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run merged; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
