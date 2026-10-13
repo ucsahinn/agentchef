@@ -85,7 +85,7 @@ export function composeWorkerPrompt({roleInstructions="",runId,taskId,role,brief
   if(!parsed.ok) fail(`Brief missing fields: ${parsed.missing.join(", ")}.`);
   return [roleInstructions.trim(),`# Team run ${runId} - ${taskId} (${role})`,`## Brief\n${formatBrief(parsed.fields)}`,TEAM_RULES,`## Return contract\nReturn exactly: outcome, evidence[], changedScope[], risks[], openQuestions[], needs[{role,why}], nextVerification, verdict (pass|partial|blocked|warn|fail), mutationCheck{claimedPaths[],outsideScope}.`].filter(Boolean).join("\n\n");
 }
-export function composeVerifierPrompt({runId,brief,checks=[]}) { return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Do not edit files.","Verdict must be pass, warn, partial, blocked, or fail. Use warn only when checks are inconclusive but safe to proceed with explicit limitations.",`Checks: ${checks.join(", ")}`].join("\n\n"); }
+export function composeVerifierPrompt({runId,brief,checks=[]}) { const list=checks.length?checks.map((check)=>`- ${check}`).join("\n"):"- No commands were specified. Compare the integration diff with the worker briefs and inspect relevant files."; return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Reading files and running read-only commands such as git, cat, and Get-Content is allowed. Do not edit files.","Verdict must be pass, warn, partial, blocked, or fail. Use warn only when checks are inconclusive but safe to proceed with explicit limitations.",`Checks:\n${list}`].join("\n\n"); }
 export function parseWorkerHandoff(value) {
   let data=value;
   if(typeof value==="string") { const fenced=value.match(/```(?:json)?\s*([\s\S]*?)```/i); try { data=JSON.parse(fenced?.[1]??value); } catch { const p=parseHandoff(value); return {ok:p.ok,fields:p.fields,missing:p.missing}; } }
@@ -108,7 +108,7 @@ export const worktreeRemove=(repo,dir)=>git(["worktree","remove",dir],repo);
 export const branchDelete=(repo,branch)=>git(["branch","-D",branch],repo);
 export const mergeNoFf=(repo,branch)=>git(["merge","--no-ff",branch],repo);
 export const mergeAbort=(repo)=>git(["merge","--abort"],repo);
-export const diffStat=(cwd=ROOT)=>git(["diff","--stat"],cwd);
+export const diffStat=(cwd=ROOT)=>git(["-c","core.quotePath=false","diff","--no-ext-diff","--no-textconv","--stat"],cwd);
 export const diffFull=(cwd=ROOT)=>git(["diff"],cwd);
 export function changedPaths(cwd=ROOT) {
   const fields=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer"}).toString("utf8").split("\0"), paths=[];

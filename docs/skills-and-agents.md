@@ -58,6 +58,14 @@ the integration worktree; review them as executable code before starting a
 run. Git merge hooks are disabled for the engine's integration and final merge
 operations.
 
+Verification runs that return `partial`, `blocked`, or `fail` remain integrated
+and can be verified again; merge still requires a passing result (or an
+explicitly accepted warning). With no configured checks, the verifier compares
+the integration diff with the worker briefs and may read files and run
+read-only commands. Its outcome, evidence, and risks are included in the report.
+Write workers that make no Git changes remain failed because there is no
+inspectable worker commit to integrate.
+
 Supported environment controls are `AGENTCHEF_TEAM_MODE`,
 `AGENTCHEF_TEAM_MAX_WORKERS`, `AGENTCHEF_TEAM_WORKTREE_ROOT`,
 `AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND`, and

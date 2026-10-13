@@ -51,7 +51,10 @@ test("worker prompt ordering, seven brief fields, safety rules and verifier prom
   for (const rule of ["worktree", "commit", "push", "checkout", "needs:", "global", "secret", "JSON"]) assert.match(prompt,new RegExp(rule,"i"));
   for (const value of Object.values(brief)) assert.ok(prompt.includes(value));
   assert.throws(() => composeWorkerPrompt({roleInstructions:"",runId:"R1",taskId:"TASK-1",role:"docs_author",brief:{...brief,goal:"token=abcdefghijklmnop"}}));
-  assert.match(composeVerifierPrompt({runId:"R1",brief}), /read-only/i);
+  const verifierPrompt = composeVerifierPrompt({runId:"R1",brief});
+  assert.match(verifierPrompt, /read-only/i);
+  assert.match(verifierPrompt, /Reading files and running read-only commands/i);
+  assert.match(verifierPrompt, /No commands were specified.*Compare the integration diff with the worker briefs/s);
 });
 test("handoff schema rejects extras and Markdown round-trips through parser", () => {
   const md = renderHandoffMarkdown(handoff);

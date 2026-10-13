@@ -79,6 +79,14 @@ paketler:
 Plugin'i kurduktan sonra Codex'i yeniden başlatıp `/plugins` üzerinden kontrol
 edebilirsin.
 
+Doğrulama `partial`, `blocked` veya `fail` döndüğünde koşu `integrated` durumunda
+kalır ve doğrulama yeniden çalıştırılabilir; merge için yine de başarılı sonuç (veya
+açıkça kabul edilmiş `warn`) gerekir. Kontrol listesi boşsa doğrulayıcı entegrasyon
+diff'ini worker brief'leriyle karşılaştırır; dosyaları okuyabilir ve salt-okunur
+komutlar çalıştırabilir. Sonuç, kanıt ve riskler rapora eklenir. Git değişikliği
+üretmeyen yazma worker'ı başarısız kalır; entegrasyona alınabilecek incelenebilir
+bir worker commit'i yoktur.
+
 ## Koordinatörler ve Uzman Agent'lar
 
 Yedi çağrılabilir koordinatör işi sahiplenip kanıtı birleştirir; 21 dar uzman

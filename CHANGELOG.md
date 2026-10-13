@@ -14,6 +14,7 @@ Team mode v2 adds a disabled-by-default experimental team runner with isolated C
 - Fix supervisor lease and worker settlement paths, collect read-only worker reports without commits, and align approval timing and worker branch names with the contract.
 - Disable Git hooks for engine merge operations and document that integration checks execute as local host processes.
 - Fix second-review and live-run findings: correct opt-in diagnostics, Windows Terminal alias discovery, NUL-safe status paths, transactional start rollback, read-only scope and lease handling, warning verdict support, Codex resume arguments, and supervisor test cleanup.
+- Fix third-review and live-run findings: retry blocked or partial verification from the integrated state, include verifier evidence in reports, clear stale run controls, release leases for uncollectable workers, serialize starts, stop the identified supervisor tree on rollback, and make the viewer exit when its worker finishes. Keep a write worker with no Git changes failed: the collection contract requires an inspectable commit for integration.
 
 ## 1.3.5 - 2026-10-12
 

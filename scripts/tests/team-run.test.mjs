@@ -202,13 +202,14 @@ test("start rollback preserves pre-existing branches, restores task state, and s
   assert.equal(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.baslat.json`), "utf8")).kullanildi, "");
 });
 
-test("start rolls back all setup when the supervisor misses its startup heartbeat", (t) => {
+test("start rollback clears stale controls, preserves approval, and permits retry", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-heartbeat-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-heartbeat-fail"; initRepo(repo); writeBoard(state);
   const { env, run } = planRun({ temp, state, repo, runId });
-  const guard = path.join(temp, "fail-supervisor.cjs"); fs.writeFileSync(guard, 'if (process.argv[1]?.endsWith("team-run.mjs") && process.argv[2] === "supervise") process.exit(29);\n');
+  const guard = path.join(temp, "fail-supervisor.cjs"), marker = path.join(temp, "failed-once"); fs.writeFileSync(guard, `const fs=require("node:fs"); if (process.argv[1]?.endsWith("team-run.mjs") && process.argv[2] === "supervise" && !fs.existsSync(${JSON.stringify(marker)})) { fs.writeFileSync(${JSON.stringify(marker)}, "once"); process.exit(29); }\n`);
   env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--require=${guard}`].filter(Boolean).join(" ");
   validApproval(state, runId, "baslat", run.plannedAt);
+  const control = path.join(path.dirname(state), "team-runs", runId, "control"); fs.mkdirSync(control, { recursive: true }); fs.writeFileSync(path.join(control, "abort.json"), JSON.stringify({ runId, reason: "stale abort" }));
   const result = runCli(state, "start", ["--run", runId], env);
   assert.notEqual(result.status, 0); assert.match(result.stderr + result.stdout, /startup heartbeat/);
   const current = runCli(state, "status", ["--run", runId], env).json.run;
@@ -216,6 +217,10 @@ test("start rolls back all setup when the supervisor misses its startup heartbea
   assert.equal(git(repo, "branch", "--list", `takim/${runId}`), "");
   assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].status, "todo");
   assert.equal(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.baslat.json`), "utf8")).kullanildi, "");
+  assert.equal(fs.existsSync(path.join(control, "abort.json")), false);
+  const retry = runCli(state, "start", ["--run", runId], env); assert.equal(retry.status, 0, retry.stderr || retry.stdout);
+  assert.equal((await waitForWorker(state, runId)).workers[0].status, "finished");
+  await waitForSupervisorStopped(state, runId);
 });
 
 test("collect detects actual outside-scope mutations and leaves the card out of review", async (t) => {
@@ -288,6 +293,7 @@ test("missing and invalid handoffs fail collection and settle the finished worke
     const collected = runCli(state, "collect", ["--run", run.runId], env);
     assert.equal(collected.status, 4);
     assert.equal(collected.json.run.workers[0].status, "failed");
+    assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].leaseUntil, null, "uncollectable worker releases its write lease");
     await waitForSupervisorStopped(state, run.runId);
   }
 });
@@ -355,18 +361,25 @@ test("integrate records real worker merge conflicts and merge refuses a conflict
   const rejected = runCli(state, "merge", ["--run", run.runId], env); assert.notEqual(rejected.status, 0);
 });
 
-test("failed independent verifier blocks merge and doctor emits JSON checks", (t) => {
+test("failed independent verifier can be retried and doctor emits JSON checks", (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-verify-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
-  const { env, run } = planRun({ temp, state, repo, runId: "R-task043-verifier", scenario: "verifier-fail" });
+  const { env, run } = planRun({ temp, state, repo, runId: "R-task043-verifier", scenario: "verifier-blocked" });
   const integration = run.integrationWorktree; git(repo, "worktree", "add", "-b", run.integrationBranch, integration);
   fs.writeFileSync(path.join(integration, "src.txt"), "integration\n"); git(integration, "add", "src.txt"); git(integration, "commit", "-m", "integrated change");
   const recordPath = path.join(path.dirname(state), "team-runs", `${run.runId}.json`), record = JSON.parse(fs.readFileSync(recordPath, "utf8"));
   fs.mkdirSync(run.worktreeRoot, { recursive: true }); fs.writeFileSync(path.join(run.worktreeRoot, "TASK-043.prompt.md"), brief);
   record.status = "integrated"; record.workers[0].status = "integrated"; record.integration = { merged: [record.workers[0].taskId], conflicts: [], checks: [], ok: true }; fs.writeFileSync(recordPath, JSON.stringify(record));
   const verified = runCli(state, "verify", ["--run", run.runId], env); assert.equal(verified.status, 4, verified.stderr || verified.stdout);
-  validApproval(state, run.runId, "birlestir", run.plannedAt);
+  assert.equal(verified.json.run.status, "integrated");
+  const report = fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", `verification-${run.runId}.md`), "utf8");
+  assert.match(report, /Outcome: fixture complete/); assert.match(report, /read-only fixture evidence/); assert.match(report, /fixture risk/);
+  env.FAKE_CODEX_SCENARIO = "verifier-pass";
+  const retried = runCli(state, "verify", ["--run", run.runId], env); assert.equal(retried.status, 0, retried.stderr || retried.stdout);
+  assert.equal(retried.json.run.status, "verified");
   const rejected = runCli(state, "merge", ["--run", run.runId], env); assert.notEqual(rejected.status, 0);
+  validApproval(state, run.runId, "birlestir", run.plannedAt);
+  const merged = runCli(state, "merge", ["--run", run.runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
   const doctor = runCli(state, "doctor", [], { ...env, FAKE_CODEX_LOGIN: "fail" });
   assert.ok(doctor.json && Array.isArray(doctor.json.checks));
   assert.equal(doctor.json.checks.find((entry) => entry.id === "codex.login").status, "fail");

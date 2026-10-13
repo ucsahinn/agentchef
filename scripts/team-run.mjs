@@ -150,6 +150,16 @@ function planCommand(options) {
 }
 function approvalPath(state, id) { return path.join(path.dirname(path.resolve(state)), "approvals", `${id}.baslat.json`); }
 function startCommand(options) {
+  const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "start.lock");
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  let fd; const lockNonce = crypto.randomUUID();
+  try { fd = fs.openSync(lock, "wx"); fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, createdAt: processCreatedAt(process.pid), nonce: lockNonce })); }
+  catch (error) { if (error.code === "EEXIST") throw new Error("Another start operation is already active for this run."); throw error; }
+  finally { if (fd !== undefined) fs.closeSync(fd); }
+  try { return startCommandLocked(options); }
+  finally { try { if (JSON.parse(fs.readFileSync(lock, "utf8")).nonce === lockNonce) fs.rmSync(lock); } catch { /* lock was already removed or replaced */ } }
+}
+function startCommandLocked(options) {
   ensureExperimentEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
   const approval = readApproval(path.dirname(path.resolve(options.state)), run.runId, "baslat");
   if (!approvalIsValid(approval, { runId: run.runId, tur: "baslat", plannedAt: run.plannedAt, now: now() })) { const e = new Error("A valid start approval is required."); e.code = "approval-required"; e.exitCode = 3; throw e; }
@@ -158,6 +168,9 @@ function startCommand(options) {
   const login = spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
   if (login.status !== 0) throw new Error("Codex login status failed.");
   if (run.status !== "planned") throw new Error(`Cannot start run in ${run.status} state.`);
+  const controlDir = path.join(path.dirname(file), run.runId, "control");
+  fs.mkdirSync(controlDir, { recursive: true });
+  for (const name of ["abort.json", "pause.json"]) try { fs.rmSync(path.join(controlDir, name)); } catch (error) { if (error.code !== "ENOENT") throw error; }
   const createdBranches = [], createdWorktrees = [], activatedTasks = [], generatedFiles = [];
   let supervisor = null;
   const runDir = path.join(path.dirname(file), run.runId), emptyHooks = path.join(runDir, "empty-hooks");
@@ -191,18 +204,18 @@ function startCommand(options) {
     output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
   } catch (error) {
     if (supervisor?.pid) {
-      const control = path.join(runDir, "control"); fs.mkdirSync(control, { recursive: true });
-      fs.writeFileSync(path.join(control, "abort.json"), JSON.stringify({ runId: run.runId, reason: "start rollback", requestedAt: now() }));
+      const identity = readRun(options.state, run.runId).supervisor?.createdAt;
+      if (identity && processCreatedAt(supervisor.pid) === identity) stopChild({ pid: supervisor.pid, agentChefCmdShim: true, kill: () => { try { process.kill(supervisor.pid); return true; } catch { return false; } } }, { createdAt: identity, cmdShim: true });
       const stopBy = Date.now() + 3000;
       while (Date.now() < stopBy && isPidAlive(supervisor.pid)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
-      if (isPidAlive(supervisor.pid)) { try { process.kill(supervisor.pid); } catch {} }
     }
     for (const wt of createdWorktrees.reverse()) try { addWorktree(["worktree", "remove", "--force", wt]); } catch {}
     for (const branch of createdBranches.reverse()) try { git(["branch", "-D", branch], run.repo); } catch {}
     for (const generated of generatedFiles) try { fs.rmSync(generated, { force: true }); } catch {}
     try { fs.rmdirSync(run.worktreeRoot); } catch { /* retain any unrelated or non-empty directory */ }
+    for (const name of ["abort.json", "pause.json"]) try { fs.rmSync(path.join(controlDir, name)); } catch { /* best effort after rollback */ }
     for (const taskId of activatedTasks) try { transitionTask(options.state, { taskId, status: "todo", reason: "Team run start rolled back." }); } catch {}
-    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, processCreatedAt: null, status: "planned" })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
+    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, cmdShim: null, processCreatedAt: null, status: "planned", startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
     throw error;
   }
 }
@@ -361,6 +374,7 @@ function abortWorkers(state, file, run, reason) {
     if (["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status)) {
       stopRecordedWorker(w);
       try { transitionTask(state, { taskId: w.taskId, status: "cancelled", reason }); } catch { /* already terminal or unavailable */ }
+      try { transitionTask(state, { taskId: w.taskId, status: "todo", reason: "Team run work was aborted; release its lease." }); } catch { /* task may already be terminal */ }
     }
   }
   updateRunRecord(file, (current) => ({ ...current, status: "aborted", workers: current.workers.map((w) => ["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status) ? { ...w, status: "aborted", finishedAt: now(), failure: reason } : w), history: [...current.history, { at: now(), event: "aborted", reason }] }));
@@ -392,8 +406,8 @@ function watchCommand(options) {
     let display = redactCliPaths(line, { root: run.repo, pathRedactions: [{ target: worker.worktree, replacement: "${WORKTREE}" }, { target: run.worktreeRoot, replacement: "${WORKTREE_ROOT}" }] });
     try { assertTeamTextSafe(display); } catch { display = "[sensitive event omitted]"; }
     process.stdout.write(`${display}\n`);
-  } } if (Date.now() - started < maxMs) setTimeout(tick, 500); };
-  tick(); return new Promise((resolve) => { setTimeout(() => resolve(0), maxMs); });
+  } } const latest = readRun(options.state, options.run).workers.find((entry) => entry.taskId === worker.taskId); if (latest && TERMINAL_WORKERS.has(latest.status)) return; if (Date.now() - started < maxMs) setTimeout(tick, 500); };
+  tick(); return new Promise((resolve) => { const finish = () => { const latest = readRun(options.state, options.run).workers.find((entry) => entry.taskId === worker.taskId); if ((latest && TERMINAL_WORKERS.has(latest.status)) || Date.now() - started >= maxMs) resolve(0); else setTimeout(finish, 250); }; finish(); });
 }
 
 function gitBytes(args, cwd) { return execFileSync("git", args, { cwd, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] }); }
@@ -422,6 +436,9 @@ function workerFinalPath(run, worker) {
   const candidates = [path.join(run.worktreeRoot, `${worker.taskId}.final.json`), path.join(worker.worktree, "final.json")];
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
+function releaseFailedWorkerLease(state, taskId) {
+  try { transitionTask(state, { taskId, status: "todo", reason: "Worker did not produce a collectable change; release its lease." }); } catch { /* already transitioned or terminal */ }
+}
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   if (!["running", "paused"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
@@ -431,10 +448,10 @@ function collectCommand(options) {
   for (const worker of selected) {
     if (worker.status !== "finished") { partial = true; continue; }
     const final = workerFinalPath(run, worker);
-    if (!final) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "final handoff file is missing"); continue; }
+    if (!final) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "final handoff file is missing"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     let handoff;
     try { handoff = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; }
-    catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); continue; }
+    catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const changed = porcelainPaths(worker.worktree);
     const outside = changed.filter((item) => !pathWithinScope(item, worker.writeScope));
     if (outside.length) {
@@ -453,7 +470,7 @@ function collectCommand(options) {
       if (handoff.verdict !== "pass") partial = true;
       continue;
     }
-    if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); continue; }
+    if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
     git(["add", "-A"], worker.worktree);
     assertTeamTextSafe(git(["diff", "--cached", "--no-ext-diff", "--no-textconv"], worker.worktree));
@@ -518,7 +535,7 @@ function integrateCommand(options) {
     const result = runCheck(check, cwd, remaining); checks.push(result);
     if (result.status !== 0) checksOk = false;
   }
-  const diff = git(["diff", "--no-ext-diff", run.baseCommit], cwd), stat = git(["diff", "--stat", run.baseCommit], cwd);
+  const diff = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", run.baseCommit], cwd), stat = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--stat", run.baseCommit], cwd);
   assertTeamTextSafe(diff); assertTeamTextSafe(stat);
   const integrationCommit = git(["rev-parse", "HEAD"], cwd);
   const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
@@ -557,12 +574,13 @@ async function verifyCommand(options) {
   if (result.exitCode === 0 && fs.existsSync(final)) {
     try { verdict = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data.verdict; } catch (error) { failure = error.message; }
   }
+  const handoff = result.exitCode === 0 && fs.existsSync(final) ? (() => { try { return parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; } catch { return null; } })() : null;
   const reportId = `verification-${run.runId}.md`, reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
-  fs.writeFileSync(path.join(reportDir, reportId), `# Independent verification\n\nVerdict: ${verdict}\n\nChecks: ${run.checks.join(", ")}\n\n${failure || "No execution failure."}\n`, "utf8");
+  fs.writeFileSync(path.join(reportDir, reportId), `# Independent verification\n\nVerdict: ${verdict}\n\nOutcome: ${handoff?.outcome || "Verifier did not provide a valid handoff."}\n\nEvidence:\n${(handoff?.evidence || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nRisks:\n${(handoff?.risks || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nChecks: ${run.checks.join(", ") || "No commands specified; integration diff compared with briefs."}\n\n${failure || "No execution failure."}\n`, "utf8");
   for (const worker of run.workers) {
     addEvidence(options.state, { taskId: worker.taskId, evidence: `verified-by: test_verifier - ${verdict}` });
   }
-  updateRunRecord(file, (current) => ({ ...transitionRun(current, verdict === "pass" || verdict === "warn" ? "verified" : "failed"), verification: { verdict, reportId, threadId: result.threadId || null, at: now(), failure, integrationCommit }, history: [...current.history, { at: now(), event: "verification_complete", verdict }] }));
+  updateRunRecord(file, (current) => ({ ...(verdict === "pass" || verdict === "warn" ? transitionRun(current, "verified") : current), verification: { verdict, reportId, threadId: result.threadId || null, at: now(), failure, integrationCommit }, history: [...current.history, { at: now(), event: "verification_complete", verdict }] }));
   output({ ok: verdict === "pass" || verdict === "warn", run: readRun(options.state, options.run) }, options.json);
   return verdict === "pass" || verdict === "warn" ? 0 : 4;
 }
@@ -584,9 +602,9 @@ function mergeCommand(options) {
   const worktreeCommit = git(["rev-parse", "HEAD"], run.integrationWorktree), branchCommit = git(["rev-parse", run.integrationBranch], run.repo);
   if (!run.verification.integrationCommit || worktreeCommit !== run.verification.integrationCommit || branchCommit !== run.verification.integrationCommit) throw new Error("Verified integration changed before merge.");
   const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
-  const consumedMerge = consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
   try { git(["-c", `core.hooksPath=${emptyHooks}`, "merge", "--no-ff", run.integrationBranch], run.repo); }
   catch (error) { try { git(["merge", "--abort"], run.repo); } catch {} throw new Error(`Integration merge failed and was aborted: ${error.message}`); }
+  const consumedMerge = consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
   updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, history: [...current.history, { at: now(), event: "merged" }] }));
   if (!options["keep-worktrees"]) removeWorktrees(run);
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
