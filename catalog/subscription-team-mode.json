@@ -72,7 +72,7 @@
   },
   "branches": {
     "integrationPrefix": "takim/",
-    "workerBranchFormat": "takim/{runId}/{taskId}",
+    "workerBranchFormat": "takim/{runId}-{taskId}",
     "worktreeRootFormat": "{repoParent}/.agentchef-worktrees/{runId}",
     "rejectTemp": true,
     "rejectInsideRepository": true

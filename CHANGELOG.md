@@ -10,6 +10,9 @@ Team mode v2 adds a disabled-by-default experimental team runner with isolated C
 - TASK-043: Add collection, integration, verification, merge, and cleanup.
 - TASK-044: Add the Claude conductor skill, status reporting, and paired docs.
 - TASK-045: Complete package checks, release notes, and Windows Codex argument handling.
+- Fix review findings: persist Codex event output as it arrives, handle closed prompt pipes, and pass the correct AgentChef root and board path to the viewer.
+- Fix supervisor lease and worker settlement paths, collect read-only worker reports without commits, and align approval timing and worker branch names with the contract.
+- Disable Git hooks for engine merge operations and document that integration checks execute as local host processes.
 
 ## 1.3.5 - 2026-10-12
 

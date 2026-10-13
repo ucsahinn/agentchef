@@ -17,6 +17,13 @@ test("valid team mode v2 catalog passes", () => {
   assert.deepEqual(validate(base), []);
 });
 
+test("worker branches use sibling refs for run and task", () => {
+  assert.equal(base.branches.workerBranchFormat, "takim/{runId}-{taskId}");
+  const value = structuredClone(base);
+  value.branches.workerBranchFormat = "takim/{runId}/{taskId}";
+  assert.ok(validate(value).length > 0);
+});
+
 test("test_verifier cannot be elevated above read-only", () => {
   const value = structuredClone(base);
   value.execution.roleModeCeilings.test_verifier = "workspace-write";

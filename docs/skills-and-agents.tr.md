@@ -60,6 +60,13 @@ Kullanım sınırı worker'ı raporlama için bekletir; bu sürümde devam ettir
 yoktur. Codex sürecinin sahibi motordur; terminal sekmesi yalnızca izleyicidir.
 Koşuyu durdurmak için `abort`, kaynak temizliği için ayrıca `cleanup` isteyin.
 
+
+Salt-okunur sandbox kullanan worker'lar commit oluşturmadan rapor olarak
+toplanır. Entegrasyon `--check` komutları entegrasyon worktree'sinde yerel ana
+süreç olarak çalışır; koşuyu başlatmadan önce bunları çalıştırılabilir kod gibi
+inceleyin. Motorun entegrasyon ve son birleştirme işlemlerinde Git hook'ları
+devre dışı bırakılır.
+
 ## Plugins
 
 Yerel plugin, AgentChef'e ait akışları birlikte kurup güncelleyebilmek için

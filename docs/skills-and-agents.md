@@ -52,6 +52,12 @@ worktree root is the repository sibling
 `.agentchef-worktrees/<runId>/` (outside the repo and not in a temporary
 directory).
 
+Workers with a read-only sandbox are collected as reports and do not create a
+worker commit. Integration `--check` commands run as local host processes in
+the integration worktree; review them as executable code before starting a
+run. Git merge hooks are disabled for the engine's integration and final merge
+operations.
+
 Supported environment controls are `AGENTCHEF_TEAM_MODE`,
 `AGENTCHEF_TEAM_MAX_WORKERS`, `AGENTCHEF_TEAM_WORKTREE_ROOT`,
 `AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND`, and

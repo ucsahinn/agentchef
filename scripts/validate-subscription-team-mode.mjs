@@ -57,7 +57,7 @@ const limits = catalog.limits || {};
 if (!(limits.leaseRenewMinutes < limits.leaseMinutes && limits.leaseMinutes <= 1440)) errors.push("lease limits must satisfy renew < lease <= 1440 minutes");
 if (limits.workerMinutes !== 60 || limits.idleWarningMinutes !== 15 || limits.idleStopMinutes !== 30 || limits.ramPerWorkerMb !== 1536) errors.push("worker limits do not match the contract");
 exactKeys(catalog.branches, ["integrationPrefix", "workerBranchFormat", "worktreeRootFormat", "rejectTemp", "rejectInsideRepository"], "branches", errors);
-if (catalog.branches?.integrationPrefix !== "takim/" || catalog.branches?.workerBranchFormat !== "takim/{runId}/{taskId}" || catalog.branches?.worktreeRootFormat !== "{repoParent}/.agentchef-worktrees/{runId}" || catalog.branches?.rejectTemp !== true || catalog.branches?.rejectInsideRepository !== true) errors.push("branch and worktree contract is invalid");
+if (catalog.branches?.integrationPrefix !== "takim/" || catalog.branches?.workerBranchFormat !== "takim/{runId}-{taskId}" || catalog.branches?.worktreeRootFormat !== "{repoParent}/.agentchef-worktrees/{runId}" || catalog.branches?.rejectTemp !== true || catalog.branches?.rejectInsideRepository !== true) errors.push("branch and worktree contract is invalid");
 
 return errors;
 }

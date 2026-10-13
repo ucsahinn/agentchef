@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { buildExecArgs, buildViewerPaneArgs, classifyFailure, parseExecEvent, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
@@ -22,6 +23,8 @@ test("JSONL event parser captures thread, message, usage and failure and ignores
   assert.equal(result.failure.kind, "usage_limit");
   parseExecEvent(JSON.stringify({ type: "error", message: "other problem" }), result);
   assert.equal(result.failure.kind, "exec_failed");
+  parseExecEvent(JSON.stringify({ type: "error", message: `ghp_${"x".repeat(36)}` }), result);
+  assert.doesNotMatch(result.failure.message, /ghp_/);
 });
 
 test("usage limits classify known quota messages", () => {
@@ -37,9 +40,17 @@ test("buildExecArgs uses stdin prompt, resume syntax and never adds approval byp
 });
 
 test("viewer pane argv does not contain shell command separators", () => {
-  const args = buildViewerPaneArgs({ worktree: "C:/work tree", runId: "R-test", taskId: "TASK-045" });
-  assert.deepEqual(args, ["-w", "0", "new-tab", "--title", "R-test TASK-045", "node", path.join("C:/work tree", "scripts", "team-run.mjs"), "watch", "--run", "R-test", "--task", "TASK-045"]);
+  const args = buildViewerPaneArgs({ root: "C:/agentchef", state: "C:/state/board.json", worktree: "C:/work tree", runId: "R-test", taskId: "TASK-045" });
+  assert.deepEqual(args, ["-w", "0", "new-tab", "--title", "R-test TASK-045", "node", path.join("C:/agentchef", "scripts", "team-run.mjs"), "watch", "--run", "R-test", "--task", "TASK-045", "--state", "C:/state/board.json"]);
   assert.equal(args.some((value) => value.includes(";")), false);
+});
+
+test("viewer pane launches the AgentChef watcher with the board state", () => {
+  const args = buildViewerPaneArgs({ worktree: "C:/worker", runId: "R-test", taskId: "TASK-045", root: "C:/agentchef", state: "C:/state/board.json" });
+  assert.ok(args.includes(path.join("C:/agentchef", "scripts", "team-run.mjs")));
+  assert.deepEqual(args.slice(-6), ["--run", "R-test", "--task", "TASK-045", "--state", "C:/state/board.json"]);
+  assert.ok(args.includes("--state"));
+  assert.ok(args.includes("C:/state/board.json"));
 });
 
 test("workerEnv sets six team variables, removes BEYIN_CHILD and preserves BEYIN_AGENT", () => {
@@ -83,4 +94,18 @@ test("fake codex spawn captures JSONL, output message, usage, and crash failure"
   assert.notEqual(failed.exitCode, 0);
   assert.equal(failed.failure.kind, "exec_failed");
   assert.match(fs.readFileSync(path.join(runDir, "stderr.log"), "utf8"), /simulated crash/);
+});
+
+test("stdin EPIPE is handled and streamed JSONL is visible before child close", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-epipe-")); t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const worktree = path.join(root, "worktree"), runDir = path.join(root, "run"), schema = path.join(root, "schema.json");
+  fs.mkdirSync(worktree); fs.writeFileSync(schema, "{}");
+  const child = new EventEmitter(); child.pid = 9; child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.stdin = new EventEmitter(); child.kill = () => true;
+  child.stdin.end = () => child.stdin.emit("error", Object.assign(new Error("closed"), { code: "EPIPE" }));
+  const execution = spawnCodexExec({ prompt: "prompt", worktree, runDir, schema, output: path.join(root, "final.json"), runId: "R-epipe", taskId: "TASK-040", role: "worker", boardState: "board", sandbox: "workspace-write", spawnImpl: () => { setImmediate(() => { child.stdout.emit("data", JSON.stringify({ type: "thread.started", thread_id: "thr-stream" }) + "\n"); setTimeout(() => child.emit("close", 0, null), 50); }); return child; } });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.match(fs.readFileSync(path.join(runDir, "events.jsonl"), "utf8"), /thread.started/);
+  const result = await execution;
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.threadId, "thr-stream");
 });

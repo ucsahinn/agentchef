@@ -1,7 +1,14 @@
-import { spawn, spawnSync, execFileSync } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { cmdShimInvocation, resolveWindowsCli } from "./platform-command.mjs";
+import { secretLikeCategory } from "./secret-classifier.mjs";
+
+function safeFailureMessage(value) {
+  const message = String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ");
+  const category = secretLikeCategory(message);
+  return category ? `sensitive ${category} output omitted` : message.slice(0, 500);
+}
 
 export function resolveCodexCommand(env = process.env, platform = process.platform) {
   if (env.AGENTCHEF_TEAM_CODEX_COMMAND) return env.AGENTCHEF_TEAM_CODEX_COMMAND;
@@ -24,7 +31,7 @@ export function parseExecEvent(line, result) {
     const item = event.item;
     if (item?.type === "agent_message" && typeof item.text === "string") result.finalMessage = item.text;
   }
-  if (type === "turn.failed" || type === "error") result.failure = { kind: classifyFailure(event.message || event.error?.message || event.message_text || "Codex execution failed"), message: event.message || event.error?.message || event.message_text || "Codex execution failed" };
+  if (type === "turn.failed" || type === "error") { const rawMessage = event.message || event.error?.message || event.message_text || "Codex execution failed"; result.failure = { kind: classifyFailure(rawMessage), message: safeFailureMessage(rawMessage) }; }
   return true;
 }
 
@@ -43,15 +50,15 @@ export function workerEnv({ runId, taskId, worktree, role, boardState }, env = p
   return result;
 }
 
-export function buildViewerPaneArgs({ worktree, runId, taskId, title = `${runId} ${taskId}` }) {
-  return ["-w", "0", "new-tab", "--title", title, "node", path.join(worktree, "scripts", "team-run.mjs"), "watch", "--run", runId, "--task", taskId];
+export function buildViewerPaneArgs({ root, state, worktree, runId, taskId, title = `${runId} ${taskId}` }) {
+  return ["-w", "0", "new-tab", "--title", title, "node", path.join(root, "scripts", "team-run.mjs"), "watch", "--run", runId, "--task", taskId, "--state", state];
 }
 
-export function openViewerPane({ worktree, runId, taskId, title = `${runId} ${taskId}`, env = process.env, platform = process.platform } = {}) {
+export function openViewerPane({ root, state, worktree, runId, taskId, title = `${runId} ${taskId}`, env = process.env, platform = process.platform } = {}) {
   if (env.AGENTCHEF_TEAM_PANE === "off" || platform !== "win32") return null;
   const wt = resolveWindowsCli("wt", env);
   if (!wt) return null;
-  const args = buildViewerPaneArgs({ worktree, runId, taskId, title });
+  const args = buildViewerPaneArgs({ root, state, worktree, runId, taskId, title });
   const invocation = wt.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(wt, args) : { command: wt, args };
   try { spawn(invocation.command, invocation.args, { detached: true, stdio: "ignore", windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments }).unref(); return true; } catch { return null; }
 }
@@ -63,8 +70,13 @@ export function stopChild(child, { createdAt, cmdShim = child?.agentChefCmdShim 
       if (!createdAt) return false;
       const identity = childProcessIdentity(child.pid);
       if (!identity || Date.parse(identity.createdAt) !== Date.parse(createdAt)) return false;
-      const result = spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T"], { windowsHide: true, timeout: 5000 });
-      return result.status === 0;
+      const tree = childProcessTree(child.pid);
+      const descendants = tree.filter((entry) => entry.pid !== child.pid).sort((a, b) => b.depth - a.depth);
+      for (const entry of descendants) {
+        const current = childProcessIdentity(entry.pid);
+        if (current && Date.parse(current.createdAt) === Date.parse(entry.createdAt)) { try { process.kill(entry.pid); } catch {} }
+      }
+      try { process.kill(child.pid); return true; } catch { return false; }
     } catch { return false; }
   }
   try { return child.kill(); } catch { return false; }
@@ -75,7 +87,20 @@ function childProcessIdentity(pid) {
   const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", timeout: 3000 }).trim();
   return { createdAt: new Date(value).toISOString() };
 }
-export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, env = process.env, platform = process.platform, spawnImpl = spawn }) {
+function childProcessTree(rootPid) {
+  const script = "$rows = Get-CimInstance Win32_Process | ForEach-Object { if ($_.CreationDate -is [datetime]) { [pscustomobject]@{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; createdAt=$_.CreationDate.ToUniversalTime().ToString('o') } } }; ConvertTo-Json -InputObject $rows -Compress";
+  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8", timeout: 5000 }).trim();
+  const parsed = JSON.parse(value || "[]"), rows = Array.isArray(parsed) ? parsed : [parsed];
+  const result = [], seen = new Set([rootPid]);
+  const visit = (parent, depth) => { for (const row of rows.filter((entry) => entry.parent === parent)) if (!seen.has(row.pid)) { seen.add(row.pid); result.push({ pid: row.pid, createdAt: row.createdAt, depth }); visit(row.pid, depth + 1); } };
+  visit(rootPid, 1);
+  return [{ pid: rootPid, createdAt: childProcessIdentity(rootPid).createdAt, depth: 0 }, ...result];
+}
+export function processCreatedAt(pid, platform = process.platform) {
+  if (platform !== "win32" || !Number.isInteger(pid)) return null;
+  try { return childProcessIdentity(pid)?.createdAt || null; } catch { return null; }
+}
+export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, onActivity = () => {}, env = process.env, platform = process.platform, spawnImpl = spawn }) {
   fs.mkdirSync(runDir, { recursive: true });
   const eventsPath = path.join(runDir, "events.jsonl");
   const stderrPath = path.join(runDir, "stderr.log");
@@ -85,7 +110,6 @@ export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId
   const invocation = platform === "win32" && command.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(command, args) : { command, args };
   let childRef = null;
   const execution = new Promise((resolve, reject) => {
-    let events = "";
     let pendingLine = "";
     let stderr = "";
     let done = false;
@@ -96,21 +120,34 @@ export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId
       if (done) return;
       done = true;
       if (pendingLine.trim()) parseExecEvent(pendingLine, result);
-      fs.appendFileSync(eventsPath, events);
-      fs.appendFileSync(stderrPath, stderr);
-      if (result.exitCode !== 0 && !result.failure) result.failure = { kind: classifyFailure(stderr || result.finalMessage || "Codex exited with a non-zero status"), message: stderr.trim() || `Codex exited with ${result.exitCode ?? result.signal}` };
+      if (pendingLine.trim()) {
+        const category = secretLikeCategory(pendingLine);
+        fs.appendFileSync(eventsPath, category ? `[sensitive ${category} event omitted]\n` : `${pendingLine}\n`);
+      }
+      if (stderr) {
+        const category = secretLikeCategory(stderr);
+        fs.appendFileSync(stderrPath, category ? `[sensitive ${category} stderr omitted]\n` : stderr);
+      }
+      if (result.failure) result.failure.message = safeFailureMessage(result.failure.message);
+      if (result.exitCode !== 0 && !result.failure) { const rawMessage = stderr.trim() || result.finalMessage || `Codex exited with ${result.exitCode ?? result.signal}`; result.failure = { kind: classifyFailure(rawMessage), message: safeFailureMessage(rawMessage) }; }
       resolve({ ...result });
     };
     child.stdout?.on("data", (chunk) => {
-      const text = String(chunk); events += text;
+      const text = String(chunk);
+      onActivity();
       const lines = (pendingLine + text).split(/\r?\n/);
       pendingLine = lines.pop() || "";
-      for (const line of lines) if (line.trim()) parseExecEvent(line, result);
+      for (const line of lines) if (line.trim()) {
+        const category = secretLikeCategory(line);
+        fs.appendFileSync(eventsPath, category ? `[sensitive ${category} event omitted]\n` : `${line}\n`);
+        parseExecEvent(line, result);
+      }
     });
-    child.stderr?.on("data", (chunk) => { stderr += String(chunk); });
+    child.stderr?.on("data", (chunk) => { const text = String(chunk); stderr = (stderr + text).slice(-200_000); onActivity(); });
     child.once("error", (error) => { if (!done) { result.failure = { kind: "spawn_error", message: error.message }; reject(error); } });
     child.once("close", (code, signal) => { result.exitCode = code; result.signal = signal; finish(); });
-    child.stdin?.end(prompt);
+    child.stdin?.once("error", (error) => { if (error.code !== "EPIPE" && !result.failure) result.failure = { kind: "stdin_error", message: error.message }; });
+    try { child.stdin?.end(prompt); } catch (error) { if (error.code !== "EPIPE") result.failure = { kind: "stdin_error", message: error.message }; }
   });
   Object.defineProperty(execution, "child", { get: () => childRef });
   return execution;

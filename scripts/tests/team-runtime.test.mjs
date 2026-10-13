@@ -32,6 +32,7 @@ test("approvals are validated and consumed once", () => {
   assert.equal(readApproval(dir,"R1","baslat"), null);
   fs.writeFileSync(file, JSON.stringify(row));
   assert.equal(approvalIsValid(row,{runId:"R1",tur:"baslat",plannedAt,now:"2026-10-03T00:00:00Z"}), true);
+  assert.equal(approvalIsValid((({tur,...rest})=>rest)(row),{runId:"R1",tur:"baslat",plannedAt,now:"2026-10-03T00:00:00Z"}), false);
   assert.equal(approvalIsValid({...row,taskId:"other"},{runId:"R1",tur:"baslat",plannedAt}), false);
   assert.equal(approvalIsValid({...row,approvedAt:"2026-09-30T00:00:00Z"},{runId:"R1",tur:"baslat",plannedAt}), false);
   assert.equal(approvalIsValid({...row,approvedAt:"2026-10-02T00:00:00Z"},{runId:"R1",tur:"baslat",plannedAt,now:"2026-10-11T00:00:00Z"}), false);
@@ -62,10 +63,12 @@ test("run writes use revision CAS and status transitions reject invalid edges", 
   writeRunRecord(file,run); const read=readRunRecord(file); assert.equal(read.revision,1);
   assert.throws(() => writeRunRecord(file,run), /revision/);
   assert.equal(transitionRun(read,"running").status,"running");
+  assert.equal(transitionRun({ ...read, status: "paused" }, "collected").status, "collected");
   assert.throws(() => transitionRun(read,"merged"));
   const worker={taskId:"TASK-1",status:"planned"};
   assert.equal(transitionWorker(worker,"queued").status,"queued");
   assert.throws(() => transitionWorker(worker,"finished"));
+  assert.equal(transitionWorker({taskId:"TASK-1",status:"finished"},"failed").status,"failed");
   fs.rmSync(dir,{recursive:true,force:true});
 });
 test("role TOML returns developer instructions, sandbox and catalog-default model", () => {

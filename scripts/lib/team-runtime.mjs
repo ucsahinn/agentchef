@@ -10,8 +10,8 @@ import * as board from "./coordination-runtime.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const CONTRACT = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/subscription-team-mode.json"),"utf8"));
 const AGENTS = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/agents.json"),"utf8"));
-const RUN_MOVES = { planned:["running","aborted","failed"], running:["paused","collected","aborted","failed"], paused:["running","aborted","failed"], collected:["integrated","aborted","failed"], integrated:["verified","aborted","failed"], verified:["merged","aborted","failed"], merged:[], aborted:[], failed:[] };
-const WORKER_MOVES = { planned:["queued","aborted"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted"], running:["finished","failed","paused_limit","timed_out","aborted"], finished:["collected","scope_violation"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[] };
+const RUN_MOVES = { planned:["running","aborted","failed"], running:["paused","collected","aborted","failed"], paused:["running","collected","aborted","failed"], collected:["integrated","aborted","failed"], integrated:["verified","aborted","failed"], verified:["merged","aborted","failed"], merged:[], aborted:[], failed:[] };
+const WORKER_MOVES = { planned:["queued","aborted"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted"], running:["finished","failed","paused_limit","timed_out","aborted"], finished:["collected","scope_violation","failed"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[] };
 const fail = (message) => { throw new Error(message); };
 const clone = (value) => structuredClone(value);
 export function loadTeamContract(file = path.join(ROOT,"catalog/subscription-team-mode.json")) { return JSON.parse(fs.readFileSync(file,"utf8")); }
@@ -52,18 +52,21 @@ export function writeRunRecord(file, record) {
 export function updateRunRecord(file, mutator) { const lock=board.acquireCoordinationStateLock(file); try { const r=readRunRecord(file); const n=mutator(clone(r)); return writeRunRecord(file,n); } finally { lock.release(); } }
 export function readApproval(stateDir, runId, type) {
   if(!["baslat","birlestir"].includes(type)) fail("Unknown approval type.");
-  const file=path.join(stateDir,"approvals",`${runId}.${type}.json`); try { return JSON.parse(fs.readFileSync(file,"utf8")); } catch(e) { if(e.code==="ENOENT") return null; throw e; }
+  const file=path.join(stateDir,"approvals",`${runId}.${type}.json`); try { return JSON.parse(fs.readFileSync(file,"utf8")); } catch(e) { if(e.code==="ENOENT"||e instanceof SyntaxError) return null; throw e; }
 }
 export function approvalIsValid(approval, {runId,tur,plannedAt,now=Date.now()}={}) {
   if(!approval||!runId||!tur) return false;
   const approved=Date.parse(approval.approvedAt), planned=Date.parse(plannedAt), current=Date.parse(now);
-  return approval.v===2&&approval.taskId===runId&&approval.runId===runId&&(!approval.tur||approval.tur===tur)&&!approval.kullanildi&&Number.isFinite(approved)&&Number.isFinite(planned)&&Number.isFinite(current)&&approved>planned&&approved<=current&&current-approved<=7*86400000;
+  return approval.v===2&&approval.taskId===runId&&approval.runId===runId&&approval.tur===tur&&Boolean(approval.nonce)&&!approval.kullanildi&&Number.isFinite(approved)&&Number.isFinite(planned)&&Number.isFinite(current)&&approved>planned&&approved<=current&&current-approved<=7*86400000;
 }
 export function consumeApproval(file, consumer) {
-  const a=JSON.parse(fs.readFileSync(file,"utf8")); if(a.kullanildi) fail("Approval has already been consumed.");
-  const n={...a,kullanildi:new Date().toISOString(),kullanan:String(consumer)}; const t=`${file}.${crypto.randomUUID()}.tmp`;
-  try { fs.writeFileSync(t,JSON.stringify(n,null,2),{flag:"wx"}); fs.renameSync(t,file); } finally { try{fs.rmSync(t,{force:true});}catch{} }
-  return n;
+  const lock=board.acquireCoordinationStateLock(file);
+  try {
+    const a=JSON.parse(fs.readFileSync(file,"utf8")); if(a.kullanildi) fail("Approval has already been consumed.");
+    const n={...a,kullanildi:new Date().toISOString(),kullanan:String(consumer)}; const t=`${file}.${crypto.randomUUID()}.tmp`;
+    try { fs.writeFileSync(t,JSON.stringify(n,null,2),{flag:"wx"}); fs.renameSync(t,file); } finally { try{fs.rmSync(t,{force:true});}catch{} }
+    return n;
+  } finally { lock.release(); }
 }
 export function assertTeamTextSafe(text) { const category=secretLikeCategory(String(text??"")); if(category) fail(`Team content contains a ${category} and was rejected.`); return String(text??""); }
 const BRIEF_KEYS=["goal","evidence","scope","boundaries","doneWhen","returnFormat","userWords"];
@@ -107,8 +110,11 @@ export const mergeNoFf=(repo,branch)=>git(["merge","--no-ff",branch],repo);
 export const mergeAbort=(repo)=>git(["merge","--abort"],repo);
 export const diffStat=(cwd=ROOT)=>git(["diff","--stat"],cwd);
 export const diffFull=(cwd=ROOT)=>git(["diff"],cwd);
-export function changedPaths(cwd=ROOT) { const b=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer"}); return b.toString("utf8").split("\0").filter(Boolean).map(x=>x.slice(3)); }
-export function commitAll(cwd=ROOT,message) { git(["add","-A"],cwd); return git(["commit","-m",message],cwd); }
+export function changedPaths(cwd=ROOT) {
+  const fields=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer"}).toString("utf8").split("\0"), paths=[];
+  for(let i=0;i<fields.length;i++){const entry=fields[i];if(!entry)continue;const status=entry.slice(0,2);paths.push(entry.slice(3));if(status.includes("R")||status.includes("C")){const previous=fields[++i];if(previous)paths.push(previous);}}
+  return [...new Set(paths)];
+}
 const mutate=(statePath,fn)=>{const lock=board.acquireCoordinationStateLock(statePath);try{const s=board.readState(statePath);const result=fn(s);board.writeState(statePath,s);return result;}finally{lock.release();}};
 export const createTask=(p,i)=>mutate(p,s=>board.createTask(s,i));
 export const setBrief=(p,i)=>mutate(p,s=>board.setBrief(s,i));
