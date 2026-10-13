@@ -16,6 +16,7 @@ import {
   readRoleToml, readRunRecord, renewLease, setBrief, transitionRun,
   transitionTask, transitionWorker, updateRunRecord, writeRunRecord
 } from "./lib/team-runtime.mjs";
+import { secretLikeCategory } from "./lib/secret-classifier.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
@@ -31,7 +32,7 @@ const COMMANDS = {
   doctor: ["state"]
 };
 const USAGE = `Usage: node scripts/team-run.mjs <${Object.keys(COMMANDS).join("|")}> --state <board.json> [--json]`;
-const TERMINAL_WORKERS = new Set(["finished", "failed", "paused_limit", "timed_out", "aborted", "scope_violation", "collected", "integrated", "conflict"]);
+const TERMINAL_WORKERS = new Set(["finished", "failed", "paused_limit", "timed_out", "aborted", "scope_violation", "rejected_content", "collected", "integrated", "conflict"]);
 const now = () => new Date().toISOString();
 const safeRunId = (value) => /^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(value);
 
@@ -374,7 +375,7 @@ function superviseCommand(options) {
 function settleWorker(file, taskId, status, exitCode, failure, result = {}) {
   updateRunRecord(file, (current) => {
     const worker = current.workers.find((w) => w.taskId === taskId);
-    if (!worker || ["failed", "paused_limit", "timed_out", "aborted", "scope_violation", "collected", "integrated", "conflict"].includes(worker.status)) return current;
+    if (!worker || ["failed", "paused_limit", "timed_out", "aborted", "scope_violation", "rejected_content", "collected", "integrated", "conflict"].includes(worker.status)) return current;
     return { ...current, workers: current.workers.map((w) => w.taskId === taskId ? { ...transitionWorker(w, status), exitCode, failure, finishedAt: now(), usage: result.usage || null, codexThreadId: result.threadId || null, lastEventAt: now() } : w), history: [...current.history, { at: now(), event: `worker_${status}`, taskId }] };
   });
 }
@@ -384,7 +385,7 @@ function abortWorkers(state, file, run, reason) {
     if (["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status)) {
       stopRecordedWorker(w);
       try { transitionTask(state, { taskId: w.taskId, status: "todo", reason: "Team run work was aborted; release its lease." }); } catch { /* task may already be terminal */ }
-    } else if (["failed", "timed_out", "scope_violation", "aborted"].includes(w.status)) releaseFailedWorkerLease(state, w.taskId);
+    } else if (["failed", "timed_out", "scope_violation", "rejected_content", "aborted"].includes(w.status)) releaseFailedWorkerLease(state, w.taskId);
   }
   updateRunRecord(file, (current) => ({ ...current, status: "aborted", workers: current.workers.map((w) => ["planned", "queued", "running", "spawning", "paused_limit"].includes(w.status) ? { ...w, status: "aborted", finishedAt: now(), failure: reason } : w), history: [...current.history, { at: now(), event: "aborted", reason }] }));
 }
@@ -451,11 +452,26 @@ function workerFinalPath(run, worker) {
   const candidates = [path.join(run.worktreeRoot, `${worker.taskId}.final.json`), path.join(worker.worktree, "final.json")];
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
+function assertAddedDiffTextSafe(diff) {
+  let file = "unknown", oldLine = 0, newLine = 0;
+  for (const line of String(diff).split(/\r?\n/)) {
+    if (line.startsWith("+++ ")) { file = line.slice(4).replace(/^b\//, ""); continue; }
+    if (line.startsWith("--- ")) continue;
+    const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    if (hunk) { oldLine = Number(hunk[1]); newLine = Number(hunk[2]); continue; }
+    if (line.startsWith("+")) {
+      const category = secretLikeCategory(line.slice(1));
+      if (category) throw new Error(`Team content in ${file}:${newLine} contains a ${category} and was rejected.`);
+      newLine++;
+    } else if (line.startsWith("-")) oldLine++;
+    else if (line.startsWith(" ")) { oldLine++; newLine++; }
+  }
+}
 function releaseFailedWorkerLease(state, taskId) {
   try { transitionTask(state, { taskId, status: "todo", reason: "Worker did not produce a collectable change; release its lease." }); } catch { /* already transitioned or terminal */ }
 }
 function releaseRunFailedLeases(state, run) {
-  for (const worker of run.workers) if (["failed", "timed_out", "scope_violation", "aborted"].includes(worker.status)) releaseFailedWorkerLease(state, worker.taskId);
+  for (const worker of run.workers) if (["failed", "timed_out", "scope_violation", "rejected_content", "aborted"].includes(worker.status)) releaseFailedWorkerLease(state, worker.taskId);
 }
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
@@ -464,7 +480,7 @@ function collectCommand(options) {
   if (options.task && !selected.length) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   let partial = false;
   for (const worker of selected) {
-    if (worker.status !== "finished") { partial = true; if (["failed", "timed_out", "scope_violation", "aborted"].includes(worker.status)) releaseFailedWorkerLease(options.state, worker.taskId); continue; }
+    if (worker.status !== "finished") { partial = true; if (["failed", "timed_out", "scope_violation", "rejected_content", "aborted"].includes(worker.status)) releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const final = workerFinalPath(run, worker);
     if (!final) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "final handoff file is missing"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     let handoff;
@@ -492,7 +508,14 @@ function collectCommand(options) {
     if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
     git(["add", "-A"], worker.worktree);
-    assertTeamTextSafe(git(["diff", "--cached", "--no-ext-diff", "--no-textconv"], worker.worktree));
+    try { assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0"], worker.worktree)); }
+    catch (error) {
+      if (!/contains a .+ and was rejected\.$/.test(error.message)) throw error;
+      partial = true;
+      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "rejected_content"), failure: error.message } : item), history: [...current.history, { at: now(), event: "worker_content_rejected", taskId: worker.taskId }] }));
+      releaseFailedWorkerLease(options.state, worker.taskId);
+      continue;
+    }
     git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", `feat(team-mode): ${worker.taskId} worker delivery`], worker.worktree);
     const commit = git(["rev-parse", "HEAD"], worker.worktree);
     const reportId = `${worker.taskId}-${worker.role}.md`;
@@ -507,7 +530,7 @@ function collectCommand(options) {
     if (handoff.verdict !== "pass") partial = true;
   }
   const current = readRun(options.state, options.run);
-  if (current.workers.every((worker) => ["collected", "scope_violation", "failed", "aborted", "timed_out", "paused_limit"].includes(worker.status))) {
+  if (current.workers.every((worker) => ["collected", "scope_violation", "rejected_content", "failed", "aborted", "timed_out", "paused_limit"].includes(worker.status))) {
     updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
   }
   output({ ok: !partial, run: readRun(options.state, options.run) }, options.json);
@@ -554,8 +577,8 @@ function integrateCommand(options) {
     const result = runCheck(check, cwd, remaining); checks.push(result);
     if (result.status !== 0) checksOk = false;
   }
-  const diff = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", run.baseCommit], cwd), stat = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--stat", run.baseCommit], cwd);
-  assertTeamTextSafe(diff); assertTeamTextSafe(stat);
+  const diff = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", run.baseCommit], cwd), stat = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", "--stat", run.baseCommit], cwd);
+  assertAddedDiffTextSafe(diff); assertAddedDiffTextSafe(stat);
   const integrationCommit = git(["rev-parse", "HEAD"], cwd);
   const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
   fs.writeFileSync(path.join(runDir, "integration.diff"), diff, "utf8"); fs.writeFileSync(path.join(runDir, "integration.stat"), stat, "utf8");
