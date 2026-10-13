@@ -78,6 +78,29 @@ pauses a worker for reporting; resume is not available in this release. The
 engine owns the Codex process; the terminal tab is only a viewer. Use `abort`
 to stop a run and request `cleanup` separately.
 
+There are two separate, single-use user gates. After `plan`, the conductor
+shows the plan and asks for the exact chat sentence `baslat <runId>`; after a
+passing verification it asks for `birlestir <runId>`. The Beyin approval hook
+writes the corresponding JSON file under the state directory's `approvals/`
+directory; the engine only reads and consumes it. The approval must match the
+run and gate, have `approvedAt` later than the relevant `plannedAt`, and be no
+more than seven days old. The engine never creates approval files. A missing,
+stale, or mismatched gate exits 3; do not retry around it.
+
+Codex resume is deliberately constrained: the worker runner reuses the saved
+thread and worktree, and supplies only `-c`, `--json`, `-m`, `-o`/
+`--output-schema`, and stdin (`-`) options. It does not change directory,
+sandbox, or profile through resume flags. Windows child processes use hidden
+consoles; the optional viewer tab uses Windows Terminal (`wt`, including its
+resolved executable alias). POSIX workers run in their own process group.
+
+Collection releases a task lease when a worker cannot be collected, times out,
+or violates its declared write scope. A write-capable worker that finishes
+without Git changes is intentionally marked `failed`: there is no inspectable
+commit to integrate. Read-only workers return reports and do not acquire a
+write lease. Workers cannot create subagents; a request for further expertise
+must be returned as `needs: <role> - <why>` for the conductor to decide.
+
 ## Plugins
 
 The local plugin packages AgentChef's own workflows so they can be installed

@@ -133,6 +133,12 @@ Resmî kaynak:
 
 ## Takım Koşusu Worker'ları
 
+Ayni kosu icin baslatma kilidi eszamanli baslatmalari onler. Sahibi sonlanmis
+veya PID'si yeniden kullanilmis kilit kurtarilir; etkin sahip kilidi varsa yol
+ve PID bilgisiyle islemi kapali tutar. Baslatma SIGINT ya da SIGTERM alirsa veya
+kurulum basarisiz olursa, o denemenin olusturdugu worktree'leri, yeni dallari
+ve gorev durumlarini geri alir; yalnizca kendi kilidini serbest birakir.
+
 Deneysel takım koşusunda her koşunun ayrık bir `team-run supervise` sahibi
 vardır. Codex alt süreçlerini başlatıp izler, görev kiralarını yeniler ve
 heartbeat/olay durumunu yazar. Görünür Windows Terminal sekmesi yalnızca

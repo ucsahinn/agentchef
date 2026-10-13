@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 - Unreleased
+
+- Document the experimental team-run approval gates, recovery and rollback,
+  worker lease outcomes, constrained Codex resume behavior, and platform
+  process handling in the paired English and Turkish operator guides.
+
 ## 1.5.0 - 2026-10-12
 Team mode v2 adds a disabled-by-default experimental team runner with isolated Codex workers, approval-gated start and merge, collection, integration, verification, and supervision.
 

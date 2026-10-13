@@ -595,6 +595,17 @@ https://code.claude.com/docs/en/hooks
 Operasyon sözleşmesi:
 [çoklu oturum süreç hijyeni](process-hygiene.tr.md).
 
+
+Allowlist'te 21 uzman worker rolü vardır. Etkin sandbox, rol şablonu ile takım
+modu tavanının daha kısıtlayıcı olanıdır; genel worker tavanı `workspace-write`,
+bazı rollerinki `read-only` olur. `danger-full-access` reddedilir. Koşu 1-4
+worker ve en çok bir alt ajan derinliğiyle sınırlıdır; worker agent açamaz,
+ek rol isteğini `needs: <rol> - <neden>` olarak döndürür. `codex exec resume`
+yalnızca `-c`, `--json`, `-m`, `-o`, `--output-schema` ve stdin (`-`)
+seçeneklerini kullanır. Başlatma ve merge onayları ayrıdır, tek kullanımlıktır;
+Beyin kancası yazar, motor okur ve tüketir. Onay ilgili plan zamanından sonra
+olmalı ve yedi günden eski olmamalıdır.
+
 ### Takım Modu Sınırları
 
 Takım modu deneyseldir ve yalnız başlatan süreçte
