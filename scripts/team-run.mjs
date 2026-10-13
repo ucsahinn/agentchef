@@ -428,7 +428,7 @@ function watchCommand(options) {
 
 function gitBytes(args, cwd) { return execFileSync("git", args, { cwd, encoding: "buffer", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }); }
 function porcelainPaths(cwd) {
-  const fields = gitBytes(["status", "--porcelain=v1", "-z"], cwd).toString("utf8").split("\0");
+  const fields = gitBytes(["status", "--porcelain=v1", "-z", "--untracked-files=all"], cwd).toString("utf8").split("\0");
   const paths = [];
   for (let i = 0; i < fields.length; i += 1) {
     const entry = fields[i]; if (!entry) continue;
@@ -440,6 +440,14 @@ function porcelainPaths(cwd) {
     }
   }
   return [...new Set(paths)];
+}
+const BOARD_EVIDENCE_LIMIT = 1900;
+function boardEvidence(text) {
+  const value = String(text);
+  return value.length <= BOARD_EVIDENCE_LIMIT ? value : `${value.slice(0, BOARD_EVIDENCE_LIMIT)} [truncated: ${value.length} characters; full text in the worker report]`;
+}
+function committedPaths(cwd, base) {
+  return [...new Set(gitBytes(["-c", "core.quotePath=false", "diff", "--name-only", "-z", base, "HEAD"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")))];
 }
 function pathWithinScope(file, scopes) {
   const candidate = file.replace(/\\/g, "/").toLocaleLowerCase("en-US");
@@ -486,7 +494,12 @@ function collectCommand(options) {
     let handoff;
     try { handoff = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; }
     catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
-    const changed = porcelainPaths(worker.worktree);
+    const deliverySubject = `feat(team-mode): ${worker.taskId} worker delivery`;
+    let changed = porcelainPaths(worker.worktree), priorCommit = null;
+    if (!changed.length && worker.sandbox !== "read-only") {
+      const head = git(["rev-parse", "HEAD"], worker.worktree);
+      if (head !== run.baseCommit && git(["log", "-1", "--format=%s"], worker.worktree) === deliverySubject) { priorCommit = head; changed = committedPaths(worker.worktree, run.baseCommit); }
+    }
     const outside = changed.filter((item) => !pathWithinScope(item, worker.writeScope));
     if (outside.length) {
       partial = true;
@@ -499,7 +512,7 @@ function collectCommand(options) {
       const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
       const report = renderHandoffMarkdown(handoff); assertTeamTextSafe(report);
       fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n- None (read-only worker)\n`, "utf8");
-      addEvidence(options.state, { taskId: worker.taskId, evidence: `Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Read-only report collected; no commit created.` });
+      addEvidence(options.state, { taskId: worker.taskId, evidence: boardEvidence(`Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Read-only report collected; no commit created.`) });
       attachReport(options.state, { taskId: worker.taskId, reportId }); transitionTask(options.state, { taskId: worker.taskId, status: "review" });
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: [], outsideScope: [], reportId, commit: null } : item), history: [...current.history, { at: now(), event: "worker_collected_read_only", taskId: worker.taskId }] }));
       if (handoff.verdict !== "pass") partial = true;
@@ -507,26 +520,28 @@ function collectCommand(options) {
     }
     if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
-    git(["add", "-A"], worker.worktree);
-    try { assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0"], worker.worktree)); }
-    catch (error) {
+    if (!priorCommit) git(["add", "-A"], worker.worktree);
+    const report = renderHandoffMarkdown(handoff);
+    const evidenceText = boardEvidence(`Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Actual changed paths: ${changed.join(", ")}.`);
+    try {
+      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", ...(priorCommit ? [run.baseCommit, "HEAD"] : ["--cached"])], worker.worktree));
+      assertTeamTextSafe(report); assertTeamTextSafe(evidenceText);
+    } catch (error) {
       if (!/contains a .+ and was rejected\.$/.test(error.message)) throw error;
       partial = true;
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "rejected_content"), failure: error.message } : item), history: [...current.history, { at: now(), event: "worker_content_rejected", taskId: worker.taskId }] }));
       releaseFailedWorkerLease(options.state, worker.taskId);
       continue;
     }
-    git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", `feat(team-mode): ${worker.taskId} worker delivery`], worker.worktree);
-    const commit = git(["rev-parse", "HEAD"], worker.worktree);
+    if (!priorCommit) git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", deliverySubject], worker.worktree);
+    const commit = priorCommit || git(["rev-parse", "HEAD"], worker.worktree);
     const reportId = `${worker.taskId}-${worker.role}.md`;
     const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
-    const report = renderHandoffMarkdown(handoff);
-    assertTeamTextSafe(report);
     fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n${changed.map((item) => `- ${item}`).join("\n")}\n`, "utf8");
-    addEvidence(options.state, { taskId: worker.taskId, evidence: `Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Actual changed paths: ${changed.join(", ")}.` });
+    addEvidence(options.state, { taskId: worker.taskId, evidence: evidenceText });
     attachReport(options.state, { taskId: worker.taskId, reportId });
     transitionTask(options.state, { taskId: worker.taskId, status: "review" });
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: "worker_collected", taskId: worker.taskId }] }));
+    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId }] }));
     if (handoff.verdict !== "pass") partial = true;
   }
   const current = readRun(options.state, options.run);

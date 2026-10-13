@@ -19,7 +19,7 @@ function makeRun(temp,runId,workers,scenario="ok",extraEnv={},setupRepo=()=>{}) 
   const isolatedTemp=path.join(temp,"tmp"); fs.mkdirSync(isolatedTemp);
   const env={...process.env,AGENTCHEF_TEAM_MODE:"experimental",AGENTCHEF_TEAM_CODEX_COMMAND:wrapper,FAKE_CODEX_SCENARIO:scenario,AGENTCHEF_TEAM_PANE:"off",TEMP:isolatedTemp,TMP:isolatedTemp,TMPDIR:isolatedTemp,...extraEnv};
   const brief=path.join(temp,"brief.md"); fs.writeFileSync(brief,["Goal: complete", "Evidence: fixture", "Write scope: src/", "Boundaries: stay in scope", "Done when: collected", "Return format: JSON", "User's words: complete"].join("\n"));
-  const plan=path.join(temp,"plan.json"); fs.writeFileSync(plan,JSON.stringify({workers:workers.map(taskId=>({taskId,role:"docs_author",briefFile:"brief.md",writeScope:["src/"]}))}));
+  const plan=path.join(temp,"plan.json"); fs.writeFileSync(plan,JSON.stringify({workers:workers.map(taskId=>({taskId,role:"docs_author",briefFile:"brief.md",writeScope:[extraEnv.FAKE_CODEX_FILE_BY_TASK?`src/${taskId}/`:"src/"]}))}));
   const planned=node(cli,["plan","--state",state,"--json","--repo",repo,"--plan-file",plan,"--run",runId],{env}); assert.equal(planned.status,0,planned.stderr||planned.stdout); return {repo,state,env,run:JSON.parse(planned.stdout).run};
 }
 function approveStart(state,run) { const dir=path.join(path.dirname(state),"approvals"); fs.mkdirSync(dir,{recursive:true}); fs.writeFileSync(path.join(dir,`${run.runId}.baslat.json`),JSON.stringify({v:2,taskId:run.runId,runId:run.runId,tur:"baslat",nonce:"test-nonce",approvedAt:new Date().toISOString(),kanal:"sohbet",ajan:"claude",session:"test",kullanildi:"",kullanan:""})); }
@@ -39,9 +39,29 @@ test("collect accepts a worker change whose unchanged fixture context contains s
 });
 test("collect rejects only the worker whose added line is secret-like and continues collecting others",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-diff-reject-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
-  const {state,env,run}=makeRun(temp,"R-diff-reject",["TASK-SECRET","TASK-SAFE"],"sensitive-output",{FAKE_CODEX_SECRET_TASK:"TASK-SECRET"});
+  const {state,env,run}=makeRun(temp,"R-diff-reject",["TASK-SECRET","TASK-SAFE"],"sensitive-output",{FAKE_CODEX_SECRET_TASK:"TASK-SECRET",FAKE_CODEX_FILE_BY_TASK:"1"});
   await startRun(state,run,env,2);
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,4,result.stderr||result.stdout); const workers=JSON.parse(result.stdout).run.workers;
-  assert.equal(workers.find(w=>w.taskId==="TASK-SECRET").status,"rejected_content"); assert.match(workers.find(w=>w.taskId==="TASK-SECRET").failure,/src\/change\.txt:\d+/); assert.doesNotMatch(workers.find(w=>w.taskId==="TASK-SECRET").failure,/[x]{12}/);
+  assert.equal(workers.find(w=>w.taskId==="TASK-SECRET").status,"rejected_content"); assert.match(workers.find(w=>w.taskId==="TASK-SECRET").failure,/src\/TASK-SECRET\/change\.txt:\d+/); assert.doesNotMatch(workers.find(w=>w.taskId==="TASK-SECRET").failure,/[x]{12}/);
   assert.equal(workers.find(w=>w.taskId==="TASK-SAFE").status,"collected");
+});
+test("collect truncates long worker evidence for the board instead of failing after the delivery commit",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-long-evidence-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env,run}=makeRun(temp,"R-long-evidence",["TASK-LONG"],"ok",{FAKE_CODEX_EVIDENCE_CHARS:"3000"});
+  await startRun(state,run,env,1);
+  const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
+  const worker=JSON.parse(result.stdout).run.workers[0]; assert.equal(worker.status,"collected"); assert.ok(worker.commit);
+  const task=JSON.parse(fs.readFileSync(state,"utf8")).tasks.find(item=>item.id==="TASK-LONG"); const evidence=task.evidence.at(-1).text;
+  assert.ok(evidence.length<=2000,`board evidence is ${evidence.length} characters`); assert.match(evidence,/\[truncated: 30\d\d characters; full text in the worker report\]$/);
+});
+test("collect reuses an existing delivery commit instead of failing the worker for having no changes",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-collect-idem-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env,run}=makeRun(temp,"R-collect-idem",["TASK-IDEM"],"ok");
+  await startRun(state,run,env,1);
+  const worktree=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run.workers[0].worktree;
+  git(worktree,"add","-A"); git(worktree,"commit","-m","feat(team-mode): TASK-IDEM worker delivery"); const head=git(worktree,"rev-parse","HEAD");
+  const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
+  const collected=JSON.parse(result.stdout).run; const worker=collected.workers[0];
+  assert.equal(worker.status,"collected"); assert.equal(worker.commit,head); assert.deepEqual(worker.changedPaths,["src/change.txt"]);
+  assert.ok(collected.history.some(item=>item.event==="worker_collected_existing_commit"&&item.taskId==="TASK-IDEM"));
 });
