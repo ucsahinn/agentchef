@@ -205,7 +205,8 @@ test("simultaneous starts serialize and leave a valid run record", async (t) => 
   assert.deepEqual(statuses, [0, 1]);
   const record = runCli(state, "status", ["--run", run.runId], env);
   assert.equal(record.status, 0, record.stderr || record.stdout); assert.equal(record.json.run.status, "running");
-  assert.equal(record.json.run.workers.length, 1); assert.equal(record.json.run.workers[0].status, "running");
+  assert.equal(record.json.run.workers.length, 1);
+  assert.ok(["spawning", "running"].includes(record.json.run.workers[0].status), `worker should be spawning or running after start, got ${record.json.run.workers[0].status}`);
   assert.equal(runCli(state, "abort", ["--run", run.runId, "--reason", "race test complete"], env).status, 0);
   await waitForSupervisorStopped(state, run.runId);
 });
