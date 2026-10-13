@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { isProcessAlive, processCreatedAt } from "../lib/codex-exec.mjs";
@@ -168,6 +168,66 @@ test("team run completes plan, collect, integrate, verify, and approved merge", 
   assert.ok(startApproval.kullanildi);
   const runRecord = JSON.parse(fs.readFileSync(path.join(path.dirname(state), "team-runs", `${runId}.json`), "utf8"));
   assert.ok(runRecord.approvals.start.consumedAt && runRecord.approvals.merge.consumedAt);
+});
+
+test("start rejects approvals with wrong type, no nonce, consumed, stale, or pre-plan timestamps", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-invalid-approval-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"); initRepo(repo);
+  for (const [index, mutate] of [
+    (a) => ({ ...a, tur: "birlestir" }),
+    (a) => ({ ...a, nonce: "" }),
+    (a) => ({ ...a, kullanildi: new Date().toISOString() }),
+    (a) => ({ ...a, approvedAt: new Date(Date.now() - 8 * 86400000).toISOString() }),
+    (a, plannedAt) => ({ ...a, approvedAt: new Date(Date.parse(plannedAt) - 1000).toISOString() })
+  ].entries()) {
+    const caseDir = path.join(temp, `case-${index}`); fs.mkdirSync(caseDir); const state = path.join(caseDir, "board.json"); writeBoard(state);
+    const { env, run } = planRun({ temp: caseDir, state, repo, runId: `R-invalid-approval-${index}` });
+    const file = validApproval(state, run.runId, "baslat", run.plannedAt);
+    fs.writeFileSync(file, JSON.stringify(mutate(JSON.parse(fs.readFileSync(file, "utf8")), run.plannedAt)));
+    assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 3, `invalid approval case ${index}`);
+    assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "planned");
+  }
+});
+
+test("simultaneous starts serialize and leave a valid run record", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-racing-start-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-racing-start", scenario: "slow" });
+  validApproval(state, run.runId, "baslat", run.plannedAt);
+  const start = () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cli, "start", "--state", state, "--json", "--run", run.runId], { env: { ...process.env, ...env }, windowsHide: true });
+    const timer = setTimeout(() => child.kill(), scaledTimeout(30_000)); let stdout = "", stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; }); child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
+    child.once("error", reject); child.once("close", (code) => { clearTimeout(timer); resolve({ status: code, stdout, stderr }); });
+  });
+  const [a, b] = await Promise.all([start(), start()]);
+  const statuses = [a.status, b.status].sort((x, y) => x - y);
+  assert.deepEqual(statuses, [0, 1]);
+  const record = runCli(state, "status", ["--run", run.runId], env);
+  assert.equal(record.status, 0, record.stderr || record.stdout); assert.equal(record.json.run.status, "running");
+  assert.equal(record.json.run.workers.length, 1); assert.equal(record.json.run.workers[0].status, "running");
+  assert.equal(runCli(state, "abort", ["--run", run.runId, "--reason", "race test complete"], env).status, 0);
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test("base merge conflict preserves verified state and does not consume approval", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-base-conflict-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-base-conflict" });
+  validApproval(state, run.runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  await waitForWorker(state, run.runId); assert.equal(runCli(state, "collect", ["--run", run.runId], env).status, 0);
+  assert.equal(runCli(state, "integrate", ["--run", run.runId], env).status, 0);
+  await waitForSupervisorStopped(state, run.runId);
+  env.FAKE_CODEX_SCENARIO = "verifier-pass";
+  assert.equal(runCli(state, "verify", ["--run", run.runId], env).status, 0);
+  fs.mkdirSync(path.join(repo, "src"), { recursive: true }); fs.writeFileSync(path.join(repo, "src", "change.txt"), "base branch edit\n");
+  git(repo, "add", "src/change.txt"); git(repo, "commit", "-m", "base branch conflicting edit");
+  validApproval(state, run.runId, "birlestir", run.plannedAt);
+  const result = runCli(state, "merge", ["--run", run.runId], env);
+  assert.notEqual(result.status, 0);
+  assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "verified");
+  const approval = JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${run.runId}.birlestir.json`), "utf8"));
+  assert.equal(approval.kullanildi, "");
 });
 
 test("status tolerates an unstarted worker and abort finalizes a planned run", (t) => {
