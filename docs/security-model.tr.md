@@ -613,6 +613,12 @@ için takımın `abort` komutunu kullanın. `cleanup` ayrı ve açık bir işlem
 Kullanım sınırına ulaşılması işi raporlama için bekletir; bu sürümde devam
 ettirme yoktur.
 
+Salt-okunur worker'ların yazma yolu kapsamı veya koordinasyon panosu kirası
+yoktur. Kurulum ya da gözetmen başlangıç heartbeat'i başarısız olursa
+başlatma işlemi oluşturduğu worktree'leri, yeni dalları ve kart durumlarını
+geri alır. Motorun oluşturduğu worktree'ler, kurulum sırasında depo checkout
+kancalarının çalışmaması için boş bir Git hooks dizini kullanır.
+
 ## Git Hijyeni
 
 Global Git guard'ları opsiyoneldir çünkü kullanıcının global Git default'larını

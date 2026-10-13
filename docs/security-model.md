@@ -618,6 +618,11 @@ renders events, so closing it does not stop a worker. Use the team `abort`
 command for requested stops. `cleanup` is a separate, explicit operation.
 Usage limits pause work for reporting; resume is not available in this release.
 
+Read-only workers have no write-path scope or coordination-board lease. Start
+rolls back worktrees, newly-created branches, and task states if setup or the
+supervisor startup heartbeat fails. Engine-created worktrees use an empty Git
+hooks directory so repository checkout hooks do not run during setup.
+
 ## Git Hygiene
 
 Global Git guards are optional because they modify the user's Git defaults.

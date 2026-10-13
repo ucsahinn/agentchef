@@ -3,7 +3,7 @@
   "stability": "experimental",
   "execution": {
     "enabled": false,
-    "optInEnv": "AGENTCHEF_TEAM_MODE=experimental",
+    "optInEnv": "AGENTCHEF_TEAM_MODE",
     "engineGeneratesApprovals": false,
     "roleModeCeilings": {
       "root_cause_debugger": "workspace-write",

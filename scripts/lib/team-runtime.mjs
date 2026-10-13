@@ -56,7 +56,7 @@ export function readApproval(stateDir, runId, type) {
 }
 export function approvalIsValid(approval, {runId,tur,plannedAt,now=Date.now()}={}) {
   if(!approval||!runId||!tur) return false;
-  const approved=Date.parse(approval.approvedAt), planned=Date.parse(plannedAt), current=Date.parse(now);
+  const approved=Date.parse(approval.approvedAt), planned=Date.parse(plannedAt), current=typeof now === "number" ? now : Date.parse(now);
   return approval.v===2&&approval.taskId===runId&&approval.runId===runId&&approval.tur===tur&&Boolean(approval.nonce)&&!approval.kullanildi&&Number.isFinite(approved)&&Number.isFinite(planned)&&Number.isFinite(current)&&approved>planned&&approved<=current&&current-approved<=7*86400000;
 }
 export function consumeApproval(file, consumer) {
@@ -83,14 +83,14 @@ export function composeWorkerPrompt({roleInstructions="",runId,taskId,role,brief
   for(const x of [roleInstructions,runId,taskId,role]) assertTeamTextSafe(x);
   const parsed=parseBrief(typeof brief==="string"?brief:BRIEF_KEYS.map(k=>`${({goal:"Goal",evidence:"Evidence",scope:"Write scope",boundaries:"Boundaries",doneWhen:"Done when",returnFormat:"Return format",userWords:"User's words"})[k]}: ${brief?.[k]??""}`).join("\n"));
   if(!parsed.ok) fail(`Brief missing fields: ${parsed.missing.join(", ")}.`);
-  return [roleInstructions.trim(),`# Team run ${runId} - ${taskId} (${role})`,`## Brief\n${formatBrief(parsed.fields)}`,TEAM_RULES,`## Return contract\nReturn exactly: outcome, evidence[], changedScope[], risks[], openQuestions[], needs[{role,why}], nextVerification, verdict (pass|partial|blocked|fail), mutationCheck{claimedPaths[],outsideScope}.`].filter(Boolean).join("\n\n");
+  return [roleInstructions.trim(),`# Team run ${runId} - ${taskId} (${role})`,`## Brief\n${formatBrief(parsed.fields)}`,TEAM_RULES,`## Return contract\nReturn exactly: outcome, evidence[], changedScope[], risks[], openQuestions[], needs[{role,why}], nextVerification, verdict (pass|partial|blocked|warn|fail), mutationCheck{claimedPaths[],outsideScope}.`].filter(Boolean).join("\n\n");
 }
-export function composeVerifierPrompt({runId,brief,checks=[]}) { return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Do not edit files.",`Checks: ${checks.join(", ")}`].join("\n\n"); }
+export function composeVerifierPrompt({runId,brief,checks=[]}) { return [`# Team run ${runId} verification`,`## Brief\n${formatBrief(typeof brief==="string"?parseBrief(brief).fields:brief)}`,"Verify independently in read-only mode. Do not edit files.","Verdict must be pass, warn, partial, blocked, or fail. Use warn only when checks are inconclusive but safe to proceed with explicit limitations.",`Checks: ${checks.join(", ")}`].join("\n\n"); }
 export function parseWorkerHandoff(value) {
   let data=value;
   if(typeof value==="string") { const fenced=value.match(/```(?:json)?\s*([\s\S]*?)```/i); try { data=JSON.parse(fenced?.[1]??value); } catch { const p=parseHandoff(value); return {ok:p.ok,fields:p.fields,missing:p.missing}; } }
   const keys=["outcome","evidence","changedScope","risks","openQuestions","needs","nextVerification","verdict","mutationCheck"];
-  const valid=data&&Object.keys(data).length===keys.length&&keys.every(k=>Object.hasOwn(data,k))&&["pass","partial","blocked","fail"].includes(data.verdict)&&["evidence","changedScope","risks","openQuestions","needs"].every(k=>Array.isArray(data[k]))&&data.needs.every(n=>n&&Object.keys(n).length===2&&n.role&&n.why)&&data.mutationCheck&&Object.keys(data.mutationCheck).length===2&&Array.isArray(data.mutationCheck.claimedPaths)&&Array.isArray(data.mutationCheck.outsideScope);
+  const valid=data&&Object.keys(data).length===keys.length&&keys.every(k=>Object.hasOwn(data,k))&&["pass","partial","blocked","warn","fail"].includes(data.verdict)&&["evidence","changedScope","risks","openQuestions","needs"].every(k=>Array.isArray(data[k]))&&data.needs.every(n=>n&&Object.keys(n).length===2&&n.role&&n.why)&&data.mutationCheck&&Object.keys(data.mutationCheck).length===2&&Array.isArray(data.mutationCheck.claimedPaths)&&Array.isArray(data.mutationCheck.outsideScope);
   if(!valid) fail("Worker handoff does not match the strict handoff schema.");
   for(const v of [data.outcome,data.nextVerification,...data.evidence,...data.changedScope,...data.risks,...data.openQuestions,...data.needs.flatMap(x=>[x.role,x.why]),...data.mutationCheck.claimedPaths,...data.mutationCheck.outsideScope]) assertTeamTextSafe(v);
   return {ok:true,data};

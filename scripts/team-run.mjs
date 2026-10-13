@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { parseBrief } from "./lib/agent-brief.mjs";
 import { CliUsageError, emitCliError, redactCliPaths } from "./lib/cli-error-contract.mjs";
 import { openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild } from "./lib/codex-exec.mjs";
-import { cmdShimInvocation } from "./lib/platform-command.mjs";
+import { cmdShimInvocation, resolveWindowsCli } from "./lib/platform-command.mjs";
 import {
   assignTask, assertTeamTextSafe, approvalIsValid, consumeApproval, createTask,
   addEvidence, attachReport, effectiveSandbox, headCommit, loadTeamContract, maxConcurrency, parseWorkerHandoff,
@@ -94,7 +94,7 @@ function scopesOverlap(left, right) {
   return left.some((a) => right.some((b) => { const x = norm(a), y = norm(b); return x === "." || y === "." || x === y || x.startsWith(`${y}/`) || y.startsWith(`${x}/`); }));
 }
 function ensureExperimentEnabled() {
-  if (!CONTRACT.execution.enabled && process.env.AGENTCHEF_TEAM_MODE !== "experimental") {
+  if (!CONTRACT.execution.enabled && process.env[CONTRACT.execution.optInEnv] !== "experimental") {
     const error = new Error("Team execution is disabled; set AGENTCHEF_TEAM_MODE=experimental to opt in."); error.exitCode = 1; error.code = "team-mode-disabled"; throw error;
   }
 }
@@ -139,7 +139,7 @@ function planCommand(options) {
   for (const worker of workers) fs.writeFileSync(path.join(briefDirectory, `${worker.taskId}.md`), assertTeamTextSafe(worker.briefText), "utf8");
   try {
     for (const w of workers) {
-      const taskInfo = { id: w.taskId, title: `Team run ${id}: ${w.role}`, ownerCoordinator: w.coordinator || "leadership_coordinator", ownerAgent: "codex", ownerSession: `team-${id}`, writeRepo: path.basename(repo), writePaths: w.writeScope.join(", ") || "read-only" };
+      const taskInfo = { id: w.taskId, title: `Team run ${id}: ${w.role}`, ownerCoordinator: w.coordinator || "leadership_coordinator", ownerAgent: "codex", ownerSession: `team-${id}`, ...(w.sandbox === "read-only" ? {} : { writeRepo: path.basename(repo), writePaths: w.writeScope.join(", ") }) };
       createTask(options.state, taskInfo);
       setBrief(options.state, { taskId: w.taskId, brief: w.briefText });
       assignTask(options.state, { taskId: w.taskId, ownerAgent: "codex", ownerSession: `team-${id}`, ownerCoordinator: w.coordinator || "leadership_coordinator" });
@@ -158,37 +158,55 @@ function startCommand(options) {
   const login = spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
   if (login.status !== 0) throw new Error("Codex login status failed.");
   if (run.status !== "planned") throw new Error(`Cannot start run in ${run.status} state.`);
-  fs.mkdirSync(run.worktreeRoot, { recursive: true });
-  git(["worktree", "add", "-b", run.integrationBranch, run.integrationWorktree], run.repo);
-  const plan = readPlanForRun(options.state, run);
-  for (const worker of run.workers) {
-    const brief = plan.workers.find((w) => w.taskId === worker.taskId);
-    const wt = path.join(run.worktreeRoot, worker.taskId);
-    // Git cannot keep a branch named takim/<runId> beside child refs at
-    // takim/<runId>/<TASK>; use siblings so the integration ref remains valid.
-    const branch = CONTRACT.branches.workerBranchFormat.replace("{runId}", run.runId).replace("{taskId}", worker.taskId);
-    git(["worktree", "add", "-b", branch, wt, run.baseCommit], run.repo);
-    const { developerInstructions } = readRoleToml(worker.role);
-    const prompt = composePrompt(developerInstructions, run, worker, brief);
-    const schema = path.join(run.worktreeRoot, `${worker.taskId}.handoff.schema.json`);
-    const promptPath = path.join(run.worktreeRoot, `${worker.taskId}.prompt.md`);
-    fs.writeFileSync(promptPath, prompt, "utf8"); fs.writeFileSync(schema, JSON.stringify(HANDOFF_SCHEMA, null, 2), "utf8");
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, worktree: wt, branch, promptHash: crypto.createHash("sha256").update(prompt).digest("hex") } : w) }));
-    renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
-      transitionTask(options.state, { taskId: worker.taskId, status: "in_progress" });
+  const createdBranches = [], createdWorktrees = [], activatedTasks = [], generatedFiles = [];
+  let supervisor = null;
+  const runDir = path.join(path.dirname(file), run.runId), emptyHooks = path.join(runDir, "empty-hooks");
+  const addWorktree = (args) => { git(["-c", `core.hooksPath=${emptyHooks}`, ...args], run.repo); };
+  try {
+    fs.mkdirSync(run.worktreeRoot, { recursive: true }); fs.mkdirSync(emptyHooks, { recursive: true });
+    addWorktree(["worktree", "add", "-b", run.integrationBranch, run.integrationWorktree]);
+    createdBranches.push(run.integrationBranch); createdWorktrees.push(run.integrationWorktree);
+    const plan = readPlanForRun(options.state, run);
+    for (const worker of run.workers) {
+      const brief = plan.workers.find((w) => w.taskId === worker.taskId), wt = path.join(run.worktreeRoot, worker.taskId);
+      const branch = CONTRACT.branches.workerBranchFormat.replace("{runId}", run.runId).replace("{taskId}", worker.taskId);
+      addWorktree(["worktree", "add", "-b", branch, wt, run.baseCommit]);
+      createdBranches.push(branch); createdWorktrees.push(wt);
+      const { developerInstructions } = readRoleToml(worker.role), prompt = composePrompt(developerInstructions, run, worker, brief);
+      const schema = path.join(run.worktreeRoot, `${worker.taskId}.handoff.schema.json`), promptPath = path.join(run.worktreeRoot, `${worker.taskId}.prompt.md`);
+      fs.writeFileSync(promptPath, prompt, "utf8"); fs.writeFileSync(schema, JSON.stringify(HANDOFF_SCHEMA, null, 2), "utf8"); generatedFiles.push(promptPath, schema);
+      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, worktree: wt, branch, promptHash: crypto.createHash("sha256").update(prompt).digest("hex") } : w) }));
+      if (worker.sandbox !== "read-only") renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
+      transitionTask(options.state, { taskId: worker.taskId, status: "in_progress" }); activatedTasks.push(worker.taskId);
+    }
+    supervisor = spawn(process.execPath, [fileURLToPath(import.meta.url), "supervise", "--run", run.runId, "--state", path.resolve(options.state), "--json"], { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true });
+    supervisor.unref();
+    updateRunRecord(file, (current) => ({ ...transitionRun(current, "running"), startedAt: now(), supervisor: { pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid), heartbeatAt: null }, history: [...current.history, { at: now(), event: "started" }] }));
+    const deadline = Date.now() + 10_000;
+    let heartbeatSeen = false;
+    while (Date.now() < deadline) { const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
+    if (!heartbeatSeen) throw new Error("Supervisor did not publish its startup heartbeat within 10 seconds.");
+    const consumedStart = consumeApproval(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`);
+    updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } }));
+    output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
+  } catch (error) {
+    if (supervisor?.pid) {
+      const control = path.join(runDir, "control"); fs.mkdirSync(control, { recursive: true });
+      fs.writeFileSync(path.join(control, "abort.json"), JSON.stringify({ runId: run.runId, reason: "start rollback", requestedAt: now() }));
+      const stopBy = Date.now() + 3000;
+      while (Date.now() < stopBy && isPidAlive(supervisor.pid)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+      if (isPidAlive(supervisor.pid)) { try { process.kill(supervisor.pid); } catch {} }
+    }
+    for (const wt of createdWorktrees.reverse()) try { addWorktree(["worktree", "remove", "--force", wt]); } catch {}
+    for (const branch of createdBranches.reverse()) try { git(["branch", "-D", branch], run.repo); } catch {}
+    for (const generated of generatedFiles) try { fs.rmSync(generated, { force: true }); } catch {}
+    try { fs.rmdirSync(run.worktreeRoot); } catch { /* retain any unrelated or non-empty directory */ }
+    for (const taskId of activatedTasks) try { transitionTask(options.state, { taskId, status: "todo", reason: "Team run start rolled back." }); } catch {}
+    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, processCreatedAt: null, status: "planned" })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
+    throw error;
   }
-  const consumedStart = consumeApproval(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`);
-  updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } }));
-  const supervisor = spawn(process.execPath, [fileURLToPath(import.meta.url), "supervise", "--run", run.runId, "--state", path.resolve(options.state), "--json"], { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true });
-  supervisor.unref();
-  updateRunRecord(file, (current) => ({ ...transitionRun(current, "running"), startedAt: now(), supervisor: { pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid), heartbeatAt: null }, history: [...current.history, { at: now(), event: "started" }] }));
-  const deadline = Date.now() + 10_000;
-  let heartbeatSeen = false;
-  while (Date.now() < deadline) { const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
-  if (!heartbeatSeen) throw new Error("Supervisor did not publish its startup heartbeat within 10 seconds.");
-  output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
 }
-const HANDOFF_SCHEMA = { type: "object", additionalProperties: false, required: ["outcome", "evidence", "changedScope", "risks", "openQuestions", "needs", "nextVerification", "verdict", "mutationCheck"], properties: { outcome: { type: "string" }, evidence: { type: "array", items: { type: "string" } }, changedScope: { type: "array", items: { type: "string" } }, risks: { type: "array", items: { type: "string" } }, openQuestions: { type: "array", items: { type: "string" } }, needs: { type: "array", items: { type: "object", additionalProperties: false, required: ["role", "why"], properties: { role: { type: "string" }, why: { type: "string" } } } }, nextVerification: { type: "string" }, verdict: { enum: ["pass", "partial", "blocked", "fail"] }, mutationCheck: { type: "object", additionalProperties: false, required: ["claimedPaths", "outsideScope"], properties: { claimedPaths: { type: "array", items: { type: "string" } }, outsideScope: { type: "array", items: { type: "string" } } } } } };
+const HANDOFF_SCHEMA = { type: "object", additionalProperties: false, required: ["outcome", "evidence", "changedScope", "risks", "openQuestions", "needs", "nextVerification", "verdict", "mutationCheck"], properties: { outcome: { type: "string" }, evidence: { type: "array", items: { type: "string" } }, changedScope: { type: "array", items: { type: "string" } }, risks: { type: "array", items: { type: "string" } }, openQuestions: { type: "array", items: { type: "string" } }, needs: { type: "array", items: { type: "object", additionalProperties: false, required: ["role", "why"], properties: { role: { type: "string" }, why: { type: "string" } } } }, nextVerification: { type: "string" }, verdict: { enum: ["pass", "warn", "partial", "blocked", "fail"] }, mutationCheck: { type: "object", additionalProperties: false, required: ["claimedPaths", "outsideScope"], properties: { claimedPaths: { type: "array", items: { type: "string" } }, outsideScope: { type: "array", items: { type: "string" } } } } } };
 function composePrompt(roleInstructions, run, worker, item) {
   const text = item.briefText || fs.readFileSync(path.resolve(path.dirname(run.planFile), item.briefFile || ""), "utf8");
   return composeWorkerPrompt({ roleInstructions, runId: run.runId, taskId: worker.taskId, role: worker.role, brief: text });
@@ -217,7 +235,7 @@ async function statusCommand(options) {
   const warnings = [];
   for (const worker of run.workers) {
     if (!worker.worktree || !fs.existsSync(worker.worktree)) continue;
-    const changed = git(["status", "--porcelain"], worker.worktree).split(/\r?\n/).filter(Boolean).map((line) => line.slice(3));
+    const changed = porcelainPaths(worker.worktree);
     const outside = changed.filter((file) => !pathWithinScope(file, worker.writeScope));
     if (outside.length) warnings.push({ taskId: worker.taskId, outsideScope: outside });
   }
@@ -264,7 +282,7 @@ function superviseCommand(options) {
       return;
     }
     for (const worker of run.workers) {
-      if (active.has(worker.taskId) && Date.now() - Date.parse(worker.leaseRenewedAt || worker.startedAt || heartbeatAt) > CONTRACT.limits.leaseRenewMinutes * 60_000) {
+      if (worker.sandbox !== "read-only" && active.has(worker.taskId) && Date.now() - Date.parse(worker.leaseRenewedAt || worker.startedAt || heartbeatAt) > CONTRACT.limits.leaseRenewMinutes * 60_000) {
         renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
         updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, leaseRenewedAt: heartbeatAt } : w) }));
       }
@@ -324,7 +342,7 @@ function superviseCommand(options) {
       const abortFile = path.join(path.dirname(file), run.runId, "control", "abort.json");
       if (fs.existsSync(abortFile)) { settleWorker(file, worker.taskId, "aborted", result.exitCode, "abort_requested", result); return; }
       if (result.failure?.kind === "usage_limit" && result.exitCode !== 0) { settleWorker(file, worker.taskId, "paused_limit", result.exitCode, result.failure.message, result); updateRunRecord(file, (current) => ({ ...current, status: "paused", history: [...current.history, { at: now(), event: "usage_limit" }] })); }
-      else settleWorker(file, worker.taskId, result.exitCode === 0 ? "finished" : "failed", result.exitCode, result.failure?.message || null, result);
+      else settleWorker(file, worker.taskId, result.exitCode === 0 && !result.failure ? "finished" : "failed", result.exitCode, result.failure?.message || null, result);
     }).catch((error) => { activeMap.delete(worker.taskId); const abortFile = path.join(path.dirname(file), run.runId, "control", "abort.json"); settleWorker(file, worker.taskId, fs.existsSync(abortFile) ? "aborted" : "failed", 1, fs.existsSync(abortFile) ? "abort_requested" : error.message); });
   };
   tick();
@@ -369,7 +387,7 @@ function watchCommand(options) {
   if (!worker) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   const file = runFile(options.state, options.run);
   const events = path.join(path.dirname(file), options.run, options.task, "events.jsonl"); let offset = 0;
-  const started = Date.now(); const maxMs = Number(process.env.AGENTCHEF_TEAM_WATCH_MS || 10 * 60_000);
+  const started = Date.now(); const maxMs = Number(process.env.AGENTCHEF_TEAM_WATCH_MS || (run.maxMinutes + 5) * 60_000);
   const tick = () => { if (fs.existsSync(events)) { const content = fs.readFileSync(events, "utf8"); const fresh = content.slice(offset); offset = content.length; for (const line of fresh.split(/\r?\n/).filter(Boolean)) {
     let display = redactCliPaths(line, { root: run.repo, pathRedactions: [{ target: worker.worktree, replacement: "${WORKTREE}" }, { target: run.worktreeRoot, replacement: "${WORKTREE_ROOT}" }] });
     try { assertTeamTextSafe(display); } catch { display = "[sensitive event omitted]"; }
@@ -438,7 +456,7 @@ function collectCommand(options) {
     if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); continue; }
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
     git(["add", "-A"], worker.worktree);
-    assertTeamTextSafe(git(["diff", "--cached", "--no-ext-diff"], worker.worktree));
+    assertTeamTextSafe(git(["diff", "--cached", "--no-ext-diff", "--no-textconv"], worker.worktree));
     git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", `feat(team-mode): ${worker.taskId} worker delivery`], worker.worktree);
     const commit = git(["rev-parse", "HEAD"], worker.worktree);
     const reportId = `${worker.taskId}-${worker.role}.md`;
@@ -531,7 +549,8 @@ async function verifyCommand(options) {
   let exec;
   try { exec = spawnCodexExec({ prompt, worktree: run.integrationWorktree, runDir: path.join(path.dirname(file), run.runId, "verification"), schema, output: final, runId: run.runId, taskId: "TASK-VERIFIER", role: "test_verifier", boardState: path.resolve(options.state), sandbox: "read-only", model: run.model, profile: run.profile }); }
   catch (error) { exec = Promise.resolve({ exitCode: 1, threadId: null, failure: { message: error.message } }); exec.child = null; }
-  const timer = setTimeout(() => stopChild(exec.child, { createdAt: processCreatedAt(exec.child?.pid) || null }), minutes * 60_000);
+  const verifierCreatedAt = processCreatedAt(exec.child?.pid) || null;
+  const timer = setTimeout(() => stopChild(exec.child, { createdAt: verifierCreatedAt }), minutes * 60_000);
   let result;
   try { result = await exec; } finally { clearTimeout(timer); }
   let verdict = "fail", failure = result.failure?.message || null;
@@ -565,10 +584,10 @@ function mergeCommand(options) {
   const worktreeCommit = git(["rev-parse", "HEAD"], run.integrationWorktree), branchCommit = git(["rev-parse", run.integrationBranch], run.repo);
   if (!run.verification.integrationCommit || worktreeCommit !== run.verification.integrationCommit || branchCommit !== run.verification.integrationCommit) throw new Error("Verified integration changed before merge.");
   const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
+  const consumedMerge = consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
   try { git(["-c", `core.hooksPath=${emptyHooks}`, "merge", "--no-ff", run.integrationBranch], run.repo); }
   catch (error) { try { git(["merge", "--abort"], run.repo); } catch {} throw new Error(`Integration merge failed and was aborted: ${error.message}`); }
-  consumeApproval(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge pid=${process.pid}`);
-  updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: now() } }, history: [...current.history, { at: now(), event: "merged" }] }));
+  updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, history: [...current.history, { at: now(), event: "merged" }] }));
   if (!options["keep-worktrees"]) removeWorktrees(run);
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
@@ -584,18 +603,32 @@ function cleanupCommand(options) {
 function doctorCommand(options) {
   const checks = [], check = (id, ok, details = "") => checks.push({ id, status: ok ? "pass" : "fail", details });
   check("contract", CONTRACT.schemaVersion === 2, `enabled=${CONTRACT.execution.enabled}; optIn=${CONTRACT.execution.optInEnv}`);
-  check("opt-in", process.env[CONTRACT.execution.optInEnv] === "experimental", `variable=${CONTRACT.execution.optInEnv}`);
+  const optInEnabled = process.env[CONTRACT.execution.optInEnv] === "experimental";
+  check("opt-in", optInEnabled, `${CONTRACT.execution.optInEnv}=experimental is ${optInEnabled ? "set" : "not set"}`);
   let codex = null;
-  try { codex = resolveCodexCommand(); const version = spawnSync(codex, ["--version"], { encoding: "utf8", timeout: 10_000, windowsHide: true }); check("codex.version", version.status === 0, (version.stdout || version.stderr || "").trim()); }
+  try {
+    codex = resolveCodexCommand();
+    const versionInvocation = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["--version"]) : { command: codex, args: ["--version"] };
+    const version = spawnSync(versionInvocation.command, versionInvocation.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: versionInvocation.options?.windowsVerbatimArguments });
+    check("codex.version", version.status === 0, ((version.stdout || "") + (version.stderr || "") || version.error?.message || `exit=${version.status}`).trim());
+  }
   catch (error) { check("codex.version", false, error.message); }
   if (codex) {
     const loginArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["login", "status"]) : { command: codex, args: ["login", "status"] };
     const login = spawnSync(loginArgs.command, loginArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: loginArgs.options?.windowsVerbatimArguments }); check("codex.login", login.status === 0, login.status === 0 ? "authenticated" : "login status failed");
-    const helpArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["exec", "--help"]) : { command: codex, args: ["exec", "--help"] };
-    const help = spawnSync(helpArgs.command, helpArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: helpArgs.options?.windowsVerbatimArguments });
-    const flags = help.stdout || help.stderr || ""; check("codex.exec-flags", help.status === 0 && ["--json", "--output-schema", "-o", "resume"].every((item) => flags.includes(item)), "requires --json, --output-schema, -o, and resume");
+    const execHelpArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["exec", "--help"]) : { command: codex, args: ["exec", "--help"] };
+    const execHelp = spawnSync(execHelpArgs.command, execHelpArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: execHelpArgs.options?.windowsVerbatimArguments });
+    const execFlags = execHelp.stdout || execHelp.stderr || "";
+    const resumeHelpArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["exec", "resume", "--help"]) : { command: codex, args: ["exec", "resume", "--help"] };
+    const resumeHelp = spawnSync(resumeHelpArgs.command, resumeHelpArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: resumeHelpArgs.options?.windowsVerbatimArguments });
+    const resumeFlags = resumeHelp.stdout || resumeHelp.stderr || "";
+    const execOk = execHelp.status === 0 && ["--json", "--output-schema", "-o"].every((item) => execFlags.includes(item));
+    const resumeOk = resumeHelp.status === 0 && ["--json", "-c", "-m", "--output-schema", "-o", "--ignore-rules"].every((item) => resumeFlags.includes(item));
+    check("codex.exec-flags", execOk, "first execution requires --json, --output-schema, and -o");
+    check("codex.resume-flags", resumeOk, "resume supports --json, -c, -m, --output-schema, -o, and --ignore-rules; cwd comes from the process working directory; -s, -p, and -C are unavailable");
   }
-  const wt = process.platform === "win32" ? spawnSync("wt.exe", ["--version"], { encoding: "utf8", timeout: 5000, windowsHide: true }) : { status: 0 };
+  const wtCommand = process.platform === "win32" ? resolveWindowsCli("wt") || "wt.exe" : null;
+  const wt = process.platform === "win32" ? spawnSync(wtCommand, ["--version"], { encoding: "utf8", timeout: 5000, windowsHide: true }) : { status: 0 };
   check("windows-terminal", process.platform !== "win32" || wt.status === 0, process.platform === "win32" ? "wt.exe" : "viewer panes are optional on this platform");
   const gitName = spawnSync("git", ["config", "user.name"], { encoding: "utf8" }), gitEmail = spawnSync("git", ["config", "user.email"], { encoding: "utf8" });
   check("git.identity", gitName.status === 0 && gitEmail.status === 0 && gitName.stdout.trim() && gitEmail.stdout.trim(), "Git user.name and user.email are required");

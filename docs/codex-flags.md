@@ -96,6 +96,15 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 The first two are read-only. The last command is the separately gated exact
 cleanup path; see [multi-session process hygiene](process-hygiene.md).
 
+`codex exec resume` has a different option set. The engine uses the worker
+worktree as the process working directory, passes the role sandbox with
+`-c sandbox_mode=<mode>`, and supplies model, JSON schema, and output file with
+the resume options `-m`, `--output-schema`, and `-o`. Resume does not accept
+`-C`, `-s`, or `-p`; it reuses the saved profile. On Windows, `-c
+windows.sandbox=unelevated` and `--ignore-rules` remain supported. The current
+team runner reports usage-limited workers as paused; automatic continuation is
+not available in this release.
+
 ## Runtime Verification Behavior
 
 `npm run verify:install:runtime` checks managed-file parity first, then probes

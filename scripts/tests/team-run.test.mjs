@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { processCreatedAt } from "../lib/codex-exec.mjs";
 import { approvalIsValid, updateRunRecord } from "../lib/team-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -60,13 +61,13 @@ function validApproval(state, runId, tur, plannedAt) {
   fs.writeFileSync(file, JSON.stringify(approval));
   return file;
 }
-function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author" }) {
+function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers }) {
   const planPath = path.join(temp, "plan.json"), briefPath = path.join(temp, "brief.md");
   fs.writeFileSync(briefPath, brief);
-  fs.writeFileSync(planPath, JSON.stringify({ workers: [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
+  fs.writeFileSync(planPath, JSON.stringify({ workers: workers || [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
   const isolatedTemp = path.join(temp, "os-temp"); fs.mkdirSync(isolatedTemp, { recursive: true });
   const codex = fixtureCommand(temp);
-  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp };
+  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}) };
   const loginProbe = spawnSync(process.execPath, [fakeCodex, "login", "status"], { encoding: "utf8", env });
   assert.equal(loginProbe.status, 0, loginProbe.error?.message || loginProbe.stderr || loginProbe.stdout);
   const planned = runCli(state, "plan", ["--repo", repo, "--plan-file", planPath, "--run", runId], env);
@@ -86,6 +87,16 @@ async function waitForWorker(state, runId) {
   }
   throw new Error("worker did not finish before timeout");
 }
+async function waitForAllWorkers(state, runId) {
+  const deadline = Date.now() + scaledTimeout(15_000);
+  while (Date.now() < deadline) {
+    const status = runCli(state, "status", ["--run", runId]);
+    assert.equal(status.status, 0, status.stderr || status.stdout);
+    if (status.json.run.workers.every((worker) => ["finished", "failed", "paused_limit", "timed_out", "aborted"].includes(worker.status))) return status.json.run;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("all workers did not finish before timeout");
+}
 async function waitForRunStatus(state, runId, expected) {
   const deadline = Date.now() + scaledTimeout(15_000);
   while (Date.now() < deadline) {
@@ -98,8 +109,21 @@ async function waitForRunStatus(state, runId, expected) {
 async function waitForSupervisorStopped(state, runId) {
   const deadline = Date.now() + scaledTimeout(15_000);
   const lockFile = path.join(path.dirname(state), "team-runs", runId, "supervisor.lock");
+  const recordFile = path.join(path.dirname(state), "team-runs", `${runId}.json`);
   while (Date.now() < deadline) {
-    if (!fs.existsSync(lockFile)) return;
+    const run = JSON.parse(fs.readFileSync(recordFile, "utf8")), pid = run.supervisor?.pid;
+    let alive = false;
+    if (Number.isInteger(pid)) {
+      try { process.kill(pid, 0); alive = !run.supervisor.createdAt || processCreatedAt(pid) === run.supervisor.createdAt; } catch { alive = false; }
+    }
+    if (!fs.existsSync(lockFile) && !alive) {
+      if (process.platform === "win32" && Number.isInteger(pid)) {
+        const task = spawnSync("tasklist.exe", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], { encoding: "utf8", timeout: 5000 });
+        assert.equal(task.status, 0, task.stderr || "tasklist failed");
+        if (task.stdout.includes(`,\"${pid}\"`)) assert.notEqual(processCreatedAt(pid), run.supervisor.createdAt, `supervisor PID ${pid} still identifies the test run`);
+      }
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error("supervisor did not exit before test cleanup");
@@ -157,12 +181,49 @@ test("status tolerates an unstarted worker and abort finalizes a planned run", (
   assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "aborted");
 });
 
+test("start rollback preserves pre-existing branches, restores task state, and skips checkout hooks", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-start-rollback-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-start-rollback"; initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId });
+  const branch = `takim/${runId}-TASK-043`; git(repo, "branch", branch);
+  const hookDir = path.join(temp, "hooks"), marker = path.join(temp, "post-checkout-marker"); fs.mkdirSync(hookDir);
+  const hook = path.join(hookDir, "post-checkout"); fs.writeFileSync(hook, `#!/bin/sh\nprintf ran > '${marker.replace(/\\/g, "/")}'\n`); fs.chmodSync(hook, 0o755); git(repo, "config", "core.hooksPath", hookDir);
+  validApproval(state, runId, "baslat", run.plannedAt);
+  const result = runCli(state, "start", ["--run", runId], env);
+  assert.notEqual(result.status, 0);
+  const current = runCli(state, "status", ["--run", runId], env).json.run;
+  assert.equal(current.status, "planned"); assert.equal(current.workers[0].status, "planned");
+  assert.equal(current.workers[0].worktree, null);
+  assert.equal(git(repo, "branch", "--list", `takim/${runId}`).length, 0);
+  assert.equal(git(repo, "branch", "--list", branch), branch, "pre-existing worker branch remains untouched");
+  assert.equal(fs.existsSync(path.join(repo, ".agentchef-worktrees", runId, "_integration")), false);
+  assert.equal(fs.existsSync(marker), false, "worktree creation does not execute post-checkout hooks");
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].status, "todo");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.baslat.json`), "utf8")).kullanildi, "");
+});
+
+test("start rolls back all setup when the supervisor misses its startup heartbeat", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-heartbeat-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-heartbeat-fail"; initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId });
+  const guard = path.join(temp, "fail-supervisor.cjs"); fs.writeFileSync(guard, 'if (process.argv[1]?.endsWith("team-run.mjs") && process.argv[2] === "supervise") process.exit(29);\n');
+  env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--require=${guard}`].filter(Boolean).join(" ");
+  validApproval(state, runId, "baslat", run.plannedAt);
+  const result = runCli(state, "start", ["--run", runId], env);
+  assert.notEqual(result.status, 0); assert.match(result.stderr + result.stdout, /startup heartbeat/);
+  const current = runCli(state, "status", ["--run", runId], env).json.run;
+  assert.equal(current.status, "planned"); assert.equal(current.workers[0].status, "planned");
+  assert.equal(git(repo, "branch", "--list", `takim/${runId}`), "");
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].status, "todo");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.baslat.json`), "utf8")).kullanildi, "");
+});
+
 test("collect detects actual outside-scope mutations and leaves the card out of review", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-scope-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
   const { env, run } = planRun({ temp, state, repo, runId: "R-task043-scope", scenario: "outside-scope" });
   validApproval(state, run.runId, "baslat", run.plannedAt);
-  assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  const started = runCli(state, "start", ["--run", run.runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
   await waitForWorker(state, run.runId);
   const result = runCli(state, "collect", ["--run", run.runId], env); assert.equal(result.status, 4);
   assert.equal(result.json.run.workers[0].status, "scope_violation");
@@ -175,14 +236,43 @@ test("read-only workers collect a report without a commit or write scope", async
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
   const { env, run } = planRun({ temp, state, repo, runId: "R-team-readonly", role: "code_mapper", scenario: "read-only" });
   assert.deepEqual(run.workers[0].writeScope, []);
+  assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].writeScope, null);
   validApproval(state, run.runId, "baslat", run.plannedAt);
-  assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  const started = runCli(state, "start", ["--run", run.runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
   await waitForWorker(state, run.runId);
   const collected = runCli(state, "collect", ["--run", run.runId], env);
   assert.equal(collected.status, 0, collected.stderr || collected.stdout);
   assert.equal(collected.json.run.workers[0].status, "collected");
   assert.equal(collected.json.run.workers[0].commit, null);
   assert.match(fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", "TASK-043-code_mapper.md"), "utf8"), /read-only worker/);
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test("two read-only workers share no write scopes or leases and run with a concurrency cap", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-readonly-multi-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const workers = ["TASK-051", "TASK-052"].map((taskId, index) => ({ taskId, role: index ? "docs_researcher" : "code_mapper", briefFile: "brief.md", checks: [] }));
+  const { env, run } = planRun({ temp, state, repo, runId: "R-readonly-multi", scenario: "read-only", workers, maxWorkers: 1 });
+  assert.equal(run.maxWorkers, 1); assert.ok(run.workers.every((worker) => worker.writeScope.length === 0));
+  assert.ok(JSON.parse(fs.readFileSync(state, "utf8")).tasks.every((task) => task.writeScope === null && task.leaseUntil === null));
+  validApproval(state, run.runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  const completed = await waitForAllWorkers(state, run.runId); assert.ok(completed.workers.every((worker) => worker.status === "finished"));
+  const collected = runCli(state, "collect", ["--run", run.runId], env); assert.equal(collected.status, 0, collected.stderr || collected.stdout);
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test("status keeps complete NUL-delimited rename paths including spaces", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-status-rename-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo);
+  fs.writeFileSync(path.join(repo, "README with space.md"), "tracked\n"); git(repo, "add", "README with space.md"); git(repo, "commit", "-m", "add spaced path"); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-status-rename", scenario: "slow" });
+  validApproval(state, run.runId, "baslat", run.plannedAt); const started = runCli(state, "start", ["--run", run.runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
+  const startedRun = runCli(state, "status", ["--run", run.runId], env).json.run, worktree = startedRun.workers[0].worktree;
+  fs.renameSync(path.join(worktree, "README with space.md"), path.join(worktree, "README renamed with space.md"));
+  git(worktree, "add", "-A");
+  const status = runCli(state, "status", ["--run", run.runId], env);
+  assert.deepEqual(status.json.warnings[0].outsideScope, ["README renamed with space.md", "README with space.md"]);
+  assert.equal(runCli(state, "abort", ["--run", run.runId, "--reason", "status test complete"], env).status, 0);
   await waitForSupervisorStopped(state, run.runId);
 });
 
@@ -281,4 +371,23 @@ test("failed independent verifier blocks merge and doctor emits JSON checks", (t
   assert.ok(doctor.json && Array.isArray(doctor.json.checks));
   assert.equal(doctor.json.checks.find((entry) => entry.id === "codex.login").status, "fail");
   assert.doesNotThrow(() => JSON.parse(doctor.stdout));
+});
+
+test("warning verdict remains verifiable and can merge only with the explicit flag", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-verify-warn-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-verify-warn" });
+  validApproval(state, run.runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", run.runId], env).status, 0);
+  await waitForWorker(state, run.runId);
+  assert.equal(runCli(state, "collect", ["--run", run.runId], env).status, 0);
+  assert.equal(runCli(state, "integrate", ["--run", run.runId, "--check", "node --version"], env).status, 0);
+  await waitForSupervisorStopped(state, run.runId);
+  env.FAKE_CODEX_SCENARIO = "verifier-warn";
+  const verified = runCli(state, "verify", ["--run", run.runId], env);
+  assert.equal(verified.status, 0, verified.stderr || verified.stdout); assert.equal(verified.json.run.verification.verdict, "warn");
+  const runApproval = runCli(state, "status", ["--run", run.runId], env).json.run;
+  validApproval(state, run.runId, "birlestir", runApproval.plannedAt);
+  assert.notEqual(runCli(state, "merge", ["--run", run.runId], env).status, 0);
+  const merged = runCli(state, "merge", ["--run", run.runId, "--accept-warn"], env);
+  assert.equal(merged.status, 0, merged.stderr || merged.stdout); assert.equal(merged.json.run.status, "merged");
 });

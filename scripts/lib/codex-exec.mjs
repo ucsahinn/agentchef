@@ -37,7 +37,14 @@ export function parseExecEvent(line, result) {
 
 export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile = "offline", schema, output, resumeThreadId, platform = process.platform }) {
   const args = ["exec"];
-  if (resumeThreadId) args.push("resume", resumeThreadId);
+  if (resumeThreadId) {
+    // `resume` does not accept -C, -s, -p, or --full-auto. The worktree is
+    // supplied as spawn cwd; the sandbox is a config override.
+    args.push("resume", resumeThreadId, "--json", "-m", model, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", `sandbox_mode=${sandbox}`);
+    if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
+    args.push("-");
+    return args;
+  }
   args.push("--json", "-C", worktree, "-s", sandbox, "-m", model, "-p", profile, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never");
   if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
   args.push("-");
@@ -84,7 +91,7 @@ export function stopChild(child, { createdAt, cmdShim = child?.agentChefCmdShim 
 
 function childProcessIdentity(pid) {
   if (process.platform !== "win32") return null;
-  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", timeout: 3000 }).trim();
+  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
   return { createdAt: new Date(value).toISOString() };
 }
 function childProcessTree(rootPid) {
@@ -146,7 +153,7 @@ export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId
     child.stderr?.on("data", (chunk) => { const text = String(chunk); stderr = (stderr + text).slice(-200_000); onActivity(); });
     child.once("error", (error) => { if (!done) { result.failure = { kind: "spawn_error", message: error.message }; reject(error); } });
     child.once("close", (code, signal) => { result.exitCode = code; result.signal = signal; finish(); });
-    child.stdin?.once("error", (error) => { if (error.code !== "EPIPE" && !result.failure) result.failure = { kind: "stdin_error", message: error.message }; });
+    child.stdin?.on("error", (error) => { if (error.code !== "EPIPE" && !result.failure) result.failure = { kind: "stdin_error", message: error.message }; });
     try { child.stdin?.end(prompt); } catch (error) { if (error.code !== "EPIPE") result.failure = { kind: "stdin_error", message: error.message }; }
   });
   Object.defineProperty(execution, "child", { get: () => childRef });

@@ -20,7 +20,7 @@ if (catalog.schemaVersion !== 2) errors.push("schemaVersion must be 2");
 if (catalog.stability !== "experimental") errors.push("stability must be experimental");
 exactKeys(catalog.execution, ["enabled", "optInEnv", "engineGeneratesApprovals", "roleModeCeilings"], "execution", errors);
 if (catalog.execution?.enabled !== false) errors.push("execution.enabled must remain false");
-if (catalog.execution?.optInEnv !== "AGENTCHEF_TEAM_MODE=experimental") errors.push("execution.optInEnv must be AGENTCHEF_TEAM_MODE=experimental");
+if (catalog.execution?.optInEnv !== "AGENTCHEF_TEAM_MODE") errors.push("execution.optInEnv must be the AGENTCHEF_TEAM_MODE variable name");
 if (catalog.execution?.engineGeneratesApprovals !== false) errors.push("execution.engineGeneratesApprovals must remain false");
 
 const agentCatalog = JSON.parse(fs.readFileSync(path.join(root, "catalog/agents.json"), "utf8"));

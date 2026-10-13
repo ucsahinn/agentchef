@@ -93,6 +93,15 @@ npm run chef -- --processes --cleanup-stale --apply --no-log
 İlk iki komut yazmasızdır. Son komut ayrıca onaylı tam hedefli temizlik yoludur;
 ayrıntı için [çoklu oturum süreç hijyenine](process-hygiene.tr.md) bak.
 
+`codex exec resume` farklı seçenekler kabul eder. Motor worker worktree'sini
+süreç çalışma dizini olarak kullanır, rol sandbox'ını `-c
+sandbox_mode=<mode>` ile; model, JSON şeması ve çıktı dosyasını resume
+seçenekleri `-m`, `--output-schema` ve `-o` ile verir. Resume `-C`, `-s` veya
+`-p` kabul etmez; kaydedilmiş profili kullanır. Windows'ta `-c
+windows.sandbox=unelevated` ve `--ignore-rules` desteklenir. Mevcut takım
+motoru kullanım sınırına ulaşan worker'ı duraklatır; bu sürüm otomatik
+devam ettirmez.
+
 ## Runtime Dogrulama Davranisi
 
 `npm run verify:install:runtime` once managed dosya esligini, sonra kurulu Codex

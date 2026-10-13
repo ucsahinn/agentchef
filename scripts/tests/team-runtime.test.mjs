@@ -36,6 +36,7 @@ test("approvals are validated and consumed once", () => {
   assert.equal(approvalIsValid({...row,taskId:"other"},{runId:"R1",tur:"baslat",plannedAt}), false);
   assert.equal(approvalIsValid({...row,approvedAt:"2026-09-30T00:00:00Z"},{runId:"R1",tur:"baslat",plannedAt}), false);
   assert.equal(approvalIsValid({...row,approvedAt:"2026-10-02T00:00:00Z"},{runId:"R1",tur:"baslat",plannedAt,now:"2026-10-11T00:00:00Z"}), false);
+  assert.equal(approvalIsValid(row,{runId:"R1",tur:"baslat",plannedAt,now:Date.parse("2026-10-03T00:00:00Z")}), true);
   consumeApproval(file,"claude/session");
   assert.ok(JSON.parse(fs.readFileSync(file,"utf8")).kullanildi);
   assert.throws(() => consumeApproval(file,"claude/session"));
@@ -56,7 +57,7 @@ test("handoff schema rejects extras and Markdown round-trips through parser", ()
   const md = renderHandoffMarkdown(handoff);
   assert.equal(parseWorkerHandoff(md).ok, true);
   assert.throws(() => parseWorkerHandoff({...handoff,extra:true}));
-  assert.throws(() => parseWorkerHandoff({...handoff,verdict:"warn"}));
+  assert.equal(parseWorkerHandoff({...handoff,verdict:"warn"}).data.verdict, "warn");
 });
 test("run writes use revision CAS and status transitions reject invalid edges", () => {
   const dir=tmp(), file=path.join(dir,"run.json"); const run={schemaVersion:1,revision:0,runId:"R1",status:"planned",workers:[]};

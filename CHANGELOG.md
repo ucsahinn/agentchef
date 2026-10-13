@@ -13,6 +13,7 @@ Team mode v2 adds a disabled-by-default experimental team runner with isolated C
 - Fix review findings: persist Codex event output as it arrives, handle closed prompt pipes, and pass the correct AgentChef root and board path to the viewer.
 - Fix supervisor lease and worker settlement paths, collect read-only worker reports without commits, and align approval timing and worker branch names with the contract.
 - Disable Git hooks for engine merge operations and document that integration checks execute as local host processes.
+- Fix second-review and live-run findings: correct opt-in diagnostics, Windows Terminal alias discovery, NUL-safe status paths, transactional start rollback, read-only scope and lease handling, warning verdict support, Codex resume arguments, and supervisor test cleanup.
 
 ## 1.3.5 - 2026-10-12
 

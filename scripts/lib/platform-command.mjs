@@ -24,14 +24,16 @@ function pathEntries(env) {
 }
 
 // The first PATH directory holding name.exe or name.cmd wins, as in a shell.
-export function resolveWindowsCli(name, env = process.env) {
+export function resolveWindowsCli(name, env = process.env, fileSystem = fs) {
   for (const directory of pathEntries(env)) {
     for (const extension of [".exe", ".cmd"]) {
       const candidate = path.join(directory, `${name}${extension}`);
       try {
-        if (fs.statSync(candidate).isFile()) return candidate;
+        if (fileSystem.statSync(candidate).isFile()) return candidate;
       } catch {
-        // not in this directory
+        // Windows Store app-execution aliases can deny stat while remaining
+        // launchable. lstat can still identify the alias itself.
+        try { if (fileSystem.lstatSync(candidate).isSymbolicLink()) return candidate; } catch { /* not in this directory */ }
       }
     }
   }
