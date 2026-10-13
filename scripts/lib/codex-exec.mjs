@@ -111,6 +111,15 @@ export function processCreatedAt(pid, platform = process.platform) {
     return value || null;
   } catch { return null; }
 }
+export function isProcessAlive(pid, platform = process.platform) {
+  if (!Number.isInteger(pid)) return false;
+  try { process.kill(pid, 0); } catch { return false; }
+  if (platform === "win32") return true;
+  try {
+    const state = execFileSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return Boolean(state) && !state.startsWith("Z");
+  } catch { return false; }
+}
 export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, onActivity = () => {}, env = process.env, platform = process.platform, spawnImpl = spawn }) {
   fs.mkdirSync(runDir, { recursive: true });
   const eventsPath = path.join(runDir, "events.jsonl");

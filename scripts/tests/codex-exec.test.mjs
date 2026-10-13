@@ -6,7 +6,7 @@ import test from "node:test";
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { buildExecArgs, buildViewerPaneArgs, classifyFailure, parseExecEvent, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
+import { buildExecArgs, buildViewerPaneArgs, classifyFailure, isProcessAlive, parseExecEvent, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "fake-codex", "fake-codex.cjs");
 
@@ -42,7 +42,7 @@ test("buildExecArgs uses stdin prompt, resume syntax and never adds approval byp
 test("Windows app execution aliases resolve when stat is denied", async () => {
   const { resolveWindowsCli } = await import("../lib/platform-command.mjs");
   const fileSystem = { statSync() { const error = new Error("denied"); error.code = "EACCES"; throw error; }, lstatSync() { return { isSymbolicLink: () => true }; } };
-  assert.equal(resolveWindowsCli("wt", { PATH: "C:/WindowsApps" }, fileSystem), path.join("C:/WindowsApps", "wt.exe"));
+  assert.equal(resolveWindowsCli("wt", { PATH: "C:/WindowsApps;D:/Tools" }, fileSystem, "win32"), path.win32.join("C:/WindowsApps", "wt.exe"));
 });
 
 test("viewer pane argv does not contain shell command separators", () => {
@@ -81,6 +81,12 @@ test("processCreatedAt reads a POSIX process start identity", () => {
   const identity = processCreatedAt(process.pid);
   assert.equal(typeof identity, "string"); assert.ok(identity.length > 0);
   assert.equal(processCreatedAt(2147483000), null);
+});
+
+test("process aliveness treats POSIX zombies as stopped", () => {
+  assert.equal(isProcessAlive(process.pid), true);
+  assert.equal(isProcessAlive(2147483000), false);
+  assert.equal(isProcessAlive(process.pid, "win32"), true);
 });
 
 test("resolveCodexCommand honors explicit command before Windows PATH lookup", () => {

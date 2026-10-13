@@ -7,7 +7,7 @@ import { spawn, spawnSync, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseBrief } from "./lib/agent-brief.mjs";
 import { CliUsageError, emitCliError, redactCliPaths } from "./lib/cli-error-contract.mjs";
-import { openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild } from "./lib/codex-exec.mjs";
+import { isProcessAlive, openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild } from "./lib/codex-exec.mjs";
 import { cmdShimInvocation, resolveWindowsCli } from "./lib/platform-command.mjs";
 import {
   assignTask, assertTeamTextSafe, approvalIsValid, consumeApproval, createTask,
@@ -280,7 +280,7 @@ async function statusCommand(options) {
   if (options.json) output(watchSeconds ? { ok: true, snapshots } : snapshots[0], true);
   return 0;
 }
-function isPidAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
+function isPidAlive(pid) { return isProcessAlive(pid); }
 function acquireSupervisorLock(file) {
   const lockFile = path.join(path.dirname(file), path.basename(file, ".json"), "supervisor.lock");
   fs.mkdirSync(path.dirname(lockFile), { recursive: true });

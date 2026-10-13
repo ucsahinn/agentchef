@@ -18,16 +18,17 @@ export function platformCommand(name, platform = process.platform) {
   return windowsCommands[name] || name;
 }
 
-function pathEntries(env) {
+function pathEntries(env, platform) {
   const key = Object.keys(env).find((candidate) => candidate.toLowerCase() === "path");
-  return String((key && env[key]) || "").split(path.delimiter).filter(Boolean);
+  return String((key && env[key]) || "").split(isWindowsPlatform(platform) ? ";" : path.delimiter).filter(Boolean);
 }
 
 // The first PATH directory holding name.exe or name.cmd wins, as in a shell.
-export function resolveWindowsCli(name, env = process.env, fileSystem = fs) {
-  for (const directory of pathEntries(env)) {
+export function resolveWindowsCli(name, env = process.env, fileSystem = fs, platform = process.platform) {
+  const pathApi = isWindowsPlatform(platform) ? path.win32 : path;
+  for (const directory of pathEntries(env, platform)) {
     for (const extension of [".exe", ".cmd"]) {
-      const candidate = path.join(directory, `${name}${extension}`);
+      const candidate = pathApi.join(directory, `${name}${extension}`);
       try {
         if (fileSystem.statSync(candidate).isFile()) return candidate;
       } catch {

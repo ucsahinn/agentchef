@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { processCreatedAt } from "../lib/codex-exec.mjs";
+import { isProcessAlive, processCreatedAt } from "../lib/codex-exec.mjs";
 import { approvalIsValid, updateRunRecord } from "../lib/team-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -114,7 +114,7 @@ async function waitForSupervisorStopped(state, runId) {
     const run = JSON.parse(fs.readFileSync(recordFile, "utf8")), pid = run.supervisor?.pid;
     let alive = false;
     if (Number.isInteger(pid)) {
-      try { process.kill(pid, 0); alive = !run.supervisor.createdAt || processCreatedAt(pid) === run.supervisor.createdAt; } catch { alive = false; }
+      alive = isProcessAlive(pid) && (!run.supervisor.createdAt || processCreatedAt(pid) === run.supervisor.createdAt);
     }
     if (!fs.existsSync(lockFile) && !alive) {
       if (process.platform === "win32" && Number.isInteger(pid)) {

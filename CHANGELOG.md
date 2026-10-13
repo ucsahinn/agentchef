@@ -16,6 +16,7 @@ Team mode v2 adds a disabled-by-default experimental team runner with isolated C
 - Fix second-review and live-run findings: correct opt-in diagnostics, Windows Terminal alias discovery, NUL-safe status paths, transactional start rollback, read-only scope and lease handling, warning verdict support, Codex resume arguments, and supervisor test cleanup.
 - Fix third-review and live-run findings: retry blocked or partial verification from the integrated state, include verifier evidence in reports, clear stale run controls, release leases for uncollectable workers, serialize starts, stop the identified supervisor tree on rollback, and make the viewer exit when its worker finishes. Keep a write worker with no Git changes failed: the collection contract requires an inspectable commit for integration.
 - Fix fourth-review findings: recover stale start locks, keep aborted cards restartable, identify POSIX child processes during rollback, release failed-worker leases, write verifier evidence only for passing verdicts, discard stale verifier output, return one JSON document for watched status, and report post-merge worktree cleanup failures without misreporting the merge.
+- Fix Linux team-run cleanup detection for exited supervisor zombies and resolve Windows CLI aliases using Windows PATH semantics on every host.
 
 ## 1.3.5 - 2026-10-12
 
