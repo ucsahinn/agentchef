@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { secretLikeCategory } from "./secret-classifier.mjs";
 import { parseBrief, parseHandoff } from "./agent-brief.mjs";
 import * as board from "./coordination-runtime.mjs";
+import { isProcessAlive, processCreatedAt } from "./codex-exec.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const CONTRACT = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/subscription-team-mode.json"),"utf8"));
@@ -50,6 +51,28 @@ export function writeRunRecord(file, record) {
   return next;
 }
 export function updateRunRecord(file, mutator) { const lock=board.acquireCoordinationStateLock(file); try { const r=readRunRecord(file); const n=mutator(clone(r)); return writeRunRecord(file,n); } finally { lock.release(); } }
+export function acquireTeamOperationLock(file) {
+  fs.mkdirSync(path.dirname(file),{recursive:true});
+  for(let attempt=0;attempt<2;attempt+=1) {
+    const nonce=crypto.randomUUID(), lockedAt=new Date().toISOString();
+    let fd;
+    try { fd=fs.openSync(file,"wx"); }
+    catch(error) {
+      if(error.code!=="EEXIST"||attempt!==0) throw error;
+      let owner; try { owner=JSON.parse(fs.readFileSync(file,"utf8")); } catch {}
+      const current=owner?.pid&&Number.isInteger(owner.pid)?processCreatedAt(owner.pid):null;
+      const stale=Boolean(owner?.pid&&((owner.createdAt&&current&&current!==owner.createdAt)||!isProcessAlive(owner.pid)));
+      if(!stale) throw error;
+      try { fs.rmSync(file); } catch { throw error; }
+      continue;
+    }
+    try { fs.writeFileSync(fd,JSON.stringify({pid:process.pid,createdAt:processCreatedAt(process.pid),lockedAt,nonce})); }
+    catch(error) { try { fs.closeSync(fd); } catch {} try { if(JSON.parse(fs.readFileSync(file,"utf8")).nonce===nonce) fs.rmSync(file); } catch {} throw error; }
+    fs.closeSync(fd);
+    return { nonce, lockedAt, release() { try { if(JSON.parse(fs.readFileSync(file,"utf8")).nonce===nonce) fs.rmSync(file); } catch {} } };
+  }
+  throw new Error("Could not acquire team operation lock.");
+}
 export function readApproval(stateDir, runId, type) {
   if(!["baslat","birlestir"].includes(type)) fail("Unknown approval type.");
   const file=path.join(stateDir,"approvals",`${runId}.${type}.json`); try { return JSON.parse(fs.readFileSync(file,"utf8")); } catch(e) { if(e.code==="ENOENT"||e instanceof SyntaxError) return null; throw e; }
@@ -66,6 +89,19 @@ export function consumeApproval(file, consumer) {
     const n={...a,kullanildi:new Date().toISOString(),kullanan:String(consumer)}; const t=`${file}.${crypto.randomUUID()}.tmp`;
     try { fs.writeFileSync(t,JSON.stringify(n,null,2),{flag:"wx"}); fs.renameSync(t,file); } finally { try{fs.rmSync(t,{force:true});}catch{} }
     return n;
+  } finally { lock.release(); }
+}
+export function consumeApprovalWith(file, consumer, commit) {
+  const lock=board.acquireCoordinationStateLock(file);
+  try {
+    const original=fs.readFileSync(file,"utf8"), approval=JSON.parse(original);
+    if(approval.kullanildi) fail("Approval has already been consumed.");
+    const consumed={...approval,kullanildi:new Date().toISOString(),kullanan:String(consumer)};
+    const write=(value)=>{const temp=`${file}.${crypto.randomUUID()}.tmp`;try{fs.writeFileSync(temp,value,{flag:"wx"});fs.renameSync(temp,file);}finally{try{fs.rmSync(temp,{force:true});}catch{}}};
+    write(`${JSON.stringify(consumed,null,2)}\n`);
+    try { commit(consumed); }
+    catch(error) { write(original); throw error; }
+    return consumed;
   } finally { lock.release(); }
 }
 export function assertTeamTextSafe(text) { const category=secretLikeCategory(String(text??"")); if(category) fail(`Team content contains a ${category} and was rejected.`); return String(text??""); }

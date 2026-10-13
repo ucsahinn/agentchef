@@ -33,8 +33,8 @@ test("usage limits classify known quota messages", () => {
 });
 
 test("buildExecArgs uses stdin prompt, resume syntax and never adds approval bypass flags", () => {
-  const args = buildExecArgs({ worktree: "C:/work tree", sandbox: "workspace-write", schema: "schema.json", output: "final.json", resumeThreadId: "thr-1", platform: "win32" });
-  assert.deepEqual(args, ["exec", "resume", "thr-1", "--json", "-m", "gpt-6-luna", "--output-schema", "schema.json", "-o", "final.json", "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", "sandbox_mode=workspace-write", "-c", "windows.sandbox=unelevated", "--ignore-rules", "-"]);
+  const args = buildExecArgs({ worktree: "C:/work tree", sandbox: "workspace-write", profile: "full", schema: "schema.json", output: "final.json", resumeThreadId: "thr-1", platform: "win32" });
+  assert.deepEqual(args, ["exec", "resume", "thr-1", "--json", "-m", "gpt-6-luna", "--output-schema", "schema.json", "-o", "final.json", "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", "sandbox_mode=workspace-write", "-c", "profile=full", "-c", "windows.sandbox=unelevated", "--ignore-rules", "-"]);
   assert.equal(args.includes("--approve-for-me"), false);
   assert.equal(args.includes("--full-auto"), false);
 });

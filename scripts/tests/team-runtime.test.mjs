@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-  effectiveSandbox, maxConcurrency, readApproval, approvalIsValid, consumeApproval,
+  acquireTeamOperationLock, consumeApprovalWith, effectiveSandbox, maxConcurrency, readApproval, approvalIsValid, consumeApproval,
   assertTeamTextSafe, composeWorkerPrompt, composeVerifierPrompt, parseWorkerHandoff,
   renderHandoffMarkdown, writeRunRecord, readRunRecord, transitionRun, transitionWorker,
   readRoleToml
@@ -40,6 +40,21 @@ test("approvals are validated and consumed once", () => {
   consumeApproval(file,"claude/session");
   assert.ok(JSON.parse(fs.readFileSync(file,"utf8")).kullanildi);
   assert.throws(() => consumeApproval(file,"claude/session"));
+  fs.rmSync(dir,{recursive:true,force:true});
+});
+test("approval consumption rolls back when its run-record commit fails", () => {
+  const dir=tmp(), file=path.join(dir,"R1.baslat.json");
+  const original={v:2,taskId:"R1",runId:"R1",tur:"baslat",nonce:"n",approvedAt:"2026-10-02T00:00:00.000Z",kanal:"sohbet",ajan:"claude",session:"s",kullanildi:"",kullanan:""};
+  fs.writeFileSync(file,JSON.stringify(original));
+  assert.throws(()=>consumeApprovalWith(file,"test",()=>{throw new Error("record write failed");}),/record write failed/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file,"utf8")),original);
+  fs.rmSync(dir,{recursive:true,force:true});
+});
+test("team operation lock rejects competitors and only releases its nonce", () => {
+  const dir=tmp(), file=path.join(dir,"merge.lock"), first=acquireTeamOperationLock(file);
+  assert.throws(()=>acquireTeamOperationLock(file),{code:"EEXIST"});
+  fs.writeFileSync(file,JSON.stringify({nonce:"replacement"})); first.release();
+  assert.equal(JSON.parse(fs.readFileSync(file,"utf8")).nonce,"replacement");
   fs.rmSync(dir,{recursive:true,force:true});
 });
 test("worker prompt ordering, seven brief fields, safety rules and verifier prompt", () => {

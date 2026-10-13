@@ -40,7 +40,7 @@ export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile
   if (resumeThreadId) {
     // `resume` does not accept -C, -s, -p, or --full-auto. The worktree is
     // supplied as spawn cwd; the sandbox is a config override.
-    args.push("resume", resumeThreadId, "--json", "-m", model, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", `sandbox_mode=${sandbox}`);
+    args.push("resume", resumeThreadId, "--json", "-m", model, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", `sandbox_mode=${sandbox}`, "-c", `profile=${profile}`);
     if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
     args.push("-");
     return args;
