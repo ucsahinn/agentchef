@@ -616,6 +616,7 @@ planlayıp kapıları yönetirken motor ayrı worktree'lerde 1-4 allowlist Codex
 kapılarını okur; bunların dayandığı dosyaları oluşturmaz. Worker sandbox'ı rol
 TOML'ı ile takım modu tavanının daha kısıtlayıcısıdır; `test_verifier`
 salt-okunurdur.
+Takım toplama ve birleştirme sırasında yalnızca diff'e eklenen satırlar gizli bilgi benzeri içerik için taranır; değişmeden kalan bağlam satırları reddedilmez.
 
 Worker'lar push yapamaz, agent açamaz veya atanmış kapsamları dışında yazamaz.
 Ayrık gözetmen Codex alt süreçlerinin sahibidir; görünür terminal sekmesi
