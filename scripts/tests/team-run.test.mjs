@@ -16,7 +16,7 @@ const scale = Number(process.env.AGENTCHEF_TEST_TIMEOUT_SCALE || 1);
 const scaledTimeout = (ms) => Math.ceil(ms * scale);
 
 function runNode(file, args, options = {}) {
-  return spawnSync(process.execPath, [file, ...args], { encoding: "utf8", timeout: scaledTimeout(30_000), ...options });
+  return spawnSync(process.execPath, [file, ...args], { encoding: "utf8", timeout: scaledTimeout(30_000), ...options, windowsHide: true });
 }
 function runCli(state, command, args = [], env = {}) {
   const result = runNode(cli, [command, "--state", state, "--json", ...args], { env: { ...process.env, ...env } });
@@ -25,7 +25,7 @@ function runCli(state, command, args = [], env = {}) {
   return { ...result, json };
 }
 function git(cwd, ...args) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", timeout: scaledTimeout(30_000) });
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", timeout: scaledTimeout(30_000), windowsHide: true });
   assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr}`);
   return result.stdout.trim();
 }
@@ -50,7 +50,7 @@ function fixtureCommand(dir) {
   const windows = process.platform === "win32";
   const wrapper = path.join(dir, windows ? "fake-codex.cmd" : "fake-codex");
   if (windows) fs.writeFileSync(wrapper, `@echo off\r\n"${process.execPath}" "${fakeCodex}" %*\r\nexit /b %ERRORLEVEL%\r\n`);
-  else { fs.writeFileSync(wrapper, `#!/usr/bin/env node\nconst result = require("node:child_process").spawnSync(${JSON.stringify(process.execPath)}, [${JSON.stringify(fakeCodex)}, ...process.argv.slice(2)], { stdio: "inherit", env: process.env });\nprocess.exit(result.status ?? 1);\n`); fs.chmodSync(wrapper, 0o755); }
+  else { fs.writeFileSync(wrapper, `#!/bin/sh\nexec node ${JSON.stringify(fakeCodex)} "$@"\n`); fs.chmodSync(wrapper, 0o755); }
   return { command: wrapper };
 }
 function validApproval(state, runId, tur, plannedAt) {
@@ -68,7 +68,7 @@ function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_autho
   const isolatedTemp = path.join(temp, "os-temp"); fs.mkdirSync(isolatedTemp, { recursive: true });
   const codex = fixtureCommand(temp);
   const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}) };
-  const loginProbe = spawnSync(process.execPath, [fakeCodex, "login", "status"], { encoding: "utf8", env });
+  const loginProbe = spawnSync(process.execPath, [fakeCodex, "login", "status"], { encoding: "utf8", env, windowsHide: true });
   assert.equal(loginProbe.status, 0, loginProbe.error?.message || loginProbe.stderr || loginProbe.stdout);
   const planned = runCli(state, "plan", ["--repo", repo, "--plan-file", planPath, "--run", runId], env);
   assert.equal(planned.status, 0, planned.stderr || planned.stdout);
@@ -118,7 +118,7 @@ async function waitForSupervisorStopped(state, runId) {
     }
     if (!fs.existsSync(lockFile) && !alive) {
       if (process.platform === "win32" && Number.isInteger(pid)) {
-        const task = spawnSync("tasklist.exe", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], { encoding: "utf8", timeout: 5000 });
+        const task = spawnSync("tasklist.exe", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], { encoding: "utf8", timeout: 5000, windowsHide: true });
         assert.equal(task.status, 0, task.stderr || "tasklist failed");
         if (task.stdout.includes(`,\"${pid}\"`)) assert.notEqual(processCreatedAt(pid), run.supervisor.createdAt, `supervisor PID ${pid} still identifies the test run`);
       }

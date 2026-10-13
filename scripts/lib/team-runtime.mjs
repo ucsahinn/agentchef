@@ -99,10 +99,10 @@ export function renderHandoffMarkdown(h) {
   const {data}=parseWorkerHandoff(h); const lines=[`## Outcome\n${data.outcome}`,`## Evidence\n${data.evidence.map(x=>`- ${x}`).join("\n")||"- None"}`,`## Changed scope\n${data.changedScope.map(x=>`- ${x}`).join("\n")||"- None"}`,`## Risks\n${data.risks.map(x=>`- ${x}`).join("\n")||"- None"}`,`## Open questions\n${data.openQuestions.map(x=>`- ${x}`).join("\n")||"- None"}`,`## Next verification\n${data.nextVerification}`,`Verdict: ${data.verdict}`,`## Mutation check\nClaimed paths: ${data.mutationCheck.claimedPaths.join(", ")}\nOutside scope: ${data.mutationCheck.outsideScope.join(", ")||"none"}`];
   return lines.join("\n\n");
 }
-export function currentBranch(cwd=ROOT) { return execFileSync("git",["branch","--show-current"],{cwd,encoding:"utf8"}).trim(); }
-export function headCommit(cwd=ROOT) { return execFileSync("git",["rev-parse","HEAD"],{cwd,encoding:"utf8"}).trim(); }
-export function isClean(cwd=ROOT) { return execFileSync("git",["status","--porcelain"],{cwd,encoding:"utf8"}).trim()===""; }
-function git(args,cwd=ROOT) { return execFileSync("git",args,{cwd,encoding:"utf8",stdio:["ignore","pipe","pipe"]}); }
+export function currentBranch(cwd=ROOT) { return execFileSync("git",["branch","--show-current"],{cwd,encoding:"utf8",windowsHide:true}).trim(); }
+export function headCommit(cwd=ROOT) { return execFileSync("git",["rev-parse","HEAD"],{cwd,encoding:"utf8",windowsHide:true}).trim(); }
+export function isClean(cwd=ROOT) { return execFileSync("git",["status","--porcelain"],{cwd,encoding:"utf8",windowsHide:true}).trim()===""; }
+function git(args,cwd=ROOT) { return execFileSync("git",args,{cwd,encoding:"utf8",windowsHide:true,stdio:["ignore","pipe","pipe"]}); }
 export const worktreeAdd=(repo,dir,branch)=>git(["worktree","add","-b",branch,dir],repo);
 export const worktreeRemove=(repo,dir)=>git(["worktree","remove",dir],repo);
 export const branchDelete=(repo,branch)=>git(["branch","-D",branch],repo);
@@ -111,7 +111,7 @@ export const mergeAbort=(repo)=>git(["merge","--abort"],repo);
 export const diffStat=(cwd=ROOT)=>git(["-c","core.quotePath=false","diff","--no-ext-diff","--no-textconv","--stat"],cwd);
 export const diffFull=(cwd=ROOT)=>git(["diff"],cwd);
 export function changedPaths(cwd=ROOT) {
-  const fields=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer"}).toString("utf8").split("\0"), paths=[];
+  const fields=execFileSync("git",["status","--porcelain","-z"],{cwd,encoding:"buffer",windowsHide:true}).toString("utf8").split("\0"), paths=[];
   for(let i=0;i<fields.length;i++){const entry=fields[i];if(!entry)continue;const status=entry.slice(0,2);paths.push(entry.slice(3));if(status.includes("R")||status.includes("C")){const previous=fields[++i];if(previous)paths.push(previous);}}
   return [...new Set(paths)];
 }

@@ -144,6 +144,10 @@ Worker'ları `team-run abort` ile durdurun; taskkill veya Stop-Process
 kullanmayın. Worktree, dal veya log temizliği ayrı ve kullanıcının istediği
 `team-run cleanup` işlemidir. Worker timeout veya kullanım sınırı durumu
 conductor'ın raporlaması için kaydedilir.
+POSIX worker'ları ayrı süreç grubunda çalışır; abort ve timeout, worker'ın
+başlangıç zamanı doğrulandıktan sonra worker'ı ve alt süreçlerini durdurabilir.
+Windows alt süreçleri gizli konsolla başlatılır; isteğe bağlı Windows Terminal
+izleyicisi takım koşusunun görünen tek penceresi olarak kalır.
 
 ## Operasyon Notları
 

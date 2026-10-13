@@ -67,7 +67,7 @@ export function openViewerPane({ root, state, worktree, runId, taskId, title = `
   if (!wt) return null;
   const args = buildViewerPaneArgs({ root, state, worktree, runId, taskId, title });
   const invocation = wt.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(wt, args) : { command: wt, args };
-  try { spawn(invocation.command, invocation.args, { detached: true, stdio: "ignore", windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments }).unref(); return true; } catch { return null; }
+  try { spawn(invocation.command, invocation.args, { detached: true, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments }).unref(); return true; } catch { return null; }
 }
 
 export function stopChild(child, { createdAt, cmdShim = child?.agentChefCmdShim === true, platform = process.platform } = {}) {
@@ -86,17 +86,31 @@ export function stopChild(child, { createdAt, cmdShim = child?.agentChefCmdShim 
       try { process.kill(child.pid); return true; } catch { return false; }
     } catch { return false; }
   }
+  if (platform !== "win32") {
+    if (!createdAt || processCreatedAt(child.pid, platform) !== createdAt) return false;
+    try {
+      process.kill(-child.pid, "SIGTERM");
+      const pid = child.pid;
+      const forceStop = () => {
+        if (processCreatedAt(pid, platform) !== createdAt) return;
+        try { process.kill(-pid, "SIGKILL"); } catch {}
+      };
+      const timer = setTimeout(forceStop, 250);
+      timer.unref?.();
+      return true;
+    } catch { return false; }
+  }
   try { return child.kill(); } catch { return false; }
 }
 
 function childProcessIdentity(pid) {
   if (process.platform !== "win32") return null;
-  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
+  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8", timeout: 3000, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }).trim();
   return { createdAt: new Date(value).toISOString() };
 }
 function childProcessTree(rootPid) {
   const script = "$rows = Get-CimInstance Win32_Process | ForEach-Object { if ($_.CreationDate -is [datetime]) { [pscustomobject]@{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; createdAt=$_.CreationDate.ToUniversalTime().ToString('o') } } }; ConvertTo-Json -InputObject $rows -Compress";
-  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8", timeout: 5000 }).trim();
+  const value = execFileSync("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8", timeout: 5000, windowsHide: true }).trim();
   const parsed = JSON.parse(value || "[]"), rows = Array.isArray(parsed) ? parsed : [parsed];
   const result = [], seen = new Set([rootPid]);
   const visit = (parent, depth) => { for (const row of rows.filter((entry) => entry.parent === parent)) if (!seen.has(row.pid)) { seen.add(row.pid); result.push({ pid: row.pid, createdAt: row.createdAt, depth }); visit(row.pid, depth + 1); } };
@@ -107,7 +121,7 @@ export function processCreatedAt(pid, platform = process.platform) {
   if (!Number.isInteger(pid)) return null;
   if (platform === "win32") { try { return childProcessIdentity(pid)?.createdAt || null; } catch { return null; } }
   try {
-    const value = execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const value = execFileSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }).trim();
     return value || null;
   } catch { return null; }
 }
@@ -116,7 +130,7 @@ export function isProcessAlive(pid, platform = process.platform) {
   try { process.kill(pid, 0); } catch { return false; }
   if (platform === "win32") return true;
   try {
-    const state = execFileSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const state = execFileSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8", timeout: 3000, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }).trim();
     return Boolean(state) && !state.startsWith("Z");
   } catch { return false; }
 }
@@ -133,7 +147,7 @@ export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId
     let pendingLine = "";
     let stderr = "";
     let done = false;
-    const child = spawnImpl(invocation.command, invocation.args, { cwd: worktree, env: workerEnv({ runId, taskId, worktree, role, boardState }, env), stdio: ["pipe", "pipe", "pipe"], windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
+    const child = spawnImpl(invocation.command, invocation.args, { cwd: worktree, env: workerEnv({ runId, taskId, worktree, role, boardState }, env), stdio: ["pipe", "pipe", "pipe"], detached: platform !== "win32", windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
     childRef = child;
     child.agentChefCmdShim = invocation.command.toLowerCase().endsWith(".cmd") || invocation.command.toLowerCase().endsWith("cmd.exe");
     const finish = () => {

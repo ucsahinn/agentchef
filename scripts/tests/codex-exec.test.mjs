@@ -72,8 +72,8 @@ test("stopChild signals only the supplied child and requires identity for Window
   const child = { pid: 123, kill() { signalled += 1; return true; } };
   assert.equal(stopChild(child, { cmdShim: true, platform: "win32" }), false);
   assert.equal(signalled, 0);
-  assert.equal(stopChild(child, { platform: "linux" }), true);
-  assert.equal(signalled, 1);
+  assert.equal(stopChild(child, { platform: "linux" }), false, "POSIX process termination requires a matching creation identity");
+  assert.equal(signalled, 0);
 });
 
 test("processCreatedAt reads a POSIX process start identity", () => {

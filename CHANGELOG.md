@@ -12,6 +12,7 @@ Team mode v2 adds a disabled-by-default experimental team runner with isolated C
 - TASK-045: Complete package checks, release notes, and Windows Codex argument handling.
 - Fix review findings: persist Codex event output as it arrives, handle closed prompt pipes, and pass the correct AgentChef root and board path to the viewer.
 - Fix supervisor lease and worker settlement paths, collect read-only worker reports without commits, and align approval timing and worker branch names with the contract.
+- DUZELTME-6: Stop POSIX worker process groups with creation-time checks, and hide Windows child process consoles.
 - Disable Git hooks for engine merge operations and document that integration checks execute as local host processes.
 - Fix second-review and live-run findings: correct opt-in diagnostics, Windows Terminal alias discovery, NUL-safe status paths, transactional start rollback, read-only scope and lease handling, warning verdict support, Codex resume arguments, and supervisor test cleanup.
 - Fix third-review and live-run findings: retry blocked or partial verification from the integrated state, include verifier evidence in reports, clear stale run controls, release leases for uncollectable workers, serialize starts, stop the identified supervisor tree on rollback, and make the viewer exit when its worker finishes. Keep a write worker with no Git changes failed: the collection contract requires an inspectable commit for integration.

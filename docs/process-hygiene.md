@@ -148,6 +148,10 @@ owned team run, not as an orphan candidate. Stop workers through
 `team-run abort`; never use taskkill or Stop-Process. Cleanup of worktrees,
 branches, or logs is a separate user-requested `team-run cleanup` operation.
 Worker timeout or usage-limit state is recorded for the conductor to report.
+Workers run in their own POSIX process group, so abort and timeout can stop the
+worker and its descendants after verifying the worker process creation time.
+Windows child processes are launched with hidden consoles; the optional
+Windows Terminal viewer remains the only visible team-run window.
 
 ## Operational Notes
 

@@ -67,7 +67,7 @@ function readRun(state, runId) {
   if (typeof runId !== "string" || !safeRunId(runId)) throw new CliUsageError("Invalid run identifier.");
   return readRunRecord(runFile(state, runId));
 }
-function git(args, cwd) { return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
+function git(args, cwd) { return execFileSync("git", args, { cwd, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 function resolveRepo(value) { const repo = path.resolve(value); if (!fs.statSync(repo).isDirectory()) throw new Error("--repo must be a directory."); git(["rev-parse", "--show-toplevel"], repo); return git(["rev-parse", "--show-toplevel"], repo); }
 function readPlan(file) {
   const stat = fs.statSync(file); if (stat.size > 128 * 1024) throw new Error("Plan file exceeds 128 KiB.");
@@ -224,7 +224,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
   } catch (error) {
     if (supervisor?.pid) {
       const identity = processCreatedAt(supervisor.pid) || readRun(options.state, run.runId).supervisor?.createdAt;
-      if (identity && processCreatedAt(supervisor.pid) === identity) stopChild({ pid: supervisor.pid, agentChefCmdShim: true, kill: () => { try { process.kill(supervisor.pid); return true; } catch { return false; } } }, { createdAt: identity, cmdShim: true });
+      if (identity && processCreatedAt(supervisor.pid) === identity) stopChild({ pid: supervisor.pid, agentChefCmdShim: true, kill: () => { try { process.kill(supervisor.pid); return true; } catch { return false; } } }, { createdAt: identity, cmdShim: process.platform === "win32" });
       else process.stderr.write(`Could not confirm supervisor identity for pid ${supervisor.pid}; it was left running.\n`);
       const stopBy = Date.now() + 3000;
       while (Date.now() < stopBy && isPidAlive(supervisor.pid)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
@@ -439,7 +439,7 @@ function watchCommand(options) {
   tick(); return new Promise((resolve) => { const finish = () => { const latest = readRun(options.state, options.run).workers.find((entry) => entry.taskId === worker.taskId); if ((latest && TERMINAL_WORKERS.has(latest.status)) || Date.now() - started >= maxMs) resolve(0); else setTimeout(finish, 250); }; finish(); });
 }
 
-function gitBytes(args, cwd) { return execFileSync("git", args, { cwd, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] }); }
+function gitBytes(args, cwd) { return execFileSync("git", args, { cwd, encoding: "buffer", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }); }
 function porcelainPaths(cwd) {
   const fields = gitBytes(["status", "--porcelain=v1", "-z"], cwd).toString("utf8").split("\0");
   const paths = [];
@@ -680,7 +680,7 @@ function doctorCommand(options) {
   const wtCommand = process.platform === "win32" ? resolveWindowsCli("wt") || "wt.exe" : null;
   const wt = process.platform === "win32" ? spawnSync(wtCommand, ["--version"], { encoding: "utf8", timeout: 5000, windowsHide: true }) : { status: 0 };
   check("windows-terminal", process.platform !== "win32" || wt.status === 0, process.platform === "win32" ? "wt.exe" : "viewer panes are optional on this platform");
-  const gitName = spawnSync("git", ["config", "user.name"], { encoding: "utf8" }), gitEmail = spawnSync("git", ["config", "user.email"], { encoding: "utf8" });
+  const gitName = spawnSync("git", ["config", "user.name"], { encoding: "utf8", windowsHide: true }), gitEmail = spawnSync("git", ["config", "user.email"], { encoding: "utf8", windowsHide: true });
   check("git.identity", gitName.status === 0 && gitEmail.status === 0 && gitName.stdout.trim() && gitEmail.stdout.trim(), "Git user.name and user.email are required");
   const lastRun = options.state && fs.existsSync(options.state) ? (() => { const dir = path.join(path.dirname(path.resolve(options.state)), "team-runs"); try { return fs.readdirSync(dir).filter((name) => name.endsWith(".json")).sort().at(-1) || null; } catch { return null; } })() : null;
   let maxWorkers = CONTRACT.workers.maxWorkers;
