@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.5.0** is not a release candidate; team execution is still disabled.
+Development version **v1.5.1** hardens the experimental team runner; team execution stays opt-in and disabled by default.
 
 ## Before Commit Or Push
 

@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.5.0** is not a release candidate; team execution is still disabled.
+Development version **v1.5.1** hardens the experimental team runner; team execution stays opt-in and disabled by default.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.5.0** yayın adayı değildir; takım yürütmesi hâlâ kapalıdır.
+Geliştirme sürümü **v1.5.1** deneysel takım yürütücüsünü sağlamlaştırır; takım yürütmesi isteğe bağlı ve varsayılan olarak kapalı kalır.
 
 ## Commit Veya Push Öncesi
 

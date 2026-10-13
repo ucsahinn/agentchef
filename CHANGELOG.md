@@ -1,9 +1,12 @@
 # Changelog
 
-## 1.5.1 - Unreleased
+## 1.5.1 - 2026-10-13
 
 - Scan only added diff lines during team collection and integration, with file and line diagnostics for rejected content.
 - Reject unsafe worker content individually, release its lease, and continue collecting other workers; add worker language and Windows test guidance.
+- Make collection repeatable: validate the report and board evidence before the delivery commit, truncate board evidence to the board limit instead of failing after the commit, and reuse an existing delivery commit on a clean worktree instead of failing the worker for having no changes.
+- List untracked files individually when checking worker changes against the write scope, so a new directory inside the scope is not reported as a scope violation.
+- Restore the Turkish characters in the 1.5.0 section of the Turkish release notes.
 - Document the experimental team-run approval gates, recovery and rollback,
   worker lease outcomes, constrained Codex resume behavior, and platform
   process handling in the paired English and Turkish operator guides.
