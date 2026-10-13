@@ -17,6 +17,18 @@ test("valid team mode v2 catalog passes", () => {
   assert.deepEqual(validate(base), []);
 });
 
+test("worker language must be a two-letter language code", () => {
+  const missing = structuredClone(base);
+  delete missing.workers.language;
+  assert.ok(validate(missing).some((error) => error.includes("workers.language is required")));
+
+  for (const language of ["", "eng", "en-US", "12"]) {
+    const value = structuredClone(base);
+    value.workers.language = language;
+    assert.ok(validate(value).some((error) => error.includes("workers.language must be a two-letter language code")));
+  }
+});
+
 test("worker branches use sibling refs for run and task", () => {
   assert.equal(base.branches.workerBranchFormat, "takim/{runId}-{taskId}");
   const value = structuredClone(base);

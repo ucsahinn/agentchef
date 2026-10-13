@@ -71,6 +71,18 @@ test("worker prompt ordering, seven brief fields, safety rules and verifier prom
   assert.match(verifierPrompt, /Reading files and running read-only commands/i);
   assert.match(verifierPrompt, /No commands were specified.*Compare the integration diff with the worker briefs/s);
 });
+test("worker and verifier prompts apply language and Windows test rules without changing worker section order", () => {
+  const makeWorker=(language,platform)=>composeWorkerPrompt({roleInstructions:"ROLE",runId:"R1",taskId:"TASK-1",role:"docs_author",brief,language,platform});
+  const windows=makeWorker(undefined,"win32");
+  assert.match(windows,/Write every progress message and the handoff text in Turkish; keep code, paths and commands verbatim/);
+  assert.match(windows,/node --test --test-isolation=none <files>/);
+  assert.ok(windows.indexOf("## Team rules")<windows.indexOf("## Return contract"));
+  const configured=makeWorker("English","linux");
+  assert.match(configured,/handoff text in English/); assert.doesNotMatch(configured,/node --test --test-isolation=none/);
+  const verifierWindows=composeVerifierPrompt({runId:"R1",brief,platform:"win32"});
+  assert.match(verifierWindows,/handoff text in Turkish/); assert.match(verifierWindows,/spawn EPERM/);
+  const verifierLinux=composeVerifierPrompt({runId:"R1",brief,platform:"linux"}); assert.doesNotMatch(verifierLinux,/spawn EPERM/);
+});
 test("handoff schema rejects extras and Markdown round-trips through parser", () => {
   const md = renderHandoffMarkdown(handoff);
   assert.equal(parseWorkerHandoff(md).ok, true);
@@ -88,6 +100,8 @@ test("run writes use revision CAS and status transitions reject invalid edges", 
   assert.equal(transitionWorker(worker,"queued").status,"queued");
   assert.throws(() => transitionWorker(worker,"finished"));
   assert.equal(transitionWorker({taskId:"TASK-1",status:"finished"},"failed").status,"failed");
+  assert.equal(transitionWorker({taskId:"TASK-1",status:"finished"},"rejected_content").status,"rejected_content");
+  assert.throws(() => transitionWorker({taskId:"TASK-1",status:"running"},"rejected_content"));
   fs.rmSync(dir,{recursive:true,force:true});
 });
 test("role TOML returns developer instructions, sandbox and catalog-default model", () => {

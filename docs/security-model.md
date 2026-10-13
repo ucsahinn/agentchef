@@ -611,6 +611,7 @@ and gates the run while the engine starts 1-4 allowlisted Codex `exec` workers
 in separate worktrees. The engine reads the user's single-use start and merge
 gates and never creates their backing files. The worker sandbox is the stricter
 of its role TOML and the team-mode ceiling; `test_verifier` is read-only.
+Team collection and integration scan only added diff lines for secret-like content, so unchanged context lines do not cause a rejection.
 
 Workers cannot push, spawn agents, or edit outside their assigned scope. The
 detached supervisor owns the Codex children; a visible terminal pane only

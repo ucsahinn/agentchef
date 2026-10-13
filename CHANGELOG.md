@@ -2,6 +2,8 @@
 
 ## 1.5.1 - Unreleased
 
+- Scan only added diff lines during team collection and integration, with file and line diagnostics for rejected content.
+- Reject unsafe worker content individually, release its lease, and continue collecting other workers; add worker language and Windows test guidance.
 - Document the experimental team-run approval gates, recovery and rollback,
   worker lease outcomes, constrained Codex resume behavior, and platform
   process handling in the paired English and Turkish operator guides.

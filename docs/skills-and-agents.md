@@ -22,6 +22,13 @@ skill is installed automatically.
 
 ## Team Runs (Experimental)
 
+Workers write every progress message and handoff in the language configured by
+`workers.language` in `catalog/subscription-team-mode.json` (default: `tr`),
+while keeping code, paths, and commands verbatim. On Windows, run Node tests as
+`node --test --test-isolation=none <files>` (Node.js 22.8 or later) because the
+sandbox can block test-runner child processes with `spawn EPERM`; if this still
+fails, report it under Risks rather than treating it as a code failure.
+
 The explicit-only `team-conductor` skill lets an interactive Claude Code
 session coordinate 1-4 bounded Codex workers. This is experimental and disabled
 by default. Set `AGENTCHEF_TEAM_MODE=experimental` in the process environment
