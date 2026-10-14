@@ -21,9 +21,9 @@ function makeRun(temp, runId, workers, extraEnv = {}) {
   if (process.platform === "win32") fs.writeFileSync(wrapper, `@echo off\r\n"${process.execPath}" "${fakeCodex}" %*\r\nexit /b %ERRORLEVEL%\r\n`);
   else { fs.writeFileSync(wrapper, `#!/bin/sh\nexec node ${JSON.stringify(fakeCodex)} "$@"\n`); fs.chmodSync(wrapper, 0o755); }
   const isolatedTemp = path.join(temp, "tmp"); fs.mkdirSync(isolatedTemp);
-  const env = { ...process.env, AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: wrapper, FAKE_CODEX_SCENARIO: "ok", AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...extraEnv };
+  const env = { ...process.env, AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: wrapper, FAKE_CODEX_SCENARIO: "ok", FAKE_CODEX_FILE_BY_TASK: "1", AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...extraEnv };
   const brief = path.join(temp, "brief.md"); fs.writeFileSync(brief, ["Goal: complete", "Evidence: fixture", "Write scope: src/", "Boundaries: stay in scope", "Done when: collected", "Return format: JSON", "User's words: complete"].join("\n"));
-  const plan = path.join(temp, "plan.json"); fs.writeFileSync(plan, JSON.stringify({ workers: workers.map((taskId) => ({ taskId, role: "docs_author", briefFile: "brief.md", writeScope: ["src/"] })) }));
+  const plan = path.join(temp, "plan.json"); fs.writeFileSync(plan, JSON.stringify({ workers: workers.map((taskId) => ({ taskId, role: "docs_author", briefFile: "brief.md", writeScope: [`src/${taskId}/`] })) }));
   const planned = node(cli, ["plan", "--state", state, "--json", "--repo", repo, "--plan-file", plan, "--run", runId], { env }); assert.equal(planned.status, 0, planned.stderr || planned.stdout);
   return { state, env, run: JSON.parse(planned.stdout).run };
 }
@@ -46,7 +46,7 @@ test("memory pressure holds one worker at a time and records memory_hold", async
 test("disabling the memory guard suppresses memory_hold under the same reserve", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-memory-off-"));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
-  const { state, env, run } = makeRun(temp, "R-memory-off", ["TASK-MEM-OFF-1", "TASK-MEM-OFF-2"], "ok", {
+  const { state, env, run } = makeRun(temp, "R-memory-off", ["TASK-MEM-OFF-1", "TASK-MEM-OFF-2"], {
     AGENTCHEF_TEAM_MIN_FREE_MB: "999999999",
     AGENTCHEF_TEAM_MEMORY_GUARD: "off",
   });
