@@ -164,14 +164,14 @@ function pathsOverlap(left, right) {
   const globPrefix = (value) => {
     const wildcard = value.search(/[?*]/);
     if (wildcard < 0) return value;
-    return value.slice(0, wildcard).replace(/\/$/, "");
+    return value.slice(0, wildcard).replace(/\/$/, "") || ".";
   };
   const leftGlob = /[?*]/.test(a);
   const rightGlob = /[?*]/.test(b);
   if (leftGlob || rightGlob) {
     const ap = leftGlob ? globPrefix(a) : a;
     const bp = rightGlob ? globPrefix(b) : b;
-    return ap === "." || bp === "." || ap === bp || ap.startsWith(`${bp}/`) || bp.startsWith(`${ap}/`);
+    return ap === "." || bp === "." || ap === bp || ap.startsWith(`${bp}/`) || bp.startsWith(`${ap}/`) || ap.startsWith(bp) || bp.startsWith(ap);
   }
   return a === "." || b === "." || a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }
@@ -202,12 +202,15 @@ function assertNoScopeConflict(state, task, now) {
 // FILE_SHARE_DELETE (a status panel, an editor, antivirus). Those holds are
 // brief, so retry the atomic rename instead of failing the caller.
 const RETRYABLE_RENAME = new Set(["EPERM", "EACCES", "EBUSY"]);
-export function replaceFileSync(temporary, target, { attempts = 40, delayMs = 25, rename = fs.renameSync } = {}) {
+export function replaceFileSync(temporary, target, { attempts = 40, delayMs = 25, maxWaitMs = 1000, platform = process.platform, rename = fs.renameSync } = {}) {
+  const deadline = Date.now() + maxWaitMs;
   for (let attempt = 1; ; attempt += 1) {
     try { rename(temporary, target); return attempt; }
     catch (error) {
-      if (!RETRYABLE_RENAME.has(error?.code) || attempt >= attempts) throw error;
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+      const retryable = RETRYABLE_RENAME.has(error?.code) && (error.code !== "EACCES" || platform === "win32");
+      const remaining = deadline - Date.now();
+      if (!retryable || attempt >= attempts || remaining <= 0) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.min(delayMs, remaining));
     }
   }
 }
@@ -216,10 +219,12 @@ export function replaceFileSync(temporary, target, { attempts = 40, delayMs = 25
 // labelled lines, so put each label on its own line and drop a sentence period after the verdict word.
 export function reviewGate(text) {
   const labels = "Verdict|Sonuç sınıfı|Sonuc sinifi|Mutation check|Mutasyon kontrolü|Mutasyon kontrolu";
-  const lined = String(text ?? "")
-    .replace(new RegExp(`\\s*(${labels})\\s*:`, "gi"), "\n$1:")
+  const source = String(text ?? "");
+  const evidence = /(?:^|[.!?]\s*)(?:Evidence|Kanıt|Kanit)\s*:/iu.exec(source);
+  const boundary = evidence ? evidence.index + evidence[0].length - evidence[0].match(/(?:Evidence|Kanıt|Kanit)\s*:/iu)[0].length : source.length;
+  const head = source.slice(0, boundary).replace(/\s+$/, "").replace(/\.$/, "").replace(new RegExp(`\\s*(${labels})\\s*:`, "gi"), "\n$1:")
     .replace(/^(\s*(?:Verdict|Sonuç sınıfı|Sonuc sinifi)\s*:\s*[\p{L}]+)\.[ \t]*/gimu, "$1\n");
-  return validateVerdictAndMutation(lined);
+  return validateVerdictAndMutation(head);
 }
 
 export function createState() {
@@ -272,15 +277,7 @@ export function writeState(statePath, state) {
       conflict.code = "COORDINATION_CONFLICT";
       throw conflict;
     }
-    try {
-      replaceFileSync(temporary, statePath);
-    } catch (error) {
-      // Windows refuses a rename while another process (a reader, antivirus)
-      // has the file open; one short retry covers that.
-      if (!["EPERM", "EBUSY", "EACCES"].includes(error?.code)) throw error;
-      pause(100);
-      replaceFileSync(temporary, statePath);
-    }
+    replaceFileSync(temporary, statePath);
   } finally {
     fs.rmSync(temporary, { force: true });
   }

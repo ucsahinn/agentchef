@@ -151,11 +151,20 @@ try {
             const resolvedReport = fs.realpathSync(reportPath);
             const relative = path.relative(stateDirectory, resolvedReport);
             if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("--report-path must resolve to a file inside the coordination state directory.");
-            const stat = fs.statSync(resolvedReport);
-            if (!stat.isFile()) throw new Error("--report-path must name a file.");
-            if (stat.size === 0) throw new Error("--report-path must not be empty.");
-            if (stat.size > MAX_TEXT_FILE_BYTES) throw new Error(`--report-path is larger than ${MAX_TEXT_FILE_BYTES} bytes.`);
-            const content = fs.readFileSync(resolvedReport, "utf8");
+            if (path.extname(resolvedReport).toLowerCase() !== ".md") throw new Error("--report-path must name a Markdown report (.md).");
+            if (relative.split(path.sep)[0].toLowerCase() === "approvals") throw new Error("--report-path cannot be inside the approvals directory.");
+            const descriptor = fs.openSync(resolvedReport, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+            let stat;
+            let content;
+            try {
+              stat = fs.fstatSync(descriptor);
+              if (!stat.isFile()) throw new Error("--report-path must name a file.");
+              if (stat.size === 0) throw new Error("--report-path must not be empty.");
+              if (stat.size > MAX_TEXT_FILE_BYTES) throw new Error(`--report-path is larger than ${MAX_TEXT_FILE_BYTES} bytes.`);
+              content = fs.readFileSync(descriptor, "utf8");
+            } finally {
+              fs.closeSync(descriptor);
+            }
             const category = secretLikeCategory(content);
             if (category) throw new Error(`Report contains a ${category} and was rejected.`);
             bytes = stat.size;

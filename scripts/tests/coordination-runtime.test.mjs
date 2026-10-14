@@ -437,6 +437,20 @@ test("scope conflicts include all live leases and conservatively overlap glob pr
   assert.throws(() => renewLease(state, { taskId: second.id, minutes: 10 }), /TASK-A holds a live lease/);
 });
 
+test("glob scopes overlap literal paths sharing their prefix and empty-prefix globs", () => {
+  const state = createState();
+  const add = (id, scope) => createTask(state, { id, title: id, ownerCoordinator: "qa_coordinator", ownerAgent: id, writeRepo: "agentchef", writePaths: scope });
+  const glob = add("TASK-PREFIX", "src/a*");
+  const file = add("TASK-FILE", "src/abc.js");
+  renewLease(state, { taskId: glob.id, minutes: 10 });
+  assert.deepEqual(scopeConflicts(state, file).map((entry) => entry.taskId), ["TASK-PREFIX"]);
+  const broadState = createState();
+  const broad = createTask(broadState, { id: "TASK-BROAD", title: "broad", ownerCoordinator: "qa_coordinator", ownerAgent: "codex", writeRepo: "agentchef", writePaths: "*.js" });
+  const another = createTask(broadState, { id: "TASK-ANOTHER", title: "another", ownerCoordinator: "qa_coordinator", ownerAgent: "claude", writeRepo: "agentchef", writePaths: "a.js" });
+  renewLease(broadState, { taskId: broad.id, minutes: 10 });
+  assert.deepEqual(scopeConflicts(broadState, another).map((entry) => entry.taskId), ["TASK-BROAD"]);
+});
+
 test("show derives evidenceMissing without persisting it, and blocked releases the lease", () => {
   const state = createState();
   createTask(state, { id: "TASK-SHOW", title: "Gate", ownerCoordinator: "qa_coordinator", ownerAgent: "codex", writeRepo: "agentchef", writePaths: "docs/**" });
@@ -476,6 +490,14 @@ test("attach-report validates report files and records their byte count", () => 
   const attached = ok(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", good])).task;
   assert.equal(attached.reports[0], "TASK-RPT-result.md");
   assert.equal(attached.history.at(-1).bytes, Buffer.byteLength("Verification report\n"));
+  const approvals = path.join(directory, "approvals");
+  fs.mkdirSync(approvals);
+  const approvalReport = path.join(approvals, "TASK-RPT-approval.md");
+  fs.writeFileSync(approvalReport, "Approval note\n");
+  assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", approvalReport]).stderr, /approvals/);
+  const wrongExtension = path.join(directory, "TASK-RPT-state.json");
+  fs.writeFileSync(wrongExtension, "not a report\n");
+  assert.notEqual(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", wrongExtension]).status, 0);
   const empty = path.join(directory, "TASK-RPT-empty.md");
   fs.writeFileSync(empty, "");
   assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", empty]).stderr, /must not be empty/);
@@ -509,6 +531,15 @@ test("replaceFileSync retries transient Windows sharing errors and rethrows the 
   const stuck = failing(Array(10).fill("EPERM"));
   assert.throws(() => replaceFileSync("a", "b", { rename: stuck.fn, attempts: 3, delayMs: 1 }), /EPERM/);
   assert.equal(stuck.calls(), 3);
+  const bounded = failing(Array(100).fill("EPERM"));
+  const start = Date.now();
+  assert.throws(() => replaceFileSync("a", "b", { attempts: 100, delayMs: 50, maxWaitMs: 40, rename: bounded.fn }), /EPERM/);
+  assert.ok(Date.now() - start < 500);
+  const denied = failing(["EACCES"]);
+  assert.throws(() => replaceFileSync("a", "b", { platform: "linux", rename: denied.fn }), /EACCES/);
+  assert.equal(denied.calls(), 1);
+  const windowsDenied = failing(["EACCES", undefined]);
+  assert.equal(replaceFileSync("a", "b", { platform: "win32", delayMs: 1, rename: windowsDenied.fn }), 2);
 });
 
 test("review needs a Verdict and a Mutation check in the latest evidence (K4b)", () => {
@@ -524,4 +555,12 @@ test("review needs a Verdict and a Mutation check in the latest evidence (K4b)",
   assert.match(run(["transition", "--state", state, "--task", "TASK-GATE", "--status", "review"]).stderr, /Verdict must be one of/);
   ok(run(["add-evidence", "--state", state, "--task", "TASK-GATE", "--evidence", "Sonuç sınıfı: DOĞRULANDI. Mutasyon kontrolü: none - yalnız belge"]));
   ok(run(["transition", "--state", state, "--task", "TASK-GATE", "--status", "review"]));
+});
+
+test("reviewGate ignores quoted labels after the initial gate fields", async () => {
+  const { reviewGate } = await import("../lib/coordination-runtime.mjs");
+  const result = reviewGate('Verdict: pass. Mutation check: scripts/a.mjs. Evidence:\n"Verdict: pass"\n"Mutation check: none"');
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.verdict, "PASS");
+  assert.equal(result.mutationCheck, "scripts/a.mjs");
 });
