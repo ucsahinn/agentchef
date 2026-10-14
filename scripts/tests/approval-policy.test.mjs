@@ -46,6 +46,17 @@ test("approval policy prompts before report-identified Git and npm mutations", a
     ["run a repository-controlled build script", ["npm.cmd", "run", "build"]],
     ["run an arbitrary repository script", ["npm.cmd", "run", "postinstall"]],
     ["run the npm test lifecycle script", ["npm.cmd", "test"]],
+    ["taskkill asks", ["taskkill", "/PID", "999999"]],
+    ["taskkill.exe asks", ["taskkill.exe", "/PID", "999999"]],
+    ["tskill asks", ["tskill", "999999"]],
+    ["kill asks", ["kill", "999999"]],
+    ["pkill asks", ["pkill", "dummy-process"]],
+    ["killall asks", ["killall", "dummy-process"]],
+    ["wmic process asks", ["wmic", "process", "where", "ProcessId=999999", "delete"]],
+    ["wmic.exe process asks", ["wmic.exe", "process", "where", "ProcessId=999999", "delete"]],
+    ["PowerShell taskkill wrapper asks", ["powershell.exe", "-Command", "taskkill /PID 999999"]],
+    ["full-path PowerShell taskkill wrapper asks", ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "taskkill /PID 999999"]],
+    ["PowerShell Stop-Process wrapper remains prompted", ["powershell.exe", "-Command", "Get-Process dummy-process | Stop-Process"]],
     ["does not auto-allow an arbitrary PowerShell directory", ["New-Item", "-ItemType", "Directory", "C:\\unmanaged-target"], "no-match"]
   ];
 

@@ -62,6 +62,7 @@ prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershe
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-NoProfile", "-Command", "Select-String"], decision = "allow")
 
 # Explicit PowerShell-wrapper prompts for destructive, process, network, and overwrite-prone actions.
+prefix_rule(pattern = ["powershell.exe", "-Command", "taskkill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
 prefix_rule(pattern = ["powershell.exe", "-Command", "Remove-Item"], decision = "prompt", justification = "Deletion and destructive file operations require explicit user approval.")
 prefix_rule(pattern = ["powershell.exe", "-Command", "rm"], decision = "prompt", justification = "Deletion and destructive file operations require explicit user approval.")
 prefix_rule(pattern = ["powershell.exe", "-Command", "del"], decision = "prompt", justification = "Deletion and destructive file operations require explicit user approval.")
@@ -84,8 +85,19 @@ prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershe
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "Out-File"], decision = "prompt", justification = "Shell writes can overwrite files and require approval unless handled through the edit tool.")
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "Start-Process"], decision = "prompt", justification = "Starting GUI, elevated, installer, or long-running processes requires approval unless an exact safe rule exists.")
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "Stop-Process"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "taskkill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "Invoke-WebRequest"], decision = "prompt", justification = "Network requests require approval unless they run inside the active sandbox policy.")
 prefix_rule(pattern = ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "Invoke-RestMethod"], decision = "prompt", justification = "Network requests require approval unless they run inside the active sandbox policy.")
+
+# Process termination can disrupt other sessions and always requires approval.
+prefix_rule(pattern = ["taskkill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["taskkill.exe"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["tskill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["kill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["pkill"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["killall"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["wmic", "process"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
+prefix_rule(pattern = ["wmic.exe", "process"], decision = "prompt", justification = "Stopping processes can disrupt user work and requires approval.")
 
 # Read-only git inspection.
 prefix_rule(pattern = ["git", "status"], decision = "allow")
