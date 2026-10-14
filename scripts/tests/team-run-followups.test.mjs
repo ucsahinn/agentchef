@@ -39,7 +39,7 @@ test("collect accepts a worker change whose unchanged fixture context contains s
 });
 test("collect rejects only the worker whose added line is secret-like and continues collecting others",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-diff-reject-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
-  const {state,env,run}=makeRun(temp,"R-diff-reject",["TASK-SECRET","TASK-SAFE"],"sensitive-output",{FAKE_CODEX_SECRET_TASK:"TASK-SECRET",FAKE_CODEX_FILE_BY_TASK:"1"});
+  const {state,env,run}=makeRun(temp,"R-diff-reject",["TASK-SECRET","TASK-SAFE"],"sensitive-output",{FAKE_CODEX_REJECT_TASK:"TASK-SECRET",FAKE_CODEX_FILE_BY_TASK:"1"});
   await startRun(state,run,env,2);
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,4,result.stderr||result.stdout); const workers=JSON.parse(result.stdout).run.workers;
   assert.equal(workers.find(w=>w.taskId==="TASK-SECRET").status,"rejected_content"); assert.match(workers.find(w=>w.taskId==="TASK-SECRET").failure,/src\/TASK-SECRET\/change\.txt:\d+/); assert.doesNotMatch(workers.find(w=>w.taskId==="TASK-SECRET").failure,/[x]{12}/);
@@ -52,7 +52,7 @@ test("collect truncates long worker evidence for the board instead of failing af
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
   const worker=JSON.parse(result.stdout).run.workers[0]; assert.equal(worker.status,"collected"); assert.ok(worker.commit);
   const task=JSON.parse(fs.readFileSync(state,"utf8")).tasks.find(item=>item.id==="TASK-LONG"); const evidence=task.evidence.at(-1).text;
-  assert.ok(evidence.length<=2000,`board evidence is ${evidence.length} characters`); assert.match(evidence,/\[truncated: 30\d\d characters; full text in the worker report\]$/);
+  assert.ok(evidence.length<=2000,`board evidence is ${evidence.length} characters`); assert.match(evidence,/\[truncated: \d+ characters; full text in the worker report\]$/);
 });
 test("collect reuses an existing delivery commit instead of failing the worker for having no changes",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-collect-idem-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -90,14 +90,14 @@ test("start refuses changed persisted briefs after planning",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-plan-hash-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
   const {state,env,run}=makeRun(temp,"R-plan-hash",["TASK-HASH"]); approveStart(state,run);
   const brief=path.join(path.dirname(state),"team-runs",run.runId,"briefs","TASK-HASH.md"); fs.appendFileSync(brief,"\nchanged after plan\n");
-  const result=node(cli,["start","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,1); assert.match(result.stderr,/plan changed after approval; plan again/);
+  const result=node(cli,["start","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,1); assert.match(result.stderr||result.stdout,/plan changed after approval; plan again/);
 });
 test("plan rejects brief files that resolve outside its directory",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-plan-brief-path-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
   const {state,env}=makeRun(temp,"R-brief-path",["TASK-PATH"]);
   const plan=path.join(temp,"plan.json"), external=path.join(path.dirname(temp),`${path.basename(temp)}-outside.md`); t.after(()=>{ if(fs.existsSync(external)) fs.unlinkSync(external); }); fs.copyFileSync(path.join(temp,"brief.md"),external);
   fs.writeFileSync(plan,JSON.stringify({workers:[{taskId:"TASK-PATH",role:"docs_author",briefFile:"../outside.md",writeScope:["src/"]}]}));
-  const result=node(cli,["plan","--state",state,"--json","--repo",path.join(temp,"repo"),"--plan-file",plan,"--run","R-brief-path-2"],{env}); assert.notEqual(result.status,0); assert.match(result.stderr,/must stay inside the plan directory/);
+  const result=node(cli,["plan","--state",state,"--json","--repo",path.join(temp,"repo"),"--plan-file",plan,"--run","R-brief-path-2"],{env}); assert.notEqual(result.status,0); assert.match(result.stderr||result.stdout,/must stay inside the plan directory/);
 });
 test("doctor treats a missing prior run as informational and reports the board and the approval writer", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-doctor-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));

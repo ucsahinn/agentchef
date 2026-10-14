@@ -118,6 +118,8 @@ function planCommand(options) {
     if (!item.taskId || !/^TASK-[A-Za-z0-9][A-Za-z0-9._-]*$/.test(item.taskId)) throw new Error("Each worker requires a valid taskId.");
     if (!ROLE_IDS.includes(item.role)) throw new Error(`Role is not allowed: ${item.role}`);
     const briefFile = path.resolve(path.dirname(path.resolve(options["plan-file"])), item.briefFile || "");
+    // Lexical check first (a missing outside file must not surface as ENOENT), then realpath for links and junctions.
+    if (!containsPath(planDirectory, briefFile)) throw new Error(`briefFile for ${item.taskId} must stay inside the plan directory.`);
     const realPlanDirectory = fs.realpathSync(planDirectory);
     const realBriefFile = fs.realpathSync(briefFile);
     if (!containsPath(realPlanDirectory, realBriefFile)) throw new Error(`briefFile for ${item.taskId} must stay inside the plan directory.`);
@@ -572,7 +574,8 @@ function collectCommand(options) {
     const report = renderHandoffMarkdown(handoff);
     const evidenceText = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: ${changed.join(", ")}. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
     try {
-      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", ...(priorCommit ? [run.baseCommit, "HEAD"] : ["--cached"])], worker.worktree));
+      // Index vs base covers the worker's own commits and the files it left dirty (both are staged above).
+      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0", run.baseCommit], worker.worktree));
       if (priorCommit && dirtyPaths.length) assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", "--cached"], worker.worktree));
       assertTeamTextSafe(report); assertTeamTextSafe(evidenceText);
     } catch (error) {
@@ -590,9 +593,10 @@ function collectCommand(options) {
     try {
       const board = JSON.parse(fs.readFileSync(options.state, "utf8"));
       const task = board.tasks.find((item) => item.id === worker.taskId);
-      if (task?.status !== "review") transitionTask(options.state, { taskId: worker.taskId, status: "review" });
+      // Evidence and report first: the board's review gate (1.7.0) needs the latest evidence before the transition.
       if (!task?.evidence?.some((item) => item.text === evidenceText)) addEvidence(options.state, { taskId: worker.taskId, evidence: evidenceText });
       attachReport(options.state, { taskId: worker.taskId, reportId });
+      if (task?.status !== "review") transitionTask(options.state, { taskId: worker.taskId, status: "review" });
     } catch (error) {
       partial = true;
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
@@ -603,7 +607,7 @@ function collectCommand(options) {
   }
   const current = readRun(options.state, options.run);
   if (current.workers.every((worker) => ["collected", "scope_violation", "rejected_content", "failed", "aborted", "timed_out", "paused_limit"].includes(worker.status))) {
-    updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
+    if (current.status !== "collected") updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
   }
   output({ ok: !partial, run: readRun(options.state, options.run) }, options.json);
   return partial ? 4 : 0;
