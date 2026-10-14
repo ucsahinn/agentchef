@@ -50,7 +50,8 @@ function normalizeVerdict(value) {
 }
 
 function isMutationCheckValid(value) {
-  return /^none\s*-\s*\S[\s\S]*$/i.test(value.trim()) || value.trim().length > 0;
+  const trimmed = value.trim();
+  return /^none\s*-\s*\S[\s\S]*$/i.test(trimmed) || trimmed.split(/\s*,\s*/).some((token) => /[\\/.]/.test(token));
 }
 
 export function validateVerdictAndMutation(text) {
