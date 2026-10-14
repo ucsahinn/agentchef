@@ -64,6 +64,7 @@ test("collect reuses an existing delivery commit instead of failing the worker f
   const collected=JSON.parse(result.stdout).run; const worker=collected.workers[0];
   assert.equal(worker.status,"collected"); assert.equal(worker.commit,head); assert.deepEqual(worker.changedPaths,["src/change.txt"]);
   assert.ok(collected.history.some(item=>item.event==="worker_collected_existing_commit"&&item.taskId==="TASK-IDEM"));
+  const repeated=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(repeated.status,0,repeated.stderr||repeated.stdout); assert.equal(JSON.parse(repeated.stdout).run.workers[0].status,"collected");
 });
 test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it off",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-switch-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -76,6 +77,27 @@ test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it of
   assert.match(off.stderr||off.stdout,/team-mode-disabled/);
   const offDoctor=node(cli,["doctor","--state",state,"--json"],{env:{...env,AGENTCHEF_TEAM_MODE:"off"}});
   assert.equal(JSON.parse(offDoctor.stdout).checks.find(check=>check.id==="execution").status,"fail");
+  const no=node(cli,["doctor","--state",state,"--json"],{env:{...env,AGENTCHEF_TEAM_MODE:"no"}});
+  const noCheck=JSON.parse(no.stdout).checks.find(check=>check.id==="execution"); assert.equal(noCheck.status,"fail"); assert.match(noCheck.details,/unrecognized value treated as off/);
+});
+test("collect includes committed and dirty paths from a worker delivery",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-commit-dirty-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env,run}=makeRun(temp,"R-commit-dirty",["TASK-DIRTY"],"commit-dirty"); await startRun(state,run,env,1);
+  const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
+  assert.deepEqual(JSON.parse(result.stdout).run.workers[0].changedPaths.sort(),["src/change.txt","src/dirty.txt"]);
+});
+test("start refuses changed persisted briefs after planning",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-plan-hash-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env,run}=makeRun(temp,"R-plan-hash",["TASK-HASH"]); approveStart(state,run);
+  const brief=path.join(path.dirname(state),"team-runs",run.runId,"briefs","TASK-HASH.md"); fs.appendFileSync(brief,"\nchanged after plan\n");
+  const result=node(cli,["start","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,1); assert.match(result.stderr,/plan changed after approval; plan again/);
+});
+test("plan rejects brief files that resolve outside its directory",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-plan-brief-path-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env}=makeRun(temp,"R-brief-path",["TASK-PATH"]);
+  const plan=path.join(temp,"plan.json"), external=path.join(path.dirname(temp),`${path.basename(temp)}-outside.md`); t.after(()=>{ if(fs.existsSync(external)) fs.unlinkSync(external); }); fs.copyFileSync(path.join(temp,"brief.md"),external);
+  fs.writeFileSync(plan,JSON.stringify({workers:[{taskId:"TASK-PATH",role:"docs_author",briefFile:"../outside.md",writeScope:["src/"]}]}));
+  const result=node(cli,["plan","--state",state,"--json","--repo",path.join(temp,"repo"),"--plan-file",plan,"--run","R-brief-path-2"],{env}); assert.notEqual(result.status,0); assert.match(result.stderr,/must stay inside the plan directory/);
 });
 test("doctor treats a missing prior run as informational and reports the board and the approval writer", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-doctor-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
