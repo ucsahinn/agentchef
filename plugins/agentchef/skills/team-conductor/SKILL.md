@@ -24,7 +24,11 @@ and opens the run and worker panels. Without Beyin, `doctor` reports a failing
    worker and check each with
    `npm run coordination:board -- brief-check --brief-file <file> --json`.
    Choose roles from the allowlist in the team-mode catalog and default to a
-   read-only role.
+   read-only role. Fan-out rule: one worker per independent write scope; run
+   two or more workers only when their write scopes are disjoint and no task
+   needs another task's output; put dependent work in a later run; never more
+   than four. A change that touches one file stays with one worker. Tell an
+   implementing role to change code, not only diagnose it.
 3. Run `plan`. Show the plan and worker table, then ask the user to send the
    exact chat sentence `baslat <runId>`. Never create or edit an approval file.
    If `start` returns 3, stop and ask again; do not retry around the gate.

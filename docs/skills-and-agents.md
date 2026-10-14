@@ -37,6 +37,11 @@ still require the user's typed approvals. See the
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 for the user-gated operating procedure.
 
+**Fan-out.** The conductor uses one worker per independent write scope. It runs
+several workers only when their write scopes are disjoint and no task needs
+another task's output, puts dependent work in a later run, and never uses more
+than four.
+
 **With dual-agent-brain.** The start and merge approvals come from the
 [dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) chat
 hook, so a team run needs both installs. Beyin finds this checkout under your
