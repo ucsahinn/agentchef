@@ -46,7 +46,7 @@ export function writeRunRecord(file, record) {
   if (current && current.revision !== record.revision) { const e=new Error(`Run record revision conflict (${record.revision} -> ${current.revision}).`); e.code="TEAM_RUN_CONFLICT"; throw e; }
   fs.mkdirSync(path.dirname(file),{recursive:true}); const next={...record,revision:(record.revision??0)+1};
   const temp=`${file}.${crypto.randomUUID()}.tmp`;
-  try { fs.writeFileSync(temp,`${JSON.stringify(next,null,2)}\n`,{flag:"wx"}); fs.renameSync(temp,file); }
+  try { fs.writeFileSync(temp,`${JSON.stringify(next,null,2)}\n`,{flag:"wx"}); board.replaceFileSync(temp,file); }
   finally { try { fs.rmSync(temp,{force:true}); } catch {} }
   return next;
 }
@@ -87,7 +87,7 @@ export function consumeApproval(file, consumer) {
   try {
     const a=JSON.parse(fs.readFileSync(file,"utf8")); if(a.kullanildi) fail("Approval has already been consumed.");
     const n={...a,kullanildi:new Date().toISOString(),kullanan:String(consumer)}; const t=`${file}.${crypto.randomUUID()}.tmp`;
-    try { fs.writeFileSync(t,JSON.stringify(n,null,2),{flag:"wx"}); fs.renameSync(t,file); } finally { try{fs.rmSync(t,{force:true});}catch{} }
+    try { fs.writeFileSync(t,JSON.stringify(n,null,2),{flag:"wx"}); board.replaceFileSync(t,file); } finally { try{fs.rmSync(t,{force:true});}catch{} }
     return n;
   } finally { lock.release(); }
 }
@@ -97,7 +97,7 @@ export function consumeApprovalWith(file, consumer, commit) {
     const original=fs.readFileSync(file,"utf8"), approval=JSON.parse(original);
     if(approval.kullanildi) fail("Approval has already been consumed.");
     const consumed={...approval,kullanildi:new Date().toISOString(),kullanan:String(consumer)};
-    const write=(value)=>{const temp=`${file}.${crypto.randomUUID()}.tmp`;try{fs.writeFileSync(temp,value,{flag:"wx"});fs.renameSync(temp,file);}finally{try{fs.rmSync(temp,{force:true});}catch{}}};
+    const write=(value)=>{const temp=`${file}.${crypto.randomUUID()}.tmp`;try{fs.writeFileSync(temp,value,{flag:"wx"});board.replaceFileSync(temp,file);}finally{try{fs.rmSync(temp,{force:true});}catch{}}};
     write(`${JSON.stringify(consumed,null,2)}\n`);
     try { commit(consumed); }
     catch(error) { write(original); throw error; }

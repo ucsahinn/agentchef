@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.6.0** takım modunu her kurulumda açar; `AGENTCHEF_TEAM_MODE=off` kapatır, başlatma ve birleştirme yine kullanıcının yazılı onayını ister.
+Geliştirme sürümü **v1.7.0** koordinasyon panosunu sağlamlaştırır (rapor kapısı, kapsam çakışmaları, incelemeden önce Verdict ve Mutation check) ve geniş süreç öldürme komutlarından önce onay ister; takım modu her kurulumda açık kalır.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

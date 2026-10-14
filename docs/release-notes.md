@@ -1,5 +1,19 @@
 # Release Notes
 
+## v1.7.0 - 2026-10-14
+
+AgentChef 1.7.0 makes the coordination board harder to close on weak evidence and makes broad process kills ask first. It was built by a three-worker team run and finished by the conductor.
+
+### What Changed
+
+- **Board evidence.** Reports attach from a real, non-empty, secret-scanned file; open tasks show what evidence is missing; and a task reaches `review` only when its latest evidence names a `Verdict` and a `Mutation check`.
+- **Write-scope conflicts.** Conflicts list every task and path, glob scopes are compared conservatively, `create` warns (or rejects with `--strict-scope`), and a blocked task releases its lease.
+- **Handoff contract.** The agent-brief skill and parser support `Verdict`, `Mutation check`, environment traps and isolation, a strict mode, and templates for conflict notices, QA attempts and escalations.
+- **Process-kill approvals.** `taskkill`, `tskill`, `kill`, `pkill`, `killall` and `wmic process` ask for approval in Codex and Claude.
+- **Windows reliability.** Board and run-record writes retry a brief sharing violation, and one failed supervisor tick no longer fails a running team.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.6.0 - 2026-10-14
 
 AgentChef 1.6.0 makes team mode available on every install. After two releases and six multi-role live runs, the conductor and the bounded Codex workers no longer need an opt-in flag. Start and merge still require the user's typed approvals, workers still run in isolated worktrees with bounded sandboxes, and the runner still never pushes or publishes.
@@ -9,8 +23,6 @@ AgentChef 1.6.0 makes team mode available on every install. After two releases a
 - **Available to everyone.** The team-mode contract sets `execution.enabled` to true and `stability` to stable. `AGENTCHEF_TEAM_MODE` is now the off switch: `off`, `0`, `false` or `disabled` switch team execution off for a process; `experimental` is accepted and has no effect.
 - **Doctor and status.** Doctor reports an `execution` check instead of `opt-in` and no longer launches wt.exe to detect Windows Terminal, because Windows Terminal 1.24 answers unknown flags with a modal Help dialog. `codex status` reports team mode as enabled (stable) unless the switch is off.
 - **Docs.** The agents, skills-and-agents and security-model guides and the team-conductor skill describe the always-available mode in English and Turkish.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.5.1 - 2026-10-13
 

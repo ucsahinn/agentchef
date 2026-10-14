@@ -292,6 +292,7 @@ function superviseCommand(options) {
   const active = new Map(); const started = Date.now();
   const stop = () => { stopping = true; if (timer) clearTimeout(timer); for (const entry of active.values()) stopChild(entry.child, { createdAt: entry.createdAt }); };
   process.once("SIGTERM", stop); process.once("SIGINT", stop);
+  let tickFailures = 0;
   const tick = async () => {
     if (stopping) return;
     timer = null;
@@ -334,8 +335,13 @@ function superviseCommand(options) {
     for (const worker of run.workers.filter((w) => w.status === "planned" || w.status === "queued").slice(0, available)) launchWorker(options, run, worker, file, active);
     run = readRun(options.state, options.run);
     if (run.workers.every((w) => TERMINAL_WORKERS.has(w.status))) { updateRunRecord(file, (current) => ({ ...current, history: [...current.history, { at: now(), event: "supervisor_complete" }] })); return; }
+    tickFailures = 0;
     timer = setTimeout(tick, 1000);
     } catch (error) {
+      // A transient file-system error (for example a status panel holding the run record open on Windows) must not
+      // kill healthy workers: retry the tick, and fail closed only after repeated consecutive failures.
+      tickFailures += 1;
+      if (tickFailures < SUPERVISOR_TICK_FAILURE_LIMIT) { timer = setTimeout(tick, 2000); return; }
       for (const entry of active.values()) stopChild(entry.child, { createdAt: entry.createdAt });
       const message = String(error?.message || error).slice(0, 500);
       let failure = message;
@@ -449,6 +455,7 @@ function boardEvidence(text) {
 function committedPaths(cwd, base) {
   return [...new Set(gitBytes(["-c", "core.quotePath=false", "diff", "--name-only", "-z", base, "HEAD"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")))];
 }
+const SUPERVISOR_TICK_FAILURE_LIMIT = 5;
 function teamExecutionEnabled(env = process.env) {
   const value = String(env[CONTRACT.execution.optInEnv] ?? "").trim().toLowerCase();
   if (value === "off" || value === "0" || value === "false" || value === "disabled") return false;
@@ -517,7 +524,7 @@ function collectCommand(options) {
       const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
       const report = renderHandoffMarkdown(handoff); assertTeamTextSafe(report);
       fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n- None (read-only worker)\n`, "utf8");
-      addEvidence(options.state, { taskId: worker.taskId, evidence: boardEvidence(`Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Read-only report collected; no commit created.`) });
+      addEvidence(options.state, { taskId: worker.taskId, evidence: boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: none - read-only report collected; no commit created. Evidence: ${handoff.evidence.join("; ") || "none"}.`) });
       attachReport(options.state, { taskId: worker.taskId, reportId }); transitionTask(options.state, { taskId: worker.taskId, status: "review" });
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: [], outsideScope: [], reportId, commit: null } : item), history: [...current.history, { at: now(), event: "worker_collected_read_only", taskId: worker.taskId }] }));
       if (handoff.verdict !== "pass") partial = true;
@@ -527,7 +534,7 @@ function collectCommand(options) {
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
     if (!priorCommit) git(["add", "-A"], worker.worktree);
     const report = renderHandoffMarkdown(handoff);
-    const evidenceText = boardEvidence(`Evidence: ${handoff.evidence.join("; ") || "none"}. Verdict: ${handoff.verdict}. Actual changed paths: ${changed.join(", ")}.`);
+    const evidenceText = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: ${changed.join(", ")}. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
     try {
       assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", ...(priorCommit ? [run.baseCommit, "HEAD"] : ["--cached"])], worker.worktree));
       assertTeamTextSafe(report); assertTeamTextSafe(evidenceText);

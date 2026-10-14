@@ -200,7 +200,7 @@ and `cancelled`. The allowed moves:
 | --- | --- |
 | `backlog` -> `todo` | nothing |
 | `todo` -> `in_progress` | an owner, a complete brief, a live lease when the task has a write scope, and no other open task holding a live lease on an overlapping path |
-| `in_progress` -> `review` | at least one evidence entry |
+| `in_progress` -> `review` | at least one evidence entry; the latest one carries a `Verdict` and a `Mutation check` (`Verdict: pass. Mutation check: none - documentation only.` works on one line) |
 | `review` -> `done` | evidence, a linked report, every handoff that needs a decision resolved, and `--verified-by <agent>` |
 | `review` -> `in_progress` (rework) | `--reason`; the `in_progress` checks apply again |
 | `in_progress` -> `todo` (release) | `--reason`; clears the lease |
@@ -252,6 +252,10 @@ and `cancelled`. The allowed moves:
   for open tasks without storing it. `create` returns live `scopeConflicts`;
   add `--strict-scope` to reject them. Glob scopes compare conservatively from
   their literal prefix, and moving to `blocked` releases the lease.
+- Board and run-record writes retry a brief Windows sharing violation (`EPERM`,
+  `EACCES`, `EBUSY`) instead of failing, and the team supervisor fails a run only
+  after five consecutive failed ticks, so a status panel reading the run record
+  cannot stop healthy workers.
 
 ## Enterprise Routing Profiles
 

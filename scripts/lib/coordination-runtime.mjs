@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { secretLikeCategory } from "./secret-classifier.mjs";
-import { parseBrief } from "./agent-brief.mjs";
+import { parseBrief, validateVerdictAndMutation } from "./agent-brief.mjs";
 
 // v3 added who works a task (owner), what it may write (writeScope) and until
 // when (leaseUntil), the task brief, and attached evidence. v4 adds the paths
@@ -198,6 +198,30 @@ function assertNoScopeConflict(state, task, now) {
   fail(`${detail}; wait for ${conflicts.length === 1 ? "it" : "them"}, or narrow this task's write scope.`);
 }
 
+// Windows refuses to replace a file that another process holds open without
+// FILE_SHARE_DELETE (a status panel, an editor, antivirus). Those holds are
+// brief, so retry the atomic rename instead of failing the caller.
+const RETRYABLE_RENAME = new Set(["EPERM", "EACCES", "EBUSY"]);
+export function replaceFileSync(temporary, target, { attempts = 40, delayMs = 25, rename = fs.renameSync } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try { rename(temporary, target); return attempt; }
+    catch (error) {
+      if (!RETRYABLE_RENAME.has(error?.code) || attempt >= attempts) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+    }
+  }
+}
+
+// Board evidence is often one line ("... Verdict: pass. Mutation check: src/a.js"). The agent-brief parser reads
+// labelled lines, so put each label on its own line and drop a sentence period after the verdict word.
+export function reviewGate(text) {
+  const labels = "Verdict|Sonuç sınıfı|Sonuc sinifi|Mutation check|Mutasyon kontrolü|Mutasyon kontrolu";
+  const lined = String(text ?? "")
+    .replace(new RegExp(`\\s*(${labels})\\s*:`, "gi"), "\n$1:")
+    .replace(/^(\s*(?:Verdict|Sonuç sınıfı|Sonuc sinifi)\s*:\s*[\p{L}]+)\.[ \t]*/gimu, "$1\n");
+  return validateVerdictAndMutation(lined);
+}
+
 export function createState() {
   return { schemaVersion: STATE_SCHEMA_VERSION, revision: 0, tasks: [] };
 }
@@ -249,13 +273,13 @@ export function writeState(statePath, state) {
       throw conflict;
     }
     try {
-      fs.renameSync(temporary, statePath);
+      replaceFileSync(temporary, statePath);
     } catch (error) {
       // Windows refuses a rename while another process (a reader, antivirus)
       // has the file open; one short retry covers that.
       if (!["EPERM", "EBUSY", "EACCES"].includes(error?.code)) throw error;
       pause(100);
-      fs.renameSync(temporary, statePath);
+      replaceFileSync(temporary, statePath);
     }
   } finally {
     fs.rmSync(temporary, { force: true });
@@ -409,6 +433,10 @@ export function transitionTask(state, input) {
   }
   if (target === "review" && task.evidence.length === 0) {
     fail("Evidence is required before in_progress can transition to review (coordination-board add-evidence).");
+  }
+  if (target === "review") {
+    const gate = reviewGate(task.evidence.at(-1).text);
+    if (gate.errors.length) fail(`The latest evidence needs a Verdict and a Mutation check before review: ${gate.errors.join(" ")} Example: add-evidence --evidence "Verdict: pass. Mutation check: none - documentation only. <evidence>"`);
   }
   if (target === "done") {
     if (task.evidence.length === 0) fail("Evidence is required before review can transition to done (coordination-board add-evidence).");

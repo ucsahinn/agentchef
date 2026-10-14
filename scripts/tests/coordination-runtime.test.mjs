@@ -61,7 +61,7 @@ function toReview(state, task, { scope = null } = {}) {
   ok(run(["brief", "--state", state, "--task", task, "--brief", completeBrief]));
   if (scope) ok(run(["renew-lease", "--state", state, "--task", task, "--minutes", "90"]));
   ok(move(state, task, "in_progress"));
-  ok(run(["add-evidence", "--state", state, "--task", task, "--evidence", "node --test: pass"]));
+  ok(run(["add-evidence", "--state", state, "--task", task, "--evidence", "Verdict: pass. Mutation check: none - test fixture. node --test: pass"]));
   ok(move(state, task, "review"));
 }
 
@@ -118,7 +118,7 @@ test("review needs evidence; done needs evidence, a report, and resolved decisio
   ok(run(["brief", "--state", state, "--task", "TASK-45", "--brief", completeBrief]));
   ok(move(state, "TASK-45", "in_progress"));
   assert.match(move(state, "TASK-45", "review").stderr, /Evidence is required/);
-  ok(run(["add-evidence", "--state", state, "--task", "TASK-45", "--evidence", "--json output verified"]));
+  ok(run(["add-evidence", "--state", state, "--task", "TASK-45", "--evidence", "Verdict: pass. Mutation check: none - test fixture. --json output verified"]));
   ok(move(state, "TASK-45", "review"));
   assert.match(move(state, "TASK-45", "done", ["--verified-by", "claude"]).stderr, /linked report/);
   assert.match(run(["attach-report", "--state", state, "--task", "TASK-45", "--report-id", "TASK-44-core.md"]).stderr, /must start with TASK-45-/);
@@ -343,7 +343,7 @@ test("assign changes the owner and records who did it", () => {
   const state = createState();
   createTask(state, { id: "T-3", title: "Reassign", ownerCoordinator: "qa_coordinator", ownerAgent: "codex" });
   assignTask(state, { taskId: "T-3", ownerAgent: "claude", by: "user" });
-  addEvidence(state, { taskId: "T-3", evidence: "handed over" });
+  addEvidence(state, { taskId: "T-3", evidence: "Verdict: pass. Mutation check: none - test fixture. handed over" });
   const entry = state.tasks[0].history.find((item) => item.action === "assign");
   assert.deepEqual([entry.from, entry.to, entry.by], ["codex", "claude", "user"]);
 });
@@ -496,4 +496,32 @@ test("create reports live scope conflicts and strict-scope rejects them", () => 
   const result = ok(run(["create", "--state", state, "--id", "TASK-FILE", "--title", "File", "--owner-coordinator", "qa_coordinator", "--owner-agent", "claude", "--write-repo", "agentchef", "--write-paths", "docs/a.md"]));
   assert.deepEqual(result.scopeConflicts.map((entry) => entry.taskId), ["TASK-GLOB"]);
   assert.match(run(["create", "--state", state, "--id", "TASK-STRICT", "--title", "Strict", "--owner-coordinator", "qa_coordinator", "--write-repo", "agentchef", "--write-paths", "docs/b.md", "--strict-scope"]).stderr, /TASK-GLOB/);
+});
+
+test("replaceFileSync retries transient Windows sharing errors and rethrows the rest", async () => {
+  const { replaceFileSync } = await import("../lib/coordination-runtime.mjs");
+  const failing = (codes) => { let calls = 0; return { fn: () => { const code = codes[calls++]; if (code) { const error = new Error(code); error.code = code; throw error; } }, calls: () => calls }; };
+  const flaky = failing(["EPERM", "EBUSY", "EACCES"]);
+  assert.equal(replaceFileSync("a", "b", { rename: flaky.fn, delayMs: 1 }), 4);
+  const fatal = failing(["ENOENT"]);
+  assert.throws(() => replaceFileSync("a", "b", { rename: fatal.fn, delayMs: 1 }), /ENOENT/);
+  assert.equal(fatal.calls(), 1);
+  const stuck = failing(Array(10).fill("EPERM"));
+  assert.throws(() => replaceFileSync("a", "b", { rename: stuck.fn, attempts: 3, delayMs: 1 }), /EPERM/);
+  assert.equal(stuck.calls(), 3);
+});
+
+test("review needs a Verdict and a Mutation check in the latest evidence (K4b)", () => {
+  const { state } = fixture();
+  ok(run(["init", "--state", state]));
+  ok(run(["create", "--state", state, "--id", "TASK-GATE", "--title", "Gate", "--owner-coordinator", "qa_coordinator", "--owner-agent", "codex"]));
+  ok(move(state, "TASK-GATE", "todo"));
+  ok(run(["brief", "--state", state, "--task", "TASK-GATE", "--brief", completeBrief]));
+  ok(move(state, "TASK-GATE", "in_progress"));
+  ok(run(["add-evidence", "--state", state, "--task", "TASK-GATE", "--evidence", "tests pass"]));
+  assert.match(run(["transition", "--state", state, "--task", "TASK-GATE", "--status", "review"]).stderr, /needs a Verdict and a Mutation check/);
+  ok(run(["add-evidence", "--state", state, "--task", "TASK-GATE", "--evidence", "Verdict: maybe. Mutation check: src/a.js"]));
+  assert.match(run(["transition", "--state", state, "--task", "TASK-GATE", "--status", "review"]).stderr, /Verdict must be one of/);
+  ok(run(["add-evidence", "--state", state, "--task", "TASK-GATE", "--evidence", "Sonuç sınıfı: DOĞRULANDI. Mutasyon kontrolü: none - yalnız belge"]));
+  ok(run(["transition", "--state", state, "--task", "TASK-GATE", "--status", "review"]));
 });

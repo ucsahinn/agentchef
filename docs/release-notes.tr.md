@@ -1,5 +1,19 @@
 # Sürüm Notları
 
+## v1.7.0 - 2026-10-14
+
+AgentChef 1.7.0 koordinasyon panosunun zayıf kanıtla kapanmasını zorlaştırır ve geniş süreç öldürme komutlarını önce sordurur. Sürüm üç işçili bir takım koşusuyla yapıldı, şef tamamladı.
+
+### Neler Değişti
+
+- **Pano kanıtı.** Raporlar gerçek, boş olmayan ve sır taramasından geçmiş bir dosyadan iliştirilir; açık görevler eksik kanıtı gösterir; görev yalnız son kanıtı `Verdict` ve `Mutation check` içeriyorsa `review`'a geçer.
+- **Yazma kapsamı çakışmaları.** Çakışmalar her görevi ve yolu sayar, glob kapsamları temkinli karşılaştırılır, `create` uyarır (`--strict-scope` ile reddeder), engellenen görev kirasını bırakır.
+- **Devir sözleşmesi.** agent-brief skill'i ve ayrıştırıcısı `Verdict`, `Mutation check`, ortam tuzakları ve izolasyonu, katı modu ve çakışma bildirimi, QA denemesi ve eskalasyon şablonlarını destekler.
+- **Süreç öldürme onayları.** `taskkill`, `tskill`, `kill`, `pkill`, `killall` ve `wmic process` Codex'te ve Claude'da onay ister.
+- **Windows güvenilirliği.** Pano ve koşu kaydı yazımları kısa bir paylaşım ihlalinde yeniden dener; tek bir gözetmen tick hatası artık çalışan bir takımı düşürmez.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.6.0 - 2026-10-14
 
 AgentChef 1.6.0 takım modunu her kurulumda açar. İki sürüm ve altı çok rollü canlı koşudan sonra gözetmen ve sınırlı Codex işçileri artık bir opt-in bayrağı istemez. Başlatma ve birleştirme yine kullanıcının yazılı onayını ister, işçiler yine yalıtılmış worktree'lerde ve sınırlı sandbox'ta çalışır, yürütücü yine push veya yayın yapmaz.
@@ -9,8 +23,6 @@ AgentChef 1.6.0 takım modunu her kurulumda açar. İki sürüm ve altı çok ro
 - **Herkese açık.** Takım sözleşmesi `execution.enabled` değerini true, `stability` değerini stable yapar. `AGENTCHEF_TEAM_MODE` artık kapatma anahtarıdır: `off`, `0`, `false` veya `disabled` bir süreçte takım yürütmesini kapatır; `experimental` kabul edilir ve etkisizdir.
 - **Doktor ve durum.** Doktor `opt-in` yerine `execution` kontrolü verir ve Windows Terminal'i algılamak için wt.exe'yi artık çalıştırmaz; Windows Terminal 1.24 bilinmeyen bayrağa kipli bir Yardım kutusuyla yanıt veriyordu. `codex status` anahtar kapalı değilse takım modunu açık (stable) raporlar.
 - **Belgeler.** Ajanlar, skill'ler ve güvenlik modeli rehberleri ile team-conductor skill'i her zaman açık modu İngilizce ve Türkçe anlatır.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.5.1 - 2026-10-13
 

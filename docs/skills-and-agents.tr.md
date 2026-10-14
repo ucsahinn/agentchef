@@ -207,7 +207,7 @@ Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
 | --- | --- |
 | `backlog` -> `todo` | hiçbir şey |
 | `todo` -> `in_progress` | bir sahip, eksiksiz bir brief, görevin yazma kapsamı varsa canlı bir kira ve çakışan bir yolda canlı kira tutan başka açık görev olmaması |
-| `in_progress` -> `review` | en az bir kanıt kaydı |
+| `in_progress` -> `review` | en az bir kanıt kaydı; sonuncusu `Verdict` ve `Mutation check` taşır (`Sonuç sınıfı: DOĞRULANDI. Mutasyon kontrolü: none - yalnız belge.` tek satırda da geçer) |
 | `review` -> `done` | kanıt, bağlı bir rapor, karar gerektiren her handoff'un çözülmüş olması ve `--verified-by <ajan>` |
 | `review` -> `in_progress` (yeniden çalışma) | `--reason`; `in_progress` kontrolleri yeniden uygulanır |
 | `in_progress` -> `todo` (bırakma) | `--reason`; kirayı temizler |
@@ -262,6 +262,10 @@ Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
   kira çakışmalarını `scopeConflicts` olarak döndürür; `--strict-scope` bunları
   ret sebebi yapar. Glob kapsamları jokerlerden önceki literal önekle temkinli
   karşılaştırılır; `blocked` geçişi kirayı bırakır.
+- Pano ve koşu kaydı yazımları kısa süren bir Windows paylaşım ihlalinde
+  (`EPERM`, `EACCES`, `EBUSY`) düşmek yerine yeniden dener; takım gözetmeni bir
+  koşuyu ancak art arda beş tick hatasından sonra başarısız sayar. Böylece koşu
+  kaydını okuyan bir durum paneli sağlıklı işçileri durduramaz.
 
 ## Enterprise Routing Profiles
 
