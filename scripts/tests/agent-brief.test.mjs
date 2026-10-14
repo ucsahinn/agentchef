@@ -102,3 +102,12 @@ test("invalid verdict is a warning and helper reports invalid verdict and mutati
   assert.deepEqual(validateVerdictAndMutation(base).errors, ["Verdict must be one of VERIFIED, REFUTED, UNMEASURED, PASS, WARN, PARTIAL, BLOCKED, FAIL.", "Mutation check must describe changed paths or use none - <reason>."]);
   assert.deepEqual(validateVerdictAndMutation("Verdict: verified\nMutation check: none - docs only").errors, []);
 });
+
+test("mutation check accepts a reason or path tokens and rejects vague values", () => {
+  for (const value of ["none", "-", "ok"]) {
+    assert.notDeepEqual(validateVerdictAndMutation(`Verdict: pass\nMutation check: ${value}`).errors, []);
+  }
+  for (const value of ["none - yalniz belge", "scripts/a.mjs, docs/b.md", "src\\a.js"]) {
+    assert.deepEqual(validateVerdictAndMutation(`Verdict: pass\nMutation check: ${value}`).errors, []);
+  }
+});
