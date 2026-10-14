@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.6.0** makes team mode available on every install; `AGENTCHEF_TEAM_MODE=off` switches it off, and start and merge still require typed user approvals.
+Development version **v1.7.0** hardens the coordination board (report gate, scope conflicts, Verdict and Mutation check before review) and asks before broad process-kill commands; team mode stays available on every install.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

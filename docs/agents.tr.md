@@ -64,8 +64,10 @@ gerekip gerekmediğine ana oturum karar verir.
 
 Bundled `agent-brief` skill'i (Codex'te `$agentchef:agent-brief`, Claude
 Code'da `/agentchef:agent-brief`) bu alışverişi sabitler: worker'ın aldığı
-yedi alanlı brief ve döndürdüğü altı alanlı handoff (Sonuç, Kanıt, Değişen
-kapsam, Riskler, Açık sorular, Sıradaki doğrulama).
+yedi zorunlu brief alanı (isteğe bağlı Ortam tuzakları ve İzolasyon ile) ve altı
+zorunlu handoff alanı (Sonuç, Kanıt, Değişen kapsam, Riskler, Açık sorular,
+Sıradaki doğrulama). Strict denetim Sonuç sınıfı ve Mutasyon kontrolünü de
+zorunlu kılabilir; yalnız dokümantasyon işinde `none - <neden>` yazılır.
 `coordination-board brief-check` brief'i göndermeden önce denetler; 1.3.3 ile
 `coordination-board handoff-check` geri dönen handoff'u
 denetler.

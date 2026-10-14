@@ -27,6 +27,12 @@ Outcome, Evidence, Changed scope, Risks, Open questions, Next verification.
 
 ## User's words
 "pc çok yavaşladı ... canlı ve kullanılan hiçbirşeye dokunmadan hızlandır"
+
+## Environment traps (optional)
+none
+
+## Isolation (optional)
+none
 ```
 
 ## Handoff Template
@@ -38,4 +44,6 @@ Changed scope: catalog/mcp-servers.json, templates/codex/config.unix.toml, ...
 Risks: a project that relied on the global Playwright must add it per project.
 Open questions: none.
 Next verification: open a new Claude session and run `claude mcp list`.
+Verdict: VERIFIED
+Mutation check: catalog/mcp-servers.json; templates/codex/config.unix.toml
 ```

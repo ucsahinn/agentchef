@@ -64,9 +64,11 @@ route. Cross-domain work returns a compact handoff to the main session, which
 decides whether another coordinator is needed.
 
 The bundled `agent-brief` skill (`$agentchef:agent-brief` in Codex,
-`/agentchef:agent-brief` in Claude Code) fixes that exchange: the seven-field
-brief a worker receives and the six-field handoff it returns (Outcome,
-Evidence, Changed scope, Risks, Open questions, Next verification).
+`/agentchef:agent-brief` in Claude Code) fixes that exchange: the seven
+required brief fields (with optional Environment traps and Isolation) and six
+required handoff fields (Outcome, Evidence, Changed scope, Risks, Open
+questions, Next verification). Strict checks can additionally require Verdict
+and Mutation check; documentation-only work records `none - <reason>`.
 `coordination-board brief-check` checks a brief before it is sent; from 1.3.3
 `coordination-board handoff-check` checks the handoff that
 comes back.

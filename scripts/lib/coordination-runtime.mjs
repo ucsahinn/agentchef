@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { secretLikeCategory } from "./secret-classifier.mjs";
-import { parseBrief } from "./agent-brief.mjs";
+import { parseBrief, validateVerdictAndMutation } from "./agent-brief.mjs";
 
 // v3 added who works a task (owner), what it may write (writeScope) and until
 // when (leaseUntil), the task brief, and attached evidence. v4 adds the paths
@@ -161,19 +161,65 @@ function normalizedPath(value) {
 function pathsOverlap(left, right) {
   const a = normalizedPath(left);
   const b = normalizedPath(right);
+  const globPrefix = (value) => {
+    const wildcard = value.search(/[?*]/);
+    if (wildcard < 0) return value;
+    return value.slice(0, wildcard).replace(/\/$/, "");
+  };
+  const leftGlob = /[?*]/.test(a);
+  const rightGlob = /[?*]/.test(b);
+  if (leftGlob || rightGlob) {
+    const ap = leftGlob ? globPrefix(a) : a;
+    const bp = rightGlob ? globPrefix(b) : b;
+    return ap === "." || bp === "." || ap === bp || ap.startsWith(`${bp}/`) || bp.startsWith(`${ap}/`);
+  }
   return a === "." || b === "." || a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }
 
 // Two open tasks may not hold live leases on the same files: the second one
 // is told which task has them.
-function assertNoScopeConflict(state, task, now) {
-  if (!task.writeScope) return;
+export function scopeConflicts(state, task, now = Date.now()) {
+  if (!task.writeScope) return [];
+  const conflicts = [];
   for (const other of state.tasks) {
     if (other === task || TERMINAL.has(other.status) || !other.writeScope || !leaseLive(other, now)) continue;
     if (other.writeScope.repo.toLowerCase() !== task.writeScope.repo.toLowerCase()) continue;
     const clash = task.writeScope.paths.find((mine) => other.writeScope.paths.some((theirs) => pathsOverlap(mine, theirs)));
-    if (clash) fail(`${other.id} holds a live lease on ${other.writeScope.repo}:${clash}; wait for it, or narrow this task's write scope.`);
+    if (clash) conflicts.push({ taskId: other.id, repo: other.writeScope.repo, path: clash });
   }
+  return conflicts;
+}
+
+function assertNoScopeConflict(state, task, now) {
+  const conflicts = scopeConflicts(state, task, now);
+  if (!conflicts.length) return;
+  // Name every conflicting task with the exact repo:path, so the caller knows what to wait for.
+  const detail = conflicts.map((entry) => `${entry.taskId} holds a live lease on ${entry.repo}:${entry.path}`).join("; ");
+  fail(`${detail}; wait for ${conflicts.length === 1 ? "it" : "them"}, or narrow this task's write scope.`);
+}
+
+// Windows refuses to replace a file that another process holds open without
+// FILE_SHARE_DELETE (a status panel, an editor, antivirus). Those holds are
+// brief, so retry the atomic rename instead of failing the caller.
+const RETRYABLE_RENAME = new Set(["EPERM", "EACCES", "EBUSY"]);
+export function replaceFileSync(temporary, target, { attempts = 40, delayMs = 25, rename = fs.renameSync } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try { rename(temporary, target); return attempt; }
+    catch (error) {
+      if (!RETRYABLE_RENAME.has(error?.code) || attempt >= attempts) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+    }
+  }
+}
+
+// Board evidence is often one line ("... Verdict: pass. Mutation check: src/a.js"). The agent-brief parser reads
+// labelled lines, so put each label on its own line and drop a sentence period after the verdict word.
+export function reviewGate(text) {
+  const labels = "Verdict|Sonuç sınıfı|Sonuc sinifi|Mutation check|Mutasyon kontrolü|Mutasyon kontrolu";
+  const lined = String(text ?? "")
+    .replace(new RegExp(`\\s*(${labels})\\s*:`, "gi"), "\n$1:")
+    .replace(/^(\s*(?:Verdict|Sonuç sınıfı|Sonuc sinifi)\s*:\s*[\p{L}]+)\.[ \t]*/gimu, "$1\n");
+  return validateVerdictAndMutation(lined);
 }
 
 export function createState() {
@@ -227,13 +273,13 @@ export function writeState(statePath, state) {
       throw conflict;
     }
     try {
-      fs.renameSync(temporary, statePath);
+      replaceFileSync(temporary, statePath);
     } catch (error) {
       // Windows refuses a rename while another process (a reader, antivirus)
       // has the file open; one short retry covers that.
       if (!["EPERM", "EBUSY", "EACCES"].includes(error?.code)) throw error;
       pause(100);
-      fs.renameSync(temporary, statePath);
+      replaceFileSync(temporary, statePath);
     }
   } finally {
     fs.rmSync(temporary, { force: true });
@@ -388,6 +434,10 @@ export function transitionTask(state, input) {
   if (target === "review" && task.evidence.length === 0) {
     fail("Evidence is required before in_progress can transition to review (coordination-board add-evidence).");
   }
+  if (target === "review") {
+    const gate = reviewGate(task.evidence.at(-1).text);
+    if (gate.errors.length) fail(`The latest evidence needs a Verdict and a Mutation check before review: ${gate.errors.join(" ")} Example: add-evidence --evidence "Verdict: pass. Mutation check: none - documentation only. <evidence>"`);
+  }
   if (target === "done") {
     if (task.evidence.length === 0) fail("Evidence is required before review can transition to done (coordination-board add-evidence).");
     if (task.reports.length === 0) fail("A linked report is required before review can transition to done.");
@@ -401,7 +451,7 @@ export function transitionTask(state, input) {
   task.status = target;
   if (verification) task.verification = verification;
   // A closed or released task frees its write scope for other agents.
-  if (TERMINAL.has(target) || (target === "todo" && (from === "in_progress" || from === "blocked"))) task.leaseUntil = null;
+  if (TERMINAL.has(target) || target === "blocked" || (target === "todo" && (from === "in_progress" || from === "blocked"))) task.leaseUntil = null;
   record(task, input, {
     action: "transition",
     from,
@@ -455,7 +505,7 @@ export function attachReport(state, input) {
   if (!reportId.startsWith(`${task.id}-`)) fail(`Report id must start with ${task.id}-.`);
   if (!task.reports.includes(reportId)) {
     task.reports.push(reportId);
-    record(task, input, { action: "attach-report", to: reportId });
+    record(task, input, { action: "attach-report", to: reportId, ...(input.bytes === undefined ? {} : { bytes: input.bytes }) });
   }
   return task;
 }
@@ -502,7 +552,14 @@ function withView(task, now) {
   const last = Date.parse(task.updatedAt || task.createdAt || "");
   const working = task.status === "in_progress" || task.status === "review";
   const stale = working && ((task.writeScope && leaseState !== "live") || (Number.isFinite(last) && now - last > STALE_HOURS * 3_600_000));
-  return { ...task, leaseState, stale: Boolean(stale) };
+  const evidenceMissing = [];
+  if (["in_progress", "review"].includes(task.status) && task.evidence.length === 0) evidenceMissing.push("evidence");
+  if (task.status === "review") {
+    if (task.reports.length === 0) evidenceMissing.push("report");
+    if (task.handoffs.some((handoff) => handoff.decisionNeeded && !handoff.resolution)) evidenceMissing.push("decision");
+    if (!task.verification) evidenceMissing.push("verifier");
+  }
+  return { ...task, leaseState, stale: Boolean(stale), ...(OPEN.includes(task.status) ? { evidenceMissing } : {}) };
 }
 
 export function showTasks(state, taskId = null, filters = {}) {

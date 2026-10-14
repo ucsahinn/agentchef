@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.0 - 2026-10-14
+
+- Coordination board report gate: `attach-report --report-path <file>` accepts only a non-empty Markdown report (up to 64 KB) inside the board state directory whose name matches the report id, after secret scanning; `show` derives `evidenceMissing` for open tasks. (TASK-059)
+- Write-scope conflicts: `scopeConflicts` lists every conflicting task with its repo and path, glob scopes compare by their literal prefix without a dependency, `create` reports live conflicts and `--strict-scope` rejects them, and `blocked` releases the lease. (TASK-059)
+- agent-brief: optional `Verdict` (VERIFIED, REFUTED, UNMEASURED and the team verdicts, with Turkish labels) and `Mutation check` handoff fields, optional `Environment traps` and `Isolation` brief fields, `--strict`, `validateVerdictAndMutation`, and conflict-notice, QA-attempt and escalation templates; the working agreement names Beyin's `beyin pano` and kill guard. (TASK-060)
+- Board review gate: moving a task to `review` requires a `Verdict` and a `Mutation check` in its latest evidence; one-line evidence is accepted, and the team runner writes both first so board truncation keeps them. (K4b)
+- Process-kill approvals: Codex rules and the Claude critical ask profile now ask before `taskkill`, `tskill`, `kill`, `pkill`, `killall` and `wmic process`, including PowerShell-wrapped `taskkill`; AgentChef's own process cleanup is unaffected. (TASK-061)
+- Windows file sharing: board and run-record writes retry `EPERM`/`EACCES`/`EBUSY` on the atomic rename, and the team supervisor fails a run only after five consecutive failed ticks. A status panel holding the run record open made a live run mark three healthy workers as failed.
+
 ## 1.6.0 - 2026-10-14
 
 - Update the team-mode guides to describe its stable, enabled-by-default behavior and process-level off switch.

@@ -97,12 +97,15 @@ test("the ask list keeps only the questions for what cannot be taken back or lea
     "Bash(git branch --delete *)", "Bash(git branch -D *)",
     "Bash(git push * -f *)", "Bash(git push *--delete*)", "Bash(git push *--force*)", "Bash(git push *--mirror*)",
     "Bash(git tag --delete *)", "Bash(git tag -d *)",
+    "Bash(kill *)", "Bash(killall *)",
     "Bash(npm publish *)", ...scripts.map((script) => `Bash(npm run ${script} *)`),
     "Bash(npm.cmd publish *)", ...scripts.map((script) => `Bash(npm.cmd run ${script} *)`),
-    "PowerShell(Stop-Process *)"
+    "Bash(pkill *)", "Bash(taskkill *)",
+    "Bash(taskkill.exe *)", "Bash(tskill *)", "Bash(wmic process *)", "Bash(wmic.exe process *)",
+    "PowerShell(Stop-Process *)", "PowerShell(taskkill *)"
   ];
   assert.deepEqual(permissions.ask, expected);
-  assert.equal(permissions.ask.length, 56);
+  assert.equal(permissions.ask.length, 65);
   for (const dropped of ["Bash(git push *)", "Bash(git commit *)", "Bash(npm install *)", "Bash(rm *)", "Bash(rg *--pre*)", "Bash(node --check *)", "Bash(npx.cmd skills list *)", "Bash(gh auth status *)", "Bash(npm run *)"]) {
     assert.equal(permissions.ask.includes(dropped), false, `${dropped} no longer asks`);
     assert.equal(permissions.allow.includes(dropped), false, `${dropped} is not auto-allowed either`);
