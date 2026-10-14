@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "stability": "experimental",
+  "stability": "stable",
   "execution": {
-    "enabled": false,
+    "enabled": true,
     "optInEnv": "AGENTCHEF_TEAM_MODE",
     "engineGeneratesApprovals": false,
     "roleModeCeilings": {

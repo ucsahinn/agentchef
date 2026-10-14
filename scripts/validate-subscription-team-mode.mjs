@@ -17,10 +17,10 @@ const errors = [];
 
 exactKeys(catalog, ["schemaVersion", "stability", "execution", "conductor", "workers", "verification", "approval", "limits", "branches"], "catalog", errors);
 if (catalog.schemaVersion !== 2) errors.push("schemaVersion must be 2");
-if (catalog.stability !== "experimental") errors.push("stability must be experimental");
+if (catalog.stability !== "stable") errors.push("stability must be stable");
 exactKeys(catalog.execution, ["enabled", "optInEnv", "engineGeneratesApprovals", "roleModeCeilings"], "execution", errors);
-if (catalog.execution?.enabled !== false) errors.push("execution.enabled must remain false");
-if (catalog.execution?.optInEnv !== "AGENTCHEF_TEAM_MODE") errors.push("execution.optInEnv must be the AGENTCHEF_TEAM_MODE variable name");
+if (catalog.execution?.enabled !== true) errors.push("execution.enabled must be true: team execution is available to every install and AGENTCHEF_TEAM_MODE=off switches it off");
+if (catalog.execution?.optInEnv !== "AGENTCHEF_TEAM_MODE") errors.push("execution.optInEnv must be the AGENTCHEF_TEAM_MODE variable name (the off switch)");
 if (catalog.execution?.engineGeneratesApprovals !== false) errors.push("execution.engineGeneratesApprovals must remain false");
 
 const agentCatalog = JSON.parse(fs.readFileSync(path.join(root, "catalog/agents.json"), "utf8"));

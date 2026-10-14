@@ -65,3 +65,15 @@ test("collect reuses an existing delivery commit instead of failing the worker f
   assert.equal(worker.status,"collected"); assert.equal(worker.commit,head); assert.deepEqual(worker.changedPaths,["src/change.txt"]);
   assert.ok(collected.history.some(item=>item.event==="worker_collected_existing_commit"&&item.taskId==="TASK-IDEM"));
 });
+test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it off",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-switch-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {state,env,run}=makeRun(temp,"R-switch",["TASK-SWITCH"],"ok");
+  const unset={...env}; delete unset.AGENTCHEF_TEAM_MODE;
+  const doctor=node(cli,["doctor","--state",state,"--json"],{env:unset}); // doctor exits 4 when any environment check fails (no Windows Terminal in CI); only the execution check matters here
+  const execution=JSON.parse(doctor.stdout).checks.find(check=>check.id==="execution"); assert.equal(execution.status,"pass");
+  const status=node(cli,["status","--state",state,"--json","--run",run.runId],{env:unset}); assert.equal(status.status,0,status.stderr||status.stdout);
+  const off=node(cli,["plan","--state",state,"--json","--repo",path.join(temp,"repo"),"--plan-file",path.join(temp,"plan.json"),"--run","R-switch-off"],{env:{...env,AGENTCHEF_TEAM_MODE:"off"}}); assert.equal(off.status,1,off.stderr||off.stdout);
+  assert.match(off.stderr||off.stdout,/team-mode-disabled/);
+  const offDoctor=node(cli,["doctor","--state",state,"--json"],{env:{...env,AGENTCHEF_TEAM_MODE:"off"}});
+  assert.equal(JSON.parse(offDoctor.stdout).checks.find(check=>check.id==="execution").status,"fail");
+});

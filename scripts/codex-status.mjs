@@ -1458,7 +1458,7 @@ function inspectTeamMode() {
   }
   return {
     inspected: true,
-    enabled: process.env.AGENTCHEF_TEAM_MODE === "experimental",
+    enabled: catalog.execution?.enabled === true && !["off", "0", "false", "disabled"].includes(String(process.env.AGENTCHEF_TEAM_MODE ?? "").trim().toLowerCase()),
     stability: catalog.stability,
     lastRun
   };

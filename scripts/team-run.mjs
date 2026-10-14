@@ -94,14 +94,14 @@ function scopesOverlap(left, right) {
   const norm = (x) => x.toLocaleLowerCase("en-US");
   return left.some((a) => right.some((b) => { const x = norm(a), y = norm(b); return x === "." || y === "." || x === y || x.startsWith(`${y}/`) || y.startsWith(`${x}/`); }));
 }
-function ensureExperimentEnabled() {
-  if (!CONTRACT.execution.enabled && process.env[CONTRACT.execution.optInEnv] !== "experimental") {
-    const error = new Error("Team execution is disabled; set AGENTCHEF_TEAM_MODE=experimental to opt in."); error.exitCode = 1; error.code = "team-mode-disabled"; throw error;
+function ensureTeamExecutionEnabled() {
+  if (!teamExecutionEnabled()) {
+    const error = new Error(`Team execution is switched off; unset ${CONTRACT.execution.optInEnv}=off to use it.`); error.exitCode = 1; error.code = "team-mode-disabled"; throw error;
   }
 }
 function validateStateFile(state) { if (!fs.existsSync(state)) throw new Error("Board state file does not exist; initialize the coordination board first."); }
 function planCommand(options) {
-  ensureExperimentEnabled(); validateStateFile(options.state);
+  ensureTeamExecutionEnabled(); validateStateFile(options.state);
   if (!options.repo) throw new CliUsageError("plan requires --repo.");
   if (!options["plan-file"]) throw new CliUsageError("plan requires --plan-file.");
   const repo = resolveRepo(options.repo || ROOT);
@@ -162,7 +162,7 @@ function startCommand(options) {
   finally { process.off("SIGINT", onSignal); process.off("SIGTERM", onSignal); operation.release(); }
 }
 function startCommandLocked(options, wasInterrupted = () => false, lockedAt = now()) {
-  ensureExperimentEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
+  ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
   const approval = readApproval(path.dirname(path.resolve(options.state)), run.runId, "baslat");
   if (!approvalIsValid(approval, { runId: run.runId, tur: "baslat", plannedAt: run.plannedAt, now: now() })) { const e = new Error("A valid start approval is required."); e.code = "approval-required"; e.exitCode = 3; throw e; }
   const command = resolveCodexCommand();
@@ -449,6 +449,11 @@ function boardEvidence(text) {
 function committedPaths(cwd, base) {
   return [...new Set(gitBytes(["-c", "core.quotePath=false", "diff", "--name-only", "-z", base, "HEAD"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")))];
 }
+function teamExecutionEnabled(env = process.env) {
+  const value = String(env[CONTRACT.execution.optInEnv] ?? "").trim().toLowerCase();
+  if (value === "off" || value === "0" || value === "false" || value === "disabled") return false;
+  return CONTRACT.execution.enabled === true;
+}
 function pathWithinScope(file, scopes) {
   const candidate = file.replace(/\\/g, "/").toLocaleLowerCase("en-US");
   return scopes.some((scope) => {
@@ -687,9 +692,9 @@ function cleanupCommand(options) {
 }
 function doctorCommand(options) {
   const checks = [], check = (id, ok, details = "") => checks.push({ id, status: ok ? "pass" : "fail", details });
-  check("contract", CONTRACT.schemaVersion === 2, `enabled=${CONTRACT.execution.enabled}; optIn=${CONTRACT.execution.optInEnv}`);
-  const optInEnabled = process.env[CONTRACT.execution.optInEnv] === "experimental";
-  check("opt-in", optInEnabled, `${CONTRACT.execution.optInEnv}=experimental is ${optInEnabled ? "set" : "not set"}`);
+  check("contract", CONTRACT.schemaVersion === 2, `enabled=${CONTRACT.execution.enabled}; switch=${CONTRACT.execution.optInEnv}`);
+  const switchValue = process.env[CONTRACT.execution.optInEnv];
+  check("execution", teamExecutionEnabled(), `${teamExecutionEnabled() ? "enabled by contract" : "switched off"}; ${CONTRACT.execution.optInEnv}=${switchValue === undefined ? "<unset>" : switchValue} (off disables)`);
   let codex = null;
   try {
     codex = resolveCodexCommand();
@@ -712,9 +717,10 @@ function doctorCommand(options) {
     check("codex.exec-flags", execOk, "first execution requires --json, --output-schema, and -o");
     check("codex.resume-flags", resumeOk, "resume supports --json, -c, -m, --output-schema, -o, and --ignore-rules; cwd comes from the process working directory; -s, -p, and -C are unavailable");
   }
-  const wtCommand = process.platform === "win32" ? resolveWindowsCli("wt") || "wt.exe" : null;
-  const wt = process.platform === "win32" ? spawnSync(wtCommand, ["--version"], { encoding: "utf8", timeout: 5000, windowsHide: true }) : { status: 0 };
-  check("windows-terminal", process.platform !== "win32" || wt.status === 0, process.platform === "win32" ? "wt.exe" : "viewer panes are optional on this platform");
+  // Never launch wt.exe to probe it: Windows Terminal 1.24 answers an unknown flag such as --version with a modal Help dialog
+  // instead of an exit code, so a doctor run left dialogs on the user's screen (observed 2026-10-14). Presence on PATH is enough.
+  const wtCommand = process.platform === "win32" ? resolveWindowsCli("wt") : null;
+  check("windows-terminal", process.platform !== "win32" || Boolean(wtCommand), process.platform === "win32" ? (wtCommand ? `found: ${wtCommand} (not launched)` : "wt.exe not found on PATH; viewer panes unavailable") : "viewer panes are optional on this platform");
   const gitName = spawnSync("git", ["config", "user.name"], { encoding: "utf8", windowsHide: true }), gitEmail = spawnSync("git", ["config", "user.email"], { encoding: "utf8", windowsHide: true });
   check("git.identity", gitName.status === 0 && gitEmail.status === 0 && gitName.stdout.trim() && gitEmail.stdout.trim(), "Git user.name and user.email are required");
   const lastRun = options.state && fs.existsSync(options.state) ? (() => { const dir = path.join(path.dirname(path.resolve(options.state)), "team-runs"); try { return fs.readdirSync(dir).filter((name) => name.endsWith(".json")).sort().at(-1) || null; } catch { return null; } })() : null;

@@ -48,9 +48,15 @@ test("unknown role is rejected", () => {
   assert.ok(validate(value).length > 0);
 });
 
-test("enabled execution is rejected", () => {
+test("disabled execution is rejected: team mode is available to every install", () => {
   const value = structuredClone(base);
-  value.execution.enabled = true;
+  value.execution.enabled = false;
+  assert.ok(validate(value).length > 0);
+});
+
+test("experimental stability is rejected", () => {
+  const value = structuredClone(base);
+  value.stability = "experimental";
   assert.ok(validate(value).length > 0);
 });
 
