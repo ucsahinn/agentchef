@@ -52,8 +52,16 @@ export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile
 }
 
 export function workerEnv({ runId, taskId, worktree, role, boardState }, env = process.env) {
-  const result = { ...env, AGENTCHEF_TEAM_RUN: runId, AGENTCHEF_TEAM_TASK: taskId, AGENTCHEF_TEAM_WORKTREE: worktree, AGENTCHEF_TEAM_ROLE: role, AGENTCHEF_ROUTING_HINT: "off", AGENTCHEF_BOARD_STATE: boardState };
-  delete result.BEYIN_CHILD;
+  const allow = new Set(String(env.AGENTCHEF_TEAM_WORKER_ENV_ALLOW ?? "").split(",").map((name) => name.trim()).filter(Boolean));
+  const safe = /^(?:OPENAI_API_KEY|CODEX_API_KEY|AZURE_OPENAI_API_KEY|CODEX_HOME|CODEX_[A-Z0-9_]*|AGENTCHEF_[A-Z0-9_]*|PATH|SystemRoot|TEMP|TMP|HOME|USERPROFILE|APPDATA|LOCALAPPDATA)$/i;
+  const sensitive = /(TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|_KEY$|_PAT$|COOKIE|SESSION)/i;
+  const result = {};
+  for (const [name, value] of Object.entries(env)) {
+    if (name === "BEYIN_CHILD") continue;
+    if (!sensitive.test(name) || safe.test(name) || allow.has(name)) result[name] = value;
+  }
+  delete result.AGENTCHEF_TEAM_WORKER_ENV_ALLOW;
+  Object.assign(result, { AGENTCHEF_TEAM_RUN: runId, AGENTCHEF_TEAM_TASK: taskId, AGENTCHEF_TEAM_WORKTREE: worktree, AGENTCHEF_TEAM_ROLE: role, AGENTCHEF_ROUTING_HINT: "off", AGENTCHEF_BOARD_STATE: boardState });
   return result;
 }
 
