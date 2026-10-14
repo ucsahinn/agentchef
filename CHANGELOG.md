@@ -4,6 +4,7 @@
 
 - `team-run resume --wait` sleeps until the usage limit resets, then resumes. The reset time is read from the paused workers' limit messages (clock times, relative hours/minutes, ISO timestamps; the latest wins, plus a 2-minute margin), falling back to 30 minutes and capped at 12 hours. `status` shows it as `resumeAt` for paused runs. New pure module `scripts/lib/usage-limit-reset.mjs`.
 - Memory guard: the supervisor holds queued workers while free RAM is short (about 1.5 GB per worker plus a 2 GB reserve). One worker always starts when none is running, so a low-memory machine slows the run instead of deadlocking it. The run history records `memory_hold` once per hold. `AGENTCHEF_TEAM_MIN_FREE_MB` overrides the reserve and `AGENTCHEF_TEAM_MEMORY_GUARD=off` disables the guard. New pure module `scripts/lib/memory-guard.mjs`.
+- Fix (from 1.7.6): resuming a paused run could fail with "The run changed while resuming" when its exiting supervisor wrote a last heartbeat; the heartbeat comparison now applies only to crash recovery.
 
 ## 1.7.6 - 2026-10-14
 
