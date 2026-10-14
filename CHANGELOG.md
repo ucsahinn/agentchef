@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.7 - 2026-10-14
+
+- `team-run resume --wait` sleeps until the usage limit resets, then resumes. The reset time is read from the paused workers' limit messages (clock times, relative hours/minutes, ISO timestamps; the latest wins, plus a 2-minute margin), falling back to 30 minutes and capped at 12 hours. `status` shows it as `resumeAt` for paused runs. New pure module `scripts/lib/usage-limit-reset.mjs`.
+- Memory guard: the supervisor holds queued workers while free RAM is short (about 1.5 GB per worker plus a 2 GB reserve). One worker always starts when none is running, so a low-memory machine slows the run instead of deadlocking it. The run history records `memory_hold` once per hold. `AGENTCHEF_TEAM_MIN_FREE_MB` overrides the reserve and `AGENTCHEF_TEAM_MEMORY_GUARD=off` disables the guard. New pure module `scripts/lib/memory-guard.mjs`.
+
 ## 1.7.6 - 2026-10-14
 
 - `team-run resume` recovers a run left `running` after a sleep, crash or restart. When the supervisor process is gone and its heartbeat is older than 60 seconds, orphaned workers (queued, spawning, running or paused) return to the queue and continue their saved Codex thread in the same worktree; a worker without a saved thread starts fresh there. A live worker process blocks recovery, the plan hash is still checked, and the run history records `recovered`. Worker transitions `spawning -> queued` and `running -> queued` exist only for this path.

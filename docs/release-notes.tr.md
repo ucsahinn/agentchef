@@ -1,5 +1,16 @@
 # Sürüm Notları
 
+## v1.7.7 - 2026-10-14
+
+AgentChef 1.7.7 takım koşusunun kota sınırını kendi başına beklemesini sağlar ve işçilerin makineyi boğmasını önler.
+
+### Neler Değişti
+
+- **`resume --wait`.** Sınır mesajından sıfırlanma saatini okur, bekler (saat yoksa 30 dakika, en çok 12 saat) ve sürdürür. `status` beklenen saati `resumeAt` olarak gösterir.
+- **Bellek koruması.** Boş RAM azken sıradaki işçiler bekler; bir işçi her zaman çalışır. `AGENTCHEF_TEAM_MIN_FREE_MB` ile ayarlanır, `AGENTCHEF_TEAM_MEMORY_GUARD=off` ile kapanır.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.6 - 2026-10-14
 
 AgentChef 1.7.6 uzun takım koşularını makineye karşı dayanıklı yapar. Windows uykuya geçer, terminal çöker ya da bilgisayar yeniden başlarsa koşu eskiden kimse çalıştırmadan `running` kalırdı. Artık `resume --run <runId>` onu kurtarır.
@@ -7,8 +18,6 @@ AgentChef 1.7.6 uzun takım koşularını makineye karşı dayanıklı yapar. Wi
 ### Neler Değişti
 
 - **Çökme sonrası kurtarma.** Canlı gözetmen yoksa ve nabız bir dakikadan eskiyse sahipsiz işçiler aynı worktree'de kayıtlı Codex oturumuyla sürer. Canlı bir işçi süreci kurtarmayı engeller; onaylı plan özeti yine denetlenir.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.5 - 2026-10-14
 

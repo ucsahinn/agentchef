@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.6** ile `resume`, uyku, çökme ya da yeniden başlatma sonrası çalışır görünen takım koşusunu kurtarır: sahipsiz işçiler aynı worktree'de kayıtlı Codex oturumuyla sürer.
+Geliştirme sürümü **v1.7.7** `resume --wait` (kota sıfırlanınca sürdür) ve boş RAM azken sıradaki işçileri bekleten bellek korumasını ekler.
 
 ## Commit Veya Push Öncesi
 

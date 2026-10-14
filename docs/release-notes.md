@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.7.7 - 2026-10-14
+
+AgentChef 1.7.7 lets a team run wait out a usage limit on its own and keeps workers from starving the machine.
+
+### What Changed
+
+- **`resume --wait`.** Reads the reset time from the limit message, waits (30 minutes when no time is given, at most 12 hours) and resumes. `status` shows the expected time as `resumeAt`.
+- **Memory guard.** Queued workers wait while free RAM is short; one worker always runs. Tunable with `AGENTCHEF_TEAM_MIN_FREE_MB`, off with `AGENTCHEF_TEAM_MEMORY_GUARD=off`.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.6 - 2026-10-14
 
 AgentChef 1.7.6 makes long team runs survive the machine. If Windows sleeps, the terminal crashes or the PC restarts mid-run, the run used to stay `running` with nobody behind it. Now `resume --run <runId>` recovers it.
@@ -7,8 +18,6 @@ AgentChef 1.7.6 makes long team runs survive the machine. If Windows sleeps, the
 ### What Changed
 
 - **Crash recovery.** With no live supervisor and a heartbeat older than a minute, orphaned workers continue their saved Codex thread in the same worktree. A live worker process blocks recovery, and the approved plan hash is still enforced.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.5 - 2026-10-14
 

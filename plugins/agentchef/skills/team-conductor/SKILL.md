@@ -44,7 +44,8 @@ and opens the run and worker panels. Without Beyin, `doctor` reports a failing
    `onayla TASK-x` are separate actions and need their own request. If usage
    limits pause a worker, report it and stop; when the user says the limit has
    reset, run `resume` (same plan, same worktrees, each paused worker continues
-   its saved Codex thread). If the machine slept, crashed or restarted and the
+   its saved Codex thread); `resume --wait` waits for the reset time read from
+   the limit message (or 30 minutes, at most 12 hours) and then resumes. If the machine slept, crashed or restarted and the
    run shows `running` with no supervisor heartbeat, the same `resume`
    recovers it: orphaned workers continue their saved thread in the same
    worktree. After abort, run cleanup only if the user asks.

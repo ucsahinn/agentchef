@@ -130,6 +130,8 @@ test("resume continues a usage-limited run on the saved Codex thread",async(t)=>
   const until=Date.now()+20000; let paused=null;
   while(Date.now()<until){ const r=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; if(r.status==="paused"&&!r.supervisor?.heartbeatAt||r.status==="paused"&&r.workers[0].status==="paused_limit"){ paused=r; break; } await new Promise(res=>setTimeout(res,100)); }
   assert.ok(paused,"run did not pause on the usage limit"); assert.equal(paused.workers[0].codexThreadId,"fake-thread-limit");
+  const pausedStatus=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout); assert.ok(Date.parse(pausedStatus.resumeAt)>Date.now(),"paused status carries resumeAt");
+  const waitFlag=node(cli,["resume","--state",state,"--json","--wait","--run","R-missing"],{env}); assert.notEqual(waitFlag.status,0); assert.doesNotMatch(waitFlag.stderr||waitFlag.stdout,/does not accept --wait/);
   const notPaused=node(cli,["resume","--state",state,"--json","--run","R-missing"],{env}); assert.notEqual(notPaused.status,0);
   let resumed=null; for(let i=0;i<100&&!resumed;i++){ const r=node(cli,["resume","--state",state,"--json","--run",run.runId],{env:{...env,FAKE_CODEX_SCENARIO:"ok"}}); if(r.status===0) resumed=JSON.parse(r.stdout); else { assert.match(r.stderr||r.stdout,/supervisor is still running/); await new Promise(res=>setTimeout(res,100)); } }
   assert.ok(resumed,"resume never succeeded"); assert.deepEqual(resumed.resumed,["TASK-RES"]);

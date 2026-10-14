@@ -17,6 +17,8 @@ import {
   transitionTask, transitionWorker, updateRunRecord, writeRunRecord
 } from "./lib/team-runtime.mjs";
 import { secretLikeCategory } from "./lib/secret-classifier.mjs";
+import { memoryAllowance } from "./lib/memory-guard.mjs";
+import { nextResumeAt } from "./lib/usage-limit-reset.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
@@ -27,7 +29,7 @@ const COMMANDS = {
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
   integrate: ["run", "state", "check"], verify: ["run", "state", "max-minutes", "detach"],
-  merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state"],
+  merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state", "wait"],
   cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
   doctor: ["state"]
 };
@@ -48,7 +50,7 @@ function parse(argv) {
     if (!token.startsWith("--")) throw new CliUsageError(`Unexpected argument: ${token}`);
     const key = token.slice(2);
     if (!accepted.has(key)) throw new CliUsageError(`${command} does not accept --${key}.`);
-    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach"].includes(key)) { options[key] = true; continue; }
+    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait"].includes(key)) { options[key] = true; continue; }
     const value = rest[i + 1];
     if (!value || value === "--json" || (value.startsWith("--") && accepted.has(value.slice(2)))) throw new CliUsageError(`--${key} requires a value.`);
     if (key === "check") (options.check ||= []).push(value); else options[key] = value;
@@ -171,8 +173,22 @@ function workerProcessAlive(worker) { return Number.isInteger(worker.pid) && isP
 function supervisorLockHeld(file) {
   try { const owner = JSON.parse(fs.readFileSync(path.join(path.dirname(file), path.basename(file, ".json"), "supervisor.lock"), "utf8")); const createdAt = processCreatedAt(owner.pid); return isPidAlive(owner.pid) && (!owner.createdAt || !createdAt || createdAt === owner.createdAt); } catch { return false; }
 }
+const RESUME_WAIT_MAX_MS = 12 * 60 * 60_000;
 function resumeCommand(options) {
-  ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
+  ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); let run = readRun(options.state, options.run);
+  if (options.wait && run.status === "paused") {
+    // Re-read the run every few seconds: stop waiting as soon as it is no longer paused (aborted, collected or resumed
+    // elsewhere), and recompute the target so a later limit message moves it. Never resume before the reset.
+    const capAt = Date.now() + RESUME_WAIT_MAX_MS; let announced = null;
+    for (;;) {
+      const at = nextResumeAt(run, new Date()); if (!at || at.getTime() <= Date.now()) break;
+      if (at.getTime() > capAt) throw new Error(`The usage limit resets at ${at.toISOString()}, more than 12 hours away; run resume --wait again later.`);
+      if (!options.json && announced !== at.getTime()) { announced = at.getTime(); process.stdout.write(`Waiting for the usage limit to reset: resuming at ${at.toISOString()}.\n`); }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.min(5000, Math.max(1, at.getTime() - Date.now())));
+      run = readRun(options.state, options.run);
+      if (run.status !== "paused") throw new Error(`Stopped waiting: ${run.runId} is now ${run.status}.`);
+    }
+  }
   if (!["paused", "running"].includes(run.status)) throw new Error(`Only a paused run can be resumed; ${run.runId} is ${run.status}.`);
   if (run.status === "running" && !run.workers.some((worker) => ["planned", "queued", "spawning", "running", "paused_limit"].includes(worker.status))) throw new Error(`Only a paused run can be resumed; ${run.runId} is running and has no orphaned worker to recover.`);
   const supervisorIdentity = !run.supervisor?.createdAt || processCreatedAt(run.supervisor?.pid) === run.supervisor.createdAt;
@@ -315,7 +331,8 @@ async function statusCommand(options) {
     const outside = changed.filter((file) => !pathWithinScope(file, worker.writeScope));
     if (outside.length) warnings.push({ taskId: worker.taskId, outsideScope: outside });
   }
-  const snapshot = { ok: true, run, planHash: run.planHash?.slice(0, 12) || null, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, warnings };
+  const resumeAt = run.status === "paused" ? nextResumeAt(run, new Date())?.toISOString() || null : null;
+  const snapshot = { ok: true, run, planHash: run.planHash?.slice(0, 12) || null, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, resumeAt, warnings };
   if (options.json) snapshots.push(snapshot); else output(snapshot, false);
   if (Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, Math.min(1000, deadline - Date.now())));
   } while (Date.now() < deadline);
@@ -347,7 +364,7 @@ function superviseCommand(options) {
   const active = new Map(); const started = Date.now();
   const stop = () => { stopping = true; if (timer) clearTimeout(timer); timer = null; for (const entry of active.values()) stopChild(entry.child, { createdAt: entry.createdAt }); };
   process.once("SIGTERM", stop); process.once("SIGINT", stop);
-  let tickFailures = 0;
+  let tickFailures = 0; let memoryHeld = 0; let memoryHoldLoggedAt = 0;
   const tick = async () => {
     timer = null;
     if (stopping) return;
@@ -387,7 +404,21 @@ function superviseCommand(options) {
     }
     run = readRun(options.state, options.run);
     const available = Math.max(0, run.maxWorkers - active.size);
-    for (const worker of run.workers.filter((w) => w.status === "planned" || w.status === "queued").slice(0, available)) launchWorker(options, run, worker, file, active);
+    const pending = run.workers.filter((w) => w.status === "planned" || w.status === "queued");
+    let launchable = Math.min(available, pending.length);
+    // Memory guard: hold queued workers while free RAM is short. One worker may always start when none is active,
+    // so a low-memory machine slows the run down instead of deadlocking it. AGENTCHEF_TEAM_MEMORY_GUARD=off disables it.
+    if (launchable > 0 && process.env.AGENTCHEF_TEAM_MEMORY_GUARD !== "off") {
+      const memory = memoryAllowance({ wanted: launchable });
+      const allowed = active.size === 0 ? Math.max(1, memory.allowed) : memory.allowed;
+      // Log a hold only when the held count changes, and at most once a minute, so RAM hovering at the threshold
+      // does not flood the run history.
+      const held = launchable - allowed;
+      if (held > 0 && held !== memoryHeld && Date.now() - memoryHoldLoggedAt >= 60_000) { memoryHeld = held; memoryHoldLoggedAt = Date.now(); updateRunRecord(file, (current) => ({ ...current, history: [...current.history, { at: now(), event: "memory_hold", held, freeMb: Math.round(memory.freeBytes / 1048576) }] })); }
+      if (held === 0) memoryHeld = 0;
+      launchable = allowed;
+    }
+    for (const worker of pending.slice(0, launchable)) launchWorker(options, run, worker, file, active);
     run = readRun(options.state, options.run);
     if (run.workers.every((w) => TERMINAL_WORKERS.has(w.status))) { updateRunRecord(file, (current) => ({ ...current, history: [...current.history, { at: now(), event: "supervisor_complete" }] })); return; }
     tickFailures = 0;
