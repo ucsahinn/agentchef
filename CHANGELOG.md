@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.3 - 2026-10-14
+
+- `team-run resume --run <runId>` continues a run that a usage limit paused: it checks the plan hash, renews the paused workers' leases, requeues only those workers, and each continues its saved Codex thread (`codex exec resume <thread>`). No second approval is needed because the approved plan is unchanged; collecting a paused run instead remains available. `pause` stays reserved.
+- The conductor skill, run protocol, skills guide and security model (EN/TR) describe resuming after a usage limit.
+
 ## 1.7.2 - 2026-10-14
 
 Fixes from an independent security audit and two code reviews, built by team run R20261014-0b90 and finished by the conductor.

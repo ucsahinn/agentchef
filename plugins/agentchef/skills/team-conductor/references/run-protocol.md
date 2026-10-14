@@ -91,8 +91,9 @@ viewer. Do not use taskkill or Stop-Process. Use `abort` for an explicitly
 requested stop and `cleanup` only when requested.
 
 The worker limit is 60 minutes. Idle activity warns at 15 minutes and stops at
-30. A usage-limit result pauses that worker for reporting; resume is not
-available in this release. Team mode is available on every install from
+30. A usage-limit result pauses that worker for reporting; after the limit
+resets, `resume --run <runId>` continues the paused workers on their saved Codex
+threads (plan hash checked, no second approval). Team mode is available on every install from
 AgentChef 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off for
 a process; the skill never changes this variable for you. Optional controls
 are `AGENTCHEF_TEAM_MAX_WORKERS`,

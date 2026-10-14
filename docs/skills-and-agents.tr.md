@@ -81,8 +81,9 @@ Desteklenen ortam değişkenleri: `AGENTCHEF_TEAM_MODE`,
 `AGENTCHEF_TEAM_MAX_WORKERS`, `AGENTCHEF_TEAM_WORKTREE_ROOT`,
 `AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND` ve
 `AGENTCHEF_BOARD_STATE`. Worker'lar push yapamaz veya başka agent açamaz.
-Kullanım sınırı worker'ı raporlama için bekletir; bu sürümde devam ettirme
-yoktur. Codex sürecinin sahibi motordur; terminal sekmesi yalnızca izleyicidir.
+Kullanım sınırı worker'ı raporlama için bekletir; sınır sıfırlanınca
+`resume --run <runId>` worker'ı kayıtlı Codex oturumunda, aynı plan ve worktree
+ile sürdürür. Codex sürecinin sahibi motordur; terminal sekmesi yalnızca izleyicidir.
 Koşuyu durdurmak için `abort`, kaynak temizliği için ayrıca `cleanup` isteyin.
 
 

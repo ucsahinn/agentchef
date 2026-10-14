@@ -1,5 +1,16 @@
 # Sürüm Notları
 
+## v1.7.3 - 2026-10-14
+
+AgentChef 1.7.3 bir takım koşusunun Codex kullanım sınırından sonra sürmesini sağlar. Sınır sıfırlanınca `resume`, duraklayan işçileri aynı worktree'lerde kayıtlı Codex oturumlarından sürdürür; plan özeti denetlendiği için onaylanan plan değiştirilemez.
+
+### Neler Değişti
+
+- **Resume.** `team-run resume --run <runId>` (ya da `beyin takim resume --run <runId>`) yalnız kullanım sınırının durdurduğu işçileri yeniden sıraya alır ve her birini kayıtlı oturumunda sürdürür.
+- **Belgeler.** Gözetmen skill'i ve operatör rehberleri ne zaman sürdürülüp ne zaman toplanacağını anlatır.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.2 - 2026-10-14
 
 AgentChef 1.7.2 takım modunun bağımsız güvenlik denetimi ve kod incelemesi bulgularını kapatır. İşçiler artık şefin sırlarını görmez, devir metinleri onay satırı enjekte edemez, onay verdiğiniz plan sonradan değiştirilemez ve toplama atlatılamaz ya da kilitlenemez.
@@ -10,8 +21,6 @@ AgentChef 1.7.2 takım modunun bağımsız güvenlik denetimi ve kod incelemesi 
 - **Plan bütünlüğü.** `start`, `plan`'dan sonra değişen brief'leri reddeder; brief dosyaları plan klasöründe olmalıdır.
 - **Toplama ve gözetim.** İşçi commit'leri ve kirli dosyalar birlikte kapsam ve sır denetiminden geçer; takılan iptal, pano reddi ya da yeniden çalıştırma koşuyu kilitlemez.
 - **Pano.** İnceleme kapısı yalnız baştaki Verdict ve Mutation check'i okur; Mutation check neden ya da yol ister; glob çakışmaları ve rapor yolları sıkılaştı.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.1 - 2026-10-14
 

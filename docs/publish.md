@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.2** hardens team runs after an independent security audit and code review: worker environment and handoff sanitization, plan integrity, and supervisor and collection fixes.
+Development version **v1.7.3** adds `resume` for team runs paused by a usage limit: the same plan and worktrees, each worker on its saved Codex thread.
 
 ## Before Commit Or Push
 
