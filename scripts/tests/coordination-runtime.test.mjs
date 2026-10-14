@@ -523,7 +523,8 @@ test("create reports live scope conflicts and strict-scope rejects them", () => 
 test("replaceFileSync retries transient Windows sharing errors and rethrows the rest", async () => {
   const { replaceFileSync } = await import("../lib/coordination-runtime.mjs");
   const failing = (codes) => { let calls = 0; return { fn: () => { const code = codes[calls++]; if (code) { const error = new Error(code); error.code = code; throw error; } }, calls: () => calls }; };
-  const flaky = failing(["EPERM", "EBUSY", "EACCES"]);
+  // EACCES is retried only on Windows (on POSIX it is a lasting permission error).
+  const flaky = failing(["EPERM", "EBUSY", process.platform === "win32" ? "EACCES" : "EBUSY"]);
   assert.equal(replaceFileSync("a", "b", { rename: flaky.fn, delayMs: 1 }), 4);
   const fatal = failing(["ENOENT"]);
   assert.throws(() => replaceFileSync("a", "b", { rename: fatal.fn, delayMs: 1 }), /ENOENT/);
