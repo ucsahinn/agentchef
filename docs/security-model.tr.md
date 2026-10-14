@@ -634,8 +634,9 @@ Worker'lar push yapamaz, agent açamaz veya atanmış kapsamları dışında yaz
 Ayrık gözetmen Codex alt süreçlerinin sahibidir; görünür terminal sekmesi
 yalnızca olayları gösterir, kapatılması worker'ı durdurmaz. İstenen durdurma
 için takımın `abort` komutunu kullanın. `cleanup` ayrı ve açık bir işlemdir.
-Kullanım sınırına ulaşılması işi raporlama için bekletir; bu sürümde devam
-ettirme yoktur.
+Kullanım sınırına ulaşılması işi raporlama için bekletir. `resume` yalnız
+duraklamış bir koşuyu, yalnız değişmemiş plan özetiyle ve yalnız sınırın
+durdurduğu worker'ları sürdürür.
 
 Salt-okunur worker'ların yazma yolu kapsamı veya koordinasyon panosu kirası
 yoktur. Kurulum ya da gözetmen başlangıç heartbeat'i başarısız olursa

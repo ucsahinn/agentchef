@@ -160,6 +160,26 @@ function hashPlan(workers) {
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 function approvalPath(state, id) { return path.join(path.dirname(path.resolve(state)), "approvals", `${id}.baslat.json`); }
+// Resume a run that a usage limit paused: the same plan (hash-checked), the same worktrees and branches, and each
+// paused worker continues its saved Codex thread. The user's start approval already covered this plan; resume
+// does not change it, so no second approval is required. Collecting a paused run instead stays available.
+function resumeCommand(options) {
+  ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
+  if (run.status !== "paused") throw new Error(`Only a paused run can be resumed; ${run.runId} is ${run.status}.`);
+  if (isPidAlive(run.supervisor?.pid)) throw new Error("The run's supervisor is still running; wait for it to stop before resuming.");
+  const persistedPlan = readPlanForRun(options.state, run);
+  const byTask = new Map(run.workers.map((worker) => [worker.taskId, worker]));
+  const currentPlanHash = hashPlan(persistedPlan.workers.map((worker) => ({ ...worker, role: byTask.get(worker.taskId).role, writeScope: byTask.get(worker.taskId).writeScope })));
+  if (currentPlanHash !== run.planHash) throw new Error("plan changed after approval; plan again");
+  const paused = run.workers.filter((worker) => worker.status === "paused_limit");
+  if (!paused.length) throw new Error("No worker is paused by a usage limit.");
+  for (const worker of paused) if (worker.sandbox !== "read-only") { try { renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes }); } catch { /* the supervisor renews leases while it runs */ } }
+  updateRunRecord(file, (current) => ({ ...transitionRun(current, "running"), workers: current.workers.map((worker) => worker.status === "paused_limit" ? { ...transitionWorker(worker, "queued"), resumeThreadId: worker.codexThreadId || null, failure: null, pid: null, processCreatedAt: null } : worker), supervisor: { pid: null, createdAt: null, heartbeatAt: null }, history: [...current.history, { at: now(), event: "resumed", workers: paused.map((worker) => worker.taskId) }] }));
+  const supervisor = spawn(process.execPath, [fileURLToPath(import.meta.url), "supervise", "--run", run.runId, "--state", path.resolve(options.state), "--json"], { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true });
+  supervisor.unref();
+  updateRunRecord(file, (current) => ({ ...current, supervisor: { pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid), heartbeatAt: null } }));
+  output({ ok: true, run: readRun(options.state, run.runId), resumed: paused.map((worker) => worker.taskId) }, options.json); return 0;
+}
 function startCommand(options) {
   const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "start.lock");
   let operation;
@@ -382,7 +402,7 @@ function superviseCommand(options) {
       return { ...transitionWorker(queued, "spawning"), startedAt: now(), lastEventAt: now() };
     }) }));
     let execution;
-    try { execution = spawnCodexExec({ prompt, worktree: worker.worktree, runDir: path.join(path.dirname(file), run.runId, worker.taskId), schema, output: resultPath, runId: run.runId, taskId: worker.taskId, role: worker.role, boardState: path.resolve(options.state), sandbox: worker.sandbox, model: run.model, profile: run.profile, onActivity: () => updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, lastEventAt: now(), idleWarningAt: null } : w) })) }); }
+    try { execution = spawnCodexExec({ resumeThreadId: worker.resumeThreadId || undefined, prompt, worktree: worker.worktree, runDir: path.join(path.dirname(file), run.runId, worker.taskId), schema, output: resultPath, runId: run.runId, taskId: worker.taskId, role: worker.role, boardState: path.resolve(options.state), sandbox: worker.sandbox, model: run.model, profile: run.profile, onActivity: () => updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, lastEventAt: now(), idleWarningAt: null } : w) })) }); }
     catch (error) { settleWorker(file, worker.taskId, "failed", 1, error.message); return; }
     const child = execution.child; const createdAt = processCreatedAt(child?.pid) || null; activeMap.set(worker.taskId, { child, createdAt });
     try { updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...transitionWorker(w, "running"), pid: child?.pid || null, cmdShim: child?.agentChefCmdShim === true, processCreatedAt: createdAt, startedAt: now() } : w) })); }
@@ -814,7 +834,8 @@ function dispatch(parsed) {
   if (command === "merge") return mergeCommand(options);
   if (command === "cleanup") return cleanupCommand(options);
   if (command === "doctor") return doctorCommand(options);
-  if (["pause", "resume"].includes(command)) { const error = new Error(`${command} is reserved for a later version.`); error.exitCode = 1; throw error; }
+  if (command === "resume") return resumeCommand(options);
+  if (command === "pause") { const error = new Error("pause is reserved for a later version."); error.exitCode = 1; throw error; }
   throw new CliUsageError(USAGE);
 }
 try {

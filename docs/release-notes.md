@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.7.3 - 2026-10-14
+
+AgentChef 1.7.3 lets a team run continue after a Codex usage limit. When the limit resets, `resume` picks up the paused workers on their saved Codex threads in the same worktrees, with the plan hash checked so the approved plan cannot change.
+
+### What Changed
+
+- **Resume.** `team-run resume --run <runId>` (or `beyin takim resume --run <runId>`) requeues only the workers a usage limit paused and continues each on its saved thread.
+- **Docs.** The conductor skill and the operator guides explain when to resume and when to collect instead.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.2 - 2026-10-14
 
 AgentChef 1.7.2 closes the findings of an independent security audit and code review of team mode. Workers no longer see the conductor's secrets, their handoff text cannot inject approval lines, a plan cannot change after you approve it, and collection can no longer be bypassed or wedged.
@@ -10,8 +21,6 @@ AgentChef 1.7.2 closes the findings of an independent security audit and code re
 - **Plan integrity.** `start` refuses briefs that changed after `plan`; brief files must live in the plan directory.
 - **Collection and supervision.** Worker commits and dirty files are both scope- and secret-checked; a stuck abort, a board rejection or a re-run no longer wedges a run.
 - **Board.** The review gate reads only the leading Verdict and Mutation check; Mutation check needs a reason or paths; glob conflicts and report paths are stricter.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.1 - 2026-10-14
 

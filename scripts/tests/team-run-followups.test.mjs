@@ -122,3 +122,19 @@ test("doctor treats a missing prior run as informational and reports the board a
   assert.equal(checks.board.status, "fail");
   assert.match(checks.board.details, /coordination-board init/);
 });
+test("resume continues a usage-limited run on the saved Codex thread",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-resume-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const log=path.join(temp,"resume.log");
+  const {state,env,run}=makeRun(temp,"R-resume",["TASK-RES"],"usage-limit",{FAKE_CODEX_RESUME_LOG:log});
+  approveStart(state,run); assert.equal(node(cli,["start","--state",state,"--json","--run",run.runId],{env}).status,0);
+  const until=Date.now()+20000; let paused=null;
+  while(Date.now()<until){ const r=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; if(r.status==="paused"&&!r.supervisor?.heartbeatAt||r.status==="paused"&&r.workers[0].status==="paused_limit"){ paused=r; break; } await new Promise(res=>setTimeout(res,100)); }
+  assert.ok(paused,"run did not pause on the usage limit"); assert.equal(paused.workers[0].codexThreadId,"fake-thread-limit");
+  const notPaused=node(cli,["resume","--state",state,"--json","--run","R-missing"],{env}); assert.notEqual(notPaused.status,0);
+  let resumed=null; for(let i=0;i<100&&!resumed;i++){ const r=node(cli,["resume","--state",state,"--json","--run",run.runId],{env:{...env,FAKE_CODEX_SCENARIO:"ok"}}); if(r.status===0) resumed=JSON.parse(r.stdout); else { assert.match(r.stderr||r.stdout,/supervisor is still running/); await new Promise(res=>setTimeout(res,100)); } }
+  assert.ok(resumed,"resume never succeeded"); assert.deepEqual(resumed.resumed,["TASK-RES"]);
+  await waitFinished(state,run.runId,1);
+  assert.match(fs.readFileSync(log,"utf8"),/TASK-RES fake-thread-limit/);
+  const finalRun=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; assert.ok(finalRun.history.some(item=>item.event==="resumed"));
+  const again=node(cli,["resume","--state",state,"--json","--run",run.runId],{env}); assert.notEqual(again.status,0); assert.match(again.stderr||again.stdout,/Only a paused run can be resumed/);
+});

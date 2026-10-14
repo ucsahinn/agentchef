@@ -629,7 +629,8 @@ Workers cannot push, spawn agents, or edit outside their assigned scope. The
 detached supervisor owns the Codex children; a visible terminal pane only
 renders events, so closing it does not stop a worker. Use the team `abort`
 command for requested stops. `cleanup` is a separate, explicit operation.
-Usage limits pause work for reporting; resume is not available in this release.
+Usage limits pause work for reporting. `resume` continues only a paused run,
+only with an unchanged plan hash, and only the workers the limit paused.
 
 Read-only workers have no write-path scope or coordination-board lease. Start
 rolls back worktrees, newly-created branches, and task states if setup or the

@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.2** bağımsız bir güvenlik denetimi ve kod incelemesinden sonra takım koşularını sağlamlaştırır: işçi ortamı ve devir metni temizliği, plan bütünlüğü, gözetmen ve toplama düzeltmeleri.
+Geliştirme sürümü **v1.7.3** kullanım sınırıyla duraklayan takım koşuları için `resume` ekler: aynı plan ve worktree'ler, her işçi kayıtlı Codex oturumunda.
 
 ## Commit Veya Push Öncesi
 

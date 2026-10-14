@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.2** hardens team runs after an independent security audit and code review: worker environment and handoff sanitization, plan integrity, and supervisor and collection fixes.
+Development version **v1.7.3** adds `resume` for team runs paused by a usage limit: the same plan and worktrees, each worker on its saved Codex thread.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private
