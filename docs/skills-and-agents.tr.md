@@ -21,7 +21,7 @@ AgentChef'e ait hazır akışlar
 altında durur. Public katalog isteğe bağlı seçenekleri de gösterir; katalogda
 yer alması her skill'in otomatik kurulacağı anlamına gelmez.
 
-## Deneysel Takım Koşuları
+## Takım Koşuları
 
 Worker'lar tüm ilerleme mesajlarını ve handoff metnini
 `catalog/subscription-team-mode.json` içindeki `workers.language` dilinde yazar
@@ -32,9 +32,11 @@ veya sonrası) çalıştırın; sandbox test çalıştırıcısının alt süre�
 saymayın, Risks bölümünde bildirin.
 
 Yalnız açık çağrılan `team-conductor` skill'i etkileşimli Claude Code
-oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Bu özellik
-deneyseldir ve varsayılan olarak kapalıdır. Opt-in için süreç ortamına
-`AGENTCHEF_TEAM_MODE=experimental` verin; skill bunu sizin yerinize açmaz.
+oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Takım modu
+1.6.0'dan itibaren her kurulumda açıktır. Bir süreçte takım yürütmesini
+kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; skill bu değişkeni sizin
+yerinize değiştirmez. Başlatma ve birleştirme yine kullanıcının yazılı onayını
+ister.
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 kullanıcı kapılarının işleyişini açıklar.
 

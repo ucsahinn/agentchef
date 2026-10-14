@@ -425,17 +425,18 @@ Claude Code (checked 2026-10-05 against
   in-process teammates, so agents could talk outside the brief and handoff.
   AgentChef assumes agent teams are off.
 
-### Claude Conductor With Codex Workers (Experimental Team Mode)
+### Claude Conductor With Codex Workers (Team Mode)
 
-AgentChef 1.5.0 includes an explicit-only `team-conductor` skill for an
-interactive Claude Code session to supervise bounded Codex `exec` workers. The
-feature is experimental and stays disabled unless
-`AGENTCHEF_TEAM_MODE=experimental` is set for that process. Claude plans and
+AgentChef 1.6.0 makes team mode available on every install. The explicit-only
+`team-conductor` skill lets an interactive Claude Code session supervise
+bounded Codex `exec` workers. Set `AGENTCHEF_TEAM_MODE=off` to switch team
+execution off for a process; the skill never changes this variable for you.
+Claude plans and
 reports; it does not spawn worker agents directly. Each of 1-4 allowlisted
 workers gets a separate worktree and the main session remains responsible for
 the user gates, integration decision, and report.
 
-Read the [team run protocol](skills-and-agents.md#team-runs-experimental) and
+Read the [team run protocol](skills-and-agents.md#team-runs) and
 the [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 before enabling a run. The skill checks the doctor, writes one checked
 `agent-brief` per task, presents the plan and exact `baslat <runId>` chat gate,
