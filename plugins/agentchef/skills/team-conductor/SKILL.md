@@ -44,7 +44,10 @@ and opens the run and worker panels. Without Beyin, `doctor` reports a failing
    `onayla TASK-x` are separate actions and need their own request. If usage
    limits pause a worker, report it and stop; when the user says the limit has
    reset, run `resume` (same plan, same worktrees, each paused worker continues
-   its saved Codex thread). After abort, run cleanup only if the user asks.
+   its saved Codex thread). If the machine slept, crashed or restarted and the
+   run shows `running` with no supervisor heartbeat, the same `resume`
+   recovers it: orphaned workers continue their saved thread in the same
+   worktree. After abort, run cleanup only if the user asks.
 
 Show the gate-specific command, exit code, affected tasks, and next action at
 each step. Do not claim a later gate passed when an earlier gate is partial or

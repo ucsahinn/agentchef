@@ -98,7 +98,9 @@ Supported environment controls are `AGENTCHEF_TEAM_MODE`,
 `AGENTCHEF_TEAM_PANE`, `AGENTCHEF_TEAM_CODEX_COMMAND`, and
 `AGENTCHEF_BOARD_STATE`. Workers cannot push or spawn more agents. A usage limit
 pauses a worker for reporting; after the limit resets, `resume --run <runId>`
-continues it on its saved Codex thread with the same plan and worktree. The
+continues it on its saved Codex thread with the same plan and worktree. The same
+command recovers a run left `running` after a sleep, crash or restart once its
+supervisor heartbeat is older than a minute. The
 engine owns the Codex process; the terminal tab is only a viewer. Use `abort`
 to stop a run and request `cleanup` separately.
 

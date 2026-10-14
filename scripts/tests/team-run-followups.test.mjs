@@ -138,3 +138,27 @@ test("resume continues a usage-limited run on the saved Codex thread",async(t)=>
   const finalRun=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; assert.ok(finalRun.history.some(item=>item.event==="resumed"));
   const again=node(cli,["resume","--state",state,"--json","--run",run.runId],{env}); assert.notEqual(again.status,0); assert.match(again.stderr||again.stdout,/Only a paused run can be resumed/);
 });
+test("resume recovers a running run whose supervisor and worker died (crash, sleep or restart)",async(t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-recover-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const log=path.join(temp,"resume.log");
+  const {state,env,run}=makeRun(temp,"R-recover",["TASK-REC"],"usage-limit",{FAKE_CODEX_RESUME_LOG:log});
+  approveStart(state,run); assert.equal(node(cli,["start","--state",state,"--json","--run",run.runId],{env}).status,0);
+  const file=path.join(path.dirname(state),"team-runs",`${run.runId}.json`);
+  const alive=(pid)=>{ if(!Number.isInteger(pid)) return false; try { process.kill(pid,0); return true; } catch { return false; } };
+  const until=Date.now()+20000; let paused=null;
+  while(Date.now()<until){ const r=JSON.parse(fs.readFileSync(file,"utf8")); if(r.status==="paused"&&r.workers[0].status==="paused_limit"&&!alive(r.supervisor?.pid)){ paused=r; break; } await new Promise(res=>setTimeout(res,100)); }
+  assert.ok(paused,"run did not pause with its supervisor stopped");
+  const crashed={...paused,status:"running",supervisor:{pid:null,createdAt:null,heartbeatAt:new Date(Date.now()-5*60_000).toISOString()},workers:[{...paused.workers[0],status:"running",pid:null,processCreatedAt:null}]};
+  fs.writeFileSync(file,JSON.stringify({...crashed,supervisor:{...crashed.supervisor,heartbeatAt:new Date().toISOString()}}));
+  const early=node(cli,["resume","--state",state,"--json","--run",run.runId],{env}); assert.notEqual(early.status,0); assert.match(early.stderr||early.stdout,/supervisor is still running/);
+  fs.writeFileSync(file,JSON.stringify({...crashed,workers:[{...crashed.workers[0],pid:process.pid,processCreatedAt:null}]}));
+  const liveWorker=node(cli,["resume","--state",state,"--json","--run",run.runId],{env}); assert.notEqual(liveWorker.status,0); assert.match(liveWorker.stderr||liveWorker.stdout,/still running without a supervisor/);
+  fs.writeFileSync(file,JSON.stringify(crashed));
+  const recovered=node(cli,["resume","--state",state,"--json","--run",run.runId],{env:{...env,FAKE_CODEX_SCENARIO:"ok"}});
+  assert.equal(recovered.status,0,recovered.stderr||recovered.stdout); const out=JSON.parse(recovered.stdout);
+  assert.equal(out.recovered,true); assert.deepEqual(out.resumed,["TASK-REC"]);
+  const twice=node(cli,["resume","--state",state,"--json","--run",run.runId],{env}); assert.notEqual(twice.status,0); assert.match(twice.stderr||twice.stdout,/supervisor is still running|Only a paused run|changed while resuming/);
+  await waitFinished(state,run.runId,1);
+  assert.match(fs.readFileSync(log,"utf8"),/TASK-REC fake-thread-limit/);
+  const finalRun=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; assert.ok(finalRun.history.some(item=>item.event==="recovered"));
+});

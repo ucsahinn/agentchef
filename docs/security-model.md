@@ -630,7 +630,10 @@ detached supervisor owns the Codex children; a visible terminal pane only
 renders events, so closing it does not stop a worker. Use the team `abort`
 command for requested stops. `cleanup` is a separate, explicit operation.
 Usage limits pause work for reporting. `resume` continues only a paused run,
-only with an unchanged plan hash, and only the workers the limit paused.
+only with an unchanged plan hash, and only the workers the limit paused. It also
+recovers a `running` run whose supervisor is gone (no live process and a
+heartbeat older than 60 seconds); it refuses while any worker process is still
+alive, and it never needs a new start approval because the plan hash is checked. On Windows the recorded worker pid can be the cmd shim; if the shim is gone but its Codex child survived, recovery cannot see the child, so check Task Manager before resuming a run you did not see stop.
 
 Read-only workers have no write-path scope or coordination-board lease. Start
 rolls back worktrees, newly-created branches, and task states if setup or the

@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.5** gives the team conductor a deterministic fan-out rule: one worker per independent write scope, parallel only when scopes are disjoint and independent.
+Development version **v1.7.6** lets `resume` recover a team run left running after a sleep, crash or restart: orphaned workers continue their saved Codex thread in the same worktree.
 
 ## Before Commit Or Push
 

@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.5** takım gözetmenine deterministik bir dağıtım kuralı verir: her bağımsız yazma kapsamına bir işçi; paralellik yalnız kapsamlar ayrı ve bağımsızsa.
+Geliştirme sürümü **v1.7.6** ile `resume`, uyku, çökme ya da yeniden başlatma sonrası çalışır görünen takım koşusunu kurtarır: sahipsiz işçiler aynı worktree'de kayıtlı Codex oturumuyla sürer.
 
 ## Commit Veya Push Öncesi
 

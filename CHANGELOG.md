@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.6 - 2026-10-14
+
+- `team-run resume` recovers a run left `running` after a sleep, crash or restart. When the supervisor process is gone and its heartbeat is older than 60 seconds, orphaned workers (queued, spawning, running or paused) return to the queue and continue their saved Codex thread in the same worktree; a worker without a saved thread starts fresh there. A live worker process blocks recovery, the plan hash is still checked, and the run history records `recovered`. Worker transitions `spawning -> queued` and `running -> queued` exist only for this path.
+
 ## 1.7.5 - 2026-10-14
 
 - The team-conductor skill and the skills guide (EN/TR) state a deterministic fan-out rule: one worker per independent write scope; several workers only when write scopes are disjoint and no task needs another's output; dependent work goes to a later run; at most four; a one-file change stays with one worker; implementing roles are told to change code, not only diagnose.
