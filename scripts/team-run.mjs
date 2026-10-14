@@ -163,22 +163,43 @@ function approvalPath(state, id) { return path.join(path.dirname(path.resolve(st
 // Resume a run that a usage limit paused: the same plan (hash-checked), the same worktrees and branches, and each
 // paused worker continues its saved Codex thread. The user's start approval already covered this plan; resume
 // does not change it, so no second approval is required. Collecting a paused run instead stays available.
+// A run left "running" by a crash, sleep or restart has no live supervisor and workers whose processes are gone.
+// resume recovers it the same way: orphaned workers go back to the queue on their saved Codex thread (or start
+// fresh in the same worktree when no thread was recorded). A live worker process blocks recovery.
+const RECOVER_HEARTBEAT_MS = 60_000;
+function workerProcessAlive(worker) { return Number.isInteger(worker.pid) && isPidAlive(worker.pid) && (!worker.processCreatedAt || processCreatedAt(worker.pid) === worker.processCreatedAt); }
+function supervisorLockHeld(file) {
+  try { const owner = JSON.parse(fs.readFileSync(path.join(path.dirname(file), path.basename(file, ".json"), "supervisor.lock"), "utf8")); const createdAt = processCreatedAt(owner.pid); return isPidAlive(owner.pid) && (!owner.createdAt || !createdAt || createdAt === owner.createdAt); } catch { return false; }
+}
 function resumeCommand(options) {
   ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
-  if (run.status !== "paused") throw new Error(`Only a paused run can be resumed; ${run.runId} is ${run.status}.`);
-  if (isPidAlive(run.supervisor?.pid)) throw new Error("The run's supervisor is still running; wait for it to stop before resuming.");
+  if (!["paused", "running"].includes(run.status)) throw new Error(`Only a paused run can be resumed; ${run.runId} is ${run.status}.`);
+  if (run.status === "running" && !run.workers.some((worker) => ["planned", "queued", "spawning", "running", "paused_limit"].includes(worker.status))) throw new Error(`Only a paused run can be resumed; ${run.runId} is running and has no orphaned worker to recover.`);
+  const supervisorIdentity = !run.supervisor?.createdAt || processCreatedAt(run.supervisor?.pid) === run.supervisor.createdAt;
+  if (isPidAlive(run.supervisor?.pid) && supervisorIdentity) throw new Error("The run's supervisor is still running; wait for it to stop before resuming.");
+  // The reset below stamps a fresh heartbeat, so a second, concurrent resume refuses instead of recovering twice.
+  const recovering = run.status === "running";
+  if (recovering) {
+    const lastLaunch = [...(run.history || [])].reverse().find((item) => ["started", "resumed", "recovered"].includes(item.event))?.at;
+    const beat = run.supervisor?.heartbeatAt || lastLaunch;
+    const age = beat ? Date.now() - Date.parse(beat) : Infinity;
+    if (age < RECOVER_HEARTBEAT_MS || supervisorLockHeld(file)) throw new Error("The run's supervisor is still running; wait for it to stop before resuming.");
+    const live = run.workers.filter((worker) => ["spawning", "running"].includes(worker.status) && workerProcessAlive(worker));
+    if (live.length) throw new Error(`Worker ${live.map((worker) => worker.taskId).join(", ")} is still running without a supervisor; abort the run or wait for it to finish before resuming.`);
+  }
   const persistedPlan = readPlanForRun(options.state, run);
   const byTask = new Map(run.workers.map((worker) => [worker.taskId, worker]));
   const currentPlanHash = hashPlan(persistedPlan.workers.map((worker) => ({ ...worker, role: byTask.get(worker.taskId).role, writeScope: byTask.get(worker.taskId).writeScope })));
   if (currentPlanHash !== run.planHash) throw new Error("plan changed after approval; plan again");
-  const paused = run.workers.filter((worker) => worker.status === "paused_limit");
-  if (!paused.length) throw new Error("No worker is paused by a usage limit.");
+  const resumable = (worker) => worker.status === "paused_limit" || (recovering && ["planned", "queued", "spawning", "running"].includes(worker.status));
+  const paused = run.workers.filter(resumable);
+  if (!paused.length) throw new Error(recovering ? `Only a paused run can be resumed; ${run.runId} is running and has no orphaned worker to recover.` : "No worker is paused by a usage limit.");
   for (const worker of paused) if (worker.sandbox !== "read-only") { try { renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes }); } catch { /* the supervisor renews leases while it runs */ } }
-  updateRunRecord(file, (current) => ({ ...transitionRun(current, "running"), workers: current.workers.map((worker) => worker.status === "paused_limit" ? { ...transitionWorker(worker, "queued"), resumeThreadId: worker.codexThreadId || null, failure: null, pid: null, processCreatedAt: null } : worker), supervisor: { pid: null, createdAt: null, heartbeatAt: null }, history: [...current.history, { at: now(), event: "resumed", workers: paused.map((worker) => worker.taskId) }] }));
+  updateRunRecord(file, (current) => { if (current.status !== run.status || (current.supervisor?.heartbeatAt || null) !== (run.supervisor?.heartbeatAt || null)) throw new Error("The run changed while resuming; check its status and try again."); return ({ ...(current.status === "running" ? current : transitionRun(current, "running")), workers: current.workers.map((worker) => resumable(worker) ? { ...(["planned", "queued"].includes(worker.status) ? worker : transitionWorker(worker, "queued")), resumeThreadId: worker.codexThreadId || null, failure: null, pid: null, cmdShim: null, processCreatedAt: null } : worker), supervisor: { pid: null, createdAt: null, heartbeatAt: now() }, history: [...current.history, { at: now(), event: recovering ? "recovered" : "resumed", workers: paused.map((worker) => worker.taskId) }] }); });
   const supervisor = spawn(process.execPath, [fileURLToPath(import.meta.url), "supervise", "--run", run.runId, "--state", path.resolve(options.state), "--json"], { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true });
   supervisor.unref();
-  updateRunRecord(file, (current) => ({ ...current, supervisor: { pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid), heartbeatAt: null } }));
-  output({ ok: true, run: readRun(options.state, run.runId), resumed: paused.map((worker) => worker.taskId) }, options.json); return 0;
+  updateRunRecord(file, (current) => ({ ...current, supervisor: { ...current.supervisor, pid: supervisor.pid, createdAt: processCreatedAt(supervisor.pid) } }));
+  output({ ok: true, run: readRun(options.state, run.runId), resumed: paused.map((worker) => worker.taskId), recovered: recovering }, options.json); return 0;
 }
 function startCommand(options) {
   const lock = path.join(path.dirname(runFile(options.state, options.run)), options.run, "start.lock");

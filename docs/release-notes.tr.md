@@ -1,5 +1,15 @@
 # Sürüm Notları
 
+## v1.7.6 - 2026-10-14
+
+AgentChef 1.7.6 uzun takım koşularını makineye karşı dayanıklı yapar. Windows uykuya geçer, terminal çöker ya da bilgisayar yeniden başlarsa koşu eskiden kimse çalıştırmadan `running` kalırdı. Artık `resume --run <runId>` onu kurtarır.
+
+### Neler Değişti
+
+- **Çökme sonrası kurtarma.** Canlı gözetmen yoksa ve nabız bir dakikadan eskiyse sahipsiz işçiler aynı worktree'de kayıtlı Codex oturumuyla sürer. Canlı bir işçi süreci kurtarmayı engeller; onaylı plan özeti yine denetlenir.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.5 - 2026-10-14
 
 AgentChef 1.7.5 takım gözetmeninin bölme kararını öngörülebilir yapar: her bağımsız yazma kapsamına bir işçi, paralel işçi yalnız ayrı ve bağımsız kapsamlar için, bağımlı iş sonraki koşuda, en fazla dört.
@@ -7,8 +17,6 @@ AgentChef 1.7.5 takım gözetmeninin bölme kararını öngörülebilir yapar: h
 ### Neler Değişti
 
 - **Dağıtım kuralı.** Gözetmen skill'ine ve skill rehberine yazıldı; aynı istek her seferinde aynı biçimde bölünür.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.4 - 2026-10-14
 

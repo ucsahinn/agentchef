@@ -1,5 +1,15 @@
 # Release Notes
 
+## v1.7.6 - 2026-10-14
+
+AgentChef 1.7.6 makes long team runs survive the machine. If Windows sleeps, the terminal crashes or the PC restarts mid-run, the run used to stay `running` with nobody behind it. Now `resume --run <runId>` recovers it.
+
+### What Changed
+
+- **Crash recovery.** With no live supervisor and a heartbeat older than a minute, orphaned workers continue their saved Codex thread in the same worktree. A live worker process blocks recovery, and the approved plan hash is still enforced.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.5 - 2026-10-14
 
 AgentChef 1.7.5 makes the team conductor's split decision predictable: one worker per independent write scope, parallel workers only for disjoint and independent scopes, dependent work in a later run, never more than four.
@@ -7,8 +17,6 @@ AgentChef 1.7.5 makes the team conductor's split decision predictable: one worke
 ### What Changed
 
 - **Fan-out rule.** Written into the team-conductor skill and the skills guide, so the same request splits the same way every time.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.4 - 2026-10-14
 

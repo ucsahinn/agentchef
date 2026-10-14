@@ -636,7 +636,9 @@ yalnızca olayları gösterir, kapatılması worker'ı durdurmaz. İstenen durdu
 için takımın `abort` komutunu kullanın. `cleanup` ayrı ve açık bir işlemdir.
 Kullanım sınırına ulaşılması işi raporlama için bekletir. `resume` yalnız
 duraklamış bir koşuyu, yalnız değişmemiş plan özetiyle ve yalnız sınırın
-durdurduğu worker'ları sürdürür.
+durdurduğu worker'ları sürdürür. Gözetmeni ölmüş (canlı süreç yok, nabız 60
+saniyeden eski) `running` bir koşuyu da kurtarır; canlı bir worker süreci varsa
+reddeder ve plan özeti denetlendiği için yeni başlatma onayı gerektirmez. Windows'ta kayıtlı worker pid'i cmd kabuğu olabilir; kabuk kapanıp Codex alt süreci yaşıyorsa kurtarma onu göremez, bu yüzden durduğunu görmediğin bir koşuyu sürdürmeden önce Görev Yöneticisi'ne bak.
 
 Salt-okunur worker'ların yazma yolu kapsamı veya koordinasyon panosu kirası
 yoktur. Kurulum ya da gözetmen başlangıç heartbeat'i başarısız olursa
