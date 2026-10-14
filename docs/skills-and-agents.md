@@ -20,7 +20,7 @@ The bundled workflows live under
 The public catalog also lists optional skills; being listed does not mean every
 skill is installed automatically.
 
-## Team Runs (Experimental)
+## Team Runs
 
 Workers write every progress message and handoff in the language configured by
 `workers.language` in `catalog/subscription-team-mode.json` (default: `tr`),
@@ -30,9 +30,10 @@ sandbox can block test-runner child processes with `spawn EPERM`; if this still
 fails, report it under Risks rather than treating it as a code failure.
 
 The explicit-only `team-conductor` skill lets an interactive Claude Code
-session coordinate 1-4 bounded Codex workers. This is experimental and disabled
-by default. Set `AGENTCHEF_TEAM_MODE=experimental` in the process environment
-to opt in; the skill never enables it for you. See the
+session coordinate 1-4 bounded Codex workers. Team mode is available on every
+install from 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off
+for a process; the skill never changes this variable for you. Start and merge
+still require the user's typed approvals. See the
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 for the user-gated operating procedure.
 
