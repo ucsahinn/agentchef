@@ -1,5 +1,17 @@
 # Release Notes
 
+## v1.6.0 - 2026-10-14
+
+AgentChef 1.6.0 makes team mode available on every install. After two releases and six multi-role live runs, the conductor and the bounded Codex workers no longer need an opt-in flag. Start and merge still require the user's typed approvals, workers still run in isolated worktrees with bounded sandboxes, and the runner still never pushes or publishes.
+
+### What Changed
+
+- **Available to everyone.** The team-mode contract sets `execution.enabled` to true and `stability` to stable. `AGENTCHEF_TEAM_MODE` is now the off switch: `off`, `0`, `false` or `disabled` switch team execution off for a process; `experimental` is accepted and has no effect.
+- **Doctor and status.** Doctor reports an `execution` check instead of `opt-in` and no longer launches wt.exe to detect Windows Terminal, because Windows Terminal 1.24 answers unknown flags with a modal Help dialog. `codex status` reports team mode as enabled (stable) unless the switch is off.
+- **Docs.** The agents, skills-and-agents and security-model guides and the team-conductor skill describe the always-available mode in English and Turkish.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.5.1 - 2026-10-13
 
 AgentChef 1.5.1 hardens the experimental team runner after its first multi-role live runs. Collection scans only added diff lines, rejects unsafe worker content per worker instead of stopping the whole run, survives long worker evidence, and reuses an existing delivery commit. Worker prompts carry a configurable language and Windows test guidance. Execution remains opt-in and disabled by default; start and merge still require separate human approvals.
@@ -9,8 +21,6 @@ AgentChef 1.5.1 hardens the experimental team runner after its first multi-role 
 - **Collection.** Only added diff lines are scanned for secret-like content, with file and line diagnostics and never the value. A rejected worker is marked `rejected_content` and releases its lease while the other workers are still collected. The report and board evidence are validated before the delivery commit, board evidence is truncated to the board limit, an existing delivery commit on a clean worktree is reused, and untracked files are listed individually for the write-scope check.
 - **Worker prompts.** `workers.language` in the team-mode contract sets the language of worker progress messages and handoffs while code, paths, and commands stay verbatim. On Windows, workers are told to run Node tests with `--test-isolation=none` because the Codex sandbox blocks child processes.
 - **Docs.** The operator guides document approval gates, recovery and rollback, worker lease outcomes, constrained Codex resume, and platform process handling. The Turkish 1.5.0 release notes are re-encoded.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.5.0 - 2026-10-12
 

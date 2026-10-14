@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.6.0 - Unreleased
+## 1.6.0 - 2026-10-14
 
 - Update the team-mode guides to describe its stable, enabled-by-default behavior and process-level off switch.
 - Team mode is available on every install: the team-mode contract sets `execution.enabled` to true and `stability` to stable. `AGENTCHEF_TEAM_MODE` is now the off switch (`off`, `0`, `false` or `disabled` switch team execution off for a process; `experimental` is accepted and has no effect). Start and merge still require the user's typed approvals.

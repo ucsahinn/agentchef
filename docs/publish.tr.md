@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.5.1** deneysel takım yürütücüsünü sağlamlaştırır; takım yürütmesi isteğe bağlı ve varsayılan olarak kapalı kalır.
+Geliştirme sürümü **v1.6.0** takım modunu her kurulumda açar; `AGENTCHEF_TEAM_MODE=off` kapatır, başlatma ve birleştirme yine kullanıcının yazılı onayını ister.
 
 ## Commit Veya Push Öncesi
 
