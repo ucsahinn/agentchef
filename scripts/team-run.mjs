@@ -28,7 +28,7 @@ const COMMANDS = {
   start: ["run", "state"], status: ["run", "state", "watch-seconds"],
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
-  integrate: ["run", "state", "check"], verify: ["run", "state", "max-minutes", "detach"],
+  integrate: ["run", "state", "check", "recheck"], verify: ["run", "state", "max-minutes", "detach"],
   merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state", "wait"],
   cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
   doctor: ["state"]
@@ -50,7 +50,7 @@ function parse(argv) {
     if (!token.startsWith("--")) throw new CliUsageError(`Unexpected argument: ${token}`);
     const key = token.slice(2);
     if (!accepted.has(key)) throw new CliUsageError(`${command} does not accept --${key}.`);
-    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait"].includes(key)) { options[key] = true; continue; }
+    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait", "recheck"].includes(key)) { options[key] = true; continue; }
     const value = rest[i + 1];
     if (!value || value === "--json" || (value.startsWith("--") && accepted.has(value.slice(2)))) throw new CliUsageError(`--${key} requires a value.`);
     if (key === "check") (options.check ||= []).push(value); else options[key] = value;
@@ -696,7 +696,8 @@ function runCheck(command, cwd, timeoutMs) {
 }
 function integrateCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
-  if (run.status !== "collected") throw new Error(`Cannot integrate a run in ${run.status} state.`);
+  if (options.recheck) return recheckIntegration(options, file, run);
+  if (run.status !== "collected") throw new Error(`Cannot integrate a run in ${run.status} state.${run.status === "integrated" && run.integration && !run.integration.ok ? " After repairing the integration branch, rerun its checks with --recheck." : ""}`);
   const cwd = run.integrationWorktree || path.join(run.worktreeRoot, "_integration");
   if (!fs.existsSync(path.join(cwd, ".git"))) throw new Error("Integration worktree is missing.");
   const merged = [], conflicts = [];
@@ -733,6 +734,32 @@ function integrateCommand(options) {
   const ok = conflicts.length === 0 && checksOk && merged.length === run.workers.length;
   updateRunRecord(file, (current) => ({ ...transitionRun(current, "integrated"), workers: current.workers.map((item) => merged.includes(item.taskId) && item.status === "collected" ? transitionWorker(item, "integrated") : item), integration: { worktree: cwd, merged, conflicts: [...new Set(conflicts)], checks, ok, diffStat: stat, commit: integrationCommit }, history: [...current.history, { at: now(), event: "integration_complete" }] }));
   output({ ok, run: readRun(options.state, options.run), conflicts: [...new Set(conflicts)], checks }, options.json);
+  return ok ? 0 : 4;
+}
+// After a failed integration the conductor may repair the integration branch (a recorded conductor commit). --recheck
+// reruns the run's checks on that branch without merging again, rescans the added diff and records the new result.
+// Only a failed integration without conflicts can be rechecked; every worker must already be integrated.
+function recheckIntegration(options, file, run) {
+  if (run.status !== "integrated" || !run.integration || run.integration.ok) throw new Error("Only a failed integration can be rechecked.");
+  if ((run.integration.conflicts || []).length) throw new Error("An integration with merge conflicts cannot be rechecked; resolve the conflicts and integrate again.");
+  const cwd = run.integration.worktree || run.integrationWorktree || path.join(run.worktreeRoot, "_integration");
+  if (!fs.existsSync(path.join(cwd, ".git"))) throw new Error("Integration worktree is missing.");
+  if (git(["status", "--porcelain"], cwd).trim()) throw new Error("The integration worktree has uncommitted changes; commit the repair first.");
+  const checks = [], checkList = options.check ? (Array.isArray(options.check) ? options.check : [options.check]) : run.checks;
+  let checksOk = true; const checkDeadline = Date.now() + 20 * 60_000;
+  for (const check of checkList) {
+    const remaining = checkDeadline - Date.now();
+    if (remaining <= 0) { checks.push({ command: check, status: 1, error: "integration check deadline exceeded" }); checksOk = false; break; }
+    const result = runCheck(check, cwd, remaining); checks.push(result); if (result.status !== 0) checksOk = false;
+  }
+  const diff = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", run.baseCommit], cwd), stat = git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", "--stat", run.baseCommit], cwd);
+  assertAddedDiffTextSafe(diff); assertAddedDiffTextSafe(stat);
+  const integrationCommit = git(["rev-parse", "HEAD"], cwd);
+  const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
+  fs.writeFileSync(path.join(runDir, "integration.diff"), diff, "utf8"); fs.writeFileSync(path.join(runDir, "integration.stat"), stat, "utf8");
+  const ok = checksOk && run.workers.every((worker) => worker.status === "integrated");
+  updateRunRecord(file, (current) => ({ ...current, integration: { ...current.integration, checks, ok, diffStat: stat, commit: integrationCommit }, history: [...current.history, { at: now(), event: "integration_rechecked", ok, commit: integrationCommit }] }));
+  output({ ok, run: readRun(options.state, options.run), conflicts: [], checks, rechecked: true }, options.json);
   return ok ? 0 : 4;
 }
 async function verifyCommand(options) {

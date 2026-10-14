@@ -164,3 +164,6 @@ test("resume recovers a running run whose supervisor and worker died (crash, sle
   assert.match(fs.readFileSync(log,"utf8"),/TASK-REC fake-thread-limit/);
   const finalRun=JSON.parse(node(cli,["status","--state",state,"--json","--run",run.runId]).stdout).run; assert.ok(finalRun.history.some(item=>item.event==="recovered"));
 });
+test("integrate --recheck is accepted and refuses anything but a failed integration",()=>{
+  const missing=node(cli,["integrate","--recheck","--state","unused.json","--json","--run","R-missing"]); assert.notEqual(missing.status,0); assert.doesNotMatch(missing.stderr||missing.stdout,/does not accept --recheck/);
+});
