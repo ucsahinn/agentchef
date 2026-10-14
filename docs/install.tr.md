@@ -692,6 +692,27 @@ plugin marketplace ilgisiz kayitlari korur ve sadece AgentChef kaydini backup
 sonrasi upsert eder. Managed drift varsa `-Repair` / `--repair` force
 senkronizasyonundan daha guvenli ilk adımdır.
 
+## AgentChef'i dual-agent-brain ile Kullanma
+
+[dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) ortak
+hafıza, ortak görev panosu (`beyin pano`) ve takım koşularını (`beyin takim`)
+ekler. Kurulum sırası önemli değildir:
+
+```powershell
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
+npm run chef -- --install --apply
+codex login
+git clone https://github.com/ucsahinn/dual-agent-brain.git Beyin
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Beyin\kurulum\kur.ps1
+beyin takim doctor
+```
+
+Beyin bu checkout'u ev klasörünüzde, Belgeler'de, Masaüstü'nde ya da yaygın bir
+kod klasöründe bulur. Başka bir yere klonladıysanız bir kez
+`beyin ayar BEYIN_AGENTCHEF_KOK <yol>` çalıştırın. Her `doctor` kontrolü geçmeli;
+`last-run` ilk koşudan önce yalnız bilgi amaçlıdır.
+
 ## AgentChef'i Kaldırma
 
 ```powershell

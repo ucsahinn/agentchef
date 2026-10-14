@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.1 - 2026-10-14
+
+- Team doctor: `last-run` is informational on a fresh install instead of failing; `codex.login` says to run `codex login`; new `board` check shows the state file and approvals directory (or the init command when it is missing); new `approval-writer` check passes only when the dual-agent-brain chat hook writes approvals for this board.
+- The team-conductor skill and run protocol run every command through `beyin takim` when dual-agent-brain is installed, and stop with a clear reason when no approval writer exists.
+- Install guide, README and skills guide (EN/TR) describe installing AgentChef together with dual-agent-brain, how Beyin finds the checkout, and `beyin ayar BEYIN_AGENTCHEF_KOK` for other locations.
+
 ## 1.7.0 - 2026-10-14
 
 - Coordination board report gate: `attach-report --report-path <file>` accepts only a non-empty Markdown report (up to 64 KB) inside the board state directory whose name matches the report id, after secret scanning; `show` derives `evidenceMissing` for open tasks. (TASK-059)

@@ -10,6 +10,13 @@ This skill is explicit-only. Team mode is available on every install from
 AgentChef 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off for
 a process; this skill never changes this variable for you.
 
+Start and merge approvals are written only by the dual-agent-brain (Beyin) chat
+hook, and only for Beyin's board. When Beyin is installed (`~/.beyin/vault.txt`
+exists), run every engine command as `beyin takim <command> ...` instead of
+`node scripts/team-run.mjs`; it supplies Beyin's board, creates it when missing,
+and opens the run and worker panels. Without Beyin, `doctor` reports a failing
+`approval-writer` check: say that team runs need dual-agent-brain and stop.
+
 1. Run `doctor`. If the `execution` check fails, explain that
    `AGENTCHEF_TEAM_MODE=off` switches team execution off for this process and
    stop. Never change the variable for the user.

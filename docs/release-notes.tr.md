@@ -1,5 +1,17 @@
 # Sürüm Notları
 
+## v1.7.1 - 2026-10-14
+
+AgentChef 1.7.1, AgentChef'i ve dual-agent-brain'i kendi makinesine sıfırdan kuran biri için ilk takım koşusunu çalışır hale getirir. Temiz profil provası yeni kullanıcının doctor'ının daha ilk koşudan önce kırmızı olduğunu, başlatma ve birleştirme onaylarının dual-agent-brain'den geldiğini hiçbir yerin söylemediğini ve skill `beyin takim` dışında çalışınca onay kancasının hiç görmediği bir pano kullanıldığını buldu.
+
+### Neler Değişti
+
+- **Doctor.** `last-run` bilgi amaçlıdır, `codex.login` çözümü söyler; yeni `board` ve `approval-writer` kontrolleri hangi panonun kullanıldığını ve sohbet onaylarının ona ulaşıp ulaşamayacağını gösterir.
+- **Gözetmen skill'i.** dual-agent-brain kuruluysa her komutu `beyin takim` üzerinden çalıştırır; onay yazıcısı yoksa durur ve nedenini söyler.
+- **Belgeler.** Kurulum rehberi, README ve skill rehberi iki projeyi birlikte kurmayı ve Beyin'in AgentChef checkout'unu nasıl bulduğunu anlatır.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.0 - 2026-10-14
 
 AgentChef 1.7.0 koordinasyon panosunun zayıf kanıtla kapanmasını zorlaştırır ve geniş süreç öldürme komutlarını önce sordurur. Sürüm üç işçili bir takım koşusuyla yapıldı, şef tamamladı.
@@ -11,8 +23,6 @@ AgentChef 1.7.0 koordinasyon panosunun zayıf kanıtla kapanmasını zorlaştır
 - **Devir sözleşmesi.** agent-brief skill'i ve ayrıştırıcısı `Verdict`, `Mutation check`, ortam tuzakları ve izolasyonu, katı modu ve çakışma bildirimi, QA denemesi ve eskalasyon şablonlarını destekler.
 - **Süreç öldürme onayları.** `taskkill`, `tskill`, `kill`, `pkill`, `killall` ve `wmic process` Codex'te ve Claude'da onay ister.
 - **Windows güvenilirliği.** Pano ve koşu kaydı yazımları kısa bir paylaşım ihlalinde yeniden dener; tek bir gözetmen tick hatası artık çalışan bir takımı düşürmez.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.6.0 - 2026-10-14
 

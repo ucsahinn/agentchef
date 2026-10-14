@@ -712,7 +712,7 @@ function doctorCommand(options) {
   catch (error) { check("codex.version", false, error.message); }
   if (codex) {
     const loginArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["login", "status"]) : { command: codex, args: ["login", "status"] };
-    const login = spawnSync(loginArgs.command, loginArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: loginArgs.options?.windowsVerbatimArguments }); check("codex.login", login.status === 0, login.status === 0 ? "authenticated" : "login status failed");
+    const login = spawnSync(loginArgs.command, loginArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: loginArgs.options?.windowsVerbatimArguments }); check("codex.login", login.status === 0, login.status === 0 ? "logged in" : "not logged in: run `codex login` (workers use your Codex subscription)");
     const execHelpArgs = process.platform === "win32" && codex.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(codex, ["exec", "--help"]) : { command: codex, args: ["exec", "--help"] };
     const execHelp = spawnSync(execHelpArgs.command, execHelpArgs.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: execHelpArgs.options?.windowsVerbatimArguments });
     const execFlags = execHelp.stdout || execHelp.stderr || "";
@@ -735,7 +735,17 @@ function doctorCommand(options) {
   if (lastRun) try { maxWorkers = readRunRecord(path.join(path.dirname(path.resolve(options.state)), "team-runs", lastRun)).maxWorkers; } catch {}
   const availableMb = Math.floor(os.freemem() / (1024 * 1024)), requiredMb = maxWorkers * CONTRACT.limits.ramPerWorkerMb;
   check("memory", availableMb >= requiredMb, `${availableMb} MiB free; ${requiredMb} MiB required for ${maxWorkers} workers`);
-  check("last-run", Boolean(lastRun), lastRun || "no prior run");
+  // Informational: a fresh install has no prior run, which is not a failure (it made every new user's doctor red).
+  check("last-run", true, lastRun || "none yet (informational)");
+  // Board and approvals: the engine reads approvals from <dirname(state)>/approvals, and only an approval writer
+  // (the dual-agent-brain chat hook) creates them. A board elsewhere than Beyin's never receives the chat approvals.
+  const statePath = options.state ? path.resolve(options.state) : "";
+  check("board", Boolean(statePath) && fs.existsSync(statePath), statePath ? (fs.existsSync(statePath) ? `${statePath}; approvals in ${path.join(path.dirname(statePath), "approvals")}` : `${statePath} is missing; run coordination-board init --state "${statePath}" (beyin takim creates it)`) : "no board state: pass --state or set AGENTCHEF_BOARD_STATE (beyin takim supplies it)");
+  const beyinVaultFile = path.join(os.homedir(), ".beyin", "vault.txt");
+  let beyinBoard = "";
+  try { const vault = fs.readFileSync(beyinVaultFile, "utf8").replace(/^\uFEFF/, "").trim(); if (vault) beyinBoard = path.join(vault, "motor", "scripts", ".state", "board.json"); } catch {}
+  const sameBoard = Boolean(beyinBoard && statePath) && path.resolve(beyinBoard).toLowerCase() === statePath.toLowerCase();
+  check("approval-writer", sameBoard, !beyinBoard ? "no approval writer: start and merge need the dual-agent-brain chat hook (github.com/ucsahinn/dual-agent-brain); run team commands through `beyin takim`" : sameBoard ? "dual-agent-brain chat hook writes `baslat <runId>` / `birlestir <runId>` approvals for this board" : `this board is not Beyin's (${beyinBoard}); chat approvals land there, so run team commands through \`beyin takim\``);
   output({ ok: checks.every((entry) => entry.status === "pass"), checks, lastRun }, options.json);
   return checks.some((entry) => entry.id === "codex.version" || entry.id === "codex.login" ? entry.status !== "pass" : false) ? 1 : 0;
 }

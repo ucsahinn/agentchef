@@ -42,7 +42,8 @@ lokal memory'sini kopyalamadan sağlam bir başlangıç düzeni kurar.
 > [sürüm notlarında](docs/release-notes.tr.md) yazılıdır. Kalıcı, oturumlar
 > arası hafıza bu kitin değil, ayrı
 > [`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)
-> motorunun işidir.
+> motorunun işidir. İkisi birlikte kurulunca ortak görev panosu ve onaylı takım
+> koşuları açılır ([kurulum](docs/install.tr.md#agentchefi-dual-agent-brain-ile-kullanma)).
 
 ## 👋 Aradığın Yerden Başla
 

@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.0** hardens the coordination board (report gate, scope conflicts, Verdict and Mutation check before review) and asks before broad process-kill commands; team mode stays available on every install.
+Development version **v1.7.1** makes team runs work for a new user with dual-agent-brain: doctor reports the board and the approval writer, and the conductor skill runs through `beyin takim`.
 
 ## Before Commit Or Push
 

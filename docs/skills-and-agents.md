@@ -37,6 +37,16 @@ still require the user's typed approvals. See the
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 for the user-gated operating procedure.
 
+**With dual-agent-brain.** The start and merge approvals come from the
+[dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) chat
+hook, so a team run needs both installs. Beyin finds this checkout under your
+home, Documents, Desktop or a common code folder (`source/repos`, `src`, `dev`,
+`code`, `projects`, `repos`, `git`, `github`), or wherever
+`beyin ayar BEYIN_AGENTCHEF_KOK <path>` points. Run team commands as
+`beyin takim <command>`: it uses Beyin's board, creates it when missing, and
+opens the run overview and worker panels in Windows Terminal. `doctor` reports
+`board` and `approval-writer` so a mismatch is visible before `plan`.
+
 Run commands from the AgentChef repository root:
 
 | Command | Purpose |
