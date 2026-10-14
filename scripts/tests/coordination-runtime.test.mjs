@@ -14,7 +14,8 @@ import {
   showTasks,
   transitionTask,
   assignTask,
-  addEvidence
+  addEvidence,
+  scopeConflicts
 } from "../lib/coordination-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -176,6 +177,8 @@ test("failed review goes back to in_progress with a reason; blocked returns to w
   const blocked = ok(move(state, "TASK-70", "blocked", ["--reason", "waiting for the user's approval"])).task;
   assert.equal(blocked.blockedFrom, "in_progress");
   assert.match(move(state, "TASK-70", "review").stderr, /Invalid transition: blocked -> review/);
+  // blocked releases the lease (2026-10-14 decision), so resuming needs a fresh one
+  ok(run(["renew-lease", "--state", state, "--task", "TASK-70", "--minutes", "30"]));
   ok(move(state, "TASK-70", "in_progress"));
   ok(move(state, "TASK-70", "cancelled", ["--reason", "superseded by TASK-71"]));
   const cancelled = ok(run(["show", "--state", state, "--task", "TASK-70"])).task;
@@ -421,4 +424,76 @@ test("more credential shapes are refused", () => {
     assert.notEqual(run(["add-evidence", "--state", state, "--task", "T-SEC", "--evidence", sample]).status, 0, sample.slice(0, 12));
   }
   assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].evidence.length, 0);
+});
+
+test("scope conflicts include all live leases and conservatively overlap glob prefixes", () => {
+  const state = createState();
+  const first = createTask(state, { id: "TASK-A", title: "Glob", ownerCoordinator: "qa_coordinator", ownerAgent: "codex", writeRepo: "agentchef", writePaths: "docs/**" });
+  const second = createTask(state, { id: "TASK-B", title: "File", ownerCoordinator: "qa_coordinator", ownerAgent: "claude", writeRepo: "agentchef", writePaths: "docs/a.md" });
+  const third = createTask(state, { id: "TASK-C", title: "Other", ownerCoordinator: "qa_coordinator", ownerAgent: "claude", writeRepo: "agentchef", writePaths: "src/**" });
+  renewLease(state, { taskId: first.id, minutes: 10 });
+  renewLease(state, { taskId: third.id, minutes: 10 });
+  assert.deepEqual(scopeConflicts(state, second).map((entry) => entry.taskId), ["TASK-A"]);
+  assert.throws(() => renewLease(state, { taskId: second.id, minutes: 10 }), /TASK-A holds a live lease/);
+});
+
+test("show derives evidenceMissing without persisting it, and blocked releases the lease", () => {
+  const state = createState();
+  createTask(state, { id: "TASK-SHOW", title: "Gate", ownerCoordinator: "qa_coordinator", ownerAgent: "codex", writeRepo: "agentchef", writePaths: "docs/**" });
+  const task = state.tasks[0];
+  task.status = "review";
+  task.evidence = [{ at: "2026-01-01", text: "ok" }];
+  task.handoffs = [{ decisionNeeded: "approval", resolution: null }];
+  task.leaseUntil = new Date(Date.now() + 60_000).toISOString();
+  assert.deepEqual(showTasks(state, task.id).task.evidenceMissing, ["report", "decision", "verifier"]);
+  assert.equal(task.evidenceMissing, undefined);
+  task.status = "in_progress";
+  transitionTask(state, { taskId: task.id, status: "blocked", reason: "waiting" });
+  assert.equal(task.leaseUntil, null);
+});
+
+test("blocked to in_progress still requires a newly acquired live lease", () => {
+  const state = createState();
+  createTask(state, { id: "TASK-RETURN", title: "Return", ownerCoordinator: "qa_coordinator", ownerAgent: "codex", writeRepo: "agentchef", writePaths: "docs/**" });
+  setBrief(state, { taskId: "TASK-RETURN", brief: completeBrief });
+  const task = state.tasks[0];
+  task.status = "todo";
+  renewLease(state, { taskId: task.id, minutes: 10 });
+  transitionTask(state, { taskId: task.id, status: "in_progress" });
+  transitionTask(state, { taskId: task.id, status: "blocked", reason: "waiting" });
+  assert.equal(task.leaseUntil, null);
+  assert.throws(() => transitionTask(state, { taskId: task.id, status: "in_progress" }), /live lease/);
+  renewLease(state, { taskId: task.id, minutes: 10 });
+  assert.equal(transitionTask(state, { taskId: task.id, status: "in_progress" }).status, "in_progress");
+});
+
+test("attach-report validates report files and records their byte count", () => {
+  const { directory, state } = fixture();
+  ok(run(["init", "--state", state]));
+  ok(run(["create", "--state", state, "--id", "TASK-RPT", "--title", "Report", "--owner-coordinator", "qa_coordinator"]));
+  const good = path.join(directory, "TASK-RPT-result.md");
+  fs.writeFileSync(good, "Verification report\n");
+  const attached = ok(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", good])).task;
+  assert.equal(attached.reports[0], "TASK-RPT-result.md");
+  assert.equal(attached.history.at(-1).bytes, Buffer.byteLength("Verification report\n"));
+  const empty = path.join(directory, "TASK-RPT-empty.md");
+  fs.writeFileSync(empty, "");
+  assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", empty]).stderr, /must not be empty/);
+  assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", good, "--report-id", "TASK-RPT-other.md"]).stderr, /must match/);
+  const outside = path.join(os.tmpdir(), "TASK-RPT-outside.md");
+  fs.writeFileSync(outside, "outside\n");
+  assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", outside]).stderr, /inside the coordination state directory/);
+  const secret = path.join(directory, "TASK-RPT-secret.md");
+  fs.writeFileSync(secret, ["Author", "ization: Bea", "rer "].join("") + "abcdefghijklmnopqrstuvwxyz012345"); // built at runtime so the fixture itself is not a labeled secret
+  assert.match(run(["attach-report", "--state", state, "--task", "TASK-RPT", "--report-path", secret]).stderr, /contains a .* rejected/);
+});
+
+test("create reports live scope conflicts and strict-scope rejects them", () => {
+  const { state } = fixture();
+  ok(run(["init", "--state", state]));
+  ok(run(["create", "--state", state, "--id", "TASK-GLOB", "--title", "Glob", "--owner-coordinator", "qa_coordinator", "--owner-agent", "codex", "--write-repo", "agentchef", "--write-paths", "docs/**"]));
+  ok(run(["renew-lease", "--state", state, "--task", "TASK-GLOB", "--minutes", "10"]));
+  const result = ok(run(["create", "--state", state, "--id", "TASK-FILE", "--title", "File", "--owner-coordinator", "qa_coordinator", "--owner-agent", "claude", "--write-repo", "agentchef", "--write-paths", "docs/a.md"]));
+  assert.deepEqual(result.scopeConflicts.map((entry) => entry.taskId), ["TASK-GLOB"]);
+  assert.match(run(["create", "--state", state, "--id", "TASK-STRICT", "--title", "Strict", "--owner-coordinator", "qa_coordinator", "--write-repo", "agentchef", "--write-paths", "docs/b.md", "--strict-scope"]).stderr, /TASK-GLOB/);
 });

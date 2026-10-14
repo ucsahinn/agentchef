@@ -54,9 +54,11 @@ test("approval policy prompts before report-identified Git and npm mutations", a
     ["killall asks", ["killall", "dummy-process"]],
     ["wmic process asks", ["wmic", "process", "where", "ProcessId=999999", "delete"]],
     ["wmic.exe process asks", ["wmic.exe", "process", "where", "ProcessId=999999", "delete"]],
-    ["PowerShell taskkill wrapper asks", ["powershell.exe", "-Command", "taskkill /PID 999999"]],
-    ["full-path PowerShell taskkill wrapper asks", ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "taskkill /PID 999999"]],
-    ["PowerShell Stop-Process wrapper remains prompted", ["powershell.exe", "-Command", "Get-Process dummy-process | Stop-Process"]],
+    ["PowerShell taskkill wrapper asks", ["powershell.exe", "-Command", "taskkill", "/PID", "999999"]],
+    ["full-path PowerShell taskkill wrapper asks", ["C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "taskkill", "/PID", "999999"]],
+    // Prefix rules match argv tokens: a pipeline inside one -Command string (Get-Process x | Stop-Process) is not
+    // expressible here; the Claude ask rules and the Beyin kill guard cover that shape.
+    ["PowerShell Stop-Process wrapper remains prompted", ["powershell.exe", "-Command", "Stop-Process", "-Id", "999999"]],
     ["does not auto-allow an arbitrary PowerShell directory", ["New-Item", "-ItemType", "Directory", "C:\\unmanaged-target"], "no-match"]
   ];
 
