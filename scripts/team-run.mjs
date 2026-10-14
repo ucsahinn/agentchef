@@ -168,7 +168,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
   const command = resolveCodexCommand();
   const invocation = process.platform === "win32" && command.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(command, ["login", "status"]) : { command, args: ["login", "status"] };
   const login = spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
-  if (login.status !== 0) throw new Error("Codex login status failed.");
+  if (login.status !== 0) throw new Error("Codex is not logged in: run `codex login` (workers use your Codex subscription).");
   if (run.status !== "planned") throw new Error(`Cannot start run in ${run.status} state.`);
   const controlDir = path.join(path.dirname(file), run.runId, "control");
   fs.mkdirSync(controlDir, { recursive: true });
