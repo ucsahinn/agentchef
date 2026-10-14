@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.7** `resume --wait` (kota sıfırlanınca sürdür) ve boş RAM azken sıradaki işçileri bekleten bellek korumasını ekler.
+Geliştirme sürümü **v1.7.8** şefin onardığı bütünleştirme için `integrate --recheck` ve bellek koruması ile kota ayrıştırıcısı için regresyon testleri ekler.
 
 ## Commit Veya Push Öncesi
 

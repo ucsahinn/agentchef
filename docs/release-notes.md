@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.7.8 - 2026-10-14
+
+AgentChef 1.7.8 closes the repair loop of a team run and adds the regression tests that its first live run produced.
+
+### What Changed
+
+- **`integrate --recheck`.** After the conductor repairs a failed integration and commits the fix, the checks run again and the run can go on to verification.
+- **Regression tests.** Memory guard at supervisor level and usage-limit parser edge cases, written by two Codex workers in team run R20261014-d760.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.7 - 2026-10-14
 
 AgentChef 1.7.7 lets a team run wait out a usage limit on its own and keeps workers from starving the machine.
@@ -8,8 +19,6 @@ AgentChef 1.7.7 lets a team run wait out a usage limit on its own and keeps work
 
 - **`resume --wait`.** Reads the reset time from the limit message, waits (30 minutes when no time is given, at most 12 hours) and resumes. `status` shows the expected time as `resumeAt`.
 - **Memory guard.** Queued workers wait while free RAM is short; one worker always runs. Tunable with `AGENTCHEF_TEAM_MIN_FREE_MB`, off with `AGENTCHEF_TEAM_MEMORY_GUARD=off`.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.6 - 2026-10-14
 

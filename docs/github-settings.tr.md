@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.7** `resume --wait` (kota sıfırlanınca sürdür) ve boş RAM azken sıradaki işçileri bekleten bellek korumasını ekler.
+Geliştirme sürümü **v1.7.8** şefin onardığı bütünleştirme için `integrate --recheck` ve bellek koruması ile kota ayrıştırıcısı için regresyon testleri ekler.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
