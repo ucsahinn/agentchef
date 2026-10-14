@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.4 - 2026-10-14
+
+- The independent verifier's prompt now carries the host integration results (PASS/FAIL per check, a sanitized tail for failures) and tells it not to re-run test suites that need to write. The read-only Codex sandbox cannot create temp directories, so every verification of a run with test checks used to come back `partial` and had to be repeated on the host.
+
 ## 1.7.3 - 2026-10-14
 
 - `team-run resume --run <runId>` continues a run that a usage limit paused: it checks the plan hash, renews the paused workers' leases, requeues only those workers, and each continues its saved Codex thread (`codex exec resume <thread>`). No second approval is needed because the approved plan is unchanged; collecting a paused run instead remains available. `pause` stays reserved.

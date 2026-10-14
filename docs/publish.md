@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.3** adds `resume` for team runs paused by a usage limit: the same plan and worktrees, each worker on its saved Codex thread.
+Development version **v1.7.4** gives the read-only verifier the host's integration results, so verification no longer depends on re-running suites its sandbox cannot run.
 
 ## Before Commit Or Push
 
