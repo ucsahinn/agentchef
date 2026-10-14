@@ -245,6 +245,13 @@ and `cancelled`. The allowed moves:
   busy lock is retried for about two seconds before the command fails.
 - Text that looks like a credential is refused, now including Bearer tokens,
   JWTs, and credentials inside URLs.
+- `attach-report --task <id> --report-path <file>` accepts a non-empty Markdown
+  report inside the state file's directory (up to 64 KB) after secret scanning;
+  its filename supplies `--report-id` and must start with `<TASK>-`. The older
+  `--report-id`-only form remains available. `show` derives `evidenceMissing`
+  for open tasks without storing it. `create` returns live `scopeConflicts`;
+  add `--strict-scope` to reject them. Glob scopes compare conservatively from
+  their literal prefix, and moving to `blocked` releases the lease.
 
 ## Enterprise Routing Profiles
 

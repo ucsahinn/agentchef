@@ -523,6 +523,17 @@ of being added back or counted as missing.
 
 Official reference: https://developers.openai.com/codex/rules
 
+### Process termination policy
+
+Codex prompts before `taskkill`, `taskkill.exe`, `tskill`, `kill`, `pkill`,
+`killall`, `wmic process`, and PowerShell-wrapped `taskkill` or
+`Stop-Process`. These commands can disrupt other agent or user sessions, so
+agents must not stop processes without approval. AgentChef's reviewed
+session-end process sweep (`codex-process-hygiene.mjs`) is separate: its
+`taskkill.exe` child process remains governed by the hook's captured-owner and
+PID/creation-time checks, not these interactive command rules. Targeting a
+specific PID still requires approval.
+
 ## Hooks
 
 Hooks are useful for lifecycle checks, but they are not a primary security

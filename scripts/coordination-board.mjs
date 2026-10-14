@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import process from "node:process";
 import fs from "node:fs";
+import path from "node:path";
 import { parseBrief, parseHandoff } from "./lib/agent-brief.mjs";
+import { secretLikeCategory } from "./lib/secret-classifier.mjs";
 import {
   addEvidence,
   addHandoff,
@@ -13,6 +15,7 @@ import {
   renewLease,
   resolveHandoff,
   setBrief,
+  scopeConflicts,
   showTasks,
   transitionTask,
   writeInitialState,
@@ -23,12 +26,12 @@ import {
 // fails instead of silently creating a task without an owner.
 const COMMANDS = {
   init: [],
-  create: ["id", "title", "owner-coordinator", "owner-agent", "owner-session", "write-repo", "write-paths"],
+  create: ["id", "title", "owner-coordinator", "owner-agent", "owner-session", "write-repo", "write-paths", "strict-scope"],
   assign: ["task", "owner-agent", "owner-session", "owner-coordinator", "by"],
   transition: ["task", "status", "verified-by", "reason", "by"],
   handoff: ["task", "source-coordinator", "target-coordinator", "question", "evidence", "conflict", "decision-needed", "verification-need"],
   "resolve-handoff": ["task", "handoff", "answer"],
-  "attach-report": ["task", "report-id"],
+  "attach-report": ["task", "report-id", "report-path"],
   brief: ["task", "brief", "brief-file"],
   "brief-check": ["brief", "brief-file"],
   "handoff-check": ["handoff", "handoff-file"],
@@ -49,7 +52,7 @@ function parse(argv) {
     const token = rest[index];
     if (!token.startsWith("--")) throw new Error(`Unexpected argument: ${token}`);
     const key = token.slice(2);
-    if (key === "json") { options.json = true; continue; }
+    if (key === "json" || key === "strict-scope") { options[key.replaceAll("-", "")] = true; continue; }
     if (key === "help") return { help: true };
     if (!accepted.has(key)) throw new Error(`${command} does not accept --${key}. Accepted: ${[...accepted].map((name) => `--${name}`).join(", ")}.`);
     // A value may itself start with "--" (evidence such as "--json works");
@@ -111,8 +114,16 @@ try {
         break;
       }
       case "create":
-        task = mutate(options.state, (current) => createTask(current, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"], ownerAgent: options["owner-agent"], ownerSession: options["owner-session"], writeRepo: options["write-repo"], writePaths: options["write-paths"] }));
-        output({ ok: true, task });
+        {
+          let conflicts;
+          task = mutate(options.state, (current) => {
+            const created = createTask(current, { id: options.id, title: options.title, ownerCoordinator: options["owner-coordinator"], ownerAgent: options["owner-agent"], ownerSession: options["owner-session"], writeRepo: options["write-repo"], writePaths: options["write-paths"] });
+            conflicts = scopeConflicts(current, created, Date.now());
+            if (options.strictscope && conflicts.length) throw new Error(`Write scope conflicts with live leases: ${conflicts.map((entry) => entry.taskId).join(", " )}.`);
+            return created;
+          });
+          output({ ok: true, task, scopeConflicts: conflicts });
+        }
         break;
       case "assign":
         task = mutate(options.state, (current) => assignTask(current, { taskId: options.task, ownerAgent: options["owner-agent"], ownerSession: options["owner-session"], ownerCoordinator: options["owner-coordinator"], by: options.by }));
@@ -131,7 +142,29 @@ try {
         output({ ok: true, task });
         break;
       case "attach-report":
-        task = mutate(options.state, (current) => attachReport(current, { taskId: options.task, reportId: options["report-id"] }));
+        {
+          let reportId = options["report-id"];
+          let bytes;
+          if (options["report-path"]) {
+            const reportPath = path.resolve(options["report-path"]);
+            const stateDirectory = fs.realpathSync(path.dirname(path.resolve(options.state)));
+            const resolvedReport = fs.realpathSync(reportPath);
+            const relative = path.relative(stateDirectory, resolvedReport);
+            if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("--report-path must resolve to a file inside the coordination state directory.");
+            const stat = fs.statSync(resolvedReport);
+            if (!stat.isFile()) throw new Error("--report-path must name a file.");
+            if (stat.size === 0) throw new Error("--report-path must not be empty.");
+            if (stat.size > MAX_TEXT_FILE_BYTES) throw new Error(`--report-path is larger than ${MAX_TEXT_FILE_BYTES} bytes.`);
+            const content = fs.readFileSync(resolvedReport, "utf8");
+            const category = secretLikeCategory(content);
+            if (category) throw new Error(`Report contains a ${category} and was rejected.`);
+            bytes = stat.size;
+            const inferred = path.basename(resolvedReport);
+            if (reportId !== undefined && reportId !== inferred) throw new Error("--report-id must match the --report-path filename.");
+            reportId = reportId ?? inferred;
+          }
+          task = mutate(options.state, (current) => attachReport(current, { taskId: options.task, reportId, bytes }));
+        }
         output({ ok: true, task });
         break;
       case "brief": {

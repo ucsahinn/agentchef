@@ -89,6 +89,9 @@ const claudeDemotedPrefixes = ["Bash(npx ", "Bash(npx.cmd ", "Bash(cmd.exe /c np
 // `full` profile keeps all of them; nothing selects it at install time yet.
 const criticalAskRules = [
   /^PowerShell\(Stop-Process \*\)$/,
+  /^Bash\((taskkill|taskkill\.exe|tskill|kill|pkill|killall) \*\)$/,
+  /^Bash\(wmic(\.exe)? process \*\)$/,
+  /^PowerShell\(taskkill \*\)$/,
   /^Bash\(gh (repo|release) delete \*\)$/,
   /^Bash\(gh auth (login|logout|refresh|setup-git|switch|token) \*\)$/,
   /^Bash\(gh config get \*token\*\)$/,

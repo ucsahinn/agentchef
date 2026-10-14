@@ -145,6 +145,8 @@
       "Bash(git push *--mirror*)",
       "Bash(git tag --delete *)",
       "Bash(git tag -d *)",
+      "Bash(kill *)",
+      "Bash(killall *)",
       "Bash(npm publish *)",
       "Bash(npm run db:drop *)",
       "Bash(npm run db:migrate *)",
@@ -183,7 +185,14 @@
       "Bash(npm.cmd run ship *)",
       "Bash(npm.cmd run truncate *)",
       "Bash(npm.cmd run wipe *)",
-      "PowerShell(Stop-Process *)"
+      "Bash(pkill *)",
+      "Bash(taskkill *)",
+      "Bash(taskkill.exe *)",
+      "Bash(tskill *)",
+      "Bash(wmic process *)",
+      "Bash(wmic.exe process *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(taskkill *)"
     ],
     "deny": [
       "mcp__codebase-memory__delete_project",

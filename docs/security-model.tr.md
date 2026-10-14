@@ -513,6 +513,17 @@ güncellemede geri eklenmek ya da eksik sayılmak yerine receipt'ten bırakılı
 
 Resmi kaynak: https://developers.openai.com/codex/rules
 
+### Süreç öldürme politikası
+
+Codex; `taskkill`, `taskkill.exe`, `tskill`, `kill`, `pkill`, `killall`,
+`wmic process` ve PowerShell içinden çağrılan `taskkill` ya da `Stop-Process`
+öncesinde onay ister. Bu komutlar başka ajan veya kullanıcı oturumlarını
+aksatabileceğinden ajanlar onaysız süreç durdurmamalıdır. AgentChef'in gözden
+geçirilmiş oturum sonu süreç süpürmesi (`codex-process-hygiene.mjs`) ayrıdır:
+`taskkill.exe` alt süreci bu etkileşimli komut kurallarıyla değil hook'un
+yakalanan sahip ve PID/oluşturulma zamanı kontrolleriyle yönetilir. Belirli bir
+PID'yi hedeflemek de onay ister.
+
 ## Hooks
 
 Hooks lifecycle kontrolü için faydalıdır ama primary security boundary değildir.

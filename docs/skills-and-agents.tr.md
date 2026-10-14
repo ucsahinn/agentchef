@@ -254,6 +254,14 @@ Durumlar `backlog`, `todo`, `in_progress`, `review`, `done`, `blocked` ve
   kilit komut başarısız olmadan önce yaklaşık iki saniye yeniden denenir.
 - Kimlik bilgisine benzeyen metin reddedilir; buna artık Bearer token'lar,
   JWT'ler ve URL içindeki kimlik bilgileri de dahildir.
+- `attach-report --task <id> --report-path <dosya>`, state dosyasının
+  klasöründeki boş olmayan Markdown raporunu (en çok 64 KB) sır taramasından
+  geçirerek iliştirir; dosya adı `--report-id` olur ve `<TASK>-` ile başlamalıdır.
+  Eski yalnızca `--report-id` biçimi çalışmayı sürdürür. `show`, açık görevler
+  için state'e yazılmayan `evidenceMissing` alanını türetir. `create`, canlı
+  kira çakışmalarını `scopeConflicts` olarak döndürür; `--strict-scope` bunları
+  ret sebebi yapar. Glob kapsamları jokerlerden önceki literal önekle temkinli
+  karşılaştırılır; `blocked` geçişi kirayı bırakır.
 
 ## Enterprise Routing Profiles
 

@@ -161,19 +161,41 @@ function normalizedPath(value) {
 function pathsOverlap(left, right) {
   const a = normalizedPath(left);
   const b = normalizedPath(right);
+  const globPrefix = (value) => {
+    const wildcard = value.search(/[?*]/);
+    if (wildcard < 0) return value;
+    return value.slice(0, wildcard).replace(/\/$/, "");
+  };
+  const leftGlob = /[?*]/.test(a);
+  const rightGlob = /[?*]/.test(b);
+  if (leftGlob || rightGlob) {
+    const ap = leftGlob ? globPrefix(a) : a;
+    const bp = rightGlob ? globPrefix(b) : b;
+    return ap === "." || bp === "." || ap === bp || ap.startsWith(`${bp}/`) || bp.startsWith(`${ap}/`);
+  }
   return a === "." || b === "." || a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }
 
 // Two open tasks may not hold live leases on the same files: the second one
 // is told which task has them.
-function assertNoScopeConflict(state, task, now) {
-  if (!task.writeScope) return;
+export function scopeConflicts(state, task, now = Date.now()) {
+  if (!task.writeScope) return [];
+  const conflicts = [];
   for (const other of state.tasks) {
     if (other === task || TERMINAL.has(other.status) || !other.writeScope || !leaseLive(other, now)) continue;
     if (other.writeScope.repo.toLowerCase() !== task.writeScope.repo.toLowerCase()) continue;
     const clash = task.writeScope.paths.find((mine) => other.writeScope.paths.some((theirs) => pathsOverlap(mine, theirs)));
-    if (clash) fail(`${other.id} holds a live lease on ${other.writeScope.repo}:${clash}; wait for it, or narrow this task's write scope.`);
+    if (clash) conflicts.push({ taskId: other.id, repo: other.writeScope.repo, path: clash });
   }
+  return conflicts;
+}
+
+function assertNoScopeConflict(state, task, now) {
+  const conflicts = scopeConflicts(state, task, now);
+  if (!conflicts.length) return;
+  // Name every conflicting task with the exact repo:path, so the caller knows what to wait for.
+  const detail = conflicts.map((entry) => `${entry.taskId} holds a live lease on ${entry.repo}:${entry.path}`).join("; ");
+  fail(`${detail}; wait for ${conflicts.length === 1 ? "it" : "them"}, or narrow this task's write scope.`);
 }
 
 export function createState() {
@@ -401,7 +423,7 @@ export function transitionTask(state, input) {
   task.status = target;
   if (verification) task.verification = verification;
   // A closed or released task frees its write scope for other agents.
-  if (TERMINAL.has(target) || (target === "todo" && (from === "in_progress" || from === "blocked"))) task.leaseUntil = null;
+  if (TERMINAL.has(target) || target === "blocked" || (target === "todo" && (from === "in_progress" || from === "blocked"))) task.leaseUntil = null;
   record(task, input, {
     action: "transition",
     from,
@@ -455,7 +477,7 @@ export function attachReport(state, input) {
   if (!reportId.startsWith(`${task.id}-`)) fail(`Report id must start with ${task.id}-.`);
   if (!task.reports.includes(reportId)) {
     task.reports.push(reportId);
-    record(task, input, { action: "attach-report", to: reportId });
+    record(task, input, { action: "attach-report", to: reportId, ...(input.bytes === undefined ? {} : { bytes: input.bytes }) });
   }
   return task;
 }
@@ -502,7 +524,14 @@ function withView(task, now) {
   const last = Date.parse(task.updatedAt || task.createdAt || "");
   const working = task.status === "in_progress" || task.status === "review";
   const stale = working && ((task.writeScope && leaseState !== "live") || (Number.isFinite(last) && now - last > STALE_HOURS * 3_600_000));
-  return { ...task, leaseState, stale: Boolean(stale) };
+  const evidenceMissing = [];
+  if (["in_progress", "review"].includes(task.status) && task.evidence.length === 0) evidenceMissing.push("evidence");
+  if (task.status === "review") {
+    if (task.reports.length === 0) evidenceMissing.push("report");
+    if (task.handoffs.some((handoff) => handoff.decisionNeeded && !handoff.resolution)) evidenceMissing.push("decision");
+    if (!task.verification) evidenceMissing.push("verifier");
+  }
+  return { ...task, leaseState, stale: Boolean(stale), ...(OPEN.includes(task.status) ? { evidenceMissing } : {}) };
 }
 
 export function showTasks(state, taskId = null, filters = {}) {
