@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0 - 2026-10-14
+
+- Update the team-mode guides to describe its stable, enabled-by-default behavior and process-level off switch.
+- Team mode is available on every install: the team-mode contract sets `execution.enabled` to true and `stability` to stable. `AGENTCHEF_TEAM_MODE` is now the off switch (`off`, `0`, `false` or `disabled` switch team execution off for a process; `experimental` is accepted and has no effect). Start and merge still require the user's typed approvals.
+- Doctor reports an `execution` check instead of `opt-in`, and no longer launches wt.exe to detect Windows Terminal: Windows Terminal 1.24 answers unknown flags with a modal Help dialog, so every doctor run left a dialog on the screen.
+- `codex status` reports the team mode as enabled (stable) unless the switch is off.
+
 ## 1.5.1 - 2026-10-13
 
 - Scan only added diff lines during team collection and integration, with file and line diagnostics for rejected content.

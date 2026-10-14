@@ -77,7 +77,7 @@ route you want.
 
 ## Experimental Team Worker Flags
 
-AgentChef's opt-in team mode launches non-interactive workers with `codex exec`
+AgentChef's team mode launches non-interactive workers with `codex exec`
 from isolated worktrees. On Windows, the Codex `.cmd` shim rejects quoted
 `-c` values in this invocation path. Pass simple overrides as unquoted
 arguments, for example `-c approval_policy=never` and

@@ -74,7 +74,7 @@ agent, skill, uzak OpenAI docs, built-in memory, hook ve app yüzeylerini korur.
 
 ## Deneysel Takım Worker Flag'leri
 
-AgentChef'in opt-in takım modu etkileşimsiz worker'ları ayrı worktree'lerde
+AgentChef'in takım modu etkileşimsiz worker'ları ayrı worktree'lerde
 `codex exec` ile başlatır. Windows'ta Codex `.cmd` shim'i bu invocation
 yolunda tırnaklı `-c` değerlerini reddeder. Basit override'ları tırnaksız
 argüman olarak verin; örneğin `-c approval_policy=never` ve

@@ -281,8 +281,8 @@ if (failures.length === 0) {
 }
 
 if (report) {
-  if (report.teamMode?.inspected !== true || typeof report.teamMode?.enabled !== "boolean" || report.teamMode?.stability !== "experimental") {
-    fail("codex status must report inspected team mode state and experimental stability.");
+  if (report.teamMode?.inspected !== true || typeof report.teamMode?.enabled !== "boolean" || report.teamMode?.stability !== "stable") {
+    fail("codex status must report inspected team mode state and stable stability.");
   }
   if (!(report.teamMode?.lastRun === null || typeof report.teamMode?.lastRun === "string")) {
     fail("codex status team mode lastRun must be a run filename or null.");
@@ -619,7 +619,7 @@ if (textResult.error) {
 } else if (textResult.status !== 0) {
   fail(`codex status text validation exited ${textResult.status}: ${(textResult.stderr || textResult.stdout).trim()}`);
 } else {
-  for (const required of ["AgentChef status", "Overall:", "Team mode: disabled (experimental) - last run: none", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
+  for (const required of ["AgentChef status", "Overall:", "Team mode: enabled (stable) - last run: none", "Repo Git:", "Installed runtime:", "Skills:", "MCP:", "Codex CLI:", "Codex doctor checks:", "Next action:"]) {
     if (!textResult.stdout.includes(required)) fail(`codex status text output missing: ${required}`);
   }
   for (const hiddenByDefault of ["Target Codex home:", "Ambient Codex:", "Enterprise routing:", "Effective controls:", "Context budget:", "Token-safe profile:", "MCP setup note:"]) {

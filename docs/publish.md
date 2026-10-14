@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.5.1** hardens the experimental team runner; team execution stays opt-in and disabled by default.
+Development version **v1.6.0** makes team mode available on every install; `AGENTCHEF_TEAM_MODE=off` switches it off, and start and merge still require typed user approvals.
 
 ## Before Commit Or Push
 
