@@ -426,16 +426,17 @@ ve [agent teams](https://code.claude.com/docs/en/agent-teams) ile
   `SendMessage` ekler; böylece agent'lar brief ve handoff dışında konuşabilir.
   AgentChef agent teams'in kapalı olduğunu varsayar.
 
-### Claude Conductor ve Codex Worker'ları (Deneysel Takım Modu)
+### Claude Conductor ve Codex Worker'ları (Takım Modu)
 
-AgentChef 1.5.0, etkileşimli Claude Code oturumunun sınırlı Codex `exec`
-worker'larını yönetmesi için yalnız açık çağrılan `team-conductor` skill'ini
-sunar. Özellik deneyseldir ve yalnız bu sürece `AGENTCHEF_TEAM_MODE=experimental`
-verilirse açılır. Claude planlar ve raporlar; worker agent'ları doğrudan
+AgentChef 1.6.0'dan itibaren takım modu her kurulumda açıktır. Etkileşimli
+Claude Code oturumu sınırlı Codex `exec` worker'larını yönetmek için yalnız açık
+çağrılan `team-conductor` skill'ini kullanabilir. Bir süreçte takım yürütmesini
+kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; skill bu değişkeni sizin
+yerinize değiştirmez. Claude planlar ve raporlar; worker agent'ları doğrudan
 başlatmaz. 1-4 allowlist worker'ının her biri ayrı worktree alır; kullanıcı
 onayları, entegrasyon kararı ve rapor ana oturumun sorumluluğundadır.
 
-Çalıştırmadan önce [takım koşusu protokolünü](skills-and-agents.tr.md#deneysel-takım-koşuları)
+Çalıştırmadan önce [takım koşusu protokolünü](skills-and-agents.tr.md#takım-koşuları)
 ve [team-conductor skill'ini](../plugins/agentchef/skills/team-conductor/SKILL.md)
 okuyun. Skill doctor kontrolü yapar, her görev için kontrol edilmiş bir
 `agent-brief` hazırlar, planı ve tam `baslat <runId>` sohbet cümlesini gösterir;

@@ -1,15 +1,18 @@
 ---
 name: team-conductor
-description: Orchestrate experimental AgentChef team runs from Claude Code with bounded Codex workers, explicit user gates, isolated worktrees, and verified integration.
+description: Orchestrate AgentChef team runs from Claude Code with bounded Codex workers, explicit user gates, isolated worktrees, and verified integration.
 ---
 
 # Team Conductor
 
 Read [the run protocol](references/run-protocol.md) before operating a team run.
-This skill is explicit-only. Team mode is experimental and disabled by default.
+This skill is explicit-only. Team mode is available on every install from
+AgentChef 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off for
+a process; this skill never changes this variable for you.
 
-1. Run `doctor`. If `enabled` is false, explain the opt-in
-   `AGENTCHEF_TEAM_MODE=experimental` and stop. Do not enable it for the user.
+1. Run `doctor`. If the `execution` check fails, explain that
+   `AGENTCHEF_TEAM_MODE=off` switches team execution off for this process and
+   stop. Never change the variable for the user.
 2. Split the request into 1-4 independent tasks. Write one `agent-brief` per
    worker and check each with
    `npm run coordination:board -- brief-check --brief-file <file> --json`.

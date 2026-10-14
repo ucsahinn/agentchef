@@ -82,8 +82,10 @@ requested stop and `cleanup` only when requested.
 
 The worker limit is 60 minutes. Idle activity warns at 15 minutes and stops at
 30. A usage-limit result pauses that worker for reporting; resume is not
-available in this release. `AGENTCHEF_TEAM_MODE=experimental` is required and
-defaults to off. Optional controls are `AGENTCHEF_TEAM_MAX_WORKERS`,
+available in this release. Team mode is available on every install from
+AgentChef 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off for
+a process; the skill never changes this variable for you. Optional controls
+are `AGENTCHEF_TEAM_MAX_WORKERS`,
 `AGENTCHEF_TEAM_WORKTREE_ROOT`, `AGENTCHEF_TEAM_PANE`, and
 `AGENTCHEF_TEAM_CODEX_COMMAND`. `AGENTCHEF_BOARD_STATE` selects the coordination
 board state file.

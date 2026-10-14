@@ -608,9 +608,10 @@ olmalı ve yedi günden eski olmamalıdır.
 
 ### Takım Modu Sınırları
 
-Takım modu deneyseldir ve yalnız başlatan süreçte
-`AGENTCHEF_TEAM_MODE=experimental` varsa açılır. `team-conductor` skill'i yalnız
-açık çağrılır; kendisi opt-in yapamaz. Etkileşimli Claude oturumu koşuyu
+Takım modu 1.6.0'dan itibaren her kurulumda açıktır. Bir süreçte takım
+yürütmesini kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; `team-conductor`
+skill'i bu değişkeni sizin yerinize değiştirmez. Skill yalnız açık çağrılır.
+Etkileşimli Claude oturumu koşuyu
 planlayıp kapıları yönetirken motor ayrı worktree'lerde 1-4 allowlist Codex
 `exec` worker'ı başlatır. Motor kullanıcının tek kullanımlık başlatma ve merge
 kapılarını okur; bunların dayandığı dosyaları oluşturmaz. Worker sandbox'ı rol

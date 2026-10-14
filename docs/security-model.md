@@ -604,9 +604,10 @@ Operational contract:
 
 ### Team Mode Boundaries
 
-Team mode is experimental and disabled unless the launching process has
-`AGENTCHEF_TEAM_MODE=experimental`. The `team-conductor` skill is
-explicit-only; it cannot opt itself in. The interactive Claude session plans
+Team mode is available on every install from 1.6.0. Set
+`AGENTCHEF_TEAM_MODE=off` to switch team execution off for a process; the
+`team-conductor` skill never changes this variable for you. The skill is
+explicit-only. The interactive Claude session plans
 and gates the run while the engine starts 1-4 allowlisted Codex `exec` workers
 in separate worktrees. The engine reads the user's single-use start and merge
 gates and never creates their backing files. The worker sandbox is the stricter
