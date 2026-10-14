@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.8 - 2026-10-14
+
+- `team-run integrate --recheck` reruns the run's checks on the integration branch after the conductor commits a repair of a failed integration. It refuses a passing integration, one with merge conflicts, or a worktree with uncommitted changes; it rescans the added diff and records `integration_rechecked`. Before this, a repaired run could not reach verification.
+- Regression tests from team run R20261014-d760 (two Codex workers, conductor repair, independent verification: pass): supervisor-level memory guard (one worker always starts under a huge reserve and `memory_hold` is recorded; `AGENTCHEF_TEAM_MEMORY_GUARD=off` suppresses it) and usage-limit parser edge cases (ISO without zone, past ISO plus relative hint, far-future ISO, latest reset wins, missing `finishedAt`).
+
 ## 1.7.7 - 2026-10-14
 
 - `team-run resume --wait` sleeps until the usage limit resets, then resumes. The reset time is read from the paused workers' limit messages (clock times, relative hours/minutes, ISO timestamps; the latest wins, plus a 2-minute margin), falling back to 30 minutes and capped at 12 hours. `status` shows it as `resumeAt` for paused runs. New pure module `scripts/lib/usage-limit-reset.mjs`.

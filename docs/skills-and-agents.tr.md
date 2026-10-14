@@ -90,7 +90,8 @@ Kullanım sınırı worker'ı raporlama için bekletir; sınır sıfırlanınca
 `resume --run <runId>` worker'ı kayıtlı Codex oturumunda, aynı plan ve worktree
 ile sürdürür; `resume --wait` sınır mesajından okunan sıfırlanma saatine (yoksa 30
 dakika, en çok 12 saat) kadar bekler ve sonra sürdürür, `status` bu saati `resumeAt`
-olarak gösterir. Gözetmen boş RAM azken sıradaki worker'ları bekletir (worker
+olarak gösterir. Düşen bir bütünleştirmeyi şef onardıktan sonra `integrate --recheck`
+kontrolleri commitlenmiş bütünleştirme dalında yeniden çalıştırır. Gözetmen boş RAM azken sıradaki worker'ları bekletir (worker
 başına yaklaşık 1,5 GB artı 2 GB pay; payı `AGENTCHEF_TEAM_MIN_FREE_MB` değiştirir,
 `AGENTCHEF_TEAM_MEMORY_GUARD=off` kapatır); hiç worker çalışmıyorsa biri her zaman
 başlar. Aynı komut, uyku, çökme ya da yeniden başlatma sonrası `running`

@@ -1,5 +1,16 @@
 # Sürüm Notları
 
+## v1.7.8 - 2026-10-14
+
+AgentChef 1.7.8 takım koşusunun onarım döngüsünü kapatır ve ilk canlı koşunun ürettiği regresyon testlerini ekler.
+
+### Neler Değişti
+
+- **`integrate --recheck`.** Şef düşen bir bütünleştirmeyi onarıp commitledikten sonra kontroller yeniden çalışır ve koşu doğrulamaya geçebilir.
+- **Regresyon testleri.** Gözetmen düzeyinde bellek koruması ve kota ayrıştırıcısı uç durumları; R20261014-d760 koşusunda iki Codex işçisi yazdı.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.7 - 2026-10-14
 
 AgentChef 1.7.7 takım koşusunun kota sınırını kendi başına beklemesini sağlar ve işçilerin makineyi boğmasını önler.
@@ -8,8 +19,6 @@ AgentChef 1.7.7 takım koşusunun kota sınırını kendi başına beklemesini s
 
 - **`resume --wait`.** Sınır mesajından sıfırlanma saatini okur, bekler (saat yoksa 30 dakika, en çok 12 saat) ve sürdürür. `status` beklenen saati `resumeAt` olarak gösterir.
 - **Bellek koruması.** Boş RAM azken sıradaki işçiler bekler; bir işçi her zaman çalışır. `AGENTCHEF_TEAM_MIN_FREE_MB` ile ayarlanır, `AGENTCHEF_TEAM_MEMORY_GUARD=off` ile kapanır.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.6 - 2026-10-14
 

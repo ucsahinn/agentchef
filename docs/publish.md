@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.7** adds `resume --wait` (resume when the usage limit resets) and a memory guard that holds queued workers while free RAM is short.
+Development version **v1.7.8** adds `integrate --recheck` for a conductor-repaired integration and regression tests for the memory guard and the usage-limit parser.
 
 ## Before Commit Or Push
 
