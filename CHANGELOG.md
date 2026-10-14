@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.5 - 2026-10-14
+
+- The team-conductor skill and the skills guide (EN/TR) state a deterministic fan-out rule: one worker per independent write scope; several workers only when write scopes are disjoint and no task needs another's output; dependent work goes to a later run; at most four; a one-file change stays with one worker; implementing roles are told to change code, not only diagnose.
+
 ## 1.7.4 - 2026-10-14
 
 - The independent verifier's prompt now carries the host integration results (PASS/FAIL per check, a sanitized tail for failures) and tells it not to re-run test suites that need to write. The read-only Codex sandbox cannot create temp directories, so every verification of a run with test checks used to come back `partial` and had to be repeated on the host.

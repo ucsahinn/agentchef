@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.4** gives the read-only verifier the host's integration results, so verification no longer depends on re-running suites its sandbox cannot run.
+Development version **v1.7.5** gives the team conductor a deterministic fan-out rule: one worker per independent write scope, parallel only when scopes are disjoint and independent.
 
 ## Before Commit Or Push
 

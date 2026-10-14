@@ -1,5 +1,15 @@
 # Sürüm Notları
 
+## v1.7.5 - 2026-10-14
+
+AgentChef 1.7.5 takım gözetmeninin bölme kararını öngörülebilir yapar: her bağımsız yazma kapsamına bir işçi, paralel işçi yalnız ayrı ve bağımsız kapsamlar için, bağımlı iş sonraki koşuda, en fazla dört.
+
+### Neler Değişti
+
+- **Dağıtım kuralı.** Gözetmen skill'ine ve skill rehberine yazıldı; aynı istek her seferinde aynı biçimde bölünür.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.4 - 2026-10-14
 
 AgentChef 1.7.4 takım koşularının bağımsız doğrulamasını güvenilir yapar. Salt okunur doğrulayıcı sandbox'ında geçici klasör açamadığından artık diff ile birlikte host'taki bütünleştirme sonuçlarını alır ve test süitlerini yeniden koşmaya çalışmak yerine bunlara göre karar verir.
@@ -7,8 +17,6 @@ AgentChef 1.7.4 takım koşularının bağımsız doğrulamasını güvenilir ya
 ### Neler Değişti
 
 - **Doğrulayıcı promptu.** Host bütünleştirme sonuçları (kontrol başına geçti ya da düştü, düşenler için kısa ve temizlenmiş çıktı) doğrulama brifinin parçasıdır; yazan test süitlerini yeniden koşmama kuralı açıkça yazılıdır.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.3 - 2026-10-14
 

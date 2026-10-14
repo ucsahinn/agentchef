@@ -1,6 +1,6 @@
 {
   "name": "agentchef",
-  "version": "1.7.4",
+  "version": "1.7.5",
   "description": "Security-first AgentChef workflows for setup maintenance, planning, review, reconstruction, and verification.",
   "author": {
     "name": "AgentChef",

@@ -40,6 +40,11 @@ ister.
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 kullanıcı kapılarının işleyişini açıklar.
 
+**Dağıtım.** Gözetmen her bağımsız yazma kapsamı için bir işçi kullanır. Birden
+çok işçiyi yalnız yazma kapsamları çakışmıyorsa ve hiçbir görev diğerinin
+çıktısına ihtiyaç duymuyorsa çalıştırır; bağımlı işi sonraki koşuya bırakır ve
+dörtten fazla işçi kullanmaz.
+
 **dual-agent-brain ile.** Başlatma ve birleştirme onaylarını
 [dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) sohbet
 kancası yazar; bu yüzden takım koşusu iki kurulumu birlikte ister. Beyin bu

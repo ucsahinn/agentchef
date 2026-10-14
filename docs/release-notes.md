@@ -1,5 +1,15 @@
 # Release Notes
 
+## v1.7.5 - 2026-10-14
+
+AgentChef 1.7.5 makes the team conductor's split decision predictable: one worker per independent write scope, parallel workers only for disjoint and independent scopes, dependent work in a later run, never more than four.
+
+### What Changed
+
+- **Fan-out rule.** Written into the team-conductor skill and the skills guide, so the same request splits the same way every time.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.4 - 2026-10-14
 
 AgentChef 1.7.4 makes independent verification of team runs reliable. The read-only verifier cannot create temp directories in its sandbox, so it now receives the host's integration results with the diff and judges from those instead of trying to re-run test suites.
@@ -7,8 +17,6 @@ AgentChef 1.7.4 makes independent verification of team runs reliable. The read-o
 ### What Changed
 
 - **Verifier prompt.** Host integration results (pass or fail per check, a short sanitized tail for failures) are part of the verification brief, with an explicit rule not to re-run writing suites.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.3 - 2026-10-14
 
