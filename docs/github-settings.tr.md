@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.1** takım koşularını dual-agent-brain ile yeni bir kullanıcı için çalışır hale getirir: doctor panoyu ve onay yazıcısını gösterir, gözetmen skill'i `beyin takim` üzerinden çalışır.
+Geliştirme sürümü **v1.7.2** bağımsız bir güvenlik denetimi ve kod incelemesinden sonra takım koşularını sağlamlaştırır: işçi ortamı ve devir metni temizliği, plan bütünlüğü, gözetmen ve toplama düzeltmeleri.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

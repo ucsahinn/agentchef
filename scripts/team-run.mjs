@@ -113,10 +113,16 @@ function planCommand(options) {
   if (!["offline", "full"].includes(profile)) throw new CliUsageError("--profile must be offline or full.");
   const maxMinutes = Number(options["max-minutes"] || CONTRACT.limits.workerMinutes);
   if (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 24 * 60) throw new CliUsageError("--max-minutes must be an integer from 1 to 1440.");
+  const planDirectory = path.dirname(path.resolve(options["plan-file"]));
   const workers = plan.workers.map((item) => {
     if (!item.taskId || !/^TASK-[A-Za-z0-9][A-Za-z0-9._-]*$/.test(item.taskId)) throw new Error("Each worker requires a valid taskId.");
     if (!ROLE_IDS.includes(item.role)) throw new Error(`Role is not allowed: ${item.role}`);
     const briefFile = path.resolve(path.dirname(path.resolve(options["plan-file"])), item.briefFile || "");
+    // Lexical check first (a missing outside file must not surface as ENOENT), then realpath for links and junctions.
+    if (!containsPath(planDirectory, briefFile)) throw new Error(`briefFile for ${item.taskId} must stay inside the plan directory.`);
+    const realPlanDirectory = fs.realpathSync(planDirectory);
+    const realBriefFile = fs.realpathSync(briefFile);
+    if (!containsPath(realPlanDirectory, realBriefFile)) throw new Error(`briefFile for ${item.taskId} must stay inside the plan directory.`);
     const briefText = fs.readFileSync(briefFile, "utf8");
     const brief = parseBrief(briefText); if (!brief.ok) throw new Error(`Brief for ${item.taskId} is missing: ${brief.missing.join(", ")}.`);
     assertTeamTextSafe(briefText);
@@ -132,7 +138,7 @@ function planCommand(options) {
   const canonicalRoot = path.join(canonicalRootParent, ".agentchef-worktrees", id);
   const canonicalTemp = fs.realpathSync(os.tmpdir());
   if (containsPath(canonicalTemp, canonicalRoot) || containsPath(canonicalRepo, canonicalRoot) || containsPath(canonicalRoot, canonicalRepo)) throw new Error("Resolved worktree root is not permitted.");
-  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", repo, repoName: path.basename(repo), baseBranch, baseCommit: headCommit(repo), integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: maxConcurrency(CONTRACT, workers.length), maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
+  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: headCommit(repo), integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: maxConcurrency(CONTRACT, workers.length), maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
   const directory = path.dirname(runFile(options.state, id)); fs.mkdirSync(directory, { recursive: true });
   if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
   writeRunRecord(runFile(options.state, id), run);
@@ -147,7 +153,11 @@ function planCommand(options) {
       transitionTask(options.state, { taskId: w.taskId, status: "todo" });
     }
   } catch (error) { updateRunRecord(runFile(options.state, id), (current) => ({ ...current, status: "failed", failure: error.message, history: [...current.history, { at: now(), event: "planning_failed" }] })); throw error; }
-  output({ ok: true, run: readRun(options.state, id) }, options.json); return 0;
+  output({ ok: true, planHash: run.planHash.slice(0, 12), run: readRun(options.state, id) }, options.json); return 0;
+}
+function hashPlan(workers) {
+  const payload = workers.map((worker) => [worker.taskId, worker.role, worker.writeScope, worker.briefText]);
+  return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 function approvalPath(state, id) { return path.join(path.dirname(path.resolve(state)), "approvals", `${id}.baslat.json`); }
 function startCommand(options) {
@@ -163,6 +173,10 @@ function startCommand(options) {
 }
 function startCommandLocked(options, wasInterrupted = () => false, lockedAt = now()) {
   ensureTeamExecutionEnabled(); const file = runFile(options.state, options.run); const run = readRun(options.state, options.run);
+  const persistedPlan = readPlanForRun(options.state, run);
+  const byTask = new Map(run.workers.map((worker) => [worker.taskId, worker]));
+  const currentPlanHash = hashPlan(persistedPlan.workers.map((worker) => ({ ...worker, role: byTask.get(worker.taskId).role, writeScope: byTask.get(worker.taskId).writeScope })));
+  if (currentPlanHash !== run.planHash) throw new Error("plan changed after approval; plan again");
   const approval = readApproval(path.dirname(path.resolve(options.state)), run.runId, "baslat");
   if (!approvalIsValid(approval, { runId: run.runId, tur: "baslat", plannedAt: run.plannedAt, now: now() })) { const e = new Error("A valid start approval is required."); e.code = "approval-required"; e.exitCode = 3; throw e; }
   const command = resolveCodexCommand();
@@ -260,7 +274,7 @@ async function statusCommand(options) {
     const outside = changed.filter((file) => !pathWithinScope(file, worker.writeScope));
     if (outside.length) warnings.push({ taskId: worker.taskId, outsideScope: outside });
   }
-  const snapshot = { ok: true, run, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, warnings };
+  const snapshot = { ok: true, run, planHash: run.planHash?.slice(0, 12) || null, supervisor: { alive: supervisorAlive, heartbeatAgeMs: Number.isFinite(supervisorAge) ? supervisorAge : null }, warnings };
   if (options.json) snapshots.push(snapshot); else output(snapshot, false);
   if (Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, Math.min(1000, deadline - Date.now())));
   } while (Date.now() < deadline);
@@ -290,12 +304,12 @@ function acquireSupervisorLock(file) {
 function superviseCommand(options) {
   const file = runFile(options.state, options.run), releaseSupervisorLock = acquireSupervisorLock(file); let stopping = false; let timer = null;
   const active = new Map(); const started = Date.now();
-  const stop = () => { stopping = true; if (timer) clearTimeout(timer); for (const entry of active.values()) stopChild(entry.child, { createdAt: entry.createdAt }); };
+  const stop = () => { stopping = true; if (timer) clearTimeout(timer); timer = null; for (const entry of active.values()) stopChild(entry.child, { createdAt: entry.createdAt }); };
   process.once("SIGTERM", stop); process.once("SIGINT", stop);
   let tickFailures = 0;
   const tick = async () => {
-    if (stopping) return;
     timer = null;
+    if (stopping) return;
     try {
     let run = readRun(options.state, options.run);
     const heartbeatAt = now();
@@ -338,6 +352,13 @@ function superviseCommand(options) {
     tickFailures = 0;
     timer = setTimeout(tick, 1000);
     } catch (error) {
+      if (stopping) {
+        const message = String(error?.message || error).slice(0, 500);
+        try { assertTeamTextSafe(message); } catch { /* do not persist sensitive error text */ }
+        try { updateRunRecord(file, (current) => ({ ...current, status: "failed", failure: "supervisor could not finish abort or pause bookkeeping", history: [...current.history, { at: now(), event: "supervisor_stop_failed" }] })); } catch { /* durable storage failure cannot be repaired here */ }
+        timer = null;
+        return;
+      }
       // A transient file-system error (for example a status panel holding the run record open on Windows) must not
       // kill healthy workers: retry the tick, and fail closed only after repeated consecutive failures.
       tickFailures += 1;
@@ -346,8 +367,8 @@ function superviseCommand(options) {
       const message = String(error?.message || error).slice(0, 500);
       let failure = message;
       try { assertTeamTextSafe(failure); } catch { failure = "supervisor error omitted by content safety filter"; }
-      try { updateRunRecord(file, (current) => ({ ...current, status: "failed", failure, history: [...current.history, { at: now(), event: "supervisor_tick_failed" }], workers: current.workers.map((worker) => active.has(worker.taskId) ? { ...worker, status: "failed", failure, finishedAt: now() } : worker) })); } catch { /* the original supervisor failure is already fail-closed */ }
-      for (const taskId of active.keys()) releaseFailedWorkerLease(options.state, taskId);
+      try { updateRunRecord(file, (current) => ({ ...current, status: "failed", failure, history: [...current.history, { at: now(), event: "supervisor_tick_failed" }], workers: current.workers.map((worker) => ["spawning", "running"].includes(worker.status) ? { ...worker, status: "failed", failure, finishedAt: now() } : worker) })); } catch { /* the original supervisor failure is already fail-closed */ }
+      for (const worker of run.workers) if (["spawning", "running"].includes(worker.status)) releaseFailedWorkerLease(options.state, worker.taskId);
       active.clear();
     }
   };
@@ -364,9 +385,12 @@ function superviseCommand(options) {
     try { execution = spawnCodexExec({ prompt, worktree: worker.worktree, runDir: path.join(path.dirname(file), run.runId, worker.taskId), schema, output: resultPath, runId: run.runId, taskId: worker.taskId, role: worker.role, boardState: path.resolve(options.state), sandbox: worker.sandbox, model: run.model, profile: run.profile, onActivity: () => updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, lastEventAt: now(), idleWarningAt: null } : w) })) }); }
     catch (error) { settleWorker(file, worker.taskId, "failed", 1, error.message); return; }
     const child = execution.child; const createdAt = processCreatedAt(child?.pid) || null; activeMap.set(worker.taskId, { child, createdAt });
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...transitionWorker(w, "running"), pid: child?.pid || null, cmdShim: child?.agentChefCmdShim === true, processCreatedAt: createdAt, startedAt: now() } : w) }));
-    const pane = openViewerPane({ root: ROOT, state: path.resolve(options.state), worktree: worker.worktree, runId: run.runId, taskId: worker.taskId });
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, pane } : w) }));
+    try { updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...transitionWorker(w, "running"), pid: child?.pid || null, cmdShim: child?.agentChefCmdShim === true, processCreatedAt: createdAt, startedAt: now() } : w) })); }
+    catch { /* keep the spawned child owned and monitored */ }
+    try {
+      const pane = openViewerPane({ root: ROOT, state: path.resolve(options.state), worktree: worker.worktree, runId: run.runId, taskId: worker.taskId });
+      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, pane } : w) }));
+    } catch { /* viewer panes are optional */ }
     execution.then((result) => {
       activeMap.delete(worker.taskId);
       const abortFile = path.join(path.dirname(file), run.runId, "control", "abort.json");
@@ -450,7 +474,10 @@ function porcelainPaths(cwd) {
 const BOARD_EVIDENCE_LIMIT = 1900;
 function boardEvidence(text) {
   const value = String(text);
-  return value.length <= BOARD_EVIDENCE_LIMIT ? value : `${value.slice(0, BOARD_EVIDENCE_LIMIT)} [truncated: ${value.length} characters; full text in the worker report]`;
+  if (value.length <= BOARD_EVIDENCE_LIMIT) return value;
+  const end = value.charCodeAt(BOARD_EVIDENCE_LIMIT - 1);
+  const cut = end >= 0xD800 && end <= 0xDBFF ? BOARD_EVIDENCE_LIMIT - 1 : BOARD_EVIDENCE_LIMIT;
+  return `${value.slice(0, cut)} [truncated: ${value.length} characters; full text in the worker report]`;
 }
 function committedPaths(cwd, base) {
   return [...new Set(gitBytes(["-c", "core.quotePath=false", "diff", "--name-only", "-z", base, "HEAD"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")))];
@@ -458,8 +485,8 @@ function committedPaths(cwd, base) {
 const SUPERVISOR_TICK_FAILURE_LIMIT = 5;
 function teamExecutionEnabled(env = process.env) {
   const value = String(env[CONTRACT.execution.optInEnv] ?? "").trim().toLowerCase();
-  if (value === "off" || value === "0" || value === "false" || value === "disabled") return false;
-  return CONTRACT.execution.enabled === true;
+  if (!value) return CONTRACT.execution.enabled === true;
+  return ["on", "1", "true", "yes", "enabled", "experimental"].includes(value) && CONTRACT.execution.enabled === true;
 }
 function pathWithinScope(file, scopes) {
   const candidate = file.replace(/\\/g, "/").toLocaleLowerCase("en-US");
@@ -495,11 +522,12 @@ function releaseRunFailedLeases(state, run) {
 }
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
-  if (!["running", "paused"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
+  if (!["running", "paused", "collected"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
   const selected = options.task ? run.workers.filter((worker) => worker.taskId === options.task) : run.workers;
   if (options.task && !selected.length) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   let partial = false;
   for (const worker of selected) {
+    if (worker.status === "collected") continue;
     if (worker.status !== "finished") { partial = true; if (["failed", "timed_out", "scope_violation", "rejected_content", "aborted"].includes(worker.status)) releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const final = workerFinalPath(run, worker);
     if (!final) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "final handoff file is missing"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
@@ -507,10 +535,10 @@ function collectCommand(options) {
     try { handoff = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; }
     catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const deliverySubject = `feat(team-mode): ${worker.taskId} worker delivery`;
-    let changed = porcelainPaths(worker.worktree), priorCommit = null;
-    if (!changed.length && worker.sandbox !== "read-only") {
+    let changed = [...new Set([...committedPaths(worker.worktree, run.baseCommit), ...porcelainPaths(worker.worktree)])], priorCommit = null;
+    if (worker.sandbox !== "read-only") {
       const head = git(["rev-parse", "HEAD"], worker.worktree);
-      if (head !== run.baseCommit && git(["log", "-1", "--format=%s"], worker.worktree) === deliverySubject) { priorCommit = head; changed = committedPaths(worker.worktree, run.baseCommit); }
+      if (head !== run.baseCommit) priorCommit = head;
     }
     const outside = changed.filter((item) => !pathWithinScope(item, worker.writeScope));
     if (outside.length) {
@@ -524,19 +552,31 @@ function collectCommand(options) {
       const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
       const report = renderHandoffMarkdown(handoff); assertTeamTextSafe(report);
       fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n- None (read-only worker)\n`, "utf8");
-      addEvidence(options.state, { taskId: worker.taskId, evidence: boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: none - read-only report collected; no commit created. Evidence: ${handoff.evidence.join("; ") || "none"}.`) });
-      attachReport(options.state, { taskId: worker.taskId, reportId }); transitionTask(options.state, { taskId: worker.taskId, status: "review" });
+      try {
+        const evidence = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: none - read-only report collected; no commit created. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
+        const task = JSON.parse(fs.readFileSync(options.state, "utf8")).tasks.find((item) => item.id === worker.taskId);
+        if (!task?.evidence?.some((item) => item.text === evidence)) addEvidence(options.state, { taskId: worker.taskId, evidence });
+        attachReport(options.state, { taskId: worker.taskId, reportId });
+        if (task?.status !== "review") transitionTask(options.state, { taskId: worker.taskId, status: "review" });
+      } catch (error) {
+        partial = true;
+        updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
+        continue;
+      }
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: [], outsideScope: [], reportId, commit: null } : item), history: [...current.history, { at: now(), event: "worker_collected_read_only", taskId: worker.taskId }] }));
       if (handoff.verdict !== "pass") partial = true;
       continue;
     }
     if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
-    if (!priorCommit) git(["add", "-A"], worker.worktree);
+    const dirtyPaths = porcelainPaths(worker.worktree);
+    if (dirtyPaths.length) git(["add", "-A"], worker.worktree);
     const report = renderHandoffMarkdown(handoff);
     const evidenceText = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: ${changed.join(", ")}. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
     try {
-      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", ...(priorCommit ? [run.baseCommit, "HEAD"] : ["--cached"])], worker.worktree));
+      // Index vs base covers the worker's own commits and the files it left dirty (both are staged above).
+      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0", run.baseCommit], worker.worktree));
+      if (priorCommit && dirtyPaths.length) assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", "--cached"], worker.worktree));
       assertTeamTextSafe(report); assertTeamTextSafe(evidenceText);
     } catch (error) {
       if (!/contains a .+ and was rejected\.$/.test(error.message)) throw error;
@@ -545,20 +585,29 @@ function collectCommand(options) {
       releaseFailedWorkerLease(options.state, worker.taskId);
       continue;
     }
-    if (!priorCommit) git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", deliverySubject], worker.worktree);
-    const commit = priorCommit || git(["rev-parse", "HEAD"], worker.worktree);
+    if (!priorCommit || dirtyPaths.length) git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", deliverySubject], worker.worktree);
+    const commit = dirtyPaths.length || !priorCommit ? git(["rev-parse", "HEAD"], worker.worktree) : priorCommit;
     const reportId = `${worker.taskId}-${worker.role}.md`;
     const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
     fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n${changed.map((item) => `- ${item}`).join("\n")}\n`, "utf8");
-    addEvidence(options.state, { taskId: worker.taskId, evidence: evidenceText });
-    attachReport(options.state, { taskId: worker.taskId, reportId });
-    transitionTask(options.state, { taskId: worker.taskId, status: "review" });
+    try {
+      const board = JSON.parse(fs.readFileSync(options.state, "utf8"));
+      const task = board.tasks.find((item) => item.id === worker.taskId);
+      // Evidence and report first: the board's review gate (1.7.0) needs the latest evidence before the transition.
+      if (!task?.evidence?.some((item) => item.text === evidenceText)) addEvidence(options.state, { taskId: worker.taskId, evidence: evidenceText });
+      attachReport(options.state, { taskId: worker.taskId, reportId });
+      if (task?.status !== "review") transitionTask(options.state, { taskId: worker.taskId, status: "review" });
+    } catch (error) {
+      partial = true;
+      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
+      continue;
+    }
     updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId }] }));
     if (handoff.verdict !== "pass") partial = true;
   }
   const current = readRun(options.state, options.run);
   if (current.workers.every((worker) => ["collected", "scope_violation", "rejected_content", "failed", "aborted", "timed_out", "paused_limit"].includes(worker.status))) {
-    updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
+    if (current.status !== "collected") updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
   }
   output({ ok: !partial, run: readRun(options.state, options.run) }, options.json);
   return partial ? 4 : 0;
@@ -701,7 +750,7 @@ function doctorCommand(options) {
   const checks = [], check = (id, ok, details = "") => checks.push({ id, status: ok ? "pass" : "fail", details });
   check("contract", CONTRACT.schemaVersion === 2, `enabled=${CONTRACT.execution.enabled}; switch=${CONTRACT.execution.optInEnv}`);
   const switchValue = process.env[CONTRACT.execution.optInEnv];
-  check("execution", teamExecutionEnabled(), `${teamExecutionEnabled() ? "enabled by contract" : "switched off"}; ${CONTRACT.execution.optInEnv}=${switchValue === undefined ? "<unset>" : switchValue} (off disables)`);
+  check("execution", teamExecutionEnabled(), `${teamExecutionEnabled() ? "enabled by contract" : "switched off"}; ${CONTRACT.execution.optInEnv}=${switchValue === undefined ? "<unset>" : switchValue}${switchValue && !["on", "1", "true", "yes", "enabled", "experimental"].includes(String(switchValue).trim().toLowerCase()) ? " (unrecognized value treated as off)" : ""}`);
   let codex = null;
   try {
     codex = resolveCodexCommand();
@@ -744,7 +793,9 @@ function doctorCommand(options) {
   const beyinVaultFile = path.join(os.homedir(), ".beyin", "vault.txt");
   let beyinBoard = "";
   try { const vault = fs.readFileSync(beyinVaultFile, "utf8").replace(/^\uFEFF/, "").trim(); if (vault) beyinBoard = path.join(vault, "motor", "scripts", ".state", "board.json"); } catch {}
-  const sameBoard = Boolean(beyinBoard && statePath) && path.resolve(beyinBoard).toLowerCase() === statePath.toLowerCase();
+  const canonical = (value) => { try { return fs.realpathSync.native(value); } catch { return path.resolve(value); } };
+  const normalizedBoard = canonical(beyinBoard), normalizedState = canonical(statePath);
+  const sameBoard = Boolean(beyinBoard && statePath) && (process.platform === "win32" ? normalizedBoard.toLowerCase() === normalizedState.toLowerCase() : normalizedBoard === normalizedState);
   check("approval-writer", sameBoard, !beyinBoard ? "no approval writer: start and merge need the dual-agent-brain chat hook (github.com/ucsahinn/dual-agent-brain); run team commands through `beyin takim`" : sameBoard ? "dual-agent-brain chat hook writes `baslat <runId>` / `birlestir <runId>` approvals for this board" : `this board is not Beyin's (${beyinBoard}); chat approvals land there, so run team commands through \`beyin takim\``);
   output({ ok: checks.every((entry) => entry.status === "pass"), checks, lastRun }, options.json);
   return checks.some((entry) => entry.id === "codex.version" || entry.id === "codex.login" ? entry.status !== "pass" : false) ? 1 : 0;

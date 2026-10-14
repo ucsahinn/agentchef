@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.1** makes team runs work for a new user with dual-agent-brain: doctor reports the board and the approval writer, and the conductor skill runs through `beyin takim`.
+Development version **v1.7.2** hardens team runs after an independent security audit and code review: worker environment and handoff sanitization, plan integrity, and supervisor and collection fixes.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

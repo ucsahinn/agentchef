@@ -59,11 +59,17 @@ test("viewer pane launches the AgentChef watcher with the board state", () => {
   assert.ok(args.includes("C:/state/board.json"));
 });
 
-test("workerEnv sets six team variables, removes BEYIN_CHILD and preserves BEYIN_AGENT", () => {
-  const env = workerEnv({ runId: "R1", taskId: "TASK-040", worktree: "wt", role: "developer", boardState: "board" }, { BEYIN_CHILD: "1", BEYIN_AGENT: "claude", KEEP: "yes" });
+test("workerEnv filters secret-like names, preserves Codex runtime vars and honors explicit allowlist", () => {
+  const env = workerEnv({ runId: "R1", taskId: "TASK-040", worktree: "wt", role: "developer", boardState: "board" }, { BEYIN_CHILD: "1", BEYIN_AGENT: "claude", KEEP: "yes", GH_TOKEN: "fake-gh", AWS_SECRET_ACCESS_KEY: "fake-aws", OPENAI_API_KEY: "fake-openai", CODEX_HOME: "codex-home" });
   assert.equal(Object.hasOwn(env, "BEYIN_CHILD"), false);
   assert.equal(env.BEYIN_AGENT, "claude");
   assert.equal(env.KEEP, "yes");
+  assert.equal(Object.hasOwn(env, "GH_TOKEN"), false);
+  assert.equal(Object.hasOwn(env, "AWS_SECRET_ACCESS_KEY"), false);
+  assert.equal(env.OPENAI_API_KEY, "fake-openai");
+  assert.equal(env.CODEX_HOME, "codex-home");
+  const allowed = workerEnv({ runId: "R1", taskId: "TASK-040", worktree: "wt", role: "developer", boardState: "board" }, { GH_TOKEN: "fake-gh", AGENTCHEF_TEAM_WORKER_ENV_ALLOW: "GH_TOKEN" });
+  assert.equal(allowed.GH_TOKEN, "fake-gh");
   assert.deepEqual([env.AGENTCHEF_TEAM_RUN, env.AGENTCHEF_TEAM_TASK, env.AGENTCHEF_TEAM_WORKTREE, env.AGENTCHEF_TEAM_ROLE, env.AGENTCHEF_ROUTING_HINT, env.AGENTCHEF_BOARD_STATE], ["R1", "TASK-040", "wt", "developer", "off", "board"]);
 });
 

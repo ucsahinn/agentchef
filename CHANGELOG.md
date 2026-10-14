@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.2 - 2026-10-14
+
+Fixes from an independent security audit and two code reviews, built by team run R20261014-0b90 and finished by the conductor.
+
+- Supervisor: a failed abort or pause no longer leaves the supervisor hanging (the timer is cleared before the stopping check); after five failed ticks every spawning or running worker is failed and releases its lease; a failure after spawn keeps the child tracked.
+- Collection: changed paths are the union of the worker's commits and dirty files, and the secret scan covers the index against the base commit, so a worker that commits a file itself cannot skip the scope and secret checks; evidence and the report are recorded before the review transition; a board rejection marks only that worker and collection continues; re-running collect on a collected run is safe; board evidence is never cut inside a surrogate pair.
+- Plan integrity: `plan` stores a SHA-256 of every worker's task, role, scope and brief, and `start` refuses briefs changed after approval; `briefFile` must stay inside the plan directory.
+- `AGENTCHEF_TEAM_MODE`: only empty, `on`, `1`, `true`, `yes`, `enabled` or `experimental` keep team execution on; any other value switches it off and doctor names it. Doctor compares board paths with realpath (case-folded only on Windows).
+- Worker isolation: workers no longer inherit secret-named environment variables (tokens, keys, passwords, credentials, cookies, sessions); `OPENAI_API_KEY`, `CODEX_*` and `AGENTCHEF_*` stay, and `AGENTCHEF_TEAM_WORKER_ENV_ALLOW` allows more by name. Handoff text is stripped of control and ANSI sequences, capped per field, and approval-like lines are neutralised before it reaches the conductor, the board or the panels.
+- Board: the review gate splits only the leading Verdict and Mutation check labels, so quoted labels in worker evidence no longer block review; `Mutation check` must be `none - <reason>` or a path list; glob scope conflicts compare by plain prefix and an empty prefix overlaps everything; `--report-path` refuses the approvals directory and non-Markdown files; Windows file-sharing retries are capped at about one second.
+- Known limit: the read-only Codex verifier cannot create temp directories in its sandbox, so suites that need them must be re-run on the host; this release was verified that way (109/109 and 39/39).
+
 ## 1.7.1 - 2026-10-14
 
 - Team doctor: `last-run` is informational on a fresh install instead of failing; `codex.login` says to run `codex login`; new `board` check shows the state file and approvals directory (or the init command when it is missing); new `approval-writer` check passes only when the dual-agent-brain chat hook writes approvals for this board.
