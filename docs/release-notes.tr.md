@@ -1,5 +1,18 @@
 # Sürüm Notları
 
+## v1.7.2 - 2026-10-14
+
+AgentChef 1.7.2 takım modunun bağımsız güvenlik denetimi ve kod incelemesi bulgularını kapatır. İşçiler artık şefin sırlarını görmez, devir metinleri onay satırı enjekte edemez, onay verdiğiniz plan sonradan değiştirilemez ve toplama atlatılamaz ya da kilitlenemez.
+
+### Neler Değişti
+
+- **İşçi yalıtımı.** Sır adlı ortam değişkenleri şefte kalır; devir metni temizlenir ve sınırlanır.
+- **Plan bütünlüğü.** `start`, `plan`'dan sonra değişen brief'leri reddeder; brief dosyaları plan klasöründe olmalıdır.
+- **Toplama ve gözetim.** İşçi commit'leri ve kirli dosyalar birlikte kapsam ve sır denetiminden geçer; takılan iptal, pano reddi ya da yeniden çalıştırma koşuyu kilitlemez.
+- **Pano.** İnceleme kapısı yalnız baştaki Verdict ve Mutation check'i okur; Mutation check neden ya da yol ister; glob çakışmaları ve rapor yolları sıkılaştı.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.1 - 2026-10-14
 
 AgentChef 1.7.1, AgentChef'i ve dual-agent-brain'i kendi makinesine sıfırdan kuran biri için ilk takım koşusunu çalışır hale getirir. Temiz profil provası yeni kullanıcının doctor'ının daha ilk koşudan önce kırmızı olduğunu, başlatma ve birleştirme onaylarının dual-agent-brain'den geldiğini hiçbir yerin söylemediğini ve skill `beyin takim` dışında çalışınca onay kancasının hiç görmediği bir pano kullanıldığını buldu.
@@ -9,8 +22,6 @@ AgentChef 1.7.1, AgentChef'i ve dual-agent-brain'i kendi makinesine sıfırdan k
 - **Doctor.** `last-run` bilgi amaçlıdır, `codex.login` çözümü söyler; yeni `board` ve `approval-writer` kontrolleri hangi panonun kullanıldığını ve sohbet onaylarının ona ulaşıp ulaşamayacağını gösterir.
 - **Gözetmen skill'i.** dual-agent-brain kuruluysa her komutu `beyin takim` üzerinden çalıştırır; onay yazıcısı yoksa durur ve nedenini söyler.
 - **Belgeler.** Kurulum rehberi, README ve skill rehberi iki projeyi birlikte kurmayı ve Beyin'in AgentChef checkout'unu nasıl bulduğunu anlatır.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.0 - 2026-10-14
 

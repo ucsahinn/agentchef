@@ -1,5 +1,18 @@
 # Release Notes
 
+## v1.7.2 - 2026-10-14
+
+AgentChef 1.7.2 closes the findings of an independent security audit and code review of team mode. Workers no longer see the conductor's secrets, their handoff text cannot inject approval lines, a plan cannot change after you approve it, and collection can no longer be bypassed or wedged.
+
+### What Changed
+
+- **Worker isolation.** Secret-named environment variables stay with the conductor; handoff text is sanitized and capped.
+- **Plan integrity.** `start` refuses briefs that changed after `plan`; brief files must live in the plan directory.
+- **Collection and supervision.** Worker commits and dirty files are both scope- and secret-checked; a stuck abort, a board rejection or a re-run no longer wedges a run.
+- **Board.** The review gate reads only the leading Verdict and Mutation check; Mutation check needs a reason or paths; glob conflicts and report paths are stricter.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.1 - 2026-10-14
 
 AgentChef 1.7.1 makes the first team run work for someone who installs AgentChef and dual-agent-brain from scratch on their own machine. A clean-profile rehearsal found that a new user's doctor was red before any run, that nothing told them the start and merge approvals come from dual-agent-brain, and that running the skill outside `beyin takim` used a board the approval hook never sees.
@@ -9,8 +22,6 @@ AgentChef 1.7.1 makes the first team run work for someone who installs AgentChef
 - **Doctor.** `last-run` is informational, `codex.login` names the fix, and new `board` and `approval-writer` checks show which board is used and whether chat approvals can reach it.
 - **Conductor skill.** With dual-agent-brain installed it runs every command through `beyin takim`; without an approval writer it stops and explains why.
 - **Docs.** The install guide, README and skills guide explain installing both projects together and how Beyin finds the AgentChef checkout.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.0 - 2026-10-14
 
