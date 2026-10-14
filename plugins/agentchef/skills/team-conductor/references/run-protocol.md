@@ -2,7 +2,17 @@
 
 ## Commands and exit codes
 
-Run the engine from the AgentChef repository root:
+With dual-agent-brain (Beyin) installed, run every command as:
+
+```text
+beyin takim <command> [--run <runId>] [...]
+```
+
+Beyin passes its own board (`<vault>/motor/scripts/.state/board.json`) and
+`--json`, creates the board when it is missing, and its chat hook writes the
+`baslat` / `birlestir` approvals for that board only. Without Beyin, run the
+engine from the AgentChef repository root; `doctor` then fails the
+`approval-writer` check because nothing can write the approvals:
 
 ```text
 node scripts/team-run.mjs <command> --state <board.json> --json

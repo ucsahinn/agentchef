@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.0** koordinasyon panosunu sağlamlaştırır (rapor kapısı, kapsam çakışmaları, incelemeden önce Verdict ve Mutation check) ve geniş süreç öldürme komutlarından önce onay ister; takım modu her kurulumda açık kalır.
+Geliştirme sürümü **v1.7.1** takım koşularını dual-agent-brain ile yeni bir kullanıcı için çalışır hale getirir: doctor panoyu ve onay yazıcısını gösterir, gözetmen skill'i `beyin takim` üzerinden çalışır.
 
 ## Commit Veya Push Öncesi
 

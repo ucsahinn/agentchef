@@ -1,5 +1,17 @@
 # Release Notes
 
+## v1.7.1 - 2026-10-14
+
+AgentChef 1.7.1 makes the first team run work for someone who installs AgentChef and dual-agent-brain from scratch on their own machine. A clean-profile rehearsal found that a new user's doctor was red before any run, that nothing told them the start and merge approvals come from dual-agent-brain, and that running the skill outside `beyin takim` used a board the approval hook never sees.
+
+### What Changed
+
+- **Doctor.** `last-run` is informational, `codex.login` names the fix, and new `board` and `approval-writer` checks show which board is used and whether chat approvals can reach it.
+- **Conductor skill.** With dual-agent-brain installed it runs every command through `beyin takim`; without an approval writer it stops and explains why.
+- **Docs.** The install guide, README and skills guide explain installing both projects together and how Beyin finds the AgentChef checkout.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.0 - 2026-10-14
 
 AgentChef 1.7.0 makes the coordination board harder to close on weak evidence and makes broad process kills ask first. It was built by a three-worker team run and finished by the conductor.
@@ -11,8 +23,6 @@ AgentChef 1.7.0 makes the coordination board harder to close on weak evidence an
 - **Handoff contract.** The agent-brief skill and parser support `Verdict`, `Mutation check`, environment traps and isolation, a strict mode, and templates for conflict notices, QA attempts and escalations.
 - **Process-kill approvals.** `taskkill`, `tskill`, `kill`, `pkill`, `killall` and `wmic process` ask for approval in Codex and Claude.
 - **Windows reliability.** Board and run-record writes retry a brief sharing violation, and one failed supervisor tick no longer fails a running team.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.6.0 - 2026-10-14
 

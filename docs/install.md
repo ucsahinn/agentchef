@@ -694,6 +694,27 @@ entries and receives only the AgentChef entry upsert after backup. When managed
 drift exists, `-Repair` / `--repair` is the safer first step before force
 synchronization.
 
+## Using AgentChef With dual-agent-brain
+
+[dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) adds
+shared memory, the shared task board (`beyin pano`) and team runs
+(`beyin takim`). Install order does not matter:
+
+```powershell
+git clone https://github.com/ucsahinn/agentchef.git
+cd agentchef
+npm run chef -- --install --apply
+codex login
+git clone https://github.com/ucsahinn/dual-agent-brain.git Beyin
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Beyin\kurulum\kur.ps1
+beyin takim doctor
+```
+
+Beyin finds this checkout under your home, Documents, Desktop or a common code
+folder. If you cloned it elsewhere, run `beyin ayar BEYIN_AGENTCHEF_KOK <path>`
+once. Every `doctor` check should pass; `last-run` is informational before the
+first run.
+
 ## Removing AgentChef
 
 ```powershell

@@ -42,7 +42,8 @@ credentials, sessions, or local memory.
 > behavior is always stated in the
 > [release notes](docs/release-notes.md). Durable cross-session memory is
 > the job of the separate [`dual-agent-brain`](https://github.com/ucsahinn/dual-agent-brain)
-> engine, not of this kit.
+> engine, not of this kit. Installed together, the two add a shared task board
+> and approval-gated team runs ([setup](docs/install.md#using-agentchef-with-dual-agent-brain)).
 
 ## 👋 Start With What You Need
 

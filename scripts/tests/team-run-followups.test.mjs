@@ -77,3 +77,26 @@ test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it of
   const offDoctor=node(cli,["doctor","--state",state,"--json"],{env:{...env,AGENTCHEF_TEAM_MODE:"off"}});
   assert.equal(JSON.parse(offDoctor.stdout).checks.find(check=>check.id==="execution").status,"fail");
 });
+test("doctor treats a missing prior run as informational and reports the board and the approval writer", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-doctor-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const { state, env } = makeRun(temp, "R-doctor", ["TASK-DOC"], "ok");
+  const home = path.join(temp, "home"); fs.mkdirSync(path.join(home, ".beyin"), { recursive: true });
+  const homeEnv = { ...env, USERPROFILE: home, HOME: home };
+  const parse = (result) => Object.fromEntries(JSON.parse(result.stdout).checks.map((check) => [check.id, check]));
+  let checks = parse(node(cli, ["doctor", "--state", state, "--json"], { env: homeEnv }));
+  assert.equal(checks["last-run"].status, "pass");
+  assert.equal(checks.board.status, "pass");
+  assert.equal(checks["approval-writer"].status, "fail");
+  assert.match(checks["approval-writer"].details, /dual-agent-brain/);
+  const vault = path.join(temp, "vault"); fs.mkdirSync(path.join(vault, "motor", "scripts", ".state"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".beyin", "vault.txt"), vault);
+  checks = parse(node(cli, ["doctor", "--state", state, "--json"], { env: homeEnv }));
+  assert.equal(checks["approval-writer"].status, "fail");
+  assert.match(checks["approval-writer"].details, /not Beyin's/);
+  const beyinState = path.join(vault, "motor", "scripts", ".state", "board.json"); fs.copyFileSync(state, beyinState);
+  checks = parse(node(cli, ["doctor", "--state", beyinState, "--json"], { env: homeEnv }));
+  assert.equal(checks["approval-writer"].status, "pass");
+  checks = parse(node(cli, ["doctor", "--state", path.join(temp, "missing.json"), "--json"], { env: homeEnv }));
+  assert.equal(checks.board.status, "fail");
+  assert.match(checks.board.details, /coordination-board init/);
+});

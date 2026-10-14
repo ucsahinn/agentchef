@@ -40,6 +40,17 @@ ister.
 [team-conductor skill](../plugins/agentchef/skills/team-conductor/SKILL.md)
 kullanıcı kapılarının işleyişini açıklar.
 
+**dual-agent-brain ile.** Başlatma ve birleştirme onaylarını
+[dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) sohbet
+kancası yazar; bu yüzden takım koşusu iki kurulumu birlikte ister. Beyin bu
+checkout'u ev klasörünüzde, Belgeler'de, Masaüstü'nde ya da yaygın bir kod
+klasöründe (`source/repos`, `src`, `dev`, `code`, `projects`, `repos`, `git`,
+`github`) ya da `beyin ayar BEYIN_AGENTCHEF_KOK <yol>` ile gösterilen yerde
+bulur. Takım komutlarını `beyin takim <komut>` olarak çalıştırın: Beyin'in
+panosunu kullanır, yoksa oluşturur ve Windows Terminal'de koşu panosu ile işçi
+panellerini açar. `doctor`, `board` ve `approval-writer` kontrolleriyle bir
+uyumsuzluğu `plan`'dan önce gösterir.
+
 Komutları AgentChef depo kökünden çalıştırın:
 
 | Komut | Amaç |
