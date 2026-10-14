@@ -1,5 +1,15 @@
 # Sürüm Notları
 
+## v1.7.4 - 2026-10-14
+
+AgentChef 1.7.4 takım koşularının bağımsız doğrulamasını güvenilir yapar. Salt okunur doğrulayıcı sandbox'ında geçici klasör açamadığından artık diff ile birlikte host'taki bütünleştirme sonuçlarını alır ve test süitlerini yeniden koşmaya çalışmak yerine bunlara göre karar verir.
+
+### Neler Değişti
+
+- **Doğrulayıcı promptu.** Host bütünleştirme sonuçları (kontrol başına geçti ya da düştü, düşenler için kısa ve temizlenmiş çıktı) doğrulama brifinin parçasıdır; yazan test süitlerini yeniden koşmama kuralı açıkça yazılıdır.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.3 - 2026-10-14
 
 AgentChef 1.7.3 bir takım koşusunun Codex kullanım sınırından sonra sürmesini sağlar. Sınır sıfırlanınca `resume`, duraklayan işçileri aynı worktree'lerde kayıtlı Codex oturumlarından sürdürür; plan özeti denetlendiği için onaylanan plan değiştirilemez.
@@ -8,8 +18,6 @@ AgentChef 1.7.3 bir takım koşusunun Codex kullanım sınırından sonra sürme
 
 - **Resume.** `team-run resume --run <runId>` (ya da `beyin takim resume --run <runId>`) yalnız kullanım sınırının durdurduğu işçileri yeniden sıraya alır ve her birini kayıtlı oturumunda sürdürür.
 - **Belgeler.** Gözetmen skill'i ve operatör rehberleri ne zaman sürdürülüp ne zaman toplanacağını anlatır.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.2 - 2026-10-14
 

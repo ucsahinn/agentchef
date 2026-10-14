@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.3** kullanım sınırıyla duraklayan takım koşuları için `resume` ekler: aynı plan ve worktree'ler, her işçi kayıtlı Codex oturumunda.
+Geliştirme sürümü **v1.7.4** salt okunur doğrulayıcıya host'taki bütünleştirme sonuçlarını verir; doğrulama artık sandbox'ın koşamadığı test süitlerine bağlı değildir.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

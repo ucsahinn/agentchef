@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.3** adds `resume` for team runs paused by a usage limit: the same plan and worktrees, each worker on its saved Codex thread.
+Development version **v1.7.4** gives the read-only verifier the host's integration results, so verification no longer depends on re-running suites its sandbox cannot run.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

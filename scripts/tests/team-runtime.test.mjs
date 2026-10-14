@@ -123,3 +123,15 @@ test("team text classifier fails closed with category label", () => {
   assert.throws(() => assertTeamTextSafe(["ghp_", "123456789012345678901234567890"].join("")), /github-token/);
   assert.equal(assertTeamTextSafe("ordinary brief"), "ordinary brief");
 });
+
+test("verifier prompt carries host integration results and tells the verifier not to re-run writing suites", () => {
+  const brief = "Goal: g\nEvidence: e\nWrite scope: src/\nBoundaries: b\nDone when: d\nReturn format: r\nUser's words: u";
+  const prompt = composeVerifierPrompt({ runId: "R1", brief, checks: ["node --test a.test.mjs"], hostResults: [{ command: "node --test a.test.mjs", status: 0, tail: "" }, { command: "node scripts/validate-docs.mjs", status: 1, tail: "\u001b[31mbroken link\u001b[0m docs/x.md" }] });
+  assert.match(prompt, /## Host integration results/);
+  assert.match(prompt, /- PASS node --test a\.test\.mjs/);
+  assert.match(prompt, /- FAIL \(exit 1\) node scripts\/validate-docs\.mjs/);
+  assert.match(prompt, /broken link docs\/x\.md/);
+  assert.doesNotMatch(prompt, /\u001b/);
+  assert.match(prompt, /do not re-run test suites/);
+  assert.doesNotMatch(composeVerifierPrompt({ runId: "R1", brief }), /Host integration results/);
+});

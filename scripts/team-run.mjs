@@ -696,7 +696,10 @@ async function verifyCommand(options) {
   const task = run.workers[0];
   const brief = readPlanForRun(options.state, run).workers.find((worker) => worker.taskId === task.taskId)?.briefText;
   if (!brief) throw new Error("Validated verifier brief is unavailable.");
-  const prompt = composeVerifierPrompt({ runId: run.runId, brief, checks: run.checks });
+  // Hand the verifier the host's integration results: its read-only sandbox cannot create temp directories, so it
+  // must not depend on re-running suites that write (2026-10-14: every Codex verification came back partial).
+  const hostResults = (run.integration?.checks || []).map((check) => ({ command: check.command, status: check.status, tail: Number(check.status) === 0 ? "" : `${check.stdout || ""}${check.stderr || ""}` }));
+  const prompt = composeVerifierPrompt({ runId: run.runId, brief, checks: run.checks, hostResults });
   const integrationCommit = git(["rev-parse", "HEAD"], run.integrationWorktree);
   if (run.integration.commit && integrationCommit !== run.integration.commit) throw new Error("Integration worktree changed after integration checks.");
   const schema = path.join(run.worktreeRoot, "verifier.schema.json"), final = path.join(run.worktreeRoot, "verification.final.json");

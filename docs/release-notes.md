@@ -1,5 +1,15 @@
 # Release Notes
 
+## v1.7.4 - 2026-10-14
+
+AgentChef 1.7.4 makes independent verification of team runs reliable. The read-only verifier cannot create temp directories in its sandbox, so it now receives the host's integration results with the diff and judges from those instead of trying to re-run test suites.
+
+### What Changed
+
+- **Verifier prompt.** Host integration results (pass or fail per check, a short sanitized tail for failures) are part of the verification brief, with an explicit rule not to re-run writing suites.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.3 - 2026-10-14
 
 AgentChef 1.7.3 lets a team run continue after a Codex usage limit. When the limit resets, `resume` picks up the paused workers on their saved Codex threads in the same worktrees, with the plan hash checked so the approved plan cannot change.
@@ -8,8 +18,6 @@ AgentChef 1.7.3 lets a team run continue after a Codex usage limit. When the lim
 
 - **Resume.** `team-run resume --run <runId>` (or `beyin takim resume --run <runId>`) requeues only the workers a usage limit paused and continues each on its saved thread.
 - **Docs.** The conductor skill and the operator guides explain when to resume and when to collect instead.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.2 - 2026-10-14
 
