@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.6** lets `resume` recover a team run left running after a sleep, crash or restart: orphaned workers continue their saved Codex thread in the same worktree.
+Development version **v1.7.7** adds `resume --wait` (resume when the usage limit resets) and a memory guard that holds queued workers while free RAM is short.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

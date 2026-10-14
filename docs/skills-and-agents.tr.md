@@ -88,7 +88,12 @@ Desteklenen ortam değişkenleri: `AGENTCHEF_TEAM_MODE`,
 `AGENTCHEF_BOARD_STATE`. Worker'lar push yapamaz veya başka agent açamaz.
 Kullanım sınırı worker'ı raporlama için bekletir; sınır sıfırlanınca
 `resume --run <runId>` worker'ı kayıtlı Codex oturumunda, aynı plan ve worktree
-ile sürdürür. Aynı komut, uyku, çökme ya da yeniden başlatma sonrası `running`
+ile sürdürür; `resume --wait` sınır mesajından okunan sıfırlanma saatine (yoksa 30
+dakika, en çok 12 saat) kadar bekler ve sonra sürdürür, `status` bu saati `resumeAt`
+olarak gösterir. Gözetmen boş RAM azken sıradaki worker'ları bekletir (worker
+başına yaklaşık 1,5 GB artı 2 GB pay; payı `AGENTCHEF_TEAM_MIN_FREE_MB` değiştirir,
+`AGENTCHEF_TEAM_MEMORY_GUARD=off` kapatır); hiç worker çalışmıyorsa biri her zaman
+başlar. Aynı komut, uyku, çökme ya da yeniden başlatma sonrası `running`
 kalmış ve gözetmen nabzı bir dakikadan eski olan koşuyu da kurtarır. Codex sürecinin sahibi motordur; terminal sekmesi yalnızca izleyicidir.
 Koşuyu durdurmak için `abort`, kaynak temizliği için ayrıca `cleanup` isteyin.
 

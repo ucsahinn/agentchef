@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.6** ile `resume`, uyku, çökme ya da yeniden başlatma sonrası çalışır görünen takım koşusunu kurtarır: sahipsiz işçiler aynı worktree'de kayıtlı Codex oturumuyla sürer.
+Geliştirme sürümü **v1.7.7** `resume --wait` (kota sıfırlanınca sürdür) ve boş RAM azken sıradaki işçileri bekleten bellek korumasını ekler.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve
