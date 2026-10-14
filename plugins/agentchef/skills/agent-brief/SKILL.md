@@ -56,6 +56,8 @@ field; never drop a label. A filled-in example is in
 - **Return format** (Dönüş biçimi): the six handoff fields below, on one line.
 - **User's words** (Kullanıcının özgün cümlesi): the user's request copied
   verbatim, never paraphrased.
+- **Environment traps** (Ortam tuzakları) and **Isolation** (İzolasyon) are
+  optional brief fields for shell, runtime, data, or workspace constraints.
 
 Check it before sending:
 
@@ -80,11 +82,20 @@ The receiving agent returns exactly these six, in this order:
    user, and any `needs: <role>` request.
 6. **Next verification** (Sıradaki doğrulama): the next check worth running.
 
+Handoffs may also include **Verdict** (Sonuç sınıfı): `VERIFIED`, `REFUTED`,
+`UNMEASURED`, or board statuses `PASS`, `WARN`, `PARTIAL`, `BLOCKED`, `FAIL`.
+Turkish labels and values are accepted. **Mutation check** (Mutasyon kontrolü)
+records changed paths; documentation-only or read-only work uses
+`none - <reason>`. Both are optional in legacy checks and required in strict
+checks. An unknown verdict is reported as a warning.
+
 Check it when it comes back:
 
 ```bash
 npm run coordination:board -- handoff-check --handoff-file handoff.md --json
 ```
+
+Use `--strict` when Verdict and Mutation check are required.
 
 ## Merge and verify
 
@@ -100,7 +111,9 @@ npm run coordination:board -- handoff-check --handoff-file handoff.md --json
   `transition --status done --verified-by <agent>`. If verification fails,
   renew the lease first, then move it back with
   `transition --status in_progress --reason "<why>"`, and update the same brief. A stuck task is `blocked` with a
-  reason; unwanted work is `cancelled`.
+  reason; unwanted work is `cancelled`. After three failed attempts, transition
+  the task to blocked with `transition --status blocked --reason "attempt 3/3: ..."`
+  and record the unresolved decision with `handoff --decision-needed`.
 - Verifier names are typed by the caller, so the board stops honest mistakes,
   not a deliberate impersonation.
 

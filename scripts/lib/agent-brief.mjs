@@ -22,7 +22,9 @@ export const BRIEF_FIELDS = Object.freeze([
   { key: "boundaries", labels: ["Boundaries", "Sınırlar", "Sinirlar"] },
   { key: "doneWhen", labels: ["Done when", "Bitti kriteri"] },
   { key: "returnFormat", labels: ["Return format", "Dönüş biçimi", "Donus bicimi", "Dönüş", "Donus"] },
-  { key: "userWords", labels: ["User's words", "User words", "Kullanıcının özgün cümlesi", "Kullanicinin ozgun cumlesi"] }
+  { key: "userWords", labels: ["User's words", "User words", "Kullanıcının özgün cümlesi", "Kullanicinin ozgun cumlesi"] },
+  { key: "environmentTraps", labels: ["Environment traps", "Ortam tuzakları", "Ortam tuzaklari"], optional: true },
+  { key: "isolation", labels: ["Isolation", "İzolasyon", "Izolasyon"], optional: true }
 ]);
 
 export const HANDOFF_FIELDS = Object.freeze([
@@ -31,8 +33,35 @@ export const HANDOFF_FIELDS = Object.freeze([
   { key: "changedScope", labels: ["Changed scope", "Değişen kapsam", "Degisen kapsam"] },
   { key: "risk", labels: ["Risks", "Risk", "Riskler"] },
   { key: "openQuestions", labels: ["Open questions", "Open question", "Unresolved questions", "Açık sorular", "Acik sorular", "Açık soru", "Acik soru"] },
-  { key: "nextVerification", labels: ["Next verification", "Next verification need", "Sıradaki doğrulama", "Siradaki dogrulama", "Sonraki doğrulama", "Sonraki dogrulama"] }
+  { key: "nextVerification", labels: ["Next verification", "Next verification need", "Sıradaki doğrulama", "Siradaki dogrulama", "Sonraki doğrulama", "Sonraki dogrulama"] },
+  { key: "verdict", labels: ["Verdict", "Sonuç sınıfı", "Sonuc sinifi"], optional: true },
+  { key: "mutationCheck", labels: ["Mutation check", "Mutasyon kontrolü", "Mutasyon kontrolu"], optional: true }
 ]);
+
+const VERDICTS = new Map([
+  ["verified", "VERIFIED"], ["dogrulandi", "VERIFIED"],
+  ["refuted", "REFUTED"], ["curutuldu", "REFUTED"],
+  ["unmeasured", "UNMEASURED"], ["olculemedi", "UNMEASURED"],
+  ...["pass", "warn", "partial", "blocked", "fail"].map((value) => [value, value.toUpperCase()])
+]);
+
+function normalizeVerdict(value) {
+  return VERDICTS.get(fold(value.trim()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")) ?? null;
+}
+
+function isMutationCheckValid(value) {
+  return /^none\s*-\s*\S[\s\S]*$/i.test(value.trim()) || value.trim().length > 0;
+}
+
+export function validateVerdictAndMutation(text) {
+  const parsed = parseFields(text, HANDOFF_FIELDS);
+  const verdict = normalizeVerdict(parsed.fields.verdict ?? "");
+  const mutationCheck = parsed.fields.mutationCheck ?? "";
+  const errors = [];
+  if (!verdict) errors.push("Verdict must be one of VERIFIED, REFUTED, UNMEASURED, PASS, WARN, PARTIAL, BLOCKED, FAIL.");
+  if (!isMutationCheckValid(mutationCheck)) errors.push("Mutation check must describe changed paths or use none - <reason>.");
+  return { verdict, mutationCheck, errors };
+}
 
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -59,7 +88,7 @@ function labelPattern(fields) {
   return { pattern, keyFor };
 }
 
-function parseFields(text, fields) {
+function parseFields(text, fields, { strict = false } = {}) {
   const { pattern, keyFor } = labelPattern(fields);
   const values = {};
   let current = null;
@@ -79,14 +108,18 @@ function parseFields(text, fields) {
     if (current) values[current] = `${values[current]}\n${line}`;
   }
   const trimmed = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.trim()]));
-  const missing = fields.filter((field) => !trimmed[field.key]).map((field) => field.labels[0]);
-  return { ok: missing.length === 0, fields: trimmed, missing };
+  const required = fields.filter((field) => !field.optional || strict);
+  const missing = required.filter((field) => !trimmed[field.key]).map((field) => field.labels[0]);
+  const warnings = [];
+  if (trimmed.verdict && !normalizeVerdict(trimmed.verdict)) warnings.push(`Unknown verdict: ${trimmed.verdict}`);
+  else if (trimmed.verdict) trimmed.verdict = normalizeVerdict(trimmed.verdict);
+  return { ok: missing.length === 0, fields: trimmed, missing, warnings };
 }
 
 export function parseBrief(text) {
   return parseFields(text, BRIEF_FIELDS);
 }
 
-export function parseHandoff(text) {
-  return parseFields(text, HANDOFF_FIELDS);
+export function parseHandoff(text, { strict = false } = {}) {
+  return parseFields(text, HANDOFF_FIELDS, { strict });
 }
