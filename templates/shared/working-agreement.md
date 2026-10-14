@@ -10,6 +10,7 @@
 - Use `rg` or `rg --files` first. Keep reads and edits scoped.
 - Preserve user work; never revert, overwrite, delete, clean, prune, or reformat unrelated changes.
 - Do not commit, push, publish, deploy, rotate secrets, or stop user processes unless explicitly requested.
+- A Beyin kill guard may hard-block name-based process kills; target a PID instead.
 <!-- target:codex -->
 - On Windows, programmatic command execution should resolve `npm.cmd`, `npx.cmd`, and `codex.cmd` safely.
 <!-- /target:codex -->
@@ -60,6 +61,8 @@
 - The parent session runs every coordination-board command; coordinators and workers never do, and no agent creates a board task the user did not ask for.
 - Brief fields, one brief per worker: Goal, Evidence, Write scope, Boundaries, Done when (the stop condition), Return format, and the user's words verbatim (the `agent-brief` skill; `coordination-board brief-check` checks one).
 - Handoff fields: workers return exactly six labeled fields, in order: Outcome, Evidence (commands, paths, observations), Changed scope (`none` if nothing changed), Risks, Open questions, Next verification (`coordination-board handoff-check` checks one). Workers do not message peer coordinators or delegate further.
+- Board handoffs carry a Verdict and a Mutation check (`none - <reason>` for documentation-only work).
+- If a Beyin vault is present (`~/.beyin/vault.txt`), drive the board only through `beyin pano`; it uses the shared state file and the human-approval gate.
 - A board task needs an owner to start and evidence to reach review. It closes only with evidence, a linked report, resolved decisions, and `--verified-by` naming an agent that did not do the work: never the owner, its session, or its coordinator. Pick the verifier by work type: `test_verifier` for checks, `code_reviewer` for diffs, `frontend_verifier` for UI, `security_auditor` for security, or the user.
 - Failed verification sends the task back (`review` to `in_progress` with `--reason`); a stuck task is `blocked` with a reason, and unwanted work is `cancelled`. No coordinator, worker, profile, or pane may auto-start, auto-complete, or infer approval.
 
