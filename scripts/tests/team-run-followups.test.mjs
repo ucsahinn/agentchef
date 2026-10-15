@@ -167,3 +167,6 @@ test("resume recovers a running run whose supervisor and worker died (crash, sle
 test("integrate --recheck is accepted and refuses anything but a failed integration",()=>{
   const missing=node(cli,["integrate","--recheck","--state","unused.json","--json","--run","R-missing"]); assert.notEqual(missing.status,0); assert.doesNotMatch(missing.stderr||missing.stdout,/does not accept --recheck/);
 });
+test("integrate --recheck --covers is accepted and validates its target",()=>{
+  const bad=node(cli,["integrate","--recheck","--covers","TASK-X","--state","unused.json","--json","--run","R-missing"]); assert.notEqual(bad.status,0); assert.doesNotMatch(bad.stderr||bad.stdout,/does not accept --covers/);
+});

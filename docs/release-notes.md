@@ -1,5 +1,15 @@
 # Release Notes
 
+## v1.7.9 - 2026-10-15
+
+AgentChef 1.7.9 lets a team run recover when a worker finishes without changes.
+
+### What Changed
+
+- **`integrate --recheck --covers TASK-x`.** The conductor completes the failed worker's scope in the integration branch, commits, and records it. The engine checks that the repair stays inside that worker's write scope and the plan; verification and the merge approval still apply.
+
+This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
+
 ## v1.7.8 - 2026-10-14
 
 AgentChef 1.7.8 closes the repair loop of a team run and adds the regression tests that its first live run produced.
@@ -8,8 +18,6 @@ AgentChef 1.7.8 closes the repair loop of a team run and adds the regression tes
 
 - **`integrate --recheck`.** After the conductor repairs a failed integration and commits the fix, the checks run again and the run can go on to verification.
 - **Regression tests.** Memory guard at supervisor level and usage-limit parser edge cases, written by two Codex workers in team run R20261014-d760.
-
-This page follows the release users should install now. Older engineering history remains available in [CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG-0.5.md](../CHANGELOG-0.5.md), so the public release guide stays useful instead of becoming an ever-growing archive.
 
 ## v1.7.7 - 2026-10-14
 

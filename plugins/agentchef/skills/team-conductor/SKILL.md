@@ -47,7 +47,11 @@ and opens the run and worker panels. Without Beyin, `doctor` reports a failing
    its saved Codex thread); `resume --wait` waits for the reset time read from
    the limit message (or 30 minutes, at most 12 hours) and then resumes. If an
    integration check fails and you repair the integration branch yourself,
-   commit the repair and run `integrate --recheck`; never merge it by hand. If the machine slept, crashed or restarted and the
+   commit the repair and run `integrate --recheck`; never merge it by hand.
+   If a worker finished without changes (for example it only diagnosed), finish
+   its scope yourself in the integration branch, commit, and run
+   `integrate --recheck --covers TASK-x`. Tell implementing roles to change
+   code, not only diagnose it. If the machine slept, crashed or restarted and the
    run shows `running` with no supervisor heartbeat, the same `resume`
    recovers it: orphaned workers continue their saved thread in the same
    worktree. After abort, run cleanup only if the user asks.

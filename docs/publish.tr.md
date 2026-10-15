@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.8** şefin onardığı bütünleştirme için `integrate --recheck` ve bellek koruması ile kota ayrıştırıcısı için regresyon testleri ekler.
+Geliştirme sürümü **v1.7.9** `integrate --recheck --covers TASK-x` ekler: işçisi yalnız teşhis yapan bir koşu, şef o işçinin kapsamını tamamladıktan sonra yine doğrulanabilir.
 
 ## Commit Veya Push Öncesi
 

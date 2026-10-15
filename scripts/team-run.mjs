@@ -28,7 +28,7 @@ const COMMANDS = {
   start: ["run", "state"], status: ["run", "state", "watch-seconds"],
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
-  integrate: ["run", "state", "check", "recheck"], verify: ["run", "state", "max-minutes", "detach"],
+  integrate: ["run", "state", "check", "recheck", "covers"], verify: ["run", "state", "max-minutes", "detach"],
   merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state", "wait"],
   cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
   doctor: ["state"]
@@ -757,8 +757,26 @@ function recheckIntegration(options, file, run) {
   const integrationCommit = git(["rev-parse", "HEAD"], cwd);
   const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
   fs.writeFileSync(path.join(runDir, "integration.diff"), diff, "utf8"); fs.writeFileSync(path.join(runDir, "integration.stat"), stat, "utf8");
-  const ok = checksOk && run.workers.every((worker) => worker.status === "integrated");
-  updateRunRecord(file, (current) => ({ ...current, integration: { ...current.integration, checks, ok, diffStat: stat, commit: integrationCommit }, history: [...current.history, { at: now(), event: "integration_rechecked", ok, commit: integrationCommit }] }));
+  // --covers TASK-x: the conductor completed a FAILED worker's scope in the integration branch (for example a worker that
+  // only diagnosed). Accepted only when the repair commits since the recorded integration touch that worker's write
+  // scope and nothing outside the plan's write scopes. Verification and the user's merge approval still apply.
+  const covers = (options.covers ? String(options.covers).split(",") : []).map((value) => value.trim()).filter(Boolean);
+  const covered = [];
+  if (covers.length) {
+    const repairPaths = git(["-c", "core.quotePath=false", "diff", "--name-only", `${run.integration.commit}..HEAD`], cwd).split(/\r?\n/).filter(Boolean);
+    const planScopes = run.workers.flatMap((worker) => worker.writeScope || []);
+    const outside = repairPaths.filter((file) => !pathWithinScope(file, planScopes));
+    if (outside.length) throw new Error(`Conductor repair changed files outside the plan's write scopes: ${outside.join(", ")}`);
+    for (const taskId of covers) {
+      const worker = run.workers.find((item) => item.taskId === taskId);
+      if (!worker) throw new Error(`Unknown worker in --covers: ${taskId}`);
+      if (!["failed", "timed_out", "rejected_content"].includes(worker.status)) throw new Error(`--covers accepts only a failed worker; ${taskId} is ${worker.status}.`);
+      if (!repairPaths.some((file) => pathWithinScope(file, worker.writeScope || []))) throw new Error(`The conductor repair does not touch ${taskId}'s write scope.`);
+      covered.push(taskId);
+    }
+  }
+  const ok = checksOk && run.workers.every((worker) => worker.status === "integrated" || covered.includes(worker.taskId));
+  updateRunRecord(file, (current) => ({ ...current, integration: { ...current.integration, checks, ok, diffStat: stat, commit: integrationCommit, ...(covered.length ? { coveredByConductor: covered } : {}) }, history: [...current.history, { at: now(), event: "integration_rechecked", ok, commit: integrationCommit, ...(covered.length ? { coveredByConductor: covered } : {}) }] }));
   output({ ok, run: readRun(options.state, options.run), conflicts: [], checks, rechecked: true }, options.json);
   return ok ? 0 : 4;
 }
