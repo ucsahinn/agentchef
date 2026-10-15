@@ -91,7 +91,9 @@ Kullanım sınırı worker'ı raporlama için bekletir; sınır sıfırlanınca
 ile sürdürür; `resume --wait` sınır mesajından okunan sıfırlanma saatine (yoksa 30
 dakika, en çok 12 saat) kadar bekler ve sonra sürdürür, `status` bu saati `resumeAt`
 olarak gösterir. Düşen bir bütünleştirmeyi şef onardıktan sonra `integrate --recheck`
-kontrolleri commitlenmiş bütünleştirme dalında yeniden çalıştırır. Gözetmen boş RAM azken sıradaki worker'ları bekletir (worker
+kontrolleri commitlenmiş bütünleştirme dalında yeniden çalıştırır; `--covers TASK-x`
+şefin başarısız bir işçinin kapsamını orada tamamladığını kaydeder (yalnız o işçinin yazma
+kapsamı, planın dışı yok), böylece koşu doğrulamaya ve kullanıcının birleştirme onayına gidebilir. Gözetmen boş RAM azken sıradaki worker'ları bekletir (worker
 başına yaklaşık 1,5 GB artı 2 GB pay; payı `AGENTCHEF_TEAM_MIN_FREE_MB` değiştirir,
 `AGENTCHEF_TEAM_MEMORY_GUARD=off` kapatır); hiç worker çalışmıyorsa biri her zaman
 başlar. Aynı komut, uyku, çökme ya da yeniden başlatma sonrası `running`

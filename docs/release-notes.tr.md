@@ -1,5 +1,15 @@
 # Sürüm Notları
 
+## v1.7.9 - 2026-10-15
+
+AgentChef 1.7.9, bir işçi değişiklik üretmeden bittiğinde takım koşusunun toparlanmasını sağlar.
+
+### Neler Değişti
+
+- **`integrate --recheck --covers TASK-x`.** Şef başarısız işçinin kapsamını bütünleştirme dalında tamamlar, commitler ve kaydeder. Motor onarımın o işçinin yazma kapsamında ve plan içinde kaldığını denetler; doğrulama ve birleştirme onayı aynen geçerlidir.
+
+Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
+
 ## v1.7.8 - 2026-10-14
 
 AgentChef 1.7.8 takım koşusunun onarım döngüsünü kapatır ve ilk canlı koşunun ürettiği regresyon testlerini ekler.
@@ -8,8 +18,6 @@ AgentChef 1.7.8 takım koşusunun onarım döngüsünü kapatır ve ilk canlı k
 
 - **`integrate --recheck`.** Şef düşen bir bütünleştirmeyi onarıp commitledikten sonra kontroller yeniden çalışır ve koşu doğrulamaya geçebilir.
 - **Regresyon testleri.** Gözetmen düzeyinde bellek koruması ve kota ayrıştırıcısı uç durumları; R20261014-d760 koşusunda iki Codex işçisi yazdı.
-
-Bu sayfa kullanıcıların şimdi kurması gereken sürümü anlatır. Eski mühendislik geçmişi [CHANGELOG.md](../CHANGELOG.md) ve [CHANGELOG-0.5.md](../CHANGELOG-0.5.md) içinde korunur; böylece public sürüm rehberi büyüyen bir arşive dönüşmeden güncel kalır.
 
 ## v1.7.7 - 2026-10-14
 

@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.8** şefin onardığı bütünleştirme için `integrate --recheck` ve bellek koruması ile kota ayrıştırıcısı için regresyon testleri ekler.
+Geliştirme sürümü **v1.7.9** `integrate --recheck --covers TASK-x` ekler: işçisi yalnız teşhis yapan bir koşu, şef o işçinin kapsamını tamamladıktan sonra yine doğrulanabilir.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

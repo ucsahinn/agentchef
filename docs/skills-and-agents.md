@@ -102,7 +102,9 @@ continues it on its saved Codex thread with the same plan and worktree;
 `resume --wait` sleeps until the reset time read from the limit message (or 30
 minutes when none is given, at most 12 hours), and `status` shows that time as
 `resumeAt`. After a conductor repair of a failed integration, `integrate --recheck`
-reruns the checks on the committed integration branch. The supervisor also holds queued workers while free RAM is short
+reruns the checks on the committed integration branch; `--covers TASK-x` records that
+the conductor completed a failed worker's scope there (only that worker's write scope, nothing
+outside the plan), so the run can still go to verification and the user's merge approval. The supervisor also holds queued workers while free RAM is short
 (about 1.5 GB per worker plus a 2 GB reserve, `AGENTCHEF_TEAM_MIN_FREE_MB`
 overrides the reserve, `AGENTCHEF_TEAM_MEMORY_GUARD=off` disables it); one
 worker always starts when none is running. The same
