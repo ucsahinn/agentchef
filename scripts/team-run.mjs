@@ -64,7 +64,29 @@ function parse(argv) {
   if (command === "abort" && !options.reason) throw new CliUsageError("abort requires --reason.");
   return { command, options };
 }
-function output(value, json = true) { if (json) process.stdout.write(`${JSON.stringify(value, null, 2)}\n`); else process.stdout.write(`${String(value)}\n`); }
+// Without --json every command used to print "[object Object]": output() stringified the result object.
+// The plain form is now a short human summary; --json stays the machine contract.
+function formatRunLines(run) {
+  const lines = [`run ${run.runId}  ${run.status || "?"}${run.repoName ? `  repo ${run.repoName}` : ""}${run.baseBranch ? `  base ${run.baseBranch}` : ""}`];
+  for (const worker of run.workers || []) lines.push(`  ${worker.taskId || "?"}  ${worker.role || ""}  ${worker.status || "?"}${worker.verdict ? `  verdict ${worker.verdict}` : ""}`.replace(/ {3,}/g, "  "));
+  return lines;
+}
+function formatHuman(value) {
+  if (value === null || typeof value !== "object") return String(value);
+  if (Array.isArray(value)) return value.map((entry) => formatHuman(entry)).join("\n---\n");
+  const lines = [];
+  if ("ok" in value) lines.push(value.ok ? "ok" : "not ok");
+  if (value.run && typeof value.run === "object" && value.run.runId) lines.push(...formatRunLines(value.run));
+  if (value.supervisor && typeof value.supervisor === "object" && "alive" in value.supervisor) lines.push(`supervisor ${value.supervisor.alive ? "alive" : "not alive"}${Number.isFinite(value.supervisor.heartbeatAgeMs) ? `, heartbeat ${Math.round(value.supervisor.heartbeatAgeMs / 1000)}s ago` : ""}`);
+  for (const warning of Array.isArray(value.warnings) ? value.warnings : []) lines.push(`warning ${warning.taskId || ""}: outside write scope: ${(warning.outsideScope || []).join(", ")}`);
+  for (const check of Array.isArray(value.checks) ? value.checks : []) lines.push(`  ${check.status === "pass" || check.ok === true ? "pass" : check.status || (check.ok === false ? "fail" : "?")}  ${check.id || check.name || check.command || ""}${check.detail ? `  ${check.detail}` : ""}`);
+  for (const [key, entry] of Object.entries(value)) {
+    if (["ok", "run", "supervisor", "warnings", "checks"].includes(key) || entry === null || entry === undefined) continue;
+    lines.push(`${key}: ${typeof entry === "object" ? JSON.stringify(entry) : String(entry)}`);
+  }
+  return lines.join("\n");
+}
+function output(value, json = true) { if (json) process.stdout.write(`${JSON.stringify(value, null, 2)}\n`); else process.stdout.write(`${formatHuman(value)}\n`); }
 function runFile(state, runId) { return path.join(path.dirname(path.resolve(state)), "team-runs", `${runId}.json`); }
 function readRun(state, runId) {
   if (typeof runId !== "string" || !safeRunId(runId)) throw new CliUsageError("Invalid run identifier.");

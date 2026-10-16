@@ -1,5 +1,13 @@
 # Sürüm Notları
 
+## v1.7.10 - 2026-10-16
+
+AgentChef 1.7.10, team-run çıktısını düz terminalde okunur yapar.
+
+### Neler Değişti
+
+- **Okunur `team-run` çıktısı.** `--json` olmadan her komut `[object Object]` basıyordu. Artık kısa bir özet basar: koşu, işçi başına bir satır, gözetmen durumu, kapsam uyarıları ve kontroller. `--json` çıktısı değişmedi.
+
 ## v1.7.9 - 2026-10-15
 
 AgentChef 1.7.9, bir işçi değişiklik üretmeden bittiğinde takım koşusunun toparlanmasını sağlar.

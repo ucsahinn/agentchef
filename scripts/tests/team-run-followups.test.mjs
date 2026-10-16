@@ -170,3 +170,23 @@ test("integrate --recheck is accepted and refuses anything but a failed integrat
 test("integrate --recheck --covers is accepted and validates its target",()=>{
   const bad=node(cli,["integrate","--recheck","--covers","TASK-X","--state","unused.json","--json","--run","R-missing"]); assert.notEqual(bad.status,0); assert.doesNotMatch(bad.stderr||bad.stdout,/does not accept --covers/);
 });
+
+test("plain output (no --json) is a human summary, never [object Object]", (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-plain-")); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const state = path.join(dir, "board.json");
+  fs.mkdirSync(path.join(dir, "team-runs"), { recursive: true });
+  const record = { schemaVersion: 1, revision: 1, runId: "R-plain", status: "collected", repoName: "demo", baseBranch: "main", supervisor: {}, workers: [{ taskId: "TASK-1", role: "qa_lead", status: "collected", verdict: "pass" }], history: [] };
+  fs.writeFileSync(path.join(dir, "team-runs", "R-plain.json"), `${JSON.stringify(record, null, 2)}\n`);
+  const cli = path.join(root, "scripts/team-run.mjs");
+  const status = node(cli, ["status", "--state", state, "--run", "R-plain"]);
+  assert.equal(status.status, 0, status.stderr);
+  assert.doesNotMatch(status.stdout, /\[object Object\]/);
+  assert.match(status.stdout, /^ok$/m);
+  assert.match(status.stdout, /run R-plain {2}collected {2}repo demo/);
+  assert.match(status.stdout, /TASK-1 {2}qa_lead {2}collected {2}verdict pass/);
+  assert.match(status.stdout, /supervisor not alive/);
+  const json = node(cli, ["status", "--state", state, "--run", "R-plain", "--json"]);
+  assert.equal(JSON.parse(json.stdout).run.runId, "R-plain");
+  const doctor = node(cli, ["doctor", "--state", state]);
+  assert.doesNotMatch(doctor.stdout, /\[object Object\]/);
+});

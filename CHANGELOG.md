@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.10 - 2026-10-16
+
+- Every `team-run` command printed `[object Object]` without `--json`: `output()` stringified the result object. The plain form is now a short human summary: ok / not ok, the run line (id, status, repo, base), one line per worker (task, role, status, verdict), supervisor liveness and heartbeat age, scope warnings, checks, and any remaining fields. `--json` is unchanged. Regression test runs `status` without `--json` against a run record.
+
 ## 1.7.9 - 2026-10-15
 
 - `team-run integrate --recheck --covers TASK-x` records that the conductor completed a failed worker's scope in the integration branch (seen live in R20261015-4368: a root_cause_debugger worker only diagnosed and produced no changes, so the run could never reach verification). Accepted only for a failed, timed-out or rejected worker, only when the repair commits since the recorded integration touch that worker's write scope, and refused when they touch anything outside the plan's write scopes. The integration record and history carry `coveredByConductor`; independent verification and the user's merge approval are unchanged.
