@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.9** `integrate --recheck --covers TASK-x` ekler: işçisi yalnız teşhis yapan bir koşu, şef o işçinin kapsamını tamamladıktan sonra yine doğrulanabilir.
+Geliştirme sürümü **v1.7.10** her `team-run` komutunu `--json` olmadan da okunur yapar: düz çıktı `[object Object]` idi, artık kısa bir özet (koşu, işçiler, gözetmen, uyarılar, kontroller).
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

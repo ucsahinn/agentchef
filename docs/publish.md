@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.9** adds `integrate --recheck --covers TASK-x`: a run whose worker only diagnosed can still be verified after the conductor completes that worker's scope.
+Development version **v1.7.10** makes every `team-run` command readable without `--json`: the plain output was `[object Object]`, it is now a short summary (run, workers, supervisor, warnings, checks).
 
 ## Before Commit Or Push
 

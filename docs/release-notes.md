@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.7.10 - 2026-10-16
+
+AgentChef 1.7.10 makes team-run readable in a plain terminal.
+
+### What Changed
+
+- **Readable `team-run` output.** Without `--json` every command used to print `[object Object]`. It now prints a short summary: the run, one line per worker, supervisor liveness, scope warnings and checks. `--json` output is unchanged.
+
 ## v1.7.9 - 2026-10-15
 
 AgentChef 1.7.9 lets a team run recover when a worker finishes without changes.

@@ -11,7 +11,7 @@ Discovery ciktisi no-write ve okunabilir kalir:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.7.9
+Package: agentchef@1.7.10
 Platform: windows
 Targets: codex
 
@@ -27,7 +27,7 @@ plugin kaynak ağacı, Git guard'ları, curated skill'ler) bir kez sayılır:
 
 ```text
 AgentChef install profiles
-Package: agentchef@1.7.9
+Package: agentchef@1.7.10
 Platform: windows
 Targets: codex, claude
 
