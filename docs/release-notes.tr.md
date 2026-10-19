@@ -1,5 +1,13 @@
 # Sürüm Notları
 
+## v1.8.3 - 2026-10-19
+
+AgentChef 1.8.3 Windows takım koşusu işçilerinin yeniden metin çıkarabilmesini sağlar.
+
+### Neler Değişti
+
+- **Tırnaksız okuma.** Windows PowerShell 5.1 yerel program argümanlarındaki çift tırnakları sildiği için tırnaklı arama kalıpları hiçbir şey bulmuyordu. İşçiler artık düz bir kelimeyi `rg -n -F` ile (bağlam satırlarıyla) arar ya da `git show` ile okur; `node -e` kullanmaz.
+
 ## v1.8.2 - 2026-10-19
 
 AgentChef 1.8.2 bir 1.8.1 gerilemesini düzeltir ve sıfır kapasite durumunu açık hale getirir.

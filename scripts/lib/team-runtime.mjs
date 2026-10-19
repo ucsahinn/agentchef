@@ -119,9 +119,14 @@ function formatBrief(brief) {
 // console code page, so Turkish text arrives garbled (run R20261019-4384 reported intact text as corrupted), and .NET
 // calls such as [Console]::OutputEncoding fail in that mode (1.8.1 told workers to use one and run R20261019-cffa could
 // read nothing). Native programs write their bytes straight through, so workers read file text only with these.
-// scripts/tests/team-runtime.test.mjs runs every form below in ConstrainedLanguage mode and checks Turkish text.
-export const WINDOWS_TEXT_READS = ["rg -n -F '<text>' <path>", "git show HEAD:<path>", "git grep -n -F '<text>'", "node -e \"process.stdout.write(require('fs').readFileSync('<path>','utf8'))\""];
-export const WINDOWS_UTF8_RULE = `\n- On Windows your commands run in Windows PowerShell 5.1 in ConstrainedLanguage mode: .NET calls such as [Console]::... fail there, and every cmdlet that prints file text (Get-Content, also with -Encoding UTF8, Select-String, Write-Output) garbles non-ASCII characters. Read and search file text only with native programs, whose bytes pass through unchanged: ${WINDOWS_TEXT_READS.map((item) => `\`${item}\``).join(", ")}, or \`cmd /c type <path>\`. Use \`rg -F\` (fixed string) for literal text and for Windows paths, whose backslashes break a regex. Ignore profile load errors. Never report broken characters or an encoding defect unless one of these native reads shows it; treat a CRLF/LF difference as line endings, not content`;
+// Windows PowerShell 5.1 also drops double quotes inside arguments it passes to native programs, so `rg 'key: "x"'`
+// matched nothing and every `node -e "..."` broke (run R20261019-9b83); in a real Codex read-only sandbox (2026-10-19)
+// `rg -n 'key: "guide-pam"'` exited 1 while `rg -n -F guide-pam` found the line. Codex also loads the user's profile,
+// which fails in that mode and prefixes output with errors. Every form below is quote-free, and the bundled rg is the
+// one program that ran in every sandbox probe. scripts/tests/team-runtime.test.mjs runs each form in ConstrainedLanguage
+// mode, checks Turkish text, and checks that none of them contains a double quote.
+export const WINDOWS_TEXT_READS = ["rg -n -F <word> <path>", "rg -n -F -A 120 <word> <path>", "rg -n -F -B 5 -A 40 <word> <path>", "rg -n . <path>", "git show HEAD:<path>"];
+export const WINDOWS_UTF8_RULE = `\n- On Windows your commands run in Windows PowerShell 5.1 in ConstrainedLanguage mode: .NET calls such as [Console]::... fail, every cmdlet that prints file text (Get-Content, also with -Encoding UTF8, Select-String, Write-Output) garbles non-ASCII characters, and a double quote inside an argument to a native program is dropped, so \`rg 'key: "x"'\` matches nothing and \`node -e "..."\` breaks. Read and search file text only with these quote-free forms: ${WINDOWS_TEXT_READS.map((item) => `\`${item}\``).join(", ")} (\`rg -n .\` prints the whole file with line numbers). Search for a plain word that sits inside the quotes (\`guide-pam\`, not \`key: "guide-pam"\`), never put a double quote in a command argument, and do not use \`node -e\`. Ignore profile load errors at the top of command output. Never report broken characters or an encoding defect unless one of these reads shows it; treat a CRLF/LF difference as line endings, not content`;
 function teamRules(language, platform) {
   const configured = language ?? CONTRACT.workers.language;
   const languageName = configured || "tr";

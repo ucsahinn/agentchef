@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.3 - 2026-10-19
+
+AgentChef 1.8.3 lets Windows team-run workers extract text again.
+
+### What Changed
+
+- **Quote-free reads.** Windows PowerShell 5.1 drops double quotes inside native-program arguments, so quoted search patterns found nothing. Workers now search for a plain word with `rg -n -F` (with context lines) or read with `git show`, and never use `node -e`.
+
 ## v1.8.2 - 2026-10-19
 
 AgentChef 1.8.2 fixes a 1.8.1 regression and makes the zero-capacity case explicit.

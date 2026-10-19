@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.2** Windows takım koşusu işçilerinin Codex sandbox'ında dosyaları yeniden okuyabilmesini sağlar, canlı kapasite önerisi 0 iken sahip tek işçi istemedikçe koşuyu reddeder ve başlatırken kapasiteyi yeniden ölçer.
+Geliştirme sürümü **v1.8.3** Windows takım koşusu işçilerini tırnaksız okuma biçimleriyle sınırlar; Windows PowerShell 5.1 yerel program argümanlarındaki çift tırnakları siliyor.
 
 ## Commit Veya Push Öncesi
 
