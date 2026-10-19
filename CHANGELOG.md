@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.1 - 2026-10-19
+
+- Windows workers read UTF-8 correctly. Codex runs worker commands through Windows PowerShell 5.1 with `-NoProfile`, whose `Get-Content` reads a UTF-8 file without a BOM as ANSI. A reviewer in run R20261019-4384 reported Turkish text as corrupted when the file was intact. Every Windows worker and verifier prompt now carries the UTF-8 console prefix, `Get-Content -Encoding UTF8`, and a rule to confirm an encoding defect from the file bytes before reporting it. A test round-trips Turkish text through `powershell.exe -NoProfile` with that exact prefix.
+- `merge --as-patch` keeps each file's line endings. Under `core.autocrlf=true`, `git apply` rewrote a whole LF working file as CRLF. LF-only files are now applied with conversion off and the rest with git's defaults; every group is checked first, and a failure reverts the groups already applied. The patch is built with `--no-renames`.
+
 ## 1.8.0 - 2026-10-19
 
 - `team-run plan --snapshot`: a repository with uncommitted work no longer blocks a team run. The working tree (tracked changes plus untracked, non-ignored files) is written through a temporary index into a commit on `refs/agentchef/snapshots/<runId>`, and the workers branch from it. The user's branch, HEAD, index and files are not touched. Untracked credential-like files (`.env`, keys, `auth.json`, ...) refuse the snapshot. A dirty repository without `--snapshot` gets a refusal that names the flag. `cleanup` deletes the snapshot ref.

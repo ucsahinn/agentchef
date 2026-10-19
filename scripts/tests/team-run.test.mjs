@@ -620,3 +620,36 @@ test("worker cap follows the live capacity recommendation and refuses a request 
   const ceiling = planRun({ temp, state, repo, runId: "R-cap-ceiling", scenario: "read-only", workers: workers(9, 150), extraEnv, allowFailure: true });
   assert.notEqual(ceiling.planned.status, 0); assert.match(ceiling.planned.stdout + ceiling.planned.stderr, /1-8 workers/);
 });
+
+// Run R20261019-4384: with core.autocrlf=true the worker worktree checks out CRLF while the owner's files may be LF. A
+// worker edit must stay a line-level diff and must be delivered in the owner's line endings, whichever they are.
+for (const eol of ["\n", "\r\n"]) {
+  const label = eol === "\n" ? "LF" : "CRLF";
+  test(`merge --as-patch keeps line-level edits and the owner's ${label} endings under core.autocrlf=true`, async (t) => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), `team-run-eol-${label}-`)); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+    const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = `R-eol-${label}`; initRepo(repo); writeBoard(state);
+    git(repo, "config", "core.autocrlf", "true");
+    const fixture = path.join(repo, "src", "change.txt"); fs.mkdirSync(path.dirname(fixture), { recursive: true });
+    const lines = (...items) => items.map((item) => `${item}${eol}`).join("");
+    fs.writeFileSync(fixture, lines("context line", "worker original neighbor", "last line"));
+    git(repo, "add", "src/change.txt"); git(repo, "commit", "-m", "fixture");
+    fs.writeFileSync(fixture, lines("context line", "worker original neighbor", "last line")); // the owner's copy keeps its endings
+    fs.writeFileSync(path.join(repo, "notes.txt"), "owner notes\n");
+    const head = git(repo, "rev-parse", "HEAD");
+    const { env } = planRun({ temp, state, repo, runId, scenario: "fixture-context", planArgs: ["--snapshot"], extraEnv: { FAKE_CODEX_CONTEXT_LINE: "context line" } });
+    validApproval(state, runId, "baslat", runCli(state, "status", ["--run", runId]).json.run.plannedAt);
+    assert.equal(runCli(state, "start", ["--run", runId], env).status, 0);
+    await waitForWorker(state, runId);
+    assert.equal(runCli(state, "collect", ["--run", runId], env).status, 0);
+    assert.equal(runCli(state, "integrate", ["--run", runId], env).status, 0);
+    const diff = fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.diff"), "utf8");
+    const changed = diff.split(/\r?\n/).filter((line) => /^[+-](?![+-])/.test(line));
+    assert.deepEqual(changed, ["-worker original neighbor", "-last line", "+worker updated the fixture neighbor"], "only the lines the worker changed, no whole-file line-ending rewrite");
+    assert.equal(runCli(state, "verify", ["--run", runId], env).status, 0);
+    validApproval(state, runId, "birlestir", runCli(state, "status", ["--run", runId]).json.run.plannedAt);
+    const delivered = runCli(state, "merge", ["--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
+    assert.equal(git(repo, "rev-parse", "HEAD"), head);
+    assert.equal(fs.readFileSync(fixture, "utf8"), lines("context line", "worker updated the fixture neighbor"), `applied in the owner's ${label} endings`);
+    await waitForSupervisorStopped(state, runId);
+  });
+}

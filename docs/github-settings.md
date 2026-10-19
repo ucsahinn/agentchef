@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.0** lets a team run work on a repository with uncommitted changes (`plan --snapshot`), deliver without a commit (`merge --as-patch`), and size its workers to the live capacity recommendation instead of a fixed four.
+Development version **v1.8.1** keeps Windows team-run workers from misreading UTF-8 files as mojibake and makes `merge --as-patch` keep each file's own line endings.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

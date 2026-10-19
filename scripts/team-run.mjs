@@ -921,19 +921,30 @@ function deliverAsPatch(options, file, run) {
   if (git(["rev-parse", "HEAD"], run.repo) !== baseHead) throw new Error("The base branch moved since planning; plan a new run on the current commit.");
   const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
   const patchFile = path.join(runDir, "integration.patch");
-  const patch = gitBytes(["-c", "core.quotePath=false", "diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv", run.baseCommit, run.verification.integrationCommit], run.repo);
+  const patch = gitBytes(["-c", "core.quotePath=false", "diff", "--no-renames", "--binary", "--full-index", "--no-ext-diff", "--no-textconv", run.baseCommit, run.verification.integrationCommit], run.repo);
   fs.writeFileSync(patchFile, patch);
-  const paths = git(["-c", "core.quotePath=false", "diff", "--name-only", run.baseCommit, run.verification.integrationCommit], run.repo).split(/\r?\n/).filter(Boolean);
+  const paths = git(["-c", "core.quotePath=false", "diff", "--no-renames", "--name-only", run.baseCommit, run.verification.integrationCommit], run.repo).split(/\r?\n/).filter(Boolean);
+  // Keep each file's line endings. With core.autocrlf=true, git apply rewrites a whole LF working file as CRLF (run
+  // R20261019-4384's owner keeps LF files under a global autocrlf), so LF-only files are applied with conversion off.
+  const lfOnly = new Set(paths.filter((item) => { try { const bytes = fs.readFileSync(path.join(run.repo, item)); return bytes.includes(10) && !bytes.includes("\r\n"); } catch { return false; } }));
+  const include = (list) => list.map((item) => `--include=${item.replace(/[\\*?[\]]/g, "\\$&")}`);
+  const groups = [[["-c", "core.autocrlf=false", "-c", "core.eol=lf"], paths.filter((item) => lfOnly.has(item))], [[], paths.filter((item) => !lfOnly.has(item))]].filter(([, list]) => list.length);
+  const applyGroup = ([config, list], extra = []) => git([...config, "apply", ...extra, "--whitespace=nowarn", ...include(list), patchFile], run.repo);
+  const applied = [];
+  const reverseApplied = () => { for (const group of applied.reverse()) try { applyGroup(group, ["-R"]); } catch { /* keep the primary error */ } };
   if (patch.length) {
-    const check = spawnSync("git", ["apply", "--check", "--whitespace=nowarn", patchFile], { cwd: run.repo, encoding: "utf8", windowsHide: true });
-    if (check.status !== 0) throw new Error(`The integration does not apply cleanly to the working tree; nothing was changed: ${(check.stderr || check.stdout).trim()}`);
-    git(["apply", "--whitespace=nowarn", patchFile], run.repo);
+    for (const [config, list] of groups) {
+      const check = spawnSync("git", [...config, "apply", "--check", "--whitespace=nowarn", ...include(list), patchFile], { cwd: run.repo, encoding: "utf8", windowsHide: true });
+      if (check.status !== 0) throw new Error(`The integration does not apply cleanly to the working tree; nothing was changed: ${(check.stderr || check.stdout).trim()}`);
+    }
+    try { for (const group of groups) { applyGroup(group); applied.push(group); } }
+    catch (error) { reverseApplied(); throw new Error(`Applying the integration failed and was reverted: ${error.message}`); }
   }
   const deliveredAt = now();
   try {
     consumeApprovalWith(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge --as-patch pid=${process.pid}`, (consumedMerge) => updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, delivery: { mode: "patch", patchFile, paths, baseHead, deliveredAt }, history: [...current.history, { at: deliveredAt, event: "delivered_as_patch" }] })));
   } catch (error) {
-    if (patch.length) try { git(["apply", "-R", "--whitespace=nowarn", patchFile], run.repo); } catch { /* preserve the approval failure as the primary result */ }
+    reverseApplied();
     throw error;
   }
   if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run delivered; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
