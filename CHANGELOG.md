@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.2 - 2026-10-19
+
+- Windows workers can read files again. 1.8.1 told workers to set `[Console]::OutputEncoding` and use `Get-Content -Encoding UTF8`, but Codex runs worker commands in the sandbox's ConstrainedLanguage mode, where that .NET call fails and cmdlet output still garbles non-ASCII text; run R20261019-cffa read nothing. Workers and the verifier now read file text only with native programs (`rg -F`, `git show`, `git grep -F`, `node`, `cmd /c type`), use `rg -F` for Windows paths, and ignore profile load errors. A test runs every named form under ConstrainedLanguage mode and checks Turkish text. The verifier prompt no longer suggests `cat` or `Get-Content`.
+- A live capacity recommendation of 0 refuses `plan` with the measured reason. `--max-workers 1` runs one worker anyway and is recorded as `capacity.ownerOverride`. Previously the plan silently ran one worker while `beyin merkez` showed 0.
+- `start` re-measures capacity (`capacity.atStart`). The approved cap can only go down (`capacity_lowered` in the run history); at 0 without an owner override the start is refused before the approval is consumed.
+
 ## 1.8.1 - 2026-10-19
 
 - Windows workers read UTF-8 correctly. Codex runs worker commands through Windows PowerShell 5.1 with `-NoProfile`, whose `Get-Content` reads a UTF-8 file without a BOM as ANSI. A reviewer in run R20261019-4384 reported Turkish text as corrupted when the file was intact. Every Windows worker and verifier prompt now carries the UTF-8 console prefix, `Get-Content -Encoding UTF8`, and a rule to confirm an encoding defect from the file bytes before reporting it. A test round-trips Turkish text through `powershell.exe -NoProfile` with that exact prefix.

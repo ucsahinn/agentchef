@@ -17,7 +17,8 @@ function makeRun(temp,runId,workers,scenario="ok",extraEnv={},setupRepo=()=>{}) 
   if(process.platform==="win32") fs.writeFileSync(wrapper,`@echo off\r\n"${process.execPath}" "${fakeCodex}" %*\r\nexit /b %ERRORLEVEL%\r\n`);
   else { fs.writeFileSync(wrapper,`#!/bin/sh\nexec node ${JSON.stringify(fakeCodex)} "$@"\n`); fs.chmodSync(wrapper,0o755); }
   const isolatedTemp=path.join(temp,"tmp"); fs.mkdirSync(isolatedTemp);
-  const env={...process.env,AGENTCHEF_TEAM_MODE:"experimental",AGENTCHEF_TEAM_CODEX_COMMAND:wrapper,FAKE_CODEX_SCENARIO:scenario,AGENTCHEF_TEAM_PANE:"off",TEMP:isolatedTemp,TMP:isolatedTemp,TMPDIR:isolatedTemp,...extraEnv};
+  const capacity=path.join(temp,"kapasite.json"); fs.writeFileSync(capacity,JSON.stringify({v:1,ts:new Date().toISOString(),onerilen:8,tavan:8,neden:"test default"}));
+  const env={...process.env,AGENTCHEF_TEAM_MODE:"experimental",AGENTCHEF_TEAM_CODEX_COMMAND:wrapper,FAKE_CODEX_SCENARIO:scenario,AGENTCHEF_TEAM_PANE:"off",TEMP:isolatedTemp,TMP:isolatedTemp,TMPDIR:isolatedTemp,AGENTCHEF_TEAM_RESOURCE_FILE:capacity,...extraEnv};
   const brief=path.join(temp,"brief.md"); fs.writeFileSync(brief,["Goal: complete", "Evidence: fixture", "Write scope: src/", "Boundaries: stay in scope", "Done when: collected", "Return format: JSON", "User's words: complete"].join("\n"));
   const plan=path.join(temp,"plan.json"); fs.writeFileSync(plan,JSON.stringify({workers:workers.map(taskId=>({taskId,role:"docs_author",briefFile:"brief.md",writeScope:[extraEnv.FAKE_CODEX_FILE_BY_TASK?`src/${taskId}/`:"src/"]}))}));
   const planned=node(cli,["plan","--state",state,"--json","--repo",repo,"--plan-file",plan,"--run",runId],{env}); assert.equal(planned.status,0,planned.stderr||planned.stdout); return {repo,state,env,run:JSON.parse(planned.stdout).run};

@@ -32,7 +32,11 @@ Workflow tool), and say which reason applies in one line before starting.
    worker), with a hard ceiling of 8; `plan` records it under `capacity`. If
    the user asks for more, pass `--max-workers <n>`; `plan` refuses a number
    above the recommendation and quotes the measured reason. Show that reason
-   and do not retry around it. Write one `agent-brief` per
+   and do not retry around it. A recommendation of 0 refuses the plan; pass
+   `--max-workers 1` only when the user explicitly asks to run one worker at a
+   time anyway (recorded as `capacity.ownerOverride`). `start` measures again:
+   the cap can only go down, and a recommendation of 0 without that override
+   refuses the start without consuming the approval. Write one `agent-brief` per
    worker and check each with
    `npm run coordination:board -- brief-check --brief-file <file> --json`.
    Choose roles from the allowlist in the team-mode catalog and default to a

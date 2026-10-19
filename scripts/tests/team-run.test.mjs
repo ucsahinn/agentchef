@@ -61,13 +61,15 @@ function validApproval(state, runId, tur, plannedAt) {
   fs.writeFileSync(file, JSON.stringify(approval));
   return file;
 }
+// A fresh capacity file that allows the ceiling, so plan and start do not depend on this machine's free memory.
+function defaultCapacity(temp) { const file = path.join(temp, "kapasite-default.json"); fs.writeFileSync(file, JSON.stringify({ v: 1, ts: new Date().toISOString(), onerilen: 8, tavan: 8, neden: "test default" })); return file; }
 function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers, planArgs = [], extraEnv = {}, allowFailure = false }) {
   const planPath = path.join(temp, "plan.json"), briefPath = path.join(temp, "brief.md");
   fs.writeFileSync(briefPath, brief);
   fs.writeFileSync(planPath, JSON.stringify({ workers: workers || [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
   const isolatedTemp = path.join(temp, "os-temp"); fs.mkdirSync(isolatedTemp, { recursive: true });
   const codex = fixtureCommand(temp);
-  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, AGENTCHEF_TEAM_RESOURCE_FILE: path.join(temp, "no-capacity.json"), ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}), ...extraEnv };
+  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, AGENTCHEF_TEAM_RESOURCE_FILE: defaultCapacity(temp), ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}), ...extraEnv };
   const loginProbe = spawnSync(process.execPath, [fakeCodex, "login", "status"], { encoding: "utf8", env, windowsHide: true });
   assert.equal(loginProbe.status, 0, loginProbe.error?.message || loginProbe.stderr || loginProbe.stdout);
   const planned = runCli(state, "plan", ["--repo", repo, "--plan-file", planPath, "--run", runId, ...planArgs], env);
@@ -612,11 +614,19 @@ test("worker cap follows the live capacity recommendation and refuses a request 
   const lowered = planRun({ temp, state, repo, runId: "R-cap-lowered", scenario: "read-only", workers: workers(6, 130), planArgs: ["--max-workers", "2"], extraEnv });
   assert.equal(lowered.run.maxWorkers, 2); assert.equal(lowered.run.capacity.requested, 2);
   writeCapacity(0);
+  // Owner decision 2026-10-19: a recommendation of 0 refuses the plan with the measured reason; one worker runs only
+  // on an explicit --max-workers 1, recorded as an owner override.
+  const zero = planRun({ temp, state, repo, runId: "R-cap-zero", scenario: "read-only", workers: workers(2, 170), extraEnv, allowFailure: true });
+  assert.notEqual(zero.planned.status, 0);
+  assert.match(zero.planned.stdout + zero.planned.stderr, /recommendation is 0 \(beyin: boş RAM 1,2 GB · commit %91\).*--max-workers 1/);
   const one = planRun({ temp, state, repo, runId: "R-cap-one", scenario: "read-only", workers: workers(2, 160), planArgs: ["--max-workers", "1"], extraEnv });
-  assert.equal(one.run.maxWorkers, 1, "one worker is always allowed, as without a request");
+  assert.equal(one.run.maxWorkers, 1); assert.equal(one.run.capacity.ownerOverride, true); assert.equal(one.run.capacity.recommended, 0);
+  const two = planRun({ temp, state, repo, runId: "R-cap-two", scenario: "read-only", workers: workers(2, 180), planArgs: ["--max-workers", "2"], extraEnv, allowFailure: true });
+  assert.notEqual(two.planned.status, 0, "the override at 0 is exactly one worker");
   writeCapacity(6, new Date(Date.now() - 60 * 60_000).toISOString());
-  const stale = planRun({ temp, state, repo, runId: "R-cap-stale", scenario: "read-only", workers: workers(2, 140), extraEnv });
-  assert.equal(stale.run.capacity.source, "local", "a stale recommendation falls back to the local free-RAM measurement");
+  const stale = planRun({ temp, state, repo, runId: "R-cap-stale", scenario: "read-only", workers: workers(2, 140), extraEnv, allowFailure: true });
+  if (stale.planned.status === 0) assert.equal(stale.run.capacity.source, "local", "a stale recommendation falls back to the local free-RAM measurement");
+  else assert.match(stale.planned.stdout + stale.planned.stderr, /\(local: /, "a stale recommendation falls back to the local measurement, which may itself be 0 on a busy machine");
   const ceiling = planRun({ temp, state, repo, runId: "R-cap-ceiling", scenario: "read-only", workers: workers(9, 150), extraEnv, allowFailure: true });
   assert.notEqual(ceiling.planned.status, 0); assert.match(ceiling.planned.stdout + ceiling.planned.stderr, /1-8 workers/);
 });
@@ -653,3 +663,43 @@ for (const eol of ["\n", "\r\n"]) {
     await waitForSupervisorStopped(state, runId);
   });
 }
+
+// Owner decision 2026-10-19: start re-measures capacity. The approved cap may only go down; a recommendation of 0
+// without an owner override refuses the start before the approval is consumed; an override of one worker survives.
+test("start re-measures capacity: lowers the cap, refuses at 0 without an override, keeps a one-worker override", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-start-cap-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const capacityFile = path.join(temp, "kapasite.json");
+  const writeCapacity = (onerilen) => fs.writeFileSync(capacityFile, JSON.stringify({ v: 1, ts: new Date().toISOString(), onerilen, tavan: 8, neden: `measured ${onerilen}` }));
+  const workers = (count, base) => Array.from({ length: count }, (_, index) => ({ taskId: `TASK-${base + index}`, role: "code_mapper", briefFile: "brief.md", checks: [] }));
+  const extraEnv = { AGENTCHEF_TEAM_RESOURCE_FILE: capacityFile };
+  const approvalFile = (runId) => path.join(path.dirname(state), "approvals", `${runId}.baslat.json`);
+
+  writeCapacity(3);
+  const lowered = planRun({ temp, state, repo, runId: "R-start-lower", scenario: "read-only", workers: workers(3, 200), extraEnv });
+  assert.equal(lowered.run.maxWorkers, 3);
+  writeCapacity(1);
+  validApproval(state, "R-start-lower", "baslat", lowered.run.plannedAt);
+  const started = runCli(state, "start", ["--run", "R-start-lower"], lowered.env); assert.equal(started.status, 0, started.stderr || started.stdout);
+  const afterStart = runCli(state, "status", ["--run", "R-start-lower"]).json.run;
+  assert.equal(afterStart.maxWorkers, 1, "the cap follows the lower start-time recommendation");
+  assert.equal(afterStart.capacity.atStart.recommended, 1);
+  assert.ok(afterStart.history.some((item) => item.event === "capacity_lowered" && item.from === 3 && item.to === 1 && item.reason === "measured 1"));
+  await waitForAllWorkers(state, "R-start-lower"); await waitForSupervisorStopped(state, "R-start-lower");
+
+  writeCapacity(2);
+  const refused = planRun({ temp, state, repo, runId: "R-start-zero", scenario: "read-only", workers: workers(1, 210), extraEnv });
+  writeCapacity(0);
+  validApproval(state, "R-start-zero", "baslat", refused.run.plannedAt);
+  const zero = runCli(state, "start", ["--run", "R-start-zero"], refused.env);
+  assert.notEqual(zero.status, 0); assert.match(zero.stdout + zero.stderr, /recommendation is 0 \(beyin: measured 0\)/);
+  assert.equal(runCli(state, "status", ["--run", "R-start-zero"]).json.run.status, "planned");
+  assert.equal(JSON.parse(fs.readFileSync(approvalFile("R-start-zero"), "utf8")).kullanildi, "", "a refused start consumes nothing");
+
+  const override = planRun({ temp, state, repo, runId: "R-start-override", scenario: "read-only", workers: workers(1, 220), planArgs: ["--max-workers", "1"], extraEnv });
+  assert.equal(override.run.capacity.ownerOverride, true);
+  validApproval(state, "R-start-override", "baslat", override.run.plannedAt);
+  const overrideStart = runCli(state, "start", ["--run", "R-start-override"], override.env); assert.equal(overrideStart.status, 0, overrideStart.stderr || overrideStart.stdout);
+  assert.equal(runCli(state, "status", ["--run", "R-start-override"]).json.run.maxWorkers, 1);
+  await waitForAllWorkers(state, "R-start-override"); await waitForSupervisorStopped(state, "R-start-override");
+});
