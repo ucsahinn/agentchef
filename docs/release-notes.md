@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.8.0 - 2026-10-19
+
+AgentChef 1.8.0 lets team runs work alongside uncommitted work and sizes them to the machine.
+
+### What Changed
+
+- **`plan --snapshot`.** A repository with uncommitted changes can run a team run. The working tree goes into a private snapshot commit (`refs/agentchef/snapshots/<runId>`); your branch, index and files stay untouched. `cleanup` removes the snapshot ref.
+- **`merge --as-patch`.** Delivers the verified result to your working tree as unstaged changes and creates no commit. It refuses before touching anything if the files changed in a conflicting way since planning.
+- **Worker count follows live capacity.** The fixed limit of four is gone. The cap follows `beyin kapasite` (or free RAM), with a hard ceiling of 8; `--max-workers` above the recommendation is refused with the measured reason.
+- **"Takım koşusu" means `beyin takim`.** The rules and skills say so, and a validator keeps the old fixed-four wording from coming back.
+
 ## v1.7.10 - 2026-10-16
 
 AgentChef 1.7.10 makes team-run readable in a plain terminal.

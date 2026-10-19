@@ -23,7 +23,7 @@ test("sandbox ceilings dominate role TOML and unknown/full access are rejected",
 });
 test("worker concurrency respects contract, env ceiling and request", () => {
   assert.equal(maxConcurrency(contract, 3, "2"), 2);
-  assert.equal(maxConcurrency(contract, 9, "bad"), 4);
+  assert.equal(maxConcurrency(contract, 9, "bad"), 8);
   assert.equal(maxConcurrency(contract, 0, "2"), 1);
 });
 test("approvals are validated and consumed once", () => {

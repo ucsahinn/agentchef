@@ -32,16 +32,18 @@
 - Use {{ROUTING_SKILL}} when routing details, aliases, specialist ownership, or surface placement materially affect the task.
 - Agent role selection is automatic when delegation is useful; keep the session's own model and profile, let delegated roles run on the catalog worker model with inherited reasoning effort, and do not pass a model override when spawning them, except a stronger model for one security or release review the user asks for.
 <!-- target:codex -->
-- Treat `agents.max_threads = 10` (alias of `agents.max_concurrent_threads_per_session`) as a capacity ceiling, not a target. Use at most four workers per task (a coordinator is not counted); more needs the user's explicit request.
+- Treat `agents.max_threads = 10` (alias of `agents.max_concurrent_threads_per_session`) as a capacity ceiling, not a target. Size the workers per task to the work and to the live capacity recommendation (`beyin kapasite`, or free RAM at 1.5 GB per worker), never above 8; a request above the recommendation is refused with the measured reason (a coordinator is not counted).
+- "Takım koşusu" (team run) means `beyin takim`, the AgentChef team run with Codex workers and the `baslat`/`birlestir` gates.
 <!-- /target:codex -->
 <!-- target:claude -->
-- Use at most four workers per task (a coordinator is not counted); more needs the user's explicit request. The bundled `agentchef:<role>` subagents are namespaced and never replace your own `~/.claude/agents/` definitions.
+- Size the workers per task to the work and to the live capacity recommendation (`beyin kapasite`, or free RAM at 1.5 GB per worker), never above 8; a request above the recommendation is refused with the measured reason (a coordinator is not counted). The bundled `agentchef:<role>` subagents are namespaced and never replace your own `~/.claude/agents/` definitions.
+- "Takım koşusu" (team run) means `beyin takim` through the `team-conductor` skill, not the Workflow tool or a fan-out of in-session subagents. Use the Workflow tool only when a team run cannot run (no Codex login, no Beyin, or the user names the Workflow tool), and say which reason applies before starting.
 <!-- /target:claude -->
 - Spawn an agent only when one of these holds: {{SPAWN_WHEN}}.
 - Do not spawn for {{SKIP_WHEN}}.
 - When a request matches a routing profile (the routing-hint line, or your own classification against the profile catalog), load the profile's auto-skill first; if that skill is explicit-only, suggest it to the user instead. If files changed and the profile's verifier is required ({{AUTO_VERIFY_PROFILES}}), run that verifier before reporting done; otherwise suggest it.
-- Start at most {{AUTO_SPAWN_CAP}} agents per task without the user naming them; more needs the user's explicit request. Agents the user asks for by name are not counted, and the team limit of four workers per task still applies. The routing-hint line is advice: you still judge whether the work needs it.
-- Two routes, both at most two levels deep: Direct, the main session briefs one to four specialists itself; Team, for a user-created board task, the main session briefs that task's coordinator, which briefs its own workers.
+- Start at most {{AUTO_SPAWN_CAP}} agents per task without the user naming them; more needs the user's explicit request. Agents the user asks for by name are not counted, and the live capacity limit still applies. The routing-hint line is advice: you still judge whether the work needs it.
+- Two routes, both at most two levels deep: Direct, the main session briefs the specialists the task needs itself; Team, for a user-created board task, the main session briefs that task's coordinator, which briefs its own workers.
 - Keep write-heavy implementation in the main thread unless the user explicitly requests split write scopes.
 - If agents may edit, give them non-overlapping files. The parent session merges: it checks each Changed scope against its brief's Write scope, resolves conflicts or asks the user, and reruns every Done-when check on the merged result before verification.
 - Agents inherit approval and sandbox boundaries; never use delegation to bypass them.

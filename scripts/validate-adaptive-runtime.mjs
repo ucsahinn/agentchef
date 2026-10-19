@@ -74,7 +74,7 @@ if (exists("catalog/routing-profiles.json")) {
   if (routing.version !== "0.4.0") fail("Routing catalog must use schema version 0.4.0.");
   if (routing.delegationPolicy?.mode !== "conditional") fail("Routing catalog must define conditional delegation.");
   if (routing.delegationPolicy?.capacityCeiling !== 10) fail("Routing capacity ceiling must preserve max_threads=10.");
-  if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) fail("Recommended parallelism must cap one task at four workers.");
+  if (routing.delegationPolicy?.recommendedParallelism?.max !== 8) fail("Recommended parallelism must cap one task at the hard ceiling of eight workers.");
   if (routing.agentRuntimePolicy?.modelSelection !== "worker-tier" || routing.agentRuntimePolicy?.reasoningSelection !== "inherit-profile-adaptive") {
     fail("Routing catalog must run roles on the worker tier and keep reasoning inherited.");
   }

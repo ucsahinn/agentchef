@@ -233,7 +233,7 @@ pinlemez; effort'u profil belirler, açtığın oturum seçtiğin modeli korur.
 Model satırı hiçbir role boundary veya approval gate'i değiştirmez.
 
 `max_threads = 10` concurrency kapasite tavanidir; her task'i fan-out etme izni
-degildir. Kosullu routing normalde bir ile dort ajan kullanir. 1.3.4 ile
+degildir. Kosullu routing ajan sayisini ise ve canli kapasite onerisine gore belirler. 1.3.4 ile
 bir agent yalniz su kosullardan biri gecerliyse baslar:
 bir autoVerify routing profili eslesti ve dosyalar degisti, boylece verifier'i
 gorev bitti denmeden once calisir; bagimsiz paralel is var; gurultulu log veya
@@ -609,8 +609,9 @@ Operasyon sözleşmesi:
 
 Allowlist'te 21 uzman worker rolü vardır. Etkin sandbox, rol şablonu ile takım
 modu tavanının daha kısıtlayıcı olanıdır; genel worker tavanı `workspace-write`,
-bazı rollerinki `read-only` olur. `danger-full-access` reddedilir. Koşu 1-4
-worker ve en çok bir alt ajan derinliğiyle sınırlıdır; worker agent açamaz,
+bazı rollerinki `read-only` olur. `danger-full-access` reddedilir. Koşu canlı
+kapasite önerisinin izin verdiği kadar eş zamanlı worker (sert tavan 8; üstündeki
+istek ölçülen gerekçeyle reddedilir) ve en çok bir alt ajan derinliğiyle sınırlıdır; worker agent açamaz,
 ek rol isteğini `needs: <rol> - <neden>` olarak döndürür. `codex exec resume`
 yalnızca `-c`, `--json`, `-m`, `-o`, `--output-schema` ve stdin (`-`)
 seçeneklerini kullanır. Başlatma ve merge onayları ayrıdır, tek kullanımlıktır;
@@ -623,8 +624,8 @@ Takım modu 1.6.0'dan itibaren her kurulumda açıktır. Bir süreçte takım
 yürütmesini kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; `team-conductor`
 skill'i bu değişkeni sizin yerinize değiştirmez. Skill yalnız açık çağrılır.
 Etkileşimli Claude oturumu koşuyu
-planlayıp kapıları yönetirken motor ayrı worktree'lerde 1-4 allowlist Codex
-`exec` worker'ı başlatır. Motor kullanıcının tek kullanımlık başlatma ve merge
+planlayıp kapıları yönetirken motor ayrı worktree'lerde canlı kapasite
+önerisinin izin verdiği kadar (sert tavan 8) allowlist Codex `exec` worker'ı başlatır. Motor kullanıcının tek kullanımlık başlatma ve merge
 kapılarını okur; bunların dayandığı dosyaları oluşturmaz. Worker sandbox'ı rol
 TOML'ı ile takım modu tavanının daha kısıtlayıcısıdır; `test_verifier`
 salt-okunurdur.

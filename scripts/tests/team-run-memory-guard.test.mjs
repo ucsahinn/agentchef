@@ -21,7 +21,9 @@ function makeRun(temp, runId, workers, extraEnv = {}) {
   if (process.platform === "win32") fs.writeFileSync(wrapper, `@echo off\r\n"${process.execPath}" "${fakeCodex}" %*\r\nexit /b %ERRORLEVEL%\r\n`);
   else { fs.writeFileSync(wrapper, `#!/bin/sh\nexec node ${JSON.stringify(fakeCodex)} "$@"\n`); fs.chmodSync(wrapper, 0o755); }
   const isolatedTemp = path.join(temp, "tmp"); fs.mkdirSync(isolatedTemp);
-  const env = { ...process.env, AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: wrapper, FAKE_CODEX_SCENARIO: "ok", FAKE_CODEX_FILE_BY_TASK: "1", AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...extraEnv };
+  // Pin the plan-time capacity so this test exercises only the supervisor's run-time memory guard.
+  const capacity = path.join(temp, "kapasite.json"); fs.writeFileSync(capacity, JSON.stringify({ v: 1, ts: new Date().toISOString(), onerilen: workers.length, tavan: 8, neden: "test fixture" }));
+  const env = { ...process.env, AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: wrapper, FAKE_CODEX_SCENARIO: "ok", FAKE_CODEX_FILE_BY_TASK: "1", AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, AGENTCHEF_TEAM_RESOURCE_FILE: capacity, ...extraEnv };
   const brief = path.join(temp, "brief.md"); fs.writeFileSync(brief, ["Goal: complete", "Evidence: fixture", "Write scope: src/", "Boundaries: stay in scope", "Done when: collected", "Return format: JSON", "User's words: complete"].join("\n"));
   const plan = path.join(temp, "plan.json"); fs.writeFileSync(plan, JSON.stringify({ workers: workers.map((taskId) => ({ taskId, role: "docs_author", briefFile: "brief.md", writeScope: [`src/${taskId}/`] })) }));
   const planned = node(cli, ["plan", "--state", state, "--json", "--repo", repo, "--plan-file", plan, "--run", runId], { env }); assert.equal(planned.status, 0, planned.stderr || planned.stdout);

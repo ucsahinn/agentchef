@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateCatalog } from "../validate-subscription-team-mode.mjs";
+import { STALE_WORKER_CAP, validateCatalog, validateTeamWording } from "../validate-subscription-team-mode.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const catalogPath = path.join(root, "catalog/subscription-team-mode.json");
@@ -70,4 +70,14 @@ test("catalog and nested objects reject unknown keys", () => {
   const value = structuredClone(base);
   value.surprise = true;
   assert.ok(validate(value).length > 0);
+});
+
+// C3/C4 regression guard: a fresh install must not bring back the fixed four-worker cap or lose the team-run meaning.
+test("installed instructions size workers by live capacity and map takım koşusu to beyin takim", () => {
+  assert.deepEqual(validateTeamWording(root), []);
+  for (const stale of ["Use at most four workers per task (a coordinator is not counted)", "the main session briefs one to four specialists", "session coordinate 1-4 bounded Codex workers", "Görev başına en çok dört worker kullan"]) {
+    assert.ok(STALE_WORKER_CAP.some((pattern) => pattern.test(stale)), stale);
+  }
+  assert.equal(base.workers.maxWorkers, 8);
+  assert.equal(base.workers.capacity.aboveRecommendation, "refuse-with-measured-reason");
 });

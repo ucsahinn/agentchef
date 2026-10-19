@@ -1,5 +1,16 @@
 # Sürüm Notları
 
+## v1.8.0 - 2026-10-19
+
+AgentChef 1.8.0 takım koşularının commit'lenmemiş işle birlikte çalışmasını ve makineye göre boyutlanmasını sağlar.
+
+### Neler Değişti
+
+- **`plan --snapshot`.** Commit'lenmemiş değişiklikleri olan bir depoda takım koşusu çalışabilir. Çalışma ağacı özel bir anlık commit'e (`refs/agentchef/snapshots/<runId>`) alınır; dalın, indeksin ve dosyaların değişmez. `cleanup` anlık ref'i siler.
+- **`merge --as-patch`.** Doğrulanmış sonucu çalışma ağacına unstaged değişiklik olarak uygular ve commit oluşturmaz. Plandan sonra dosyalar çakışacak şekilde değiştiyse hiçbir şeye dokunmadan reddeder.
+- **İşçi sayısı canlı kapasiteyi izler.** Sabit dört sınırı kalktı. Tavan `beyin kapasite` (ya da boş RAM) önerisini izler, sert tavan 8'dir; önerinin üstündeki `--max-workers` ölçülen gerekçeyle reddedilir.
+- **"Takım koşusu" `beyin takim` demektir.** Kurallar ve skill'ler bunu söyler; bir doğrulayıcı eski sabit-dört ifadesinin geri gelmesini engeller.
+
 ## v1.7.10 - 2026-10-16
 
 AgentChef 1.7.10, team-run çıktısını düz terminalde okunur yapar.

@@ -39,7 +39,16 @@
     "language": "tr",
     "promptTransport": "stdin",
     "minWorkers": 1,
-    "maxWorkers": 4,
+    "maxWorkers": 8,
+    "capacity": {
+      "source": "live-recommendation",
+      "recommendationFile": "motor/scripts/.state/kapasite.json",
+      "recommendationCommand": "beyin kapasite -Json",
+      "freshMinutes": 10,
+      "fallback": "local-free-ram",
+      "ownerOverride": "--max-workers",
+      "aboveRecommendation": "refuse-with-measured-reason"
+    },
     "maxDepth": 1,
     "workerMayPush": false,
     "isolation": "git-worktree-per-worker",

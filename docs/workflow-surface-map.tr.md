@@ -38,8 +38,8 @@ bagimsiz paralel is var; gurultulu log veya arastirma ana thread'den ayrilmali;
 kullanici acikca delegasyon istedi. Onemsiz, kesinlikle sirali, siki bagli ve
 delegasyonun koordinasyon maliyeti getirdigi tek dosyalik islerde spawn etme.
 Kullanici adlarini vermeden gorev basina en fazla 2 agent baslat.
-`max_threads = 10` birden fazla Codex penceresine kapasite birakir; normal
-fan-out bir ile dorttur. Routing'i bir kez `Routing plan:`, bir kez de
+`max_threads = 10` birden fazla Codex penceresine kapasite birakir; fan-out
+ise ve canli kapasite onerisine (`beyin kapasite`, sert tavan 8) gore belirlenir. Routing'i bir kez `Routing plan:`, bir kez de
 `Routing result:` ile raporla; ajan/skill/MCP basina ayri lifecycle mesaji basma.
 
 Karar gerekcesi: [ADR-001](decisions/001-adaptive-routing-and-user-owned-config-overlay.md).

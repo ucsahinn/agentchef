@@ -38,8 +38,9 @@ parallel work exists; noisy logs or research should be isolated from the main
 thread; the user explicitly requests delegation. Skip trivial work, strictly
 sequential work, tightly coupled work, and single-file work where delegation
 adds coordination cost. Start at most 2 agents per task without the user naming
-them. Keep the normal fan-out at one to four even though `max_threads = 10`
-preserves headroom for several Codex windows. Report routing once with
+them. Size the fan-out to the work and to the live capacity recommendation
+(`beyin kapasite`, hard ceiling 8) even though `max_threads = 10` preserves
+headroom for several Codex windows. Report routing once with
 `Routing plan:` and once with `Routing result:`; do not emit separate
 agent/skill/MCP lifecycle chatter.
 

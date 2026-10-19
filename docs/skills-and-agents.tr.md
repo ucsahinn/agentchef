@@ -32,7 +32,9 @@ veya sonrası) çalıştırın; sandbox test çalıştırıcısının alt süre�
 saymayın, Risks bölümünde bildirin.
 
 Yalnız açık çağrılan `team-conductor` skill'i etkileşimli Claude Code
-oturumunun 1-4 sınırlı Codex worker'ını koordine etmesini sağlar. Takım modu
+oturumunun canlı kapasite önerisine (`beyin kapasite`, sert tavan 8) göre
+boyutlanan Codex worker'larını koordine etmesini sağlar. "Takım koşusu" bu
+skill ve `beyin takim` demektir, Claude Code Workflow aracı değil. Takım modu
 1.6.0'dan itibaren her kurulumda açıktır. Bir süreçte takım yürütmesini
 kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; skill bu değişkeni sizin
 yerinize değiştirmez. Başlatma ve birleştirme yine kullanıcının yazılı onayını
@@ -42,8 +44,11 @@ kullanıcı kapılarının işleyişini açıklar.
 
 **Dağıtım.** Gözetmen her bağımsız yazma kapsamı için bir işçi kullanır. Birden
 çok işçiyi yalnız yazma kapsamları çakışmıyorsa ve hiçbir görev diğerinin
-çıktısına ihtiyaç duymuyorsa çalıştırır; bağımlı işi sonraki koşuya bırakır ve
-dörtten fazla işçi kullanmaz.
+çıktısına ihtiyaç duymuyorsa çalıştırır ve bağımlı işi sonraki koşuya bırakır.
+Aynı anda kaç işçinin çalışacağını canlı kapasite önerisi belirler; bunun
+üstündeki `plan --max-workers <n>` ölçülen gerekçeyle reddedilir. Commit'lenmemiş
+işi olan depo `--snapshot` ile planlanır ve commit oluşturmayan
+`merge --as-patch` ile teslim edilir.
 
 **dual-agent-brain ile.** Başlatma ve birleştirme onaylarını
 [dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) sohbet
@@ -169,10 +174,10 @@ onlara fazladan yetki vermez.
 açtığın oturum ise kendi modelini korur; bkz.
 [Model Katmanları](agents.tr.md#model-katmanları). Agent'lar birbiriyle
 sohbet etmez. 1.3.3 ile iki rota vardır, ikisi de en çok
-iki seviye derinliktedir: Direct, ana oturum bir ila dört uzmana brief verir;
+iki seviye derinliktedir: Direct, ana oturum işin gerektirdiği uzmanlara brief verir;
 Team, bir board görevi için ana oturum o görevin koordinatörüne brief verir,
-koordinatör de kendi worker'larına. Görev başına en çok dört worker kullan
-(koordinatör sayılmaz); her agent tek bir handoff döndürür.
+koordinatör de kendi worker'larına. Görev başına worker sayısını işe ve canlı
+kapasite önerisine göre seç (koordinatör sayılmaz); her agent tek bir handoff döndürür.
 1.3.4 ile bir agent yalnızca dört koşuldan biri geçerliyse
 başlar (verifier gerektiren bir routing profili eşleşti ve dosyalar değişti;
 bağımsız paralel iş; ayrılması gereken gürültülü log veya araştırma; sen istedin)

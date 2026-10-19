@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.7.10** her `team-run` komutunu `--json` olmadan da okunur yapar: düz çıktı `[object Object]` idi, artık kısa bir özet (koşu, işçiler, gözetmen, uyarılar, kontroller).
+Geliştirme sürümü **v1.8.0** takım koşusunun commit'lenmemiş değişiklikleri olan bir depoda çalışmasını (`plan --snapshot`), commit oluşturmadan teslim etmesini (`merge --as-patch`) ve işçi sayısını sabit dört yerine canlı kapasite önerisine göre ayarlamasını sağlar.
 
 ## Commit Veya Push Öncesi
 

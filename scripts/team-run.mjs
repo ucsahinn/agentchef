@@ -19,17 +19,18 @@ import {
 import { secretLikeCategory } from "./lib/secret-classifier.mjs";
 import { memoryAllowance } from "./lib/memory-guard.mjs";
 import { nextResumeAt } from "./lib/usage-limit-reset.mjs";
+import { capacityRecommendation, resolveWorkerCap } from "./lib/team-capacity.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
 const ROLE_IDS = CONTRACT.workers.allowedRoleIds;
 const COMMANDS = {
-  plan: ["repo", "plan-file", "state", "run", "profile", "max-minutes"],
+  plan: ["repo", "plan-file", "state", "run", "profile", "max-minutes", "snapshot", "max-workers"],
   start: ["run", "state"], status: ["run", "state", "watch-seconds"],
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
   integrate: ["run", "state", "check", "recheck", "covers"], verify: ["run", "state", "max-minutes", "detach"],
-  merge: ["run", "state", "accept-warn", "keep-worktrees"], pause: ["run", "state"], resume: ["run", "state", "wait"],
+  merge: ["run", "state", "accept-warn", "keep-worktrees", "as-patch"], pause: ["run", "state"], resume: ["run", "state", "wait"],
   cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
   doctor: ["state"]
 };
@@ -50,7 +51,7 @@ function parse(argv) {
     if (!token.startsWith("--")) throw new CliUsageError(`Unexpected argument: ${token}`);
     const key = token.slice(2);
     if (!accepted.has(key)) throw new CliUsageError(`${command} does not accept --${key}.`);
-    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait", "recheck"].includes(key)) { options[key] = true; continue; }
+    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait", "recheck", "snapshot", "as-patch"].includes(key)) { options[key] = true; continue; }
     const value = rest[i + 1];
     if (!value || value === "--json" || (value.startsWith("--") && accepted.has(value.slice(2)))) throw new CliUsageError(`--${key} requires a value.`);
     if (key === "check") (options.check ||= []).push(value); else options[key] = value;
@@ -129,10 +130,16 @@ function planCommand(options) {
   if (!options.repo) throw new CliUsageError("plan requires --repo.");
   if (!options["plan-file"]) throw new CliUsageError("plan requires --plan-file.");
   const repo = resolveRepo(options.repo || ROOT);
-  if (git(["status", "--porcelain"], repo)) throw new Error("--repo must have a clean worktree before planning.");
+  const dirty = Boolean(git(["status", "--porcelain"], repo));
+  if (dirty && !options.snapshot) throw new Error("--repo has uncommitted changes. Rerun with --snapshot to base the run on a private snapshot of the working tree (the branch and index stay untouched), or commit first.");
   const plan = readPlan(options["plan-file"]);
   const id = options.run || `R${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomBytes(2).toString("hex")}`;
   if (!safeRunId(id)) throw new CliUsageError("--run must match the documented run identifier format.");
+  const capacity = capacityRecommendation({ contract: CONTRACT });
+  let workerCap;
+  try { workerCap = resolveWorkerCap({ contract: CONTRACT, requested: options["max-workers"] ?? null, planned: plan.workers.length, capacity }); }
+  catch (error) { if (error.usage) throw new CliUsageError(error.message); throw error; }
+  workerCap = maxConcurrency(CONTRACT, workerCap);
   const profile = options.profile || CONTRACT.workers.defaultProfile;
   if (!["offline", "full"].includes(profile)) throw new CliUsageError("--profile must be offline or full.");
   const maxMinutes = Number(options["max-minutes"] || CONTRACT.limits.workerMinutes);
@@ -162,7 +169,10 @@ function planCommand(options) {
   const canonicalRoot = path.join(canonicalRootParent, ".agentchef-worktrees", id);
   const canonicalTemp = fs.realpathSync(os.tmpdir());
   if (containsPath(canonicalTemp, canonicalRoot) || containsPath(canonicalRepo, canonicalRoot) || containsPath(canonicalRoot, canonicalRepo)) throw new Error("Resolved worktree root is not permitted.");
-  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: headCommit(repo), integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: maxConcurrency(CONTRACT, workers.length), maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
+  if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
+  // Snapshot last, after every refusal above, so a refused plan leaves no ref behind.
+  const snapshot = dirty ? createSnapshot(repo, id) : null;
+  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: snapshot ? snapshot.commit : headCommit(repo), baseHead: headCommit(repo), snapshot, integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: workerCap, capacity: { recommended: capacity.recommended, ceiling: capacity.ceiling, source: capacity.source, reason: capacity.reason, measuredAt: capacity.measuredAt, requested: options["max-workers"] == null ? null : Number(options["max-workers"]) }, maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
   const directory = path.dirname(runFile(options.state, id)); fs.mkdirSync(directory, { recursive: true });
   if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
   writeRunRecord(runFile(options.state, id), run);
@@ -178,6 +188,26 @@ function planCommand(options) {
     }
   } catch (error) { updateRunRecord(runFile(options.state, id), (current) => ({ ...current, status: "failed", failure: error.message, history: [...current.history, { at: now(), event: "planning_failed" }] })); throw error; }
   output({ ok: true, planHash: run.planHash.slice(0, 12), run: readRun(options.state, id) }, options.json); return 0;
+}
+// Snapshot of a dirty working tree: tracked changes plus untracked, non-ignored files, written through a temporary
+// index into a commit on refs/agentchef/snapshots/<runId>. The user's branch, HEAD, index and files are not touched.
+const SNAPSHOT_SECRET_NAME = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|keystore)|id_(rsa|dsa|ecdsa|ed25519)|\.npmrc|\.netrc|credentials(\.json)?|auth\.json)$/i;
+function createSnapshot(repo, runId) {
+  const ref = `refs/agentchef/snapshots/${runId}`;
+  const indexFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "agentchef-snapshot-")), "index");
+  const env = { ...process.env, GIT_INDEX_FILE: indexFile };
+  const run = (args) => execFileSync("git", args, { cwd: repo, env, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).trim();
+  try {
+    run(["read-tree", "HEAD"]);
+    run(["add", "--all", "--", "."]);
+    const added = run(["-c", "core.quotePath=false", "diff", "--cached", "--name-only", "--diff-filter=A", "HEAD"]).split(/\r?\n/).filter(Boolean);
+    const secretLike = added.filter((file) => SNAPSHOT_SECRET_NAME.test(file));
+    if (secretLike.length) throw new Error(`Snapshot refused: untracked ${secretLike.join(", ")} look like credential files; add them to .gitignore or move them out first.`);
+    const tree = run(["write-tree"]);
+    const commit = run(["commit-tree", tree, "-p", "HEAD", "-m", `agentchef team-run snapshot ${runId}`]);
+    run(["update-ref", ref, commit, ""]);
+    return { ref, commit, head: headCommit(repo), createdAt: now() };
+  } finally { fs.rmSync(path.dirname(indexFile), { recursive: true, force: true }); }
 }
 function hashPlan(workers) {
   const payload = workers.map((worker) => [worker.taskId, worker.role, worker.writeScope, worker.briefText]);
@@ -864,9 +894,11 @@ function mergeCommandLocked(options) {
   if (!run.verification?.at || !approvalIsValid(approval, { runId: run.runId, tur: "birlestir", plannedAt: run.verification.at, now: now() })) { const error = new Error("A valid merge approval is required."); error.code = "approval-required"; error.exitCode = 3; throw error; }
   if (run.workers.some((worker) => worker.status === "conflict")) throw new Error("A run with conflicted workers cannot be merged.");
   if (run.status !== "verified" || !["pass", "warn"].includes(run.verification?.verdict) || (run.verification.verdict === "warn" && !options["accept-warn"])) throw new Error("Merge requires a passing verification or --accept-warn for a warning verdict.");
-  if (git(["status", "--porcelain=v1"], run.repo) || git(["branch", "--show-current"], run.repo) !== run.baseBranch) throw new Error("Merge requires a clean repository on the recorded base branch.");
+  if (run.snapshot && !options["as-patch"]) throw new Error("This run is based on a working-tree snapshot; deliver it with merge --as-patch (a merge would commit the snapshot onto the base branch).");
+  if (!options["as-patch"] && (git(["status", "--porcelain=v1"], run.repo) || git(["branch", "--show-current"], run.repo) !== run.baseBranch)) throw new Error("Merge requires a clean repository on the recorded base branch.");
   const worktreeCommit = git(["rev-parse", "HEAD"], run.integrationWorktree), branchCommit = git(["rev-parse", run.integrationBranch], run.repo);
   if (!run.verification.integrationCommit || worktreeCommit !== run.verification.integrationCommit || branchCommit !== run.verification.integrationCommit) throw new Error("Verified integration changed before merge.");
+  if (options["as-patch"]) return deliverAsPatch(options, file, run);
   const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
   try { git(["-c", `core.hooksPath=${emptyHooks}`, "merge", "--no-ff", run.integrationBranch], run.repo); }
   catch (error) { try { git(["merge", "--abort"], run.repo); } catch {} throw new Error(`Integration merge failed and was aborted: ${error.message}`); }
@@ -879,14 +911,45 @@ function mergeCommandLocked(options) {
   if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run merged; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
+// Non-committing delivery: apply the verified integration diff (baseCommit..integration) to the user's working tree as
+// unstaged changes. The base branch must still point at the commit the run was planned on, and `git apply --check`
+// must pass first, so a file the user changed since planning refuses the delivery instead of half-applying it.
+// No commit is created and the index is not touched; the birlestir approval is consumed only after a clean apply.
+function deliverAsPatch(options, file, run) {
+  const baseHead = run.baseHead || run.baseCommit;
+  if (git(["branch", "--show-current"], run.repo) !== run.baseBranch) throw new Error(`Delivery requires the recorded base branch ${run.baseBranch}.`);
+  if (git(["rev-parse", "HEAD"], run.repo) !== baseHead) throw new Error("The base branch moved since planning; plan a new run on the current commit.");
+  const runDir = path.join(path.dirname(file), run.runId); fs.mkdirSync(runDir, { recursive: true });
+  const patchFile = path.join(runDir, "integration.patch");
+  const patch = gitBytes(["-c", "core.quotePath=false", "diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv", run.baseCommit, run.verification.integrationCommit], run.repo);
+  fs.writeFileSync(patchFile, patch);
+  const paths = git(["-c", "core.quotePath=false", "diff", "--name-only", run.baseCommit, run.verification.integrationCommit], run.repo).split(/\r?\n/).filter(Boolean);
+  if (patch.length) {
+    const check = spawnSync("git", ["apply", "--check", "--whitespace=nowarn", patchFile], { cwd: run.repo, encoding: "utf8", windowsHide: true });
+    if (check.status !== 0) throw new Error(`The integration does not apply cleanly to the working tree; nothing was changed: ${(check.stderr || check.stdout).trim()}`);
+    git(["apply", "--whitespace=nowarn", patchFile], run.repo);
+  }
+  const deliveredAt = now();
+  try {
+    consumeApprovalWith(path.join(path.dirname(path.resolve(options.state)), "approvals", `${run.runId}.birlestir.json`), `team-run merge --as-patch pid=${process.pid}`, (consumedMerge) => updateRunRecord(file, (current) => ({ ...transitionRun(current, "merged"), approvals: { ...current.approvals, merge: { consumedAt: consumedMerge.kullanildi } }, delivery: { mode: "patch", patchFile, paths, baseHead, deliveredAt }, history: [...current.history, { at: deliveredAt, event: "delivered_as_patch" }] })));
+  } catch (error) {
+    if (patch.length) try { git(["apply", "-R", "--whitespace=nowarn", patchFile], run.repo); } catch { /* preserve the approval failure as the primary result */ }
+    throw error;
+  }
+  if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run delivered; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
+  output({ ok: true, delivered: "working-tree", paths, run: readRun(options.state, options.run) }, options.json); return 0;
+}
 function cleanupCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   if (!["merged", "aborted", "failed"].includes(run.status)) throw new Error("Cleanup is allowed only for merged, aborted, or failed runs.");
   const removed = removeWorktrees(run);
+  // The private snapshot ref only anchored the run's base; once the run is merged, aborted or failed it has no use.
+  let snapshotRef = null;
+  if (run.snapshot?.ref?.startsWith("refs/agentchef/snapshots/")) { try { git(["update-ref", "-d", run.snapshot.ref], run.repo); snapshotRef = run.snapshot.ref; } catch { /* already gone */ } }
   if (options["delete-integration"]) { try { git(["branch", "-D", run.integrationBranch], run.repo); } catch {} }
   if (options["delete-branches"]) for (const worker of run.workers) { try { git(["branch", "-D", worker.branch], run.repo); } catch {} }
   if (options["purge-logs"]) fs.rmSync(path.join(path.dirname(file), run.runId), { recursive: true, force: true });
-  output({ ok: true, removedWorktrees: removed, purgedLogs: Boolean(options["purge-logs"]) }, options.json); return 0;
+  output({ ok: true, removedWorktrees: removed, removedSnapshotRef: snapshotRef, purgedLogs: Boolean(options["purge-logs"]) }, options.json); return 0;
 }
 function doctorCommand(options) {
   const checks = [], check = (id, ok, details = "") => checks.push({ id, status: ok ? "pass" : "fail", details });

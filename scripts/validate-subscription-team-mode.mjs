@@ -41,9 +41,12 @@ for (const roleId of Object.keys(ceilings)) if (!roles.has(roleId)) errors.push(
 
 exactKeys(catalog.conductor, ["type", "spawnsWorkersDirectly", "editsWorkerScopeDuringRun"], "conductor", errors);
 if (catalog.conductor?.type !== "interactive-session" || catalog.conductor?.spawnsWorkersDirectly !== false || catalog.conductor?.editsWorkerScopeDuringRun !== false) errors.push("conductor contract is invalid");
-exactKeys(catalog.workers, ["command", "language", "promptTransport", "minWorkers", "maxWorkers", "maxDepth", "workerMayPush", "isolation", "defaultProfile", "allowedRoleIds"], "workers", errors);
+exactKeys(catalog.workers, ["command", "language", "promptTransport", "minWorkers", "maxWorkers", "capacity", "maxDepth", "workerMayPush", "isolation", "defaultProfile", "allowedRoleIds"], "workers", errors);
 if (typeof catalog.workers?.language !== "string" || !/^[a-z]{2}$/i.test(catalog.workers.language)) errors.push("workers.language must be a two-letter language code");
-if (catalog.workers?.command !== "codex exec --json" || catalog.workers?.promptTransport !== "stdin" || catalog.workers?.minWorkers !== 1 || catalog.workers?.maxWorkers !== 4 || catalog.workers?.maxDepth !== 1 || catalog.workers?.workerMayPush !== false || catalog.workers?.isolation !== "git-worktree-per-worker" || catalog.workers?.defaultProfile !== "offline") errors.push("workers contract is invalid");
+if (catalog.workers?.command !== "codex exec --json" || catalog.workers?.promptTransport !== "stdin" || catalog.workers?.minWorkers !== 1 || catalog.workers?.maxWorkers !== 8 || catalog.workers?.maxDepth !== 1 || catalog.workers?.workerMayPush !== false || catalog.workers?.isolation !== "git-worktree-per-worker" || catalog.workers?.defaultProfile !== "offline") errors.push("workers contract is invalid");
+// The worker cap is dynamic: maxWorkers is only the hard ceiling; the live recommendation sets the run cap.
+exactKeys(catalog.workers?.capacity, ["source", "recommendationFile", "recommendationCommand", "freshMinutes", "fallback", "ownerOverride", "aboveRecommendation"], "workers.capacity", errors);
+if (catalog.workers?.capacity?.source !== "live-recommendation" || catalog.workers?.capacity?.aboveRecommendation !== "refuse-with-measured-reason" || catalog.workers?.capacity?.ownerOverride !== "--max-workers" || !Number.isInteger(catalog.workers?.capacity?.freshMinutes) || catalog.workers.capacity.freshMinutes < 1) errors.push("workers.capacity must follow the live recommendation and refuse requests above it");
 if (JSON.stringify([...(catalog.workers?.allowedRoleIds || [])].sort()) !== JSON.stringify([...roles.keys()].sort())) errors.push("workers.allowedRoleIds must exactly match catalog roles");
 exactKeys(catalog.verification, ["roleId", "sandboxMode", "branch"], "verification", errors);
 if (catalog.verification?.roleId !== "test_verifier" || catalog.verification?.sandboxMode !== "read-only" || ceilings.test_verifier !== "read-only") errors.push("verification must use read-only test_verifier");
@@ -63,6 +66,34 @@ if (catalog.branches?.integrationPrefix !== "takim/" || catalog.branches?.worker
 return errors;
 }
 
+// Installed instructions must not bring back the fixed four-worker cap, and must keep "takım koşusu" mapped to
+// `beyin takim` (2026-10-19: a session read "takım koştur" as permission for the Claude Code Workflow tool, and a
+// fixed cap of four was applied whatever the machine had free).
+export const STALE_WORKER_CAP = [
+  /at most (?:four|4) workers per task/i, /one to four (?:specialists|agents|workers)/i, /\b1-4 (?:bounded|allowlisted|allowlist|independent|sınırlı)/i,
+  /more\s+than four\b/i, /four-(?:workers|agents)-per-task/i, /(?:en çok|en fazla) dört worker/i, /dörtten fazla işçi/i, /bir ila dört/i, /bir ile dort/i
+];
+function surfaceFiles(root) {
+  const out = [];
+  const walk = (dir) => { for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) { const rel = `${dir}/${entry.name}`; if (entry.isDirectory()) { if (entry.name !== "node_modules") walk(rel); } else if (/\.(md|toml|json)$/.test(entry.name)) out.push(rel); } };
+  for (const dir of ["templates", "plugins/agentchef", "catalog"]) if (fs.existsSync(path.join(root, dir))) walk(dir);
+  for (const name of fs.readdirSync(path.join(root, "docs"))) if (/\.md$/.test(name) && !name.startsWith("release-notes")) out.push(`docs/${name}`);
+  for (const name of ["README.md", "README.tr.md"]) if (fs.existsSync(path.join(root, name))) out.push(name);
+  return out;
+}
+export function validateTeamWording(root = process.cwd()) {
+  const errors = [];
+  for (const file of surfaceFiles(root)) {
+    const text = fs.readFileSync(path.join(root, file), "utf8").replace(/\s+/g, " ");
+    for (const pattern of STALE_WORKER_CAP) if (pattern.test(text)) errors.push(`${file}: fixed worker cap wording ${pattern} conflicts with the live capacity recommendation`);
+  }
+  const need = (file, patterns) => { const full = path.join(root, file); if (!fs.existsSync(full)) { errors.push(`${file} is missing`); return; } const text = fs.readFileSync(full, "utf8").replace(/\s+/g, " "); for (const pattern of patterns) if (!pattern.test(text)) errors.push(`${file} must contain ${pattern}`); };
+  need("templates/claude/rules/agentchef-working-agreement.md", [/"Takım koşusu" \(team run\) means `beyin takim` through the `team-conductor` skill, not the Workflow tool/, /live capacity recommendation/]);
+  need("templates/codex/AGENTS.md", [/"Takım koşusu" \(team run\) means `beyin takim`/, /live capacity recommendation/]);
+  need("plugins/agentchef/skills/team-conductor/SKILL.md", [/"Takım koşusu"/, /Do not substitute the Claude Code Workflow tool/, /--snapshot/, /merge --as-patch/, /--max-workers/, /Never commit, stash or clean the user's work/]);
+  return errors;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   if (args.length) {
@@ -72,7 +103,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   try {
     const root = path.resolve(process.cwd());
     const catalog = JSON.parse(fs.readFileSync(path.join(root, "catalog/subscription-team-mode.json"), "utf8"));
-    const errors = validateCatalog(catalog, root);
+    const errors = [...validateCatalog(catalog, root), ...validateTeamWording(root)];
     if (errors.length) {
       console.error(errors.map((error) => `- ${error}`).join("\n"));
       process.exit(1);

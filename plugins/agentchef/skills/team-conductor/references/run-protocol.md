@@ -21,7 +21,7 @@ node scripts/team-run.mjs <command> --state <board.json> --json
 | Step | Command | What to show |
 | --- | --- | --- |
 | Diagnose | `doctor` | Enablement, prerequisites, resource checks, and latest run |
-| Plan | `plan --repo <path> --plan-file <file>` | Run ID, base branch, worker/task/role/sandbox/write-scope table, checks |
+| Plan | `plan --repo <path> --plan-file <file> [--snapshot] [--max-workers <n>]` | Run ID, base branch, snapshot ref if any, worker cap with its capacity source and reason, worker/task/role/sandbox/write-scope table, checks |
 | Start | `start --run <runId>` | State and worker launch results |
 | Supervise | Internal `supervise --run <runId>` | Engine-owned detached supervisor; do not launch or stop manually |
 | Observe | `status --run <runId>` | Each worker's state, latest event, lease/heartbeat health, and scope warning |
@@ -29,6 +29,7 @@ node scripts/team-run.mjs <command> --state <board.json> --json
 | Integrate | `integrate --run <runId>` | Integration checks, merged tasks, conflicts, and diff statistics |
 | Verify | `verify --run <runId>` | Independent read-only `test_verifier` report and verdict |
 | Merge | `merge --run <runId>` | Merge commit result and cleanup result |
+| Deliver | `merge --run <runId> --as-patch` | Paths applied to the working tree as unstaged changes; the base commit is unchanged |
 | Stop | `abort --run <runId> --reason <reason>` | Aborted workers and board task outcomes |
 | Inspect | `watch --run <runId>` / `doctor` | Read-only event view / prerequisites |
 | Reclaim | `cleanup --run <runId>` | Exact worktrees, branches, or logs selected for cleanup |
@@ -83,7 +84,14 @@ its own worktree and branch `takim/<runId>-<TASK>`; the integration branch is
 `.agentchef-worktrees/<runId>/`. Temporary directories and paths inside the
 repository are rejected.
 
-Use only 1-4 allowlisted roles. Default to read-only. `test_verifier` is
+Use only allowlisted roles, one worker per independent write scope. How many
+run at once follows the live capacity recommendation: `beyin kapasite`
+(`<vault>/motor/scripts/.state/kapasite.json`, fresh for 10 minutes) or,
+without it, free RAM at 1.5 GB per worker plus a 2 GB reserve. The hard
+ceiling is 8. `--max-workers <n>` may lower the cap, or raise it up to the
+recommendation; a higher number is refused with the measured reason. A dirty
+repository plans with `--snapshot`, and its run is delivered with
+`merge --as-patch`. Default to read-only. `test_verifier` is
 read-only and verifies the integration branch. Workers cannot push, change
 their assigned scope, spawn more agents, or alter global configuration. The
 engine owns Codex child processes; the visible terminal pane is only an event
@@ -96,7 +104,8 @@ resets, `resume --run <runId>` continues the paused workers on their saved Codex
 threads (plan hash checked, no second approval). Team mode is available on every install from
 AgentChef 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off for
 a process; the skill never changes this variable for you. Optional controls
-are `AGENTCHEF_TEAM_MAX_WORKERS`,
+are `AGENTCHEF_TEAM_MAX_WORKERS` (a further cap), `AGENTCHEF_TEAM_RESOURCE_FILE`
+(another capacity file),
 `AGENTCHEF_TEAM_WORKTREE_ROOT`, `AGENTCHEF_TEAM_PANE`, and
 `AGENTCHEF_TEAM_CODEX_COMMAND`. `AGENTCHEF_BOARD_STATE` selects the coordination
 board state file.
