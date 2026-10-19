@@ -55,7 +55,7 @@ durdurmasını veya kapatmasını da isteyebilirsin.
 
 Routing yolu iki rotadır; ikisi de en fazla iki seviye derindir:
 
-- **Direct**: `görev -> routing profili -> ana oturum bir ila dört uzmana brief verir + dar skill/MCP'ler`
+- **Direct**: `görev -> routing profili -> ana oturum işin gerektirdiği uzmanlara brief verir + dar skill/MCP'ler`
 - **Team**: senin oluşturduğun bir board görevi için `görev -> routing profili -> ana oturum o görevin koordinatörüne brief verir -> koordinatörün katalogdaki worker'ları`
 
 Yani koordinatör her zaman yolda değildir; yalnızca Team rotasında kullanılır.
@@ -170,7 +170,7 @@ belirtir:
   önerilir.
 
 Sen adlarını vermeden görev başına en fazla 2 agent başlar; adını verdiğin
-agent'lar sayılmaz ve görev başına dört worker sınırı geçerliliğini korur.
+agent'lar sayılmaz ve canlı kapasite sınırı geçerliliğini korur.
 Eşleşme tavsiyedir: işin agent gerektirip gerektirmediğine yine ana oturum karar
 verir.
 
@@ -350,12 +350,13 @@ geçerlidir. Bir ofis ekibi gibi işler:
 
 İki rota vardır, ikisi de en çok iki seviye derinliktedir:
 
-- **Direct**: ana oturum bir ila dört uzmana brief'i kendisi verir.
+- **Direct**: ana oturum işin gerektirdiği uzmanlara brief'i kendisi verir.
 - **Team**: senin oluşturduğun bir board görevi için ana oturum o görevin
   koordinatörüne brief verir, koordinatör de kendi worker'larına.
 
-Görev başına en çok dört worker kullan (koordinatör sayılmaz); fazlası senin
-açık isteğini gerektirir.
+Görev başına worker sayısını işe ve canlı kapasite önerisine göre seç
+(`beyin kapasite`, sert tavan 8; koordinatör sayılmaz). Önerinin üstündeki istek
+ölçülen gerekçeyle reddedilir.
 
 - Bir agent tek bir brief alır ve tek bir handoff döndürür. Agent'lar çalışırken
   birbirine mesaj atmaz; alanlar arası sorular ana oturum üzerinden giden bir
@@ -405,8 +406,8 @@ ile 2026-10-05'te kontrol edildi):
   backend'i bunu uygular; isteğe bağlı `multi_agent_v2` backend'i yok sayar,
   bu yüzden orada iki seviye kuralı rol talimatlarına dayanır.
 - `max_threads = 10`, `max_concurrent_threads_per_session` için eski bir takma
-  addır: hedef değil, oturum genelinde bir tavandır. Görev başına dört worker
-  kuralı yine geçerlidir.
+  addır: hedef değil, oturum genelinde bir tavandır. Görev başına canlı kapasite
+  sınırı yine geçerlidir.
 - AgentChef ayrıca `job_max_runtime_seconds = 3600` yazar; upstream'de artık
   etkisi yoktur ve zararsızdır. Güncel configuration reference `max_depth` ya
   da `job_max_runtime_seconds` anahtarını listelemez.
@@ -435,7 +436,7 @@ Claude Code oturumu sınırlı Codex `exec` worker'larını yönetmek için yaln
 çağrılan `team-conductor` skill'ini kullanabilir. Bir süreçte takım yürütmesini
 kapatmak için `AGENTCHEF_TEAM_MODE=off` ayarlayın; skill bu değişkeni sizin
 yerinize değiştirmez. Claude planlar ve raporlar; worker agent'ları doğrudan
-başlatmaz. 1-4 allowlist worker'ının her biri ayrı worktree alır; kullanıcı
+başlatmaz. Allowlist worker'larının (canlı kapasite önerisinin izin verdiği kadarı aynı anda) her biri ayrı worktree alır; kullanıcı
 onayları, entegrasyon kararı ve rapor ana oturumun sorumluluğundadır.
 
 Çalıştırmadan önce [takım koşusu protokolünü](skills-and-agents.tr.md#takım-koşuları)
@@ -470,8 +471,8 @@ bölümüne bakın.
 Kurulumda çalışan yedi koordinatör vardır: leadership, product, backend, DevOps,
 QA, UI ve marketing. 21 AgentChef uzmanı dar görev worker'ı olarak kalır.
 `catalog/agents.json` eksiksiz 7→21 sahiplik eşlemesini tutar. Bir koordinatör
-yalnızca katalogdaki worker grubunu, görev başına en çok dört worker sınırı
-içinde (koordinatörün kendisi sayılmaz) seçebilir; worker daha fazla delege
+yalnızca katalogdaki worker grubunu, koordinatör başına en çok dört katalog
+rolü içinde (koordinatörün kendisi sayılmaz) seçebilir; worker daha fazla delege
 etmez.
 
 1.3.0 ile birlikte, 1.2 kurulumundan yapılan yükseltme kaldırılan beş koordinatör

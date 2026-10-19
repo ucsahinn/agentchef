@@ -30,7 +30,9 @@ sandbox can block test-runner child processes with `spawn EPERM`; if this still
 fails, report it under Risks rather than treating it as a code failure.
 
 The explicit-only `team-conductor` skill lets an interactive Claude Code
-session coordinate 1-4 bounded Codex workers. Team mode is available on every
+session coordinate Codex workers sized to the live capacity recommendation
+(`beyin kapasite`, hard ceiling 8). "Takım koşusu" (team run) means this
+skill and `beyin takim`, not the Claude Code Workflow tool. Team mode is available on every
 install from 1.6.0. Set `AGENTCHEF_TEAM_MODE=off` to switch team execution off
 for a process; the skill never changes this variable for you. Start and merge
 still require the user's typed approvals. See the
@@ -39,8 +41,11 @@ for the user-gated operating procedure.
 
 **Fan-out.** The conductor uses one worker per independent write scope. It runs
 several workers only when their write scopes are disjoint and no task needs
-another task's output, puts dependent work in a later run, and never uses more
-than four.
+another task's output, and puts dependent work in a later run. How many run at
+once follows the live capacity recommendation; `plan --max-workers <n>` above
+it is refused with the measured reason. A repository with uncommitted work
+plans with `--snapshot` and is delivered with `merge --as-patch`, which creates
+no commit.
 
 **With dual-agent-brain.** The start and merge approvals come from the
 [dual-agent-brain](https://github.com/ucsahinn/dual-agent-brain) (Beyin) chat
@@ -164,9 +169,9 @@ extra authority just because the work was delegated.
 From 1.3.2, roles run on a cheaper worker model while the
 session you open keeps its own; see [Model Tiers](agents.md#model-tiers).
 Agents do not chat with each other. From 1.3.3 there are
-two routes, both at most two levels deep: Direct, where the main session briefs one to four specialists,
+two routes, both at most two levels deep: Direct, where the main session briefs the specialists the task needs,
 and Team, where for a board task the main session briefs that task's
-coordinator and the coordinator briefs its own workers. Use at most four workers per task (a coordinator is not counted); each agent returns one handoff.
+coordinator and the coordinator briefs its own workers. Size the workers per task to the work and to the live capacity recommendation (a coordinator is not counted); each agent returns one handoff.
 From 1.3.4, an agent starts only when one of four conditions
 holds (a routing profile that requires a verifier matched and files changed;
 independent parallel work; noisy logs or research to isolate; you asked for it),

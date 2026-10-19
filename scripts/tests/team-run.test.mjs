@@ -61,18 +61,18 @@ function validApproval(state, runId, tur, plannedAt) {
   fs.writeFileSync(file, JSON.stringify(approval));
   return file;
 }
-function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers }) {
+function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers, planArgs = [], extraEnv = {}, allowFailure = false }) {
   const planPath = path.join(temp, "plan.json"), briefPath = path.join(temp, "brief.md");
   fs.writeFileSync(briefPath, brief);
   fs.writeFileSync(planPath, JSON.stringify({ workers: workers || [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
   const isolatedTemp = path.join(temp, "os-temp"); fs.mkdirSync(isolatedTemp, { recursive: true });
   const codex = fixtureCommand(temp);
-  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}) };
+  const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, AGENTCHEF_TEAM_RESOURCE_FILE: path.join(temp, "no-capacity.json"), ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}), ...extraEnv };
   const loginProbe = spawnSync(process.execPath, [fakeCodex, "login", "status"], { encoding: "utf8", env, windowsHide: true });
   assert.equal(loginProbe.status, 0, loginProbe.error?.message || loginProbe.stderr || loginProbe.stdout);
-  const planned = runCli(state, "plan", ["--repo", repo, "--plan-file", planPath, "--run", runId], env);
-  assert.equal(planned.status, 0, planned.stderr || planned.stdout);
-  return { env, run: planned.json.run, planPath };
+  const planned = runCli(state, "plan", ["--repo", repo, "--plan-file", planPath, "--run", runId, ...planArgs], env);
+  if (!allowFailure) assert.equal(planned.status, 0, planned.stderr || planned.stdout);
+  return { env, run: planned.json?.run, planPath, planned };
 }
 function finalHandoff(verdict = "pass", changedScope = ["src/change.txt"], claimedPaths = ["src/change.txt"]) {
   return { outcome: "fixture completed", evidence: ["fixture check passed"], changedScope, risks: [], openQuestions: [], needs: [], nextVerification: "integration verification", verdict, mutationCheck: { claimedPaths, outsideScope: [] } };
@@ -507,4 +507,116 @@ test("warning verdict remains verifiable and can merge only with the explicit fl
   const merged = runCli(state, "merge", ["--run", run.runId, "--accept-warn"], env);
   assert.equal(merged.status, 0, merged.stderr || merged.stdout); assert.equal(merged.json.run.status, "merged");
   assert.match(merged.json.cleanupWarning, /worktree cleanup failed/);
+});
+
+// C1: a repository with uncommitted work could not run a team run at all ("--repo must have a clean worktree").
+test("plan --snapshot bases a dirty repository on a private ref without touching its branch or index", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-snapshot-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  fs.writeFileSync(path.join(repo, "README.md"), "base\nuser edit\n"); fs.writeFileSync(path.join(repo, "notes.txt"), "untracked user notes\n");
+  fs.writeFileSync(path.join(repo, "staged.txt"), "staged\n"); git(repo, "add", "staged.txt");
+  const head = git(repo, "rev-parse", "HEAD"), statusBefore = git(repo, "status", "--porcelain"), cachedBefore = git(repo, "diff", "--cached", "--name-only");
+  const refused = planRun({ temp, state, repo, runId: "R-snapshot-refused", allowFailure: true });
+  assert.notEqual(refused.planned.status, 0); assert.match(refused.planned.stdout + refused.planned.stderr, /--snapshot/);
+  const { run } = planRun({ temp, state, repo, runId: "R-snapshot", planArgs: ["--snapshot"] });
+  assert.equal(run.snapshot.ref, "refs/agentchef/snapshots/R-snapshot");
+  assert.equal(git(repo, "rev-parse", run.snapshot.ref), run.baseCommit);
+  assert.equal(run.baseHead, head); assert.notEqual(run.baseCommit, head);
+  assert.equal(git(repo, "rev-parse", `${run.baseCommit}^`), head);
+  assert.deepEqual(git(repo, "ls-tree", "-r", "--name-only", run.baseCommit).split("\n").sort(), ["README.md", "notes.txt", "staged.txt"]);
+  assert.equal(git(repo, "show", `${run.baseCommit}:README.md`).replace(/\r/g, ""), "base\nuser edit");
+  assert.equal(git(repo, "rev-parse", "HEAD"), head, "HEAD must not move");
+  assert.equal(git(repo, "status", "--porcelain"), statusBefore, "working tree and index must be unchanged");
+  assert.equal(git(repo, "diff", "--cached", "--name-only"), cachedBefore);
+});
+
+test("plan --snapshot refuses untracked credential-like files and creates no ref", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-snapshot-secret-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  git(repo, "config", "core.excludesFile", path.join(temp, "no-global-excludes")); // a global .gitignore may already ignore .env
+  fs.writeFileSync(path.join(repo, ".env"), "PLACEHOLDER=1\n");
+  const { planned } = planRun({ temp, state, repo, runId: "R-snapshot-secret", planArgs: ["--snapshot"], allowFailure: true });
+  assert.notEqual(planned.status, 0); assert.match(planned.stdout + planned.stderr, /credential files/);
+  assert.equal(spawnSync("git", ["rev-parse", "--verify", "--quiet", "refs/agentchef/snapshots/R-snapshot-secret"], { cwd: repo, windowsHide: true }).status, 1);
+});
+
+// C2: delivery used to require a clean base and always created a merge commit on the owner's branch.
+test("merge --as-patch delivers a snapshot run to the working tree without a commit", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-as-patch-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-as-patch"; initRepo(repo); writeBoard(state);
+  fs.writeFileSync(path.join(repo, "README.md"), "base\nuser edit\n"); fs.writeFileSync(path.join(repo, "notes.txt"), "untracked user notes\n");
+  const head = git(repo, "rev-parse", "HEAD"), cachedBefore = git(repo, "diff", "--cached", "--name-only");
+  const { env } = planRun({ temp, state, repo, runId, planArgs: ["--snapshot"] });
+  validApproval(state, runId, "baslat", runCli(state, "status", ["--run", runId]).json.run.plannedAt);
+  assert.equal(runCli(state, "start", ["--run", runId], env).status, 0);
+  await waitForWorker(state, runId);
+  assert.equal(runCli(state, "collect", ["--run", runId], env).status, 0);
+  const integrated = runCli(state, "integrate", ["--run", runId], env); assert.equal(integrated.status, 0, integrated.stderr || integrated.stdout);
+  assert.doesNotMatch(fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.diff"), "utf8"), /user edit|untracked user notes/, "the snapshot itself is not part of the delivered diff");
+  const verified = runCli(state, "verify", ["--run", runId], env); assert.equal(verified.status, 0, verified.stderr || verified.stdout);
+  const run = runCli(state, "status", ["--run", runId]).json.run;
+  validApproval(state, runId, "birlestir", run.plannedAt);
+  const plainMerge = runCli(state, "merge", ["--run", runId], env);
+  assert.notEqual(plainMerge.status, 0); assert.match(plainMerge.stdout + plainMerge.stderr, /--as-patch/);
+  const delivered = runCli(state, "merge", ["--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
+  assert.equal(git(repo, "rev-parse", "HEAD"), head, "no commit on the base branch");
+  assert.equal(git(repo, "diff", "--cached", "--name-only"), cachedBefore, "the index is not touched");
+  assert.match(fs.readFileSync(path.join(repo, "src", "change.txt"), "utf8"), /worker output/);
+  assert.equal(fs.readFileSync(path.join(repo, "README.md"), "utf8").replace(/\r/g, ""), "base\nuser edit\n", "the owner's uncommitted edit survives");
+  assert.ok(fs.existsSync(path.join(repo, "notes.txt")));
+  assert.deepEqual(delivered.json.paths, ["src/change.txt"]);
+  assert.equal(delivered.json.run.status, "merged"); assert.equal(delivered.json.run.delivery.mode, "patch");
+  assert.ok(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.birlestir.json`), "utf8")).kullanildi);
+  await waitForSupervisorStopped(state, runId);
+  const cleaned = runCli(state, "cleanup", ["--run", runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
+  assert.equal(cleaned.json.removedSnapshotRef, `refs/agentchef/snapshots/${runId}`);
+  assert.equal(spawnSync("git", ["rev-parse", "--verify", "--quiet", `refs/agentchef/snapshots/${runId}`], { cwd: repo, windowsHide: true }).status, 1, "cleanup deletes the private snapshot ref");
+  assert.equal(git(repo, "rev-parse", "HEAD"), head);
+});
+
+test("merge --as-patch refuses a working tree that diverged and consumes nothing", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-as-patch-conflict-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-as-patch-conflict"; initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId });
+  validApproval(state, runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", runId], env).status, 0);
+  await waitForWorker(state, runId); assert.equal(runCli(state, "collect", ["--run", runId], env).status, 0);
+  assert.equal(runCli(state, "integrate", ["--run", runId], env).status, 0);
+  assert.equal(runCli(state, "verify", ["--run", runId], env).status, 0);
+  fs.mkdirSync(path.join(repo, "src"), { recursive: true }); fs.writeFileSync(path.join(repo, "src", "change.txt"), "owner wrote this meanwhile\n");
+  validApproval(state, runId, "birlestir", run.plannedAt);
+  const refused = runCli(state, "merge", ["--run", runId, "--as-patch"], env);
+  assert.notEqual(refused.status, 0); assert.match(refused.stdout + refused.stderr, /does not apply cleanly/);
+  assert.equal(fs.readFileSync(path.join(repo, "src", "change.txt"), "utf8"), "owner wrote this meanwhile\n");
+  assert.equal(runCli(state, "status", ["--run", runId], env).json.run.status, "verified");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.birlestir.json`), "utf8")).kullanildi, "");
+  await waitForSupervisorStopped(state, runId);
+});
+
+// C3: the cap was a fixed 4 whatever the machine had free; now it follows the live recommendation.
+test("worker cap follows the live capacity recommendation and refuses a request above it", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-capacity-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const capacityFile = path.join(temp, "kapasite.json");
+  const writeCapacity = (onerilen, ts = new Date().toISOString()) => fs.writeFileSync(capacityFile, JSON.stringify({ v: 1, ts, onerilen, tavan: 8, bosRamGB: 1.2, commitYuzde: 91, neden: "boş RAM 1,2 GB · commit %91" }));
+  const workers = (count, base) => Array.from({ length: count }, (_, index) => ({ taskId: `TASK-${base + index}`, role: "code_mapper", briefFile: "brief.md", checks: [] }));
+  const extraEnv = { AGENTCHEF_TEAM_RESOURCE_FILE: capacityFile };
+  writeCapacity(1);
+  const above = planRun({ temp, state, repo, runId: "R-cap-above", scenario: "read-only", workers: workers(3, 100), planArgs: ["--max-workers", "3"], extraEnv, allowFailure: true });
+  assert.notEqual(above.planned.status, 0);
+  assert.match(above.planned.stdout + above.planned.stderr, /above the live capacity recommendation of 1 \(beyin: boş RAM 1,2 GB · commit %91\)/);
+  const capped = planRun({ temp, state, repo, runId: "R-cap-default", scenario: "read-only", workers: workers(3, 110), extraEnv });
+  assert.equal(capped.run.maxWorkers, 1); assert.equal(capped.run.capacity.source, "beyin");
+  writeCapacity(6);
+  const wide = planRun({ temp, state, repo, runId: "R-cap-six", scenario: "read-only", workers: workers(6, 120), extraEnv });
+  assert.equal(wide.run.maxWorkers, 6, "six workers run together when the machine has room for six");
+  const lowered = planRun({ temp, state, repo, runId: "R-cap-lowered", scenario: "read-only", workers: workers(6, 130), planArgs: ["--max-workers", "2"], extraEnv });
+  assert.equal(lowered.run.maxWorkers, 2); assert.equal(lowered.run.capacity.requested, 2);
+  writeCapacity(0);
+  const one = planRun({ temp, state, repo, runId: "R-cap-one", scenario: "read-only", workers: workers(2, 160), planArgs: ["--max-workers", "1"], extraEnv });
+  assert.equal(one.run.maxWorkers, 1, "one worker is always allowed, as without a request");
+  writeCapacity(6, new Date(Date.now() - 60 * 60_000).toISOString());
+  const stale = planRun({ temp, state, repo, runId: "R-cap-stale", scenario: "read-only", workers: workers(2, 140), extraEnv });
+  assert.equal(stale.run.capacity.source, "local", "a stale recommendation falls back to the local free-RAM measurement");
+  const ceiling = planRun({ temp, state, repo, runId: "R-cap-ceiling", scenario: "read-only", workers: workers(9, 150), extraEnv, allowFailure: true });
+  assert.notEqual(ceiling.planned.status, 0); assert.match(ceiling.planned.stdout + ceiling.planned.stderr, /1-8 workers/);
 });

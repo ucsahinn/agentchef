@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.7.10** makes every `team-run` command readable without `--json`: the plain output was `[object Object]`, it is now a short summary (run, workers, supervisor, warnings, checks).
+Development version **v1.8.0** lets a team run work on a repository with uncommitted changes (`plan --snapshot`), deliver without a commit (`merge --as-patch`), and size its workers to the live capacity recommendation instead of a fixed four.
 
 ## Before Commit Or Push
 

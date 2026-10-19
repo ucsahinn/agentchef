@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0 - 2026-10-19
+
+- `team-run plan --snapshot`: a repository with uncommitted work no longer blocks a team run. The working tree (tracked changes plus untracked, non-ignored files) is written through a temporary index into a commit on `refs/agentchef/snapshots/<runId>`, and the workers branch from it. The user's branch, HEAD, index and files are not touched. Untracked credential-like files (`.env`, keys, `auth.json`, ...) refuse the snapshot. A dirty repository without `--snapshot` gets a refusal that names the flag. `cleanup` deletes the snapshot ref.
+- `team-run merge --as-patch`: delivery without a commit. After the same `birlestir` and verification gates, the verified integration diff is applied to the working tree as unstaged changes, after `git apply --check`, and only while the base branch still points at the planned commit. The approval is consumed only after a clean apply. A snapshot run must be delivered this way; a plain merge of it is refused.
+- Dynamic worker cap: `maxWorkers` follows the live capacity recommendation (Beyin `kapasite.json` v1 from `beyin kapasite`, fresh for 10 minutes; otherwise free RAM at 1.5 GB per worker plus a 2 GB reserve). The hard ceiling is 8 (was a fixed 4). `plan --max-workers <n>` may lower the cap or raise it up to the recommendation; a higher number is refused with the measured reason. The run record carries `capacity` (recommended, source, reason, requested).
+- "Takım koşusu" (team run) means `beyin takim` through the `team-conductor` skill, not the Claude Code Workflow tool; the Workflow tool is for work a team run cannot do, with the reason said first. The working agreement (both targets), the team-conductor, agent-brief and adaptive-agent-routing skills, the seven coordinators, the routing catalog and the docs no longer carry the fixed four-worker wording.
+- `validate-subscription-team-mode.mjs` now also fails if fixed four-worker wording returns anywhere in templates, the plugin, catalogs, docs or READMEs, or if the team-run meaning is missing from either rule target or the skill.
+
 ## 1.7.10 - 2026-10-16
 
 - Every `team-run` command printed `[object Object]` without `--json`: `output()` stringified the result object. The plain form is now a short human summary: ok / not ok, the run line (id, status, repo, base), one line per worker (task, role, status, verdict), supervisor liveness and heartbeat age, scope warnings, checks, and any remaining fields. `--json` is unchanged. Regression test runs `status` without `--json` against a run record.

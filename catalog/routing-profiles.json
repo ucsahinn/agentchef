@@ -1,13 +1,13 @@
 {
   "version": "0.4.0",
   "dateChecked": "2026-10-06",
-  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces and never start work by themselves. Two routes exist: Direct, where the main session briefs one to four specialists; Team, where a user-created coordination-board task names a coordinator that briefs its own cataloged workers. A profile with autoVerify names the verifier that runs before a file-changing task is reported done; other profiles only suggest one. A matched profile's autoSkill is loaded first when the skill allows implicit invocation and suggested otherwise. Workers return structured handoffs; the parent relays cross-domain handoffs; a task becomes done only after its evidence is attached and independently verified. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
+  "sourcePolicy": "Routing profiles recommend the narrowest useful surfaces and never start work by themselves. Two routes exist: Direct, where the main session briefs the specialists the task needs (sized to the live capacity recommendation); Team, where a user-created coordination-board task names a coordinator that briefs its own cataloged workers. A profile with autoVerify names the verifier that runs before a file-changing task is reported done; other profiles only suggest one. A matched profile's autoSkill is loaded first when the skill allows implicit invocation and suggested otherwise. Workers return structured handoffs; the parent relays cross-domain handoffs; a task becomes done only after its evidence is attached and independently verified. Preserve the active user profile and keep destructive, credentialed, publishing, deployment, database, broad filesystem, and broad or destructive graph actions approval-gated.",
   "delegationPolicy": {
     "mode": "conditional",
     "capacityCeiling": 10,
     "recommendedParallelism": {
       "default": 1,
-      "max": 4
+      "max": 8
     },
     "autoSpawnCap": 2,
     "autoSpawnNote": "At most autoSpawnCap agents start per task without the user naming them; agents the user asks for by name are not counted; more needs the user's explicit request.",

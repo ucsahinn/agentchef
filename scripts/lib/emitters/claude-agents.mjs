@@ -149,7 +149,7 @@ export function emitCoordinatorAgent(coordinator, roleToml, { pluginName, worker
     // Claude Code enforces the Agent(...) type list only when this agent runs
     // as the main thread (claude --agent); as a subagent the list is ignored,
     // so the rule is stated here too.
-    `- Spawn only the workers listed above; never \`general-purpose\`, \`fork\`, another coordinator, or any agent outside that list. Use at most ${maxWorkers} workers per task and one coordinator-to-worker level.`,
+    `- Spawn only the workers listed above; never \`general-purpose\`, \`fork\`, another coordinator, or any agent outside that list. Use only these cataloged workers (at most ${maxWorkers}), each at most once per task, and one coordinator-to-worker level.`,
     "- Attach worker evidence (commands, paths, observations) to the handoff before reporting done.",
     "",
     role.developer_instructions || ""

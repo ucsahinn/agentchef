@@ -221,7 +221,7 @@ profile still sets effort and the session you open keeps the model you chose.
 The model line changes no role boundary or approval gate.
 
 `max_threads = 10` is a concurrency capacity ceiling, not permission to fan
-out every task. Conditional routing normally uses one to four agents. From
+out every task. Conditional routing sizes the agents to the work and to the live capacity recommendation. From
 1.3.4, an agent starts only when one of these holds: an
 autoVerify routing profile matched and files changed, so its verifier runs
 before the task is reported done; independent parallel work exists; noisy logs
@@ -619,7 +619,8 @@ Team mode is available on every install from 1.6.0. Set
 `AGENTCHEF_TEAM_MODE=off` to switch team execution off for a process; the
 `team-conductor` skill never changes this variable for you. The skill is
 explicit-only. The interactive Claude session plans
-and gates the run while the engine starts 1-4 allowlisted Codex `exec` workers
+and gates the run while the engine starts allowlisted Codex `exec` workers, as many at once as the live
+capacity recommendation allows (hard ceiling 8),
 in separate worktrees. The engine reads the user's single-use start and merge
 gates and never creates their backing files. The worker sandbox is the stricter
 of its role TOML and the team-mode ceiling; `test_verifier` is read-only.
@@ -644,7 +645,8 @@ There are 21 allowlisted specialist worker roles. Each worker's effective
 sandbox is the stricter of the role template and the team-mode ceiling; the
 contract caps the general worker sandbox at `workspace-write`, and several
 roles are capped at `read-only`. `danger-full-access` is rejected. Runs allow
-one to four workers, with maximum nesting depth one; workers cannot spawn more
+as many concurrent workers as the live capacity recommendation permits (hard ceiling 8; a request above
+it is refused with the measured reason), with maximum nesting depth one; workers cannot spawn more
 agents and must return further-role requests as `needs: <role> - <why>`.
 `codex exec resume` uses only `-c`, `--json`, `-m`, `-o`,
 `--output-schema`, and stdin (`-`); resume does not accept directory, sandbox,

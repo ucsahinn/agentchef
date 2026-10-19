@@ -29,10 +29,10 @@ field by field.
 - Roles: the user approves; the main session plans, briefs, merges, runs every
   board command, and reports; a coordinator picks its own cataloged workers and
   merges their handoffs (read-only); a worker does one bounded job.
-- Routes: Direct, the main session briefs one to four specialists; Team, for a
-  board task, the main session briefs its coordinator, which briefs its own
-  workers. At most four workers per task (a coordinator is not counted); two
-  levels.
+- Routes: Direct, the main session briefs the specialists the task needs; Team,
+  for a board task, the main session briefs its coordinator, which briefs its own
+  workers. Size the workers per task to the live capacity recommendation (a
+  coordinator is not counted); two levels.
 - Workers never spawn. When another role is needed, the worker writes
   `needs: <role> - <why>` under Open questions and the parent decides.
 

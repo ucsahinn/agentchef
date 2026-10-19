@@ -93,8 +93,8 @@ if (!Array.isArray(routing.profiles) || routing.profiles.length < 10) {
 if (routing.delegationPolicy?.mode !== "conditional" || routing.delegationPolicy?.capacityCeiling !== 10) {
   fail("routing catalog must define conditional delegation with capacity ceiling 10.");
 }
-if (routing.delegationPolicy?.recommendedParallelism?.max !== 4) {
-  fail("routing catalog must cap one task at four workers.");
+if (routing.delegationPolicy?.recommendedParallelism?.max !== 8) {
+  fail("routing catalog must cap one task at the hard ceiling of eight workers (the live capacity recommendation decides below it).");
 }
 if (!Number.isInteger(routing.delegationPolicy?.autoSpawnCap) || routing.delegationPolicy.autoSpawnCap < 1 || routing.delegationPolicy.autoSpawnCap > 4) {
   fail("routing catalog must set delegationPolicy.autoSpawnCap to an integer from 1 to 4.");

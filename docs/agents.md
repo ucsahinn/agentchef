@@ -56,7 +56,7 @@ you can also ask Codex to steer, stop, or close an agent.
 
 The routing path has two routes, both at most two levels deep:
 
-- **Direct**: `task -> routing profile -> main session briefs one to four specialists + narrow skills/MCPs`
+- **Direct**: `task -> routing profile -> main session briefs the specialists the task needs + narrow skills/MCPs`
 - **Team**: for a board task you created, `task -> routing profile -> main session briefs that task's coordinator -> its cataloged workers`
 
 A coordinator is therefore not always in the path; it is used only for the Team
@@ -173,7 +173,7 @@ names:
   instead of being loaded.
 
 At most 2 agents start per task without you naming them; agents you name are not
-counted, and the four-workers-per-task limit still applies. The matching is
+counted, and the live capacity limit still applies. The matching is
 advice: the main session still judges whether the work needs an agent.
 
 To see the match for a request, run:
@@ -348,12 +348,13 @@ like an office team:
 
 Two routes, both at most two levels deep:
 
-- **Direct**: the main session briefs one to four specialists itself.
+- **Direct**: the main session briefs the specialists the task needs itself.
 - **Team**: for a board task you created, the main session briefs that task's
   coordinator, which briefs its own workers.
 
-Use at most four workers per task (a coordinator is not counted); more needs your
-explicit request.
+Size the workers per task to the work and to the live capacity recommendation
+(`beyin kapasite`, hard ceiling 8; a coordinator is not counted). A request above
+the recommendation is refused with the measured reason.
 
 - An agent receives one brief and returns one handoff. Agents do not message
   each other while they work; cross-domain questions go back to the main
@@ -405,7 +406,7 @@ and the [configuration reference](https://learn.chatgpt.com/docs/config-file/con
   there the two-level rule rests on the role instructions.
 - `max_threads = 10` is a legacy alias of
   `max_concurrent_threads_per_session`: a ceiling across the session, not a
-  target. The four-agents-per-task rule still applies.
+  target. The live capacity limit per task still applies.
 - AgentChef also writes `job_max_runtime_seconds = 3600`; it no longer has an
   effect upstream and is harmless. The current configuration reference does
   not list `max_depth` or `job_max_runtime_seconds`.
@@ -434,8 +435,8 @@ AgentChef 1.6.0 makes team mode available on every install. The explicit-only
 bounded Codex `exec` workers. Set `AGENTCHEF_TEAM_MODE=off` to switch team
 execution off for a process; the skill never changes this variable for you.
 Claude plans and
-reports; it does not spawn worker agents directly. Each of 1-4 allowlisted
-workers gets a separate worktree and the main session remains responsible for
+reports; it does not spawn worker agents directly. Each allowlisted worker
+(as many at once as the live capacity recommendation allows) gets a separate worktree and the main session remains responsible for
 the user gates, integration decision, and report.
 
 Read the [team run protocol](skills-and-agents.md#team-runs) and
@@ -469,8 +470,8 @@ the supervisor owns the Codex child. Use `abort` for a requested stop and
 The seven installed coordinators own work: leadership, product, backend, DevOps,
 QA, UI, and marketing. The 21 AgentChef specialists remain narrow task workers.
 `catalog/agents.json` records the complete 7-to-21 ownership map. A
-coordinator may select only its cataloged worker group, within the limit of
-four workers per task (the coordinator itself is not counted), and workers do
+coordinator may select only its cataloged worker group, at most four cataloged
+roles per coordinator (the coordinator itself is not counted), and workers do
 not delegate further.
 
 Starting with 1.3.0, upgrading from a 1.2 install retires the five removed
