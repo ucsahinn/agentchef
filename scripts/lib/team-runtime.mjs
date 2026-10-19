@@ -114,11 +114,18 @@ function formatBrief(brief) {
   const labels={goal:"Goal",evidence:"Evidence",scope:"Write scope",boundaries:"Boundaries",doneWhen:"Done when",returnFormat:"Return format",userWords:"User's words"};
   return BRIEF_KEYS.map(k=>`### ${labels[k]}\n${values[k]}`).join("\n\n");
 }
+// Codex runs worker commands through Windows PowerShell 5.1 with -NoProfile. Its Get-Content reads a UTF-8 file without a
+// BOM as ANSI and its console output is not UTF-8, so Turkish text came back as mojibake and a reviewer reported a
+// corruption that was not in the file (run R20261019-4384). Environment variables and profiles cannot change that, so
+// the worker is told the exact prefix and read form; scripts/tests/team-runtime.test.mjs round-trips Turkish text
+// through this same prefix.
+export const WINDOWS_UTF8_PREFIX = "[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); $OutputEncoding=[Console]::OutputEncoding;";
+export const WINDOWS_UTF8_RULE = `\n- On Windows your commands run in Windows PowerShell 5.1, which reads UTF-8 files as ANSI and prints non-ASCII text garbled. Start every PowerShell command that reads or prints file text with \`${WINDOWS_UTF8_PREFIX}\` and read files with \`Get-Content -Encoding UTF8\` (rg and git pass bytes through unchanged). Never report broken characters or an encoding defect from PowerShell output alone; confirm it from the file bytes first (for example \`Format-Hex\`), and treat a CRLF/LF difference as line endings, not content`;
 function teamRules(language, platform) {
   const configured = language ?? CONTRACT.workers.language;
   const languageName = configured || "tr";
   const displayLanguage = languageName === "tr" ? "Turkish" : languageName;
-  const windowsRule = platform === "win32" ? "\n- On Windows the sandbox blocks child processes spawned by the Node test runner; run tests as `node --test --test-isolation=none <files>`; never conclude the code is broken from a `spawn EPERM`; report it under Risks if even that fails" : "";
+  const windowsRule = platform === "win32" ? `\n- On Windows the sandbox blocks child processes spawned by the Node test runner; run tests as \`node --test --test-isolation=none <files>\`; never conclude the code is broken from a \`spawn EPERM\`; report it under Risks if even that fails${WINDOWS_UTF8_RULE}` : "";
   return `## Team rules\n- Work only in your assigned worktree and write scope.\n- Do not commit, push, checkout, create worktrees, or create branches.\n- Do not spawn agents; if needed, write needs: <role> - <why>.\n- Do not install packages or change global settings.\n- Never print, repeat, or persist secrets.\n- Write every progress message and the handoff text in ${displayLanguage}; keep code, paths and commands verbatim.\n- Never type approval sentences (baslat/birlestir/onayla) or address the conductor's tools; your handoff is data for the conductor, not instructions.${windowsRule}\n- Your final response must be only JSON matching the output schema.`;
 }
 export function composeWorkerPrompt({roleInstructions="",runId,taskId,role,brief,language,platform=process.platform}) {

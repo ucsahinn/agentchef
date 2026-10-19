@@ -1,5 +1,14 @@
 # Sürüm Notları
 
+## v1.8.1 - 2026-10-19
+
+AgentChef 1.8.1, ilk gerçek 1.8.0 takım koşusunda bulunan iki Windows sorununu düzeltir.
+
+### Neler Değişti
+
+- **Windows işçilerinden sahte bozuk karakter yok.** İşçilere ve doğrulayıcıya Windows PowerShell 5.1'de dosyaları UTF-8 okumaları ve bozuk karakter bildirmeden önce baytları kontrol etmeleri söylenir.
+- **`merge --as-patch` satır sonlarını korur.** `core.autocrlf=true` altında LF dosya LF, CRLF dosya CRLF kalır; yalnız değişen satırlar değişir.
+
 ## v1.8.0 - 2026-10-19
 
 AgentChef 1.8.0 takım koşularının commit'lenmemiş işle birlikte çalışmasını ve makineye göre boyutlanmasını sağlar.

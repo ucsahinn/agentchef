@@ -91,7 +91,13 @@ without it, free RAM at 1.5 GB per worker plus a 2 GB reserve. The hard
 ceiling is 8. `--max-workers <n>` may lower the cap, or raise it up to the
 recommendation; a higher number is refused with the measured reason. A dirty
 repository plans with `--snapshot`, and its run is delivered with
-`merge --as-patch`. Default to read-only. `test_verifier` is
+`merge --as-patch`. Default to read-only.
+
+On Windows, workers run commands in Windows PowerShell 5.1, which reads UTF-8
+files as ANSI. The engine tells every worker and the verifier to read with the
+UTF-8 prefix and `Get-Content -Encoding UTF8`. If a report still claims broken
+characters, check the file bytes before acting on it. `merge --as-patch` keeps
+each file's own line endings (LF or CRLF) under `core.autocrlf=true`. `test_verifier` is
 read-only and verifies the integration branch. Workers cannot push, change
 their assigned scope, spawn more agents, or alter global configuration. The
 engine owns Codex child processes; the visible terminal pane is only an event

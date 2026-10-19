@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.0** takım koşusunun commit'lenmemiş değişiklikleri olan bir depoda çalışmasını (`plan --snapshot`), commit oluşturmadan teslim etmesini (`merge --as-patch`) ve işçi sayısını sabit dört yerine canlı kapasite önerisine göre ayarlamasını sağlar.
+Geliştirme sürümü **v1.8.1** Windows takım koşusu işçilerinin UTF-8 dosyaları bozuk karakter olarak okumasını önler ve `merge --as-patch` ile her dosyanın kendi satır sonlarını korur.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

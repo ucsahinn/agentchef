@@ -7,8 +7,9 @@ import {
   acquireTeamOperationLock, consumeApprovalWith, effectiveSandbox, maxConcurrency, readApproval, approvalIsValid, consumeApproval,
   assertTeamTextSafe, composeWorkerPrompt, composeVerifierPrompt, parseWorkerHandoff,
   renderHandoffMarkdown, writeRunRecord, readRunRecord, transitionRun, transitionWorker,
-  readRoleToml
+  readRoleToml, WINDOWS_UTF8_PREFIX
 } from "../lib/team-runtime.mjs";
+import { spawnSync } from "node:child_process";
 
 const contract = JSON.parse(fs.readFileSync(new URL("../../catalog/subscription-team-mode.json", import.meta.url)));
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "team-runtime-"));
@@ -134,4 +135,32 @@ test("verifier prompt carries host integration results and tells the verifier no
   assert.doesNotMatch(prompt, /\u001b/);
   assert.match(prompt, /do not re-run test suites/);
   assert.doesNotMatch(composeVerifierPrompt({ runId: "R1", brief }), /Host integration results/);
+});
+
+// Run R20261019-4384: a Windows worker read Turkish UTF-8 text through Windows PowerShell 5.1 defaults and reported a
+// corruption that was not in the file. Workers and the verifier must get the UTF-8 read rule, and its exact prefix must
+// round-trip Turkish text through powershell.exe -NoProfile, the same shell path Codex uses.
+test("Windows workers and the verifier are told to read files as UTF-8 and to check bytes before reporting mojibake", () => {
+  for (const prompt of [
+    composeWorkerPrompt({ roleInstructions: "ROLE", runId: "R1", taskId: "TASK-1", role: "code_reviewer", brief, platform: "win32" }),
+    composeVerifierPrompt({ runId: "R1", brief, platform: "win32" })
+  ]) {
+    assert.ok(prompt.includes(WINDOWS_UTF8_PREFIX), "prompt carries the UTF-8 console prefix");
+    assert.match(prompt, /Get-Content -Encoding UTF8/);
+    assert.match(prompt, /Never report broken characters or an encoding defect from PowerShell output alone/);
+  }
+  assert.ok(!composeWorkerPrompt({ roleInstructions: "ROLE", runId: "R1", taskId: "TASK-1", role: "code_reviewer", brief, platform: "linux" }).includes(WINDOWS_UTF8_PREFIX));
+});
+
+test("the Windows UTF-8 prefix round-trips Turkish text through powershell.exe -NoProfile", { skip: process.platform !== "win32" }, () => {
+  const dir = tmp(); const file = path.join(dir, "topics.ts");
+  const text = "Şirket İçi Şifre Yöneticisi · Ayrıcalıklı Erişim · ğüşöçİı";
+  fs.writeFileSync(file, `${text}\n`, "utf8"); // UTF-8 without a BOM, like the repository file
+  const command = `${WINDOWS_UTF8_PREFIX} Get-Content -Encoding UTF8 -LiteralPath '${file.replace(/'/g, "''")}'`;
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-Command", command], { encoding: "buffer", windowsHide: true, timeout: 60_000 });
+  assert.equal(result.status, 0, result.stderr?.toString());
+  const out = result.stdout.toString("utf8").replace(/\r?\n$/, "");
+  assert.equal(out, text);
+  assert.ok(!out.includes("�"));
+  fs.rmSync(dir, { recursive: true, force: true });
 });

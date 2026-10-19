@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.8.1 - 2026-10-19
+
+AgentChef 1.8.1 fixes two Windows issues found in the first real 1.8.0 team run.
+
+### What Changed
+
+- **No false mojibake from Windows workers.** Workers and the verifier are told to read files as UTF-8 in Windows PowerShell 5.1 and to check the bytes before reporting broken characters.
+- **`merge --as-patch` keeps line endings.** An LF file stays LF and a CRLF file stays CRLF under `core.autocrlf=true`; only the changed lines change.
+
 ## v1.8.0 - 2026-10-19
 
 AgentChef 1.8.0 lets team runs work alongside uncommitted work and sizes them to the machine.
