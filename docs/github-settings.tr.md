@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.2** Windows takım koşusu işçilerinin Codex sandbox'ında dosyaları yeniden okuyabilmesini sağlar, canlı kapasite önerisi 0 iken sahip tek işçi istemedikçe koşuyu reddeder ve başlatırken kapasiteyi yeniden ölçer.
+Geliştirme sürümü **v1.8.3** Windows takım koşusu işçilerini tırnaksız okuma biçimleriyle sınırlar; Windows PowerShell 5.1 yerel program argümanlarındaki çift tırnakları siliyor.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

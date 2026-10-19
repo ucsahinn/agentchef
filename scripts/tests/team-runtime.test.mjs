@@ -137,19 +137,21 @@ test("verifier prompt carries host integration results and tells the verifier no
   assert.doesNotMatch(composeVerifierPrompt({ runId: "R1", brief }), /Host integration results/);
 });
 
-// Runs R20261019-4384 and R20261019-cffa: Codex runs worker commands through Windows PowerShell 5.1 in its sandbox's
-// ConstrainedLanguage mode. Cmdlet output garbles Turkish text, and the .NET prefix 1.8.1 recommended fails there, so
-// the worker could read nothing. Workers and the verifier must be told to read with native programs only, and every
-// form the rule names must return Turkish text intact under ConstrainedLanguage mode.
-test("Windows workers and the verifier read file text with native programs, not PowerShell cmdlets or .NET calls", () => {
+// Runs R20261019-4384, R20261019-cffa and R20261019-9b83: Codex runs worker commands through Windows PowerShell 5.1 in
+// its sandbox's ConstrainedLanguage mode. Cmdlet output garbles Turkish text, .NET calls fail, and double quotes inside
+// native arguments are dropped. Workers and the verifier must be told to read with quote-free native forms only, and
+// every form the rule names must return Turkish text intact under ConstrainedLanguage mode.
+test("Windows workers and the verifier read file text with quote-free native forms only", () => {
+  for (const form of WINDOWS_TEXT_READS) assert.ok(!form.includes("\""), `${form} must not contain a double quote`);
   for (const prompt of [
     composeWorkerPrompt({ roleInstructions: "ROLE", runId: "R1", taskId: "TASK-1", role: "code_reviewer", brief, platform: "win32" }),
     composeVerifierPrompt({ runId: "R1", brief, platform: "win32" })
   ]) {
     for (const form of WINDOWS_TEXT_READS) assert.ok(prompt.includes(form), `prompt names ${form}`);
     assert.match(prompt, /ConstrainedLanguage mode/);
-    assert.match(prompt, /Use `rg -F` \(fixed string\) for literal text and for Windows paths/);
-    assert.match(prompt, /Never report broken characters or an encoding defect unless one of these native reads shows it/);
+    assert.match(prompt, /a double quote inside an argument to a native program is dropped/);
+    assert.match(prompt, /never put a double quote in a command argument, and do not use `node -e`/);
+    assert.match(prompt, /Never report broken characters or an encoding defect unless one of these reads shows it/);
     assert.doesNotMatch(prompt, /OutputEncoding=|Get-Content -Encoding UTF8`|such as git, cat, and Get-Content/, "no advice that fails or garbles in the sandbox");
   }
   assert.ok(!composeWorkerPrompt({ roleInstructions: "ROLE", runId: "R1", taskId: "TASK-1", role: "code_reviewer", brief, platform: "linux" }).includes(WINDOWS_TEXT_READS[0]));
@@ -158,21 +160,22 @@ test("Windows workers and the verifier read file text with native programs, not 
 test("every read form named in the Windows rule returns Turkish text intact under ConstrainedLanguage mode", { skip: process.platform !== "win32" }, () => {
   const dir = fs.mkdtempSync(path.join(os.homedir(), "agentchef-clm-")); // git refuses some temp roots; home is safe and removed below
   try {
-    const text = "Şirket İçi Şifre Yöneticisi · Ayrıcalıklı Erişim · ğüşöçİı";
+    const text = "Kendi Sunucunda Barındırma · Şifre Yöneticisi · Ayrıcalıklı Erişim · ğüşöçİı";
+    const body = `const topics = [\n  {\n    key: "guide-self-hosted", title: "${text}",\n  },\n];\n`;
     const run = (args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", `core.hooksPath=${path.join(dir, "no-hooks")}`, ...args], { cwd: dir, encoding: "utf8", windowsHide: true });
-    run(["init", "-q"]); fs.writeFileSync(path.join(dir, "topics.ts"), `${text}\n`, "utf8"); run(["add", "topics.ts"]); run(["commit", "-qm", "fixture"]);
+    run(["init", "-q"]); fs.writeFileSync(path.join(dir, "topics.ts"), body, "utf8"); run(["add", "topics.ts"]); run(["commit", "-qm", "fixture"]);
     const clm = "$ExecutionContext.SessionState.LanguageMode='ConstrainedLanguage';";
-    const shell = (body) => spawnSync("powershell.exe", ["-NoProfile", "-Command", `${clm} ${body}`], { cwd: dir, encoding: "buffer", windowsHide: true, timeout: 60_000 });
-    const probe = shell("$ExecutionContext.SessionState.LanguageMode"); assert.equal(probe.stdout.toString().trim(), "ConstrainedLanguage");
-    const forms = [...WINDOWS_TEXT_READS, "cmd /c type <path>"].map((form) => form.replaceAll("<text>", "Yönet").replaceAll("<path>", "topics.ts"));
-    for (const form of forms) {
+    const shell = (command) => spawnSync("powershell.exe", ["-NoProfile", "-Command", `${clm} ${command}`], { cwd: dir, encoding: "buffer", windowsHide: true, timeout: 60_000 });
+    assert.equal(shell("$ExecutionContext.SessionState.LanguageMode").stdout.toString().trim(), "ConstrainedLanguage");
+    for (const form of WINDOWS_TEXT_READS.map((item) => item.replaceAll("<word>", "guide-self-hosted").replaceAll("<path>", "topics.ts"))) {
       const result = shell(form);
       const out = result.stdout.toString("utf8");
       assert.equal(result.status, 0, `${form}: ${result.stderr.toString()}`);
-      assert.ok(out.includes(text), `${form} returned ${JSON.stringify(out.slice(0, 80))}`);
+      assert.ok(out.includes(text), `${form} returned ${JSON.stringify(out.slice(0, 120))}`);
       assert.ok(!out.includes("�"), form);
     }
-    // The cmdlet path stays broken in this mode; if this ever passes, the rule can be relaxed.
-    assert.ok(!shell("Get-Content -Encoding UTF8 topics.ts").stdout.toString("utf8").includes(text), "Get-Content output is still garbled under ConstrainedLanguage mode");
+    // The two traps the rule names stay real in this mode; if either ever passes, the rule can be relaxed.
+    assert.equal(shell("rg -n 'key: \"guide-self-hosted\"' topics.ts").status, 1, "a double quote inside a native argument is dropped");
+    assert.ok(!shell("Get-Content -Encoding UTF8 topics.ts").stdout.toString("utf8").includes(text), "Get-Content output is garbled");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

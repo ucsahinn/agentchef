@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.2** lets Windows team-run workers read files again inside the Codex sandbox, refuses a run when the live capacity recommendation is 0 unless the owner asks for one worker, and re-measures capacity at start.
+Development version **v1.8.3** keeps Windows team-run workers to quote-free reads, because Windows PowerShell 5.1 drops double quotes inside native-program arguments.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

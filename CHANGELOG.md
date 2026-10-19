@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.3 - 2026-10-19
+
+- Windows workers read with quote-free forms only. Windows PowerShell 5.1 drops double quotes inside arguments it passes to native programs, so in run R20261019-9b83 every `rg 'key: "x"'` matched nothing and every `node -e "..."` broke. Measured in a real Codex read-only sandbox, `rg -n 'key: "guide-pam"'` exits 1 while `rg -n -F guide-pam` finds the line. The Windows rule now names only `rg -n -F <word>` (with `-A`/`-B` for context), `rg -n . <path>` and `git show HEAD:<path>`. It tells workers to search for a plain word inside the quotes, never to put a double quote in a command argument or use `node -e`, and to ignore profile load errors. A test checks that no named form contains a double quote and that each returns Turkish text intact under ConstrainedLanguage mode.
+
 ## 1.8.2 - 2026-10-19
 
 - Windows workers can read files again. 1.8.1 told workers to set `[Console]::OutputEncoding` and use `Get-Content -Encoding UTF8`, but Codex runs worker commands in the sandbox's ConstrainedLanguage mode, where that .NET call fails and cmdlet output still garbles non-ASCII text; run R20261019-cffa read nothing. Workers and the verifier now read file text only with native programs (`rg -F`, `git show`, `git grep -F`, `node`, `cmd /c type`), use `rg -F` for Windows paths, and ignore profile load errors. A test runs every named form under ConstrainedLanguage mode and checks Turkish text. The verifier prompt no longer suggests `cat` or `Get-Content`.

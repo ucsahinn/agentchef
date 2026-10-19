@@ -99,9 +99,11 @@ repository plans with `--snapshot`, and its run is delivered with
 
 On Windows, workers run commands in Windows PowerShell 5.1 in the sandbox's
 ConstrainedLanguage mode, where cmdlet output garbles non-ASCII text and .NET
-calls fail. The engine tells every worker and the verifier to read file text
-only with native programs (`rg -F`, `git show`, `git grep -F`, `node`). If a
-report still claims broken characters, check with `git show` before acting on it. `merge --as-patch` keeps
+calls fail, and double quotes inside native-program arguments are dropped. The
+engine tells every worker and the verifier to read file text only with quote-free
+forms (`rg -n -F <word>`, with `-A`/`-B` for context, `rg -n . <path>`, `git show
+HEAD:<path>`) and never `node -e`. If a report still claims broken characters,
+check with `git show` before acting on it. `merge --as-patch` keeps
 each file's own line endings (LF or CRLF) under `core.autocrlf=true`. `test_verifier` is
 read-only and verifies the integration branch. Workers cannot push, change
 their assigned scope, spawn more agents, or alter global configuration. The
