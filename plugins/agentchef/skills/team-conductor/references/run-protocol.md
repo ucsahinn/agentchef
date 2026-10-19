@@ -89,14 +89,19 @@ run at once follows the live capacity recommendation: `beyin kapasite`
 (`<vault>/motor/scripts/.state/kapasite.json`, fresh for 10 minutes) or,
 without it, free RAM at 1.5 GB per worker plus a 2 GB reserve. The hard
 ceiling is 8. `--max-workers <n>` may lower the cap, or raise it up to the
-recommendation; a higher number is refused with the measured reason. A dirty
+recommendation; a higher number is refused with the measured reason. A
+recommendation of 0 refuses the plan unless the user asks for `--max-workers 1`
+(recorded as `capacity.ownerOverride`). `start` measures again and only lowers
+the cap (`capacity_lowered` in the run history); at 0 without the override it
+refuses and consumes nothing. A dirty
 repository plans with `--snapshot`, and its run is delivered with
 `merge --as-patch`. Default to read-only.
 
-On Windows, workers run commands in Windows PowerShell 5.1, which reads UTF-8
-files as ANSI. The engine tells every worker and the verifier to read with the
-UTF-8 prefix and `Get-Content -Encoding UTF8`. If a report still claims broken
-characters, check the file bytes before acting on it. `merge --as-patch` keeps
+On Windows, workers run commands in Windows PowerShell 5.1 in the sandbox's
+ConstrainedLanguage mode, where cmdlet output garbles non-ASCII text and .NET
+calls fail. The engine tells every worker and the verifier to read file text
+only with native programs (`rg -F`, `git show`, `git grep -F`, `node`). If a
+report still claims broken characters, check with `git show` before acting on it. `merge --as-patch` keeps
 each file's own line endings (LF or CRLF) under `core.autocrlf=true`. `test_verifier` is
 read-only and verifies the integration branch. Workers cannot push, change
 their assigned scope, spawn more agents, or alter global configuration. The

@@ -1,5 +1,15 @@
 # Release Notes
 
+## v1.8.2 - 2026-10-19
+
+AgentChef 1.8.2 fixes a 1.8.1 regression and makes the zero-capacity case explicit.
+
+### What Changed
+
+- **Windows workers read files again.** Inside the Codex sandbox PowerShell runs in ConstrainedLanguage mode, where the 1.8.1 UTF-8 prefix failed. Workers now read file text with native programs (`rg -F`, `git show`, `node`), which keep Turkish characters intact.
+- **Capacity 0 stops the run.** A recommendation of 0 refuses `plan` with the measured reason; `--max-workers 1` runs one worker on purpose and is recorded.
+- **Start measures again.** `start` can lower the worker cap to the current recommendation, never raise it, and refuses at 0 without the override.
+
 ## v1.8.1 - 2026-10-19
 
 AgentChef 1.8.1 fixes two Windows issues found in the first real 1.8.0 team run.

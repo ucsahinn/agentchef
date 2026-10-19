@@ -1,5 +1,15 @@
 # Sürüm Notları
 
+## v1.8.2 - 2026-10-19
+
+AgentChef 1.8.2 bir 1.8.1 gerilemesini düzeltir ve sıfır kapasite durumunu açık hale getirir.
+
+### Neler Değişti
+
+- **Windows işçileri dosyaları yeniden okuyabiliyor.** Codex sandbox'ında PowerShell ConstrainedLanguage modunda çalışır ve 1.8.1'in UTF-8 öneki orada başarısız oluyordu. İşçiler artık dosya metnini Türkçe karakterleri bozmayan yerel programlarla (`rg -F`, `git show`, `node`) okur.
+- **Kapasite 0 koşuyu durdurur.** Öneri 0 iken `plan` ölçülen gerekçeyle reddedilir; `--max-workers 1` bilerek tek işçi çalıştırır ve kayda yazılır.
+- **Başlatırken yeniden ölçüm.** `start` işçi tavanını o anki öneriye indirebilir, asla yükseltmez; onay olmadan öneri 0 ise başlatmayı reddeder.
+
 ## v1.8.1 - 2026-10-19
 
 AgentChef 1.8.1, ilk gerçek 1.8.0 takım koşusunda bulunan iki Windows sorununu düzeltir.

@@ -41,18 +41,33 @@ export function capacityRecommendation({ contract, env = process.env, home = os.
   return { recommended: Math.min(ceiling, memory.allowed), ceiling, source: "local", file: null, measuredAt: new Date(nowMs).toISOString(), reason: `${freeMb} MB free RAM, ${contract.limits.ramPerWorkerMb} MB per worker plus a reserve, so ${Math.min(ceiling, memory.allowed)} worker(s) fit` };
 }
 
+// A recommendation of 0 blocks a run unless the owner explicitly asks for one worker (owner decision 2026-10-19: the
+// plan used to run one worker silently while merkez showed "0 önerilen").
+export function zeroCapacityError(capacity, when = "plan") {
+  return new Error(`The live capacity recommendation is 0 (${capacity.source}: ${capacity.reason}). Free resources and ${when === "plan" ? "plan" : "start"} again, or run one worker at a time on purpose with ${when === "plan" ? "plan" : "a new plan"} --max-workers 1.`);
+}
+
 // Effective concurrency for a run. requested = the owner's --max-workers (or null), planned = workers in the plan.
-// One worker is always allowed, with or without a request, so a busy machine runs one worker at a time instead of
-// refusing (the supervisor's memory guard makes the same exception). A request above that throws with the measured
-// reason; it never silently shrinks.
+// Without a request the cap is the recommendation, and 0 refuses. --max-workers may go up to the recommendation; at a
+// recommendation of 0 it may ask for exactly one worker, recorded as an owner override. Nothing silently shrinks.
 export function resolveWorkerCap({ contract, requested = null, planned, capacity }) {
-  const allowed = Math.max(1, capacity.recommended);
   if (requested != null) {
     const value = Number(requested);
+    const allowed = Math.max(1, capacity.recommended);
     if (!Number.isInteger(value) || value < 1) { const error = new Error("--max-workers must be a positive integer."); error.usage = true; throw error; }
     if (value > capacity.ceiling) throw new Error(`--max-workers ${value} is above the hard ceiling of ${capacity.ceiling} workers.`);
     if (value > allowed) throw new Error(`--max-workers ${value} is above the live capacity recommendation of ${capacity.recommended} (${capacity.source}: ${capacity.reason}). Free resources or request at most ${allowed}.`);
     return Math.min(value, planned);
   }
-  return Math.min(allowed, planned, contract.workers.maxWorkers);
+  if (capacity.recommended < 1) throw zeroCapacityError(capacity, "plan");
+  return Math.min(capacity.recommended, planned, contract.workers.maxWorkers);
+}
+
+// Start re-measures: the approved cap may only go down. An owner override of one worker survives a recommendation of
+// 0; without an override a recommendation of 0 refuses the start before anything is consumed.
+export function resolveStartCap({ run, capacity }) {
+  const override = run.capacity?.requested != null;
+  if (capacity.recommended < 1 && !override) throw zeroCapacityError(capacity, "start");
+  const live = override ? Math.max(1, capacity.recommended) : capacity.recommended;
+  return { cap: Math.min(run.maxWorkers, live), lowered: live < run.maxWorkers };
 }

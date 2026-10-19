@@ -19,7 +19,7 @@ import {
 import { secretLikeCategory } from "./lib/secret-classifier.mjs";
 import { memoryAllowance } from "./lib/memory-guard.mjs";
 import { nextResumeAt } from "./lib/usage-limit-reset.mjs";
-import { capacityRecommendation, resolveWorkerCap } from "./lib/team-capacity.mjs";
+import { capacityRecommendation, resolveStartCap, resolveWorkerCap } from "./lib/team-capacity.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
@@ -172,7 +172,7 @@ function planCommand(options) {
   if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
   // Snapshot last, after every refusal above, so a refused plan leaves no ref behind.
   const snapshot = dirty ? createSnapshot(repo, id) : null;
-  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: snapshot ? snapshot.commit : headCommit(repo), baseHead: headCommit(repo), snapshot, integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: workerCap, capacity: { recommended: capacity.recommended, ceiling: capacity.ceiling, source: capacity.source, reason: capacity.reason, measuredAt: capacity.measuredAt, requested: options["max-workers"] == null ? null : Number(options["max-workers"]) }, maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
+  const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: snapshot ? snapshot.commit : headCommit(repo), baseHead: headCommit(repo), snapshot, integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: workerCap, capacity: { recommended: capacity.recommended, ceiling: capacity.ceiling, source: capacity.source, reason: capacity.reason, measuredAt: capacity.measuredAt, requested: options["max-workers"] == null ? null : Number(options["max-workers"]), ownerOverride: options["max-workers"] != null && Number(options["max-workers"]) > capacity.recommended }, maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
   const directory = path.dirname(runFile(options.state, id)); fs.mkdirSync(directory, { recursive: true });
   if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
   writeRunRecord(runFile(options.state, id), run);
@@ -293,6 +293,12 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
   const login = spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout: 10_000, windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
   if (login.status !== 0) throw new Error("Codex is not logged in: run `codex login` (workers use your Codex subscription).");
   if (run.status !== "planned") throw new Error(`Cannot start run in ${run.status} state.`);
+  // Re-measure at start: the approved cap may only go down, and a recommendation of 0 without an owner override refuses
+  // before the approval is consumed.
+  const liveCapacity = capacityRecommendation({ contract: CONTRACT });
+  const startCap = resolveStartCap({ run, capacity: liveCapacity });
+  const atStart = { recommended: liveCapacity.recommended, source: liveCapacity.source, reason: liveCapacity.reason, measuredAt: liveCapacity.measuredAt };
+  updateRunRecord(file, (current) => ({ ...current, maxWorkers: startCap.cap, capacity: { ...current.capacity, atStart }, history: startCap.lowered ? [...current.history, { at: now(), event: "capacity_lowered", from: current.maxWorkers, to: startCap.cap, reason: liveCapacity.reason }] : current.history }));
   const controlDir = path.join(path.dirname(file), run.runId, "control");
   fs.mkdirSync(controlDir, { recursive: true });
   for (const name of ["abort.json", "pause.json"]) try {
