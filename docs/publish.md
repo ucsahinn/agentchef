@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.3** keeps Windows team-run workers to quote-free reads, because Windows PowerShell 5.1 drops double quotes inside native-program arguments.
+Development version **v1.8.4** closes read-only team runs as `completed` when their reports are collected and warns at collect time about quoted reads and reports that list no findings.
 
 ## Before Commit Or Push
 

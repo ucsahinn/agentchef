@@ -1,5 +1,14 @@
 # Sürüm Notları
 
+## v1.8.4 - 2026-10-20
+
+AgentChef 1.8.4 salt-okur takım koşularını kapatır ve ikinci bakış gerektiren raporları işaretler.
+
+### Neler Değişti
+
+- **Salt-okur koşular tamamlanır.** Tüm işçileri salt-okur olan bir koşu, raporları toplandığında hiç gelmeyecek bir bütünleştirmeyi sonsuza dek beklemek yerine `completed` olarak biter.
+- **Toplama uyarıları.** `rg`'ye tırnak geçiren ya da `node -e` kullanan, veya raporu bulguların listelendiğini söyleyip tek bir satır göstermeyen işçiye koşu kaydında ve raporunda uyarı eklenir.
+
 ## v1.8.3 - 2026-10-19
 
 AgentChef 1.8.3 Windows takım koşusu işçilerinin yeniden metin çıkarabilmesini sağlar.

@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.3** Windows takım koşusu işçilerini tırnaksız okuma biçimleriyle sınırlar; Windows PowerShell 5.1 yerel program argümanlarındaki çift tırnakları siliyor.
+Geliştirme sürümü **v1.8.4** salt-okur takım koşularını raporlar toplandığında `completed` olarak kapatır ve toplama anında tırnaklı okumalar ile bulgu listelemeyen raporlar için uyarı verir.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

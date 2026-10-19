@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.4 - 2026-10-20
+
+- A read-only team run ends. When every worker has a read-only sandbox, `collect` moves the run from `collected` to the new terminal status `completed`, with `completion` = {at, reason "read-only, reports collected", partial} and a `completed_read_only` history event. Such runs used to stay `collected` forever, and `beyin merkez` kept offering `integrate`. Running `collect` again completes a run an older engine left `collected`. `cleanup` accepts `completed`.
+- Collect-time warnings (`scripts/lib/team-warnings.mjs`). They do not fail collection. They are recorded as `warnings` on the worker and shown in a `Collect warnings` section of its report. A warning is raised when the worker's command log shows a double quote passed to `rg` or a `node -e` call (run R20261019-d4cb retried a quoted rg seven times), or when the outcome says findings are listed but no evidence or risk entry names a line (run R20261019-acd4, TASK-VP-TR52). The worker return contract now asks for one `<path>:<line> - <issue> - <suggestion>` evidence entry per finding.
+
 ## 1.8.3 - 2026-10-19
 
 - Windows workers read with quote-free forms only. Windows PowerShell 5.1 drops double quotes inside arguments it passes to native programs, so in run R20261019-9b83 every `rg 'key: "x"'` matched nothing and every `node -e "..."` broke. Measured in a real Codex read-only sandbox, `rg -n 'key: "guide-pam"'` exits 1 while `rg -n -F guide-pam` finds the line. The Windows rule now names only `rg -n -F <word>` (with `-A`/`-B` for context), `rg -n . <path>` and `git show HEAD:<path>`. It tells workers to search for a plain word inside the quotes, never to put a double quote in a command argument or use `node -e`, and to ignore profile load errors. A test checks that no named form contains a double quote and that each returns Turkish text intact under ConstrainedLanguage mode.
