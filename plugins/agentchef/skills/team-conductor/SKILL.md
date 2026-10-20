@@ -59,7 +59,8 @@ Workflow tool), and say which reason applies in one line before starting.
    run whose workers are all read-only ends here with status `completed`
    (`completion.reason` "read-only, reports collected"; `completion.partial` is
    true when a worker did not finish or its verdict is partial, fail or
-   blocked): show the reports and stop; there is nothing to integrate, verify or merge. Run
+   blocked; running `collect` again on a completed run recomputes it): show the
+   reports and stop; there is nothing to integrate, verify or merge. Run
    `integrate`; on exit 4, show conflicts and checks and ask how to proceed.
 6. Run `verify` on the integration branch. Show integration statistics,
    verification report, and verdict. Ask the user to send the exact chat

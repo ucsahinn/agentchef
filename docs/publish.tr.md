@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.5** tamamlanan salt-okur takım koşusunu, bir işçi bitmediğinde ya da kararı partial, fail veya blocked olduğunda yarım (partial) olarak işaretler.
+Geliştirme sürümü **v1.8.6** `collect` komutunun tamamlanmış salt-okur koşunun tamamlanma bilgisini güncel işçi kararlarından yeniden hesaplamasını sağlar.
 
 ## Commit Veya Push Öncesi
 

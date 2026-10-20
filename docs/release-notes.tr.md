@@ -1,5 +1,13 @@
 # Sürüm Notları
 
+## v1.8.6 - 2026-10-20
+
+AgentChef 1.8.6 eski tamamlanmış koşuların kayıtları elle düzenlenmeden düzeltilmesini sağlar.
+
+### Neler Değişti
+
+- **Toplamada yeniden hesaplama.** Tamamlanmış salt-okur koşuda `collect`, `partial` işaretini güncel işçi kararlarından yeniden hesaplar ve değişikliği koşu geçmişine yazar.
+
 ## v1.8.5 - 2026-10-20
 
 AgentChef 1.8.5 tamamlanan salt-okur koşunun `partial` işaretinin anlamını düzeltir.

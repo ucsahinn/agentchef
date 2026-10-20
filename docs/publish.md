@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.5** marks a completed read-only team run as partial when any worker did not finish or returned a partial, fail or blocked verdict.
+Development version **v1.8.6** lets `collect` recompute a completed read-only run's completion from the current worker verdicts.
 
 ## Before Commit Or Push
 
