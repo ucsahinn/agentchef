@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.6 - 2026-10-20
+
+- Running `collect` on a `completed` read-only run recomputes `completion.partial` and `completion.reason` from the current worker verdicts. It adds no worker events, and writes a `completion_recomputed` history entry only when a value changes. Runs that 1.8.4 completed with `partial: false` can be corrected this way without editing their records.
+
 ## 1.8.5 - 2026-10-20
 
 - `completion.partial` on a completed read-only run now answers "did the work finish". It is true when a worker did not reach `collected` or its own verdict is `partial`, `fail` or `blocked`. In 1.8.4 it only checked the worker status, so runs R20261019-cffa, -9b83 and -d4cb completed with `partial: false` although their only worker said the work was not done.

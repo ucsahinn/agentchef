@@ -656,7 +656,16 @@ function releaseRunFailedLeases(state, run) {
 }
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
-  if (!["running", "paused", "collected"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.${run.status === "completed" ? " A read-only run is complete once its reports are collected." : ""}`);
+  // Collecting a completed read-only run again recomputes its completion from the current worker verdicts, so a run an
+  // older engine completed with a wrong partial flag is corrected without editing the record. It adds no worker events
+  // and records completion_recomputed only when a value changes.
+  if (run.status === "completed") {
+    const partial = run.workers.some((worker) => worker.status !== "collected" || INCOMPLETE_VERDICTS.has(worker.verdict));
+    const reason = "read-only, reports collected";
+    if (run.completion?.partial !== partial || run.completion?.reason !== reason) updateRunRecord(file, (current) => ({ ...current, completion: { ...current.completion, reason, partial, recomputedAt: now() }, history: [...current.history, { at: now(), event: "completion_recomputed", partial }] }));
+    output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
+  }
+  if (!["running", "paused", "collected"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
   const selected = options.task ? run.workers.filter((worker) => worker.taskId === options.task) : run.workers;
   if (options.task && !selected.length) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   let partial = false;

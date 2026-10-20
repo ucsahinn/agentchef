@@ -344,6 +344,15 @@ test("read-only workers collect a report without a commit or write scope", async
   const again = runCli(state, "collect", ["--run", run.runId], env); assert.equal(again.status, 0, again.stderr || again.stdout);
   assert.equal(again.json.run.status, "completed");
   assert.equal(again.json.run.completion.partial, true, "a partial worker verdict makes the completed run partial");
+  // Collecting a completed run again recomputes completion from the current verdicts without touching its status or
+  // workers, and records completion_recomputed only when the value changes.
+  updateRunRecord(recordPath, (current) => ({ ...current, completion: { ...current.completion, partial: false } }));
+  const historyBefore = runCli(state, "status", ["--run", run.runId]).json.run.history.length;
+  const recomputed = runCli(state, "collect", ["--run", run.runId], env); assert.equal(recomputed.status, 0, recomputed.stderr || recomputed.stdout);
+  assert.equal(recomputed.json.run.status, "completed"); assert.equal(recomputed.json.run.completion.partial, true);
+  assert.equal(recomputed.json.run.history.length, historyBefore + 1); assert.equal(recomputed.json.run.history.at(-1).event, "completion_recomputed");
+  const unchanged = runCli(state, "collect", ["--run", run.runId], env); assert.equal(unchanged.status, 0);
+  assert.equal(unchanged.json.run.history.length, historyBefore + 1, "an unchanged completion adds no history");
   const cleaned = runCli(state, "cleanup", ["--run", run.runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
 });
 

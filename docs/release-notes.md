@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.6 - 2026-10-20
+
+AgentChef 1.8.6 lets older completed runs be corrected without editing their records.
+
+### What Changed
+
+- **Recompute on collect.** `collect` on a completed read-only run recomputes its `partial` flag from the current worker verdicts and records the change in the run history.
+
 ## v1.8.5 - 2026-10-20
 
 AgentChef 1.8.5 fixes the meaning of a completed read-only run's `partial` flag.
