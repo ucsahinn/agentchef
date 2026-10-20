@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.5 - 2026-10-20
+
+AgentChef 1.8.5 fixes the meaning of a completed read-only run's `partial` flag.
+
+### What Changed
+
+- **`completion.partial` reflects the work.** A completed read-only run is partial when a worker did not finish or its verdict is partial, fail or blocked.
+
 ## v1.8.4 - 2026-10-20
 
 AgentChef 1.8.4 closes read-only team runs and flags reports that need a second look.

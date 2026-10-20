@@ -1,5 +1,13 @@
 # Sürüm Notları
 
+## v1.8.5 - 2026-10-20
+
+AgentChef 1.8.5 tamamlanan salt-okur koşunun `partial` işaretinin anlamını düzeltir.
+
+### Neler Değişti
+
+- **`completion.partial` işi yansıtır.** Bir işçi bitmediğinde ya da kararı partial, fail veya blocked olduğunda tamamlanan salt-okur koşu yarım sayılır.
+
 ## v1.8.4 - 2026-10-20
 
 AgentChef 1.8.4 salt-okur takım koşularını kapatır ve ikinci bakış gerektiren raporları işaretler.

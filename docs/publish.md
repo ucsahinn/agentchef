@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.4** closes read-only team runs as `completed` when their reports are collected and warns at collect time about quoted reads and reports that list no findings.
+Development version **v1.8.5** marks a completed read-only team run as partial when any worker did not finish or returned a partial, fail or blocked verdict.
 
 ## Before Commit Or Push
 
