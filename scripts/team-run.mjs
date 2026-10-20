@@ -20,6 +20,7 @@ import { secretLikeCategory } from "./lib/secret-classifier.mjs";
 import { memoryAllowance } from "./lib/memory-guard.mjs";
 import { nextResumeAt } from "./lib/usage-limit-reset.mjs";
 import { capacityRecommendation, resolveStartCap, resolveWorkerCap } from "./lib/team-capacity.mjs";
+import { handoffWarnings, quotedNativeCalls } from "./lib/team-warnings.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
@@ -652,7 +653,7 @@ function releaseRunFailedLeases(state, run) {
 }
 function collectCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
-  if (!["running", "paused", "collected"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.`);
+  if (!["running", "paused", "collected"].includes(run.status)) throw new Error(`Cannot collect a run in ${run.status} state.${run.status === "completed" ? " A read-only run is complete once its reports are collected." : ""}`);
   const selected = options.task ? run.workers.filter((worker) => worker.taskId === options.task) : run.workers;
   if (options.task && !selected.length) throw new CliUsageError(`Unknown task in run: ${options.task}.`);
   let partial = false;
@@ -664,6 +665,7 @@ function collectCommand(options) {
     let handoff;
     try { handoff = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; }
     catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
+    const warnings = collectWarnings(file, run, worker, handoff);
     const deliverySubject = `feat(team-mode): ${worker.taskId} worker delivery`;
     let changed = [...new Set([...committedPaths(worker.worktree, run.baseCommit), ...porcelainPaths(worker.worktree)])], priorCommit = null;
     if (worker.sandbox !== "read-only") {
@@ -680,7 +682,7 @@ function collectCommand(options) {
     if (worker.sandbox === "read-only") {
       const reportId = `${worker.taskId}-${worker.role}.md`;
       const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
-      const report = renderHandoffMarkdown(handoff); assertTeamTextSafe(report);
+      const report = renderHandoffMarkdown(handoff) + warningSection(warnings); assertTeamTextSafe(report);
       fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n- None (read-only worker)\n`, "utf8");
       try {
         const evidence = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: none - read-only report collected; no commit created. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
@@ -693,7 +695,7 @@ function collectCommand(options) {
         updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
         continue;
       }
-      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: [], outsideScope: [], reportId, commit: null } : item), history: [...current.history, { at: now(), event: "worker_collected_read_only", taskId: worker.taskId }] }));
+      updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, warnings, changedPaths: [], outsideScope: [], reportId, commit: null } : item), history: [...current.history, { at: now(), event: "worker_collected_read_only", taskId: worker.taskId }] }));
       if (handoff.verdict !== "pass") partial = true;
       continue;
     }
@@ -701,7 +703,7 @@ function collectCommand(options) {
     const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
     const dirtyPaths = porcelainPaths(worker.worktree);
     if (dirtyPaths.length) git(["add", "-A"], worker.worktree);
-    const report = renderHandoffMarkdown(handoff);
+    const report = renderHandoffMarkdown(handoff) + warningSection(warnings);
     const evidenceText = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: ${changed.join(", ")}. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
     try {
       // Index vs base covers the worker's own commits and the files it left dirty (both are staged above).
@@ -732,16 +734,31 @@ function collectCommand(options) {
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
       continue;
     }
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId }] }));
+    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, warnings, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId }] }));
     if (handoff.verdict !== "pass") partial = true;
   }
   const current = readRun(options.state, options.run);
   if (current.workers.every((worker) => ["collected", "scope_violation", "rejected_content", "failed", "aborted", "timed_out", "paused_limit"].includes(worker.status))) {
     if (current.status !== "collected") updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
+    // A run whose workers are all read-only has nothing to integrate, verify or merge: its reports are the result. It used
+    // to stay "collected" forever, so beyin merkez kept offering integrate. Collecting it again completes an older run.
+    if (current.workers.every((worker) => worker.sandbox === "read-only")) updateRunRecord(file, (record) => ({ ...transitionRun(record, "completed"), completion: { at: now(), reason: "read-only, reports collected", partial: record.workers.some((worker) => worker.status !== "collected") }, history: [...record.history, { at: now(), event: "completed_read_only" }] }));
   }
   output({ ok: !partial, run: readRun(options.state, options.run) }, options.json);
   return partial ? 4 : 0;
 }
+// Collect-time warnings. They do not fail collection; they are recorded on the worker, shown in its report and passed
+// to the conductor. (1) Windows PowerShell 5.1 drops double quotes inside native arguments, and a worker in run
+// R20261019-d4cb still retried a quoted rg seven times before it recovered. (2) A report whose outcome says its findings
+// are listed below, without a single "finding:" evidence entry, contradicts itself (run R20261019-acd4, TASK-VP-TR52).
+function collectWarnings(file, run, worker, handoff) {
+  const warnings = handoffWarnings(handoff);
+  let events = ""; try { events = fs.readFileSync(path.join(path.dirname(file), run.runId, worker.taskId, "events.jsonl"), "utf8"); } catch { /* no event log */ }
+  const calls = quotedNativeCalls(events);
+  if (calls.length) warnings.push(`${calls.length} command(s) passed a double quote to rg or used node -e (${calls.filter((call) => call.exitCode !== 0).length} failed); Windows PowerShell 5.1 drops those quotes, so check that the report rests on reads that worked.`);
+  return warnings;
+}
+const warningSection = (warnings) => warnings.length ? `\n\n## Collect warnings\n${warnings.map((item) => `- ${item}`).join("\n")}` : "";
 function conflictPaths(cwd) { return gitBytes(["diff", "--name-only", "--diff-filter=U", "-z"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")); }
 function runCheck(command, cwd, timeoutMs) {
   const parts = command.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((part) => part.replace(/^"|"$/g, "")) || [];
@@ -958,7 +975,7 @@ function deliverAsPatch(options, file, run) {
 }
 function cleanupCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
-  if (!["merged", "aborted", "failed"].includes(run.status)) throw new Error("Cleanup is allowed only for merged, aborted, or failed runs.");
+  if (!["merged", "completed", "aborted", "failed"].includes(run.status)) throw new Error("Cleanup is allowed only for merged, completed, aborted, or failed runs.");
   const removed = removeWorktrees(run);
   // The private snapshot ref only anchored the run's base; once the run is merged, aborted or failed it has no use.
   let snapshotRef = null;

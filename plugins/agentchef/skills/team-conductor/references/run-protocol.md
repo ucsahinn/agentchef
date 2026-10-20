@@ -25,7 +25,7 @@ node scripts/team-run.mjs <command> --state <board.json> --json
 | Start | `start --run <runId>` | State and worker launch results |
 | Supervise | Internal `supervise --run <runId>` | Engine-owned detached supervisor; do not launch or stop manually |
 | Observe | `status --run <runId>` | Each worker's state, latest event, lease/heartbeat health, and scope warning |
-| Gather | `collect --run <runId>` | Each handoff, changed paths, scope result, and board evidence |
+| Gather | `collect --run <runId>` | Each handoff, changed paths, scope result, and board evidence; a run whose workers are all read-only ends here as `completed` |
 | Integrate | `integrate --run <runId>` | Integration checks, merged tasks, conflicts, and diff statistics |
 | Verify | `verify --run <runId>` | Independent read-only `test_verifier` report and verdict |
 | Merge | `merge --run <runId>` | Merge commit result and cleanup result |
@@ -103,7 +103,13 @@ calls fail, and double quotes inside native-program arguments are dropped. The
 engine tells every worker and the verifier to read file text only with quote-free
 forms (`rg -n -F <word>`, with `-A`/`-B` for context, `rg -n . <path>`, `git show
 HEAD:<path>`) and never `node -e`. If a report still claims broken characters,
-check with `git show` before acting on it. `merge --as-patch` keeps
+check with `git show` before acting on it.
+
+`collect` adds warnings to a worker (`warnings` in the run record, a `Collect
+warnings` section in its report) when its command log shows a double quote passed
+to `rg` or a `node -e` call, or when its outcome says findings are listed but no
+evidence entry names a line. A warning does not fail collection; read that report
+with care before acting on it. `merge --as-patch` keeps
 each file's own line endings (LF or CRLF) under `core.autocrlf=true`. `test_verifier` is
 read-only and verifies the integration branch. Workers cannot push, change
 their assigned scope, spawn more agents, or alter global configuration. The

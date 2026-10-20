@@ -10,6 +10,7 @@ import {
   readRoleToml, WINDOWS_TEXT_READS
 } from "../lib/team-runtime.mjs";
 import { spawnSync } from "node:child_process";
+import { handoffWarnings, quotedNativeCalls } from "../lib/team-warnings.mjs";
 
 const contract = JSON.parse(fs.readFileSync(new URL("../../catalog/subscription-team-mode.json", import.meta.url)));
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "team-runtime-"));
@@ -178,4 +179,31 @@ test("every read form named in the Windows rule returns Turkish text intact unde
     assert.equal(shell("rg -n 'key: \"guide-self-hosted\"' topics.ts").status, 1, "a double quote inside a native argument is dropped");
     assert.ok(!shell("Get-Content -Encoding UTF8 topics.ts").stdout.toString("utf8").includes(text), "Get-Content output is garbled");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// Collect-time warnings. The command strings follow the exact shape Codex logged in runs R20261019-d4cb and -9b83.
+test("quoted rg and node -e calls are found in a worker's command log", () => {
+  const ps = "\"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\"";
+  const event = (command, exit) => JSON.stringify({ type: "item.completed", item: { type: "command_execution", command, exit_code: exit } });
+  const log = [
+    event(`${ps} -Command "rg -n -F -A 145 'key: \\"guide-pam\\"' src/content/topics.ts"`, 1),
+    event(`${ps} -Command 'rg -n -F guide-pam src/content/topics.ts'`, 0),
+    event(`${ps} -Command "node -e \\"console.log(1)\\""`, 0),
+    event(`${ps} -NoProfile -Command 'git show HEAD:src/content/topics.ts'`, 0),
+    JSON.stringify({ type: "item.started", item: { type: "command_execution", command: `${ps} -Command "rg -n 'a \\"b\\"' x"` } }),
+    "not json"
+  ].join("\n");
+  assert.deepEqual(quotedNativeCalls(log), [{ kind: "quoted-rg", exitCode: 1 }, { kind: "node-e", exitCode: 0 }]);
+});
+
+test("a report that says its findings are listed must name at least one line", () => {
+  const base = { evidence: [], risks: [], openQuestions: [], verdict: "warn", outcome: "Bunları aşağıda alan ve satır numarasıyla belirttim." };
+  assert.equal(handoffWarnings(base).length, 1, "TASK-VP-TR52: nothing listed");
+  assert.equal(handoffWarnings({ ...base, evidence: ["Tam blok `src/content/topics.ts:3979–4059` arasında."] }).length, 1, "a block range is not a finding");
+  assert.equal(handoffWarnings({ ...base, evidence: ["`src/content/topics.ts:4337` — Alan: `lead`. Öneri: ..."] }).length, 0, "TASK-VP-TR54 form");
+  assert.equal(handoffWarnings({ ...base, evidence: ["Bulgu — `sections[1].body`, satır 4864: ..."] }).length, 0, "TASK-VP-TR57 form");
+  assert.equal(handoffWarnings({ ...base, evidence: ["finding: guide text reads like a translation"] }).length, 0);
+  assert.equal(handoffWarnings({ ...base, verdict: "pass" }).length, 0, "a passing report claims nothing missing");
+  assert.equal(handoffWarnings({ ...base, outcome: "No issues found." }).length, 0);
+  assert.match(composeWorkerPrompt({ roleInstructions: "ROLE", runId: "R1", taskId: "TASK-1", role: "code_reviewer", brief }), /`<path>:<line> - <issue> - <suggestion>`/);
 });

@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.3** keeps Windows team-run workers to quote-free reads, because Windows PowerShell 5.1 drops double quotes inside native-program arguments.
+Development version **v1.8.4** closes read-only team runs as `completed` when their reports are collected and warns at collect time about quoted reads and reports that list no findings.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private

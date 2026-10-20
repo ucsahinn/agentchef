@@ -55,7 +55,10 @@ Workflow tool), and say which reason applies in one line before starting.
 4. Run `start`, then poll `status` every 60-120 seconds. Do not edit worker
    scopes while they run. Never use taskkill or Stop-Process; use `abort` only
    when the user asks to stop the run.
-5. Run `collect`. On exit 4, show partial reports and ask how to proceed. Run
+5. Run `collect`. On exit 4, show partial reports and ask how to proceed. A
+   run whose workers are all read-only ends here with status `completed`
+   (`completion.reason` "read-only, reports collected"): show the reports and
+   stop; there is nothing to integrate, verify or merge. Run
    `integrate`; on exit 4, show conflicts and checks and ask how to proceed.
 6. Run `verify` on the integration branch. Show integration statistics,
    verification report, and verdict. Ask the user to send the exact chat

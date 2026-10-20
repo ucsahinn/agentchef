@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.8.4 - 2026-10-20
+
+AgentChef 1.8.4 closes read-only team runs and flags reports that need a second look.
+
+### What Changed
+
+- **Read-only runs complete.** A run whose workers are all read-only ends as `completed` once its reports are collected, instead of waiting forever for an integration that never comes.
+- **Collect warnings.** A worker that passed quotes to `rg` or used `node -e`, or whose report says findings are listed without naming a single line, gets a warning in the run record and in its report.
+
 ## v1.8.3 - 2026-10-19
 
 AgentChef 1.8.3 lets Windows team-run workers extract text again.

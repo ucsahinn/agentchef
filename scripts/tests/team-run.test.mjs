@@ -321,12 +321,28 @@ test("read-only workers collect a report without a commit or write scope", async
   validApproval(state, run.runId, "baslat", run.plannedAt);
   const started = runCli(state, "start", ["--run", run.runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
   await waitForWorker(state, run.runId);
+  // A quoted rg call in the worker's command log becomes a collect warning on the worker and in its report.
+  const eventLog = path.join(path.dirname(state), "team-runs", run.runId, "TASK-043", "events.jsonl"); fs.mkdirSync(path.dirname(eventLog), { recursive: true });
+  fs.appendFileSync(eventLog, `${JSON.stringify({ type: "item.completed", item: { type: "command_execution", command: "\"powershell.exe\" -Command \"rg -n 'key: \\\"x\\\"' a.ts\"", exit_code: 1 } })}\n`);
   const collected = runCli(state, "collect", ["--run", run.runId], env);
   assert.equal(collected.status, 0, collected.stderr || collected.stdout);
   assert.equal(collected.json.run.workers[0].status, "collected");
   assert.equal(collected.json.run.workers[0].commit, null);
-  assert.match(fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", "TASK-043-code_mapper.md"), "utf8"), /read-only worker/);
+  assert.equal(collected.json.run.workers[0].warnings.length, 1);
+  assert.match(collected.json.run.workers[0].warnings[0], /1 command\(s\) passed a double quote to rg or used node -e \(1 failed\)/);
+  const reportText = fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", "TASK-043-code_mapper.md"), "utf8");
+  assert.match(reportText, /read-only worker/); assert.match(reportText, /## Collect warnings\n- 1 command\(s\)/);
   await waitForSupervisorStopped(state, run.runId);
+  // A read-only run has nothing to integrate or merge, so collect ends it (it used to stay "collected" forever).
+  assert.equal(collected.json.run.status, "completed");
+  assert.deepEqual({ reason: collected.json.run.completion.reason, partial: collected.json.run.completion.partial }, { reason: "read-only, reports collected", partial: false });
+  const integrate = runCli(state, "integrate", ["--run", run.runId], env); assert.notEqual(integrate.status, 0);
+  // A run left "collected" by an older engine is completed by collecting it again.
+  const recordPath = path.join(path.dirname(state), "team-runs", `${run.runId}.json`);
+  updateRunRecord(recordPath, (current) => ({ ...current, status: "collected", completion: undefined }));
+  const again = runCli(state, "collect", ["--run", run.runId], env); assert.equal(again.status, 0, again.stderr || again.stdout);
+  assert.equal(again.json.run.status, "completed");
+  const cleaned = runCli(state, "cleanup", ["--run", run.runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
 });
 
 test("two read-only workers share no write scopes or leases and run with a concurrency cap", async (t) => {
