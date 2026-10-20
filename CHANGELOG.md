@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.5 - 2026-10-20
+
+- `completion.partial` on a completed read-only run now answers "did the work finish". It is true when a worker did not reach `collected` or its own verdict is `partial`, `fail` or `blocked`. In 1.8.4 it only checked the worker status, so runs R20261019-cffa, -9b83 and -d4cb completed with `partial: false` although their only worker said the work was not done.
+
 ## 1.8.4 - 2026-10-20
 
 - A read-only team run ends. When every worker has a read-only sandbox, `collect` moves the run from `collected` to the new terminal status `completed`, with `completion` = {at, reason "read-only, reports collected", partial} and a `completed_read_only` history event. Such runs used to stay `collected` forever, and `beyin merkez` kept offering `integrate`. Running `collect` again completes a run an older engine left `collected`. `cleanup` accepts `completed`.

@@ -36,6 +36,9 @@ const COMMANDS = {
   doctor: ["state"]
 };
 const USAGE = `Usage: node scripts/team-run.mjs <${Object.keys(COMMANDS).join("|")}> --state <board.json> [--json]`;
+// "Did the work finish": a worker that did not reach collected, or whose own verdict says the work is not done, makes a
+// completed run partial (runs R20261019-cffa, -9b83 and -d4cb completed with partial=false while their only worker said partial).
+const INCOMPLETE_VERDICTS = new Set(["partial", "fail", "blocked"]);
 const TERMINAL_WORKERS = new Set(["finished", "failed", "paused_limit", "timed_out", "aborted", "scope_violation", "rejected_content", "collected", "integrated", "conflict"]);
 const now = () => new Date().toISOString();
 const safeRunId = (value) => /^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(value);
@@ -742,7 +745,7 @@ function collectCommand(options) {
     if (current.status !== "collected") updateRunRecord(file, (record) => ({ ...transitionRun(record, "collected"), history: [...record.history, { at: now(), event: "collection_complete" }] }));
     // A run whose workers are all read-only has nothing to integrate, verify or merge: its reports are the result. It used
     // to stay "collected" forever, so beyin merkez kept offering integrate. Collecting it again completes an older run.
-    if (current.workers.every((worker) => worker.sandbox === "read-only")) updateRunRecord(file, (record) => ({ ...transitionRun(record, "completed"), completion: { at: now(), reason: "read-only, reports collected", partial: record.workers.some((worker) => worker.status !== "collected") }, history: [...record.history, { at: now(), event: "completed_read_only" }] }));
+    if (current.workers.every((worker) => worker.sandbox === "read-only")) updateRunRecord(file, (record) => ({ ...transitionRun(record, "completed"), completion: { at: now(), reason: "read-only, reports collected", partial: record.workers.some((worker) => worker.status !== "collected" || INCOMPLETE_VERDICTS.has(worker.verdict)) }, history: [...record.history, { at: now(), event: "completed_read_only" }] }));
   }
   output({ ok: !partial, run: readRun(options.state, options.run) }, options.json);
   return partial ? 4 : 0;

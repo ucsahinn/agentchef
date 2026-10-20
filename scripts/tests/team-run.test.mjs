@@ -339,9 +339,11 @@ test("read-only workers collect a report without a commit or write scope", async
   const integrate = runCli(state, "integrate", ["--run", run.runId], env); assert.notEqual(integrate.status, 0);
   // A run left "collected" by an older engine is completed by collecting it again.
   const recordPath = path.join(path.dirname(state), "team-runs", `${run.runId}.json`);
-  updateRunRecord(recordPath, (current) => ({ ...current, status: "collected", completion: undefined }));
+  // completion.partial answers "did the work finish": a worker whose own verdict is partial makes it true.
+  updateRunRecord(recordPath, (current) => ({ ...current, status: "collected", completion: undefined, workers: current.workers.map((worker) => ({ ...worker, verdict: "partial" })) }));
   const again = runCli(state, "collect", ["--run", run.runId], env); assert.equal(again.status, 0, again.stderr || again.stdout);
   assert.equal(again.json.run.status, "completed");
+  assert.equal(again.json.run.completion.partial, true, "a partial worker verdict makes the completed run partial");
   const cleaned = runCli(state, "cleanup", ["--run", run.runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
 });
 

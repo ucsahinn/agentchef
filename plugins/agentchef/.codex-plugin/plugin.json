@@ -1,6 +1,6 @@
 {
   "name": "agentchef",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "description": "Security-first AgentChef workflows for setup maintenance, planning, review, reconstruction, and verification.",
   "skills": "./skills/",
   "hooks": [

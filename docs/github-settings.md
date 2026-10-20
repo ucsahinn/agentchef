@@ -4,7 +4,7 @@ These settings shape the project’s public first impression. Apply them manuall
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.8.4** closes read-only team runs as `completed` when their reports are collected and warns at collect time about quoted reads and reports that list no findings.
+Development version **v1.8.5** marks a completed read-only team run as partial when any worker did not finish or returned a partial, fail or blocked verdict.
 
 Live read-back after the approved account writes on 2026-07-29: secret scanning,
 push protection, vulnerability alerts, Dependabot security updates, and private
