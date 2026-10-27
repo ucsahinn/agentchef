@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { workerMcpOverrides, assertWorkerMcpBoundary } from './lib/codex-exec.mjs';
 
 // `codex --strict-config --version` exits 0 without reading config.toml, so it
 // cannot detect anything. `codex exec --strict-config` does load it; pointing
@@ -39,10 +40,11 @@ function prepareHome(name, extraConfig = "") {
   return codexHome;
 }
 
-function probe(codexHome, profile) {
+function probe(codexHome, profile, worker = false) {
   const probeArgs = [
     "exec", "--strict-config", "--ephemeral", "--skip-git-repo-check",
     ...(profile ? ["--profile", profile] : []),
+    ...(worker ? [...workerMcpOverrides().flatMap(value => ['-c', value]), '-c', 'agents.max_depth=1', '-c', 'agents.max_threads=1'] : []),
     "-c", `model_provider=${probeProvider}`, "noop"
   ];
   const args = process.platform === "win32"
@@ -65,10 +67,11 @@ function isMissingCli({ result, output }) {
 
 let exitCode = 0;
 try {
+  assertWorkerMcpBoundary(['windows', 'unix'].map(platform => fs.readFileSync(path.join(root, 'templates/codex', `config.${platform}.toml`), 'utf8')));
   const codexHome = prepareHome("candidate");
-  for (const profile of [null, "full", "multi-session", "offline"]) {
+  for (const profile of [null, "full", "multi-session", "offline", 'team-worker']) {
     const label = profile ? `profile ${profile}` : "base config";
-    const attempt = probe(codexHome, profile);
+    const attempt = probe(codexHome, profile === 'team-worker' ? 'offline' : profile, profile === 'team-worker');
     if (isMissingCli(attempt)) {
       console.log("Codex config compatibility skipped: Codex CLI is not installed.");
       process.exit(0);

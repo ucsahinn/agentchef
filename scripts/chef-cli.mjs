@@ -2970,7 +2970,7 @@ function buildManagedRestoreAllowlist() {
     if (file.endsWith(".toml")) addCodex(`agents/${file}`);
   }
   for (const file of fs.readdirSync(path.join(root, "templates", "codex", "profiles"))) {
-    if (file.endsWith(".config.toml")) addCodex(file);
+    if (file.endsWith(".config.toml") && file !== "team-worker.config.toml") addCodex(file);
   }
 
   const pluginSource = path.join(root, "plugins", "agentchef");

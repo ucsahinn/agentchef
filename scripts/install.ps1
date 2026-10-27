@@ -895,7 +895,7 @@ if ($InstallCodex) {
     Install-File -Source $_.FullName -Destination (Join-Path (Join-Path $CodexHome "agents") $_.Name)
   }
 
-  Get-ChildItem -Path (Join-Path $TemplateRoot "profiles") -Filter "*.toml" | ForEach-Object {
+  Get-ChildItem -Path (Join-Path $TemplateRoot "profiles") -Filter "*.toml" | Where-Object { $_.Name -ne "team-worker.config.toml" } | ForEach-Object {
     if ($_.Name -in @("full.config.toml", "multi-session.config.toml", "offline.config.toml")) {
       Install-McpProfile -Template $_.FullName -Destination (Join-Path $CodexHome $_.Name) -ConfigSource (Join-Path $CodexHome "config.toml")
     } else {

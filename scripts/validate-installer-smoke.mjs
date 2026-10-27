@@ -222,6 +222,7 @@ function hasOnlyEmptyArg0RunnerFootprint(target) {
 }
 
 function assertInstalledBaseline(codexHome, agentsHome, label) {
+  if (fs.existsSync(path.join(codexHome, 'team-worker.config.toml'))) fail(`${label}: repo-only worker profile must not be installed.`);
   const configPath = path.join(codexHome, "config.toml");
   const agentsPath = path.join(codexHome, "AGENTS.md");
   const rulesPath = path.join(codexHome, "rules", "default.rules");

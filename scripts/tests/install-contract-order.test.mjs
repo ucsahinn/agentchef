@@ -12,6 +12,15 @@ function componentIds(contract) {
   return contract.selectedComponents.map((component) => component.id);
 }
 
+test('worker-only MCP policy stays outside Windows and Unix install contracts', () => {
+  for (const platform of ['windows', 'unix']) {
+    const contract = resolveInstallContract({ platform, codexHome: '/fixture/codex', agentsHome: '/fixture/agents', home: '/fixture/home' });
+    const profiles = contract.operations.filter(action => action.componentId === 'codex-profiles');
+    assert.ok(profiles.some(action => action.source.endsWith('development.config.toml')));
+    assert.equal(profiles.some(action => action.source.endsWith('team-worker.config.toml')), false, platform);
+  }
+});
+
 test("install plan reports the same terminal side-effect order as the installers", () => {
   const manifest = readInstallManifest();
   const baseOptions = {

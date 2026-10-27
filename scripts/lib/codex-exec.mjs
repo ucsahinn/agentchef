@@ -35,23 +35,51 @@ export function parseExecEvent(line, result) {
   return true;
 }
 
-export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile = "offline", schema, output, resumeThreadId, platform = process.platform }) {
+export function workerMcpOverrides(template = fs.readFileSync(new URL('../../templates/codex/profiles/team-worker.config.toml', import.meta.url), 'utf8')) {
+  const servers = JSON.parse(fs.readFileSync(new URL('../../catalog/mcp-servers.json', import.meta.url), 'utf8')).servers;
+  const required = ['node_repl', ...servers.map(server => server.name)];
+  const blocks = new Map(); let current;
+  for (const line of template.split(/\r?\n/)) {
+    const header = /^\[mcp_servers\.([\w-]+)\]\s*$/.exec(line);
+    if (header) {
+      if (blocks.has(header[1]) || !required.includes(header[1])) throw new Error('Worker profile has an unknown or duplicate MCP table.');
+      current = []; blocks.set(header[1], current);
+    } else if (/^\s*\[/.test(line)) throw new Error('Worker profile may contain only MCP diet tables.');
+    else if (current) current.push(line);
+  }
+  for (const name of required) if (!/^enabled\s*=\s*false\s*$/m.test((blocks.get(name) || []).join('\n'))) throw new Error(`Worker profile must park ${name}.`);
+  if (!/^command\s*=\s*"node"\s*$/m.test(blocks.get('node_repl').join('\n'))) throw new Error('Worker node_repl requires its disabled transport stub.');
+  return [...required.map(name => `mcp_servers.${name}.enabled=false`), 'mcp_servers.node_repl.command=node'];
+}
+
+export function assertWorkerMcpBoundary(configTexts) {
+  if (configTexts.some(text => /^\s*\[mcp_servers\.node_repl\]\s*$/m.test(text))) throw new Error('node_repl worker override must not enter global config templates.');
+}
+
+export function buildExecArgs({ worktree, sandbox, model = "gpt-6-luna", profile = "offline", schema, output, resumeThreadId, platform = process.platform, workerConfig = false, maxWorkers = 1 }) {
   const args = ["exec"];
+  const diet = () => {
+    if (!workerConfig) return;
+    if (!Number.isInteger(maxWorkers) || maxWorkers < 1 || maxWorkers > 8) throw new Error('Invalid live worker cap.');
+    for (const override of workerMcpOverrides()) args.push('-c', override);
+    // Bound only this worker process to measured capacity; role templates stay unrestricted.
+    args.push('-c', 'agents.max_depth=1', '-c', `agents.max_threads=${maxWorkers}`);
+  };
   if (resumeThreadId) {
     // `resume` does not accept -C, -s, -p, or --full-auto. The worktree is
     // supplied as spawn cwd; the sandbox is a config override.
     args.push("resume", resumeThreadId, "--json", "-m", model, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never", "-c", `sandbox_mode=${sandbox}`, "-c", `profile=${profile}`);
     if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
-    args.push("-");
+    diet(); args.push("-");
     return args;
   }
   args.push("--json", "-C", worktree, "-s", sandbox, "-m", model, "-p", profile, "--output-schema", schema, "-o", output, "-c", "features.multi_agent=false", "-c", "approval_policy=never");
   if (platform === "win32") args.push("-c", "windows.sandbox=unelevated", "--ignore-rules");
-  args.push("-");
+  diet(); args.push("-");
   return args;
 }
 
-export function workerEnv({ runId, taskId, worktree, role, boardState }, env = process.env) {
+export function workerEnv({ runId, taskId, worktree, role, boardState, resources }, env = process.env) {
   const allow = new Set(String(env.AGENTCHEF_TEAM_WORKER_ENV_ALLOW ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   const safe = /^(?:OPENAI_API_KEY|CODEX_API_KEY|AZURE_OPENAI_API_KEY|CODEX_HOME|CODEX_[A-Z0-9_]*|AGENTCHEF_[A-Z0-9_]*|PATH|SystemRoot|TEMP|TMP|HOME|USERPROFILE|APPDATA|LOCALAPPDATA)$/i;
   const sensitive = /(TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|_KEY$|_PAT$|COOKIE|SESSION)/i;
@@ -62,6 +90,7 @@ export function workerEnv({ runId, taskId, worktree, role, boardState }, env = p
   }
   delete result.AGENTCHEF_TEAM_WORKER_ENV_ALLOW;
   Object.assign(result, { AGENTCHEF_TEAM_RUN: runId, AGENTCHEF_TEAM_TASK: taskId, AGENTCHEF_TEAM_WORKTREE: worktree, AGENTCHEF_TEAM_ROLE: role, AGENTCHEF_ROUTING_HINT: "off", AGENTCHEF_BOARD_STATE: boardState });
+  if (resources) Object.assign(result, { npm_config_cache: resources.cache, NPM_CONFIG_CACHE: resources.cache, AGENTCHEF_PORT_START: String(resources.portStart), AGENTCHEF_PORT_END: String(resources.portEnd) });
   return result;
 }
 
@@ -142,20 +171,20 @@ export function isProcessAlive(pid, platform = process.platform) {
     return Boolean(state) && !state.startsWith("Z");
   } catch { return false; }
 }
-export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, onActivity = () => {}, env = process.env, platform = process.platform, spawnImpl = spawn }) {
+export function spawnCodexExec({ prompt, worktree, runDir, schema, output, runId, taskId, role, boardState, sandbox, model, profile, resumeThreadId, onActivity = () => {}, env = process.env, platform = process.platform, spawnImpl = spawn, maxWorkers = 1, resources }) {
   fs.mkdirSync(runDir, { recursive: true });
   const eventsPath = path.join(runDir, "events.jsonl");
   const stderrPath = path.join(runDir, "stderr.log");
   const result = { exitCode: null, signal: null, threadId: null, usage: null, finalMessage: null, items: [], failure: null };
   const command = resolveCodexCommand(env, platform);
-  const args = buildExecArgs({ worktree, sandbox, model, profile, schema, output, resumeThreadId, platform });
+  const args = buildExecArgs({ worktree, sandbox, model, profile, schema, output, resumeThreadId, platform, workerConfig: true, maxWorkers });
   const invocation = platform === "win32" && command.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(command, args) : { command, args };
   let childRef = null;
   const execution = new Promise((resolve, reject) => {
     let pendingLine = "";
     let stderr = "";
     let done = false;
-    const child = spawnImpl(invocation.command, invocation.args, { cwd: worktree, env: workerEnv({ runId, taskId, worktree, role, boardState }, env), stdio: ["pipe", "pipe", "pipe"], detached: platform !== "win32", windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
+    const child = spawnImpl(invocation.command, invocation.args, { cwd: worktree, env: workerEnv({ runId, taskId, worktree, role, boardState, resources }, env), stdio: ["pipe", "pipe", "pipe"], detached: platform !== "win32", windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments });
     childRef = child;
     child.agentChefCmdShim = invocation.command.toLowerCase().endsWith(".cmd") || invocation.command.toLowerCase().endsWith("cmd.exe");
     const finish = () => {

@@ -6,7 +6,8 @@ import test from "node:test";
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { buildExecArgs, buildViewerPaneArgs, classifyFailure, isProcessAlive, parseExecEvent, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } from "../lib/codex-exec.mjs";
+import * as codexRuntime from '../lib/codex-exec.mjs';
+const { buildExecArgs, buildViewerPaneArgs, classifyFailure, isProcessAlive, parseExecEvent, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerEnv } = codexRuntime;
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "fake-codex", "fake-codex.cjs");
 
@@ -49,6 +50,42 @@ test("viewer pane argv does not contain shell command separators", () => {
   const args = buildViewerPaneArgs({ root: "C:/agentchef", state: "C:/state/board.json", worktree: "C:/work tree", runId: "R-test", taskId: "TASK-045" });
   assert.deepEqual(args, ["-w", "0", "new-tab", "--title", "R-test TASK-045", "node", path.join("C:/agentchef", "scripts", "team-run.mjs"), "watch", "--run", "R-test", "--task", "TASK-045", "--state", "C:/state/board.json"]);
   assert.equal(args.some((value) => value.includes(";")), false);
+});
+
+test('worker process profile parks MCPs including a valid disabled node_repl transport and binds live capacity', () => {
+  const args = buildExecArgs({ worktree: 'repo', sandbox: 'workspace-write', schema: 'schema', output: 'final', workerConfig: true, maxWorkers: 3 });
+  assert.ok(args.includes('mcp_servers.node_repl.enabled=false'));
+  assert.ok(args.includes('mcp_servers.node_repl.command=node'));
+  assert.ok(args.includes('agents.max_threads=3'));
+  assert.ok(args.includes('agents.max_depth=1'));
+  assert.throws(() => buildExecArgs({ workerConfig: true, maxWorkers: 9 }), /cap/);
+});
+
+test('role templates preserve interactive agent capacity; only worker argv bounds nesting and threads', () => {
+  const roles = new URL('../../templates/codex/agents/', import.meta.url);
+  const files = fs.readdirSync(roles).filter(file => file.endsWith('.toml'));
+  assert.equal(files.length, 28);
+  for (const file of files) assert.doesNotMatch(fs.readFileSync(new URL(file, roles), 'utf8'), /^\[agents\]/m, file);
+  const ordinary = buildExecArgs({ worktree: 'repo', sandbox: 'read-only', schema: 'schema', output: 'final' });
+  assert.equal(ordinary.some(arg => /^agents\.max_(depth|threads)=/.test(arg)), false);
+  for (const resumeThreadId of [undefined, 'thread-fixture']) {
+    const worker = buildExecArgs({ worktree: 'repo', sandbox: 'workspace-write', schema: 'schema', output: 'final', workerConfig: true, maxWorkers: 4, resumeThreadId });
+    for (const value of ['agents.max_depth=1', 'agents.max_threads=4']) assert.equal(worker[worker.indexOf(value) - 1], '-c');
+  }
+});
+
+test('worker profile validators use the runtime table and reject missing transport, enabled MCPs and global leakage', () => {
+  assert.equal(typeof codexRuntime.workerMcpOverrides, 'function');
+  assert.equal(typeof codexRuntime.assertWorkerMcpBoundary, 'function');
+  const template = fs.readFileSync(new URL('../../templates/codex/profiles/team-worker.config.toml', import.meta.url), 'utf8');
+  const overrides = codexRuntime.workerMcpOverrides(template);
+  assert.ok(overrides.includes('mcp_servers.node_repl.enabled=false'));
+  assert.ok(overrides.includes('mcp_servers.node_repl.command=node'));
+  assert.throws(() => codexRuntime.workerMcpOverrides(template.replace('enabled = false', 'enabled = true')), /park/);
+  assert.throws(() => codexRuntime.workerMcpOverrides(template.replace('command = "node"', '')), /transport/);
+  assert.throws(() => codexRuntime.assertWorkerMcpBoundary(['[mcp_servers.node_repl]\nenabled = false']), /global/);
+  const configs = ['windows', 'unix'].map(platform => fs.readFileSync(new URL(`../../templates/codex/config.${platform}.toml`, import.meta.url), 'utf8'));
+  assert.doesNotThrow(() => codexRuntime.assertWorkerMcpBoundary(configs));
 });
 
 test("viewer pane launches the AgentChef watcher with the board state", () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { workerMcpOverrides, assertWorkerMcpBoundary } from './lib/codex-exec.mjs';
 
 const root = path.resolve(process.cwd());
 const failures = [];
@@ -235,6 +236,8 @@ for (const [profileFile, expectedEnabled] of [
 }
 
 const offlineBlocks = parseMcpBlocks(read("templates/codex/profiles/offline.config.toml"));
+try { workerMcpOverrides(read('templates/codex/profiles/team-worker.config.toml')); assertWorkerMcpBoundary(configFiles.map(read)); }
+catch (error) { fail(error.message); }
 for (const server of catalog.servers || []) {
   const block = offlineBlocks.get(server.name);
   if (!block) fail(`offline.config.toml is missing [mcp_servers.${server.name}]`);
