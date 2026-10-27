@@ -46,16 +46,16 @@ test("collect rejects only the worker whose added line is secret-like and contin
   assert.equal(workers.find(w=>w.taskId==="TASK-SECRET").status,"rejected_content"); assert.match(workers.find(w=>w.taskId==="TASK-SECRET").failure,/src\/TASK-SECRET\/change\.txt:\d+/); assert.doesNotMatch(workers.find(w=>w.taskId==="TASK-SECRET").failure,/[x]{12}/);
   assert.equal(workers.find(w=>w.taskId==="TASK-SAFE").status,"collected");
 });
-test("collect truncates long worker evidence for the board instead of failing after the delivery commit",async(t)=>{
+test("collect truncates long evidence and records a patch without committing",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-long-evidence-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
   const {state,env,run}=makeRun(temp,"R-long-evidence",["TASK-LONG"],"ok",{FAKE_CODEX_EVIDENCE_CHARS:"3000"});
   await startRun(state,run,env,1);
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
-  const worker=JSON.parse(result.stdout).run.workers[0]; assert.equal(worker.status,"collected"); assert.ok(worker.commit);
+  const worker=JSON.parse(result.stdout).run.workers[0]; assert.equal(worker.status,"collected"); assert.equal(worker.commit,null); assert.ok(worker.patchHash);
   const task=JSON.parse(fs.readFileSync(state,"utf8")).tasks.find(item=>item.id==="TASK-LONG"); const evidence=task.evidence.at(-1).text;
   assert.ok(evidence.length<=2000,`board evidence is ${evidence.length} characters`); assert.match(evidence,/\[truncated: \d+ characters; full text in the worker report\]$/);
 });
-test("collect reuses an existing delivery commit instead of failing the worker for having no changes",async(t)=>{
+test("collect folds a committed-only delivery once and preserves the worker HEAD",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-collect-idem-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
   const {state,env,run}=makeRun(temp,"R-collect-idem",["TASK-IDEM"],"ok");
   await startRun(state,run,env,1);
@@ -63,9 +63,11 @@ test("collect reuses an existing delivery commit instead of failing the worker f
   git(worktree,"add","-A"); git(worktree,"commit","-m","feat(team-mode): TASK-IDEM worker delivery"); const head=git(worktree,"rev-parse","HEAD");
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
   const collected=JSON.parse(result.stdout).run; const worker=collected.workers[0];
-  assert.equal(worker.status,"collected"); assert.equal(worker.commit,head); assert.deepEqual(worker.changedPaths,["src/change.txt"]);
-  assert.ok(collected.history.some(item=>item.event==="worker_collected_existing_commit"&&item.taskId==="TASK-IDEM"));
-  const repeated=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(repeated.status,0,repeated.stderr||repeated.stdout); assert.equal(JSON.parse(repeated.stdout).run.workers[0].status,"collected");
+  assert.equal(worker.status,'collected'); assert.equal(worker.commit,null); assert.equal(git(worktree,'rev-parse','HEAD'),head);
+  assert.match(fs.readFileSync(worker.patchFile,'utf8'),/worker output ok/);
+  assert.ok(collected.history.some(event=>event.event==='worker_collected_existing_commit'));
+  const again=node(cli,['collect','--state',state,'--json','--run',run.runId],{env}); assert.equal(again.status,0,again.stderr||again.stdout);
+  assert.equal(JSON.parse(again.stdout).run.history.filter(event=>event.event==='worker_collected_existing_commit').length,1);
 });
 test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it off",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-switch-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -81,11 +83,34 @@ test("team execution is on by default and AGENTCHEF_TEAM_MODE=off switches it of
   const no=node(cli,["doctor","--state",state,"--json"],{env:{...env,AGENTCHEF_TEAM_MODE:"no"}});
   const noCheck=JSON.parse(no.stdout).checks.find(check=>check.id==="execution"); assert.equal(noCheck.status,"fail"); assert.match(noCheck.details,/unrecognized value treated as off/);
 });
-test("collect includes committed and dirty paths from a worker delivery",async(t)=>{
+test("collect folds worker commits and dirty changes into a delivery patch with a warning",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-commit-dirty-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
   const {state,env,run}=makeRun(temp,"R-commit-dirty",["TASK-DIRTY"],"commit-dirty"); await startRun(state,run,env,1);
+  const finished=JSON.parse(fs.readFileSync(path.join(temp,'team-runs',run.runId+'.json'),'utf8'));
+  const workerHead=git(finished.workers[0].worktree,'rev-parse','HEAD');
   const result=node(cli,["collect","--state",state,"--json","--run",run.runId],{env}); assert.equal(result.status,0,result.stderr||result.stdout);
-  assert.deepEqual(JSON.parse(result.stdout).run.workers[0].changedPaths.sort(),["src/change.txt","src/dirty.txt"]);
+  const collected=JSON.parse(result.stdout).run, worker=collected.workers[0];
+  assert.equal(worker.status,'collected'); assert.equal(worker.commit,null);
+  assert.match(fs.readFileSync(worker.patchFile,'utf8'),/worker output commit-dirty/);
+  assert.match(fs.readFileSync(worker.patchFile,'utf8'),/dirty worker output/);
+  assert.ok(worker.warnings.some(warning=>/commits.*folded.*patch/i.test(warning)));
+  assert.ok(collected.history.some(event=>event.event==='worker_collected_existing_commit' && /folded.*patch/i.test(event.warning)));
+  assert.equal(git(worker.worktree,'rev-parse','HEAD'),workerHead,'collect must not create a worker commit');
+  assert.match(fs.readFileSync(path.join(run.worktreeRoot,'TASK-DIRTY.prompt.md'),'utf8'),/Do not commit/);
+  const integrated=node(cli,['integrate','--state',state,'--json','--run',run.runId],{env}); assert.equal(integrated.status,0,integrated.stderr||integrated.stdout);
+  const integration=JSON.parse(integrated.stdout).run.integrationWorktree;
+  assert.match(fs.readFileSync(path.join(integration,'src/change.txt'),'utf8'),/worker output commit-dirty/);
+  assert.match(fs.readFileSync(path.join(integration,'src/dirty.txt'),'utf8'),/dirty worker output/);
+});
+
+test('integration recheck tells the conductor to commit an uncommitted repair first', (t)=>{
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'team-recheck-message-')); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+  const {repo,state,env,run}=makeRun(temp,'R-recheck-message',['TASK-REPAIR']);
+  const file=path.join(temp,'team-runs',run.runId+'.json');
+  fs.writeFileSync(file,JSON.stringify({...run,status:'integrated',integrationWorktree:repo,integration:{ok:false,worktree:repo,commit:run.baseCommit}}));
+  fs.appendFileSync(path.join(repo,'README.md'),'repair\n');
+  const result=node(cli,['integrate','--recheck','--state',state,'--json','--run',run.runId],{env});
+  assert.notEqual(result.status,0); assert.match(result.stderr+result.stdout,/commit the repair first/);
 });
 test("start refuses changed persisted briefs after planning",async(t)=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"team-plan-hash-")); t.after(()=>fs.rmSync(temp,{recursive:true,force:true}));

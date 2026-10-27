@@ -24,6 +24,15 @@ function runCli(state, command, args = [], env = {}) {
   try { json = JSON.parse(result.stdout); } catch { /* report captured below */ }
   return { ...result, json };
 }
+function verifyWithLead(state, command, args = [], env = {}) {
+  const runId = args[args.indexOf('--run') + 1];
+  const run = JSON.parse(fs.readFileSync(path.join(path.dirname(state), 'team-runs', runId + '.json'), 'utf8'));
+  const reviewFile = path.join(path.dirname(state), runId + '.review.json');
+  fs.writeFileSync(reviewFile, JSON.stringify({ engine: 'claude', reviewer: 'fixture-lead', verdict: 'pass', integrationCommit: run.integration.commit, evidence: ['fixture-review.md:1 - checked integration against the brief'] }));
+  const reviewed = runCli(state, 'lead-review', ['--run', runId, '--review-file', reviewFile], env);
+  assert.equal(reviewed.status, 0, reviewed.stderr || reviewed.stdout);
+  return runCli(state, command, args, env);
+}
 function git(cwd, ...args) {
   const result = spawnSync("git", args, { cwd, encoding: "utf8", timeout: scaledTimeout(30_000), windowsHide: true });
   assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr}`);
@@ -63,10 +72,10 @@ function validApproval(state, runId, tur, plannedAt) {
 }
 // A fresh capacity file that allows the ceiling, so plan and start do not depend on this machine's free memory.
 function defaultCapacity(temp) { const file = path.join(temp, "kapasite-default.json"); fs.writeFileSync(file, JSON.stringify({ v: 1, ts: new Date().toISOString(), onerilen: 8, tavan: 8, neden: "test default" })); return file; }
-function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers, planArgs = [], extraEnv = {}, allowFailure = false }) {
+function planRun({ temp, state, repo, runId, scenario = "ok", role = "docs_author", workers, maxWorkers, planArgs = [], extraEnv = {}, allowFailure = false, routingProfiles = [] }) {
   const planPath = path.join(temp, "plan.json"), briefPath = path.join(temp, "brief.md");
   fs.writeFileSync(briefPath, brief);
-  fs.writeFileSync(planPath, JSON.stringify({ workers: workers || [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
+  fs.writeFileSync(planPath, JSON.stringify({ routingProfiles, workers: workers || [{ taskId: "TASK-043", role, briefFile: "brief.md", writeScope: ["src/"], checks: ["node --version"] }] }));
   const isolatedTemp = path.join(temp, "os-temp"); fs.mkdirSync(isolatedTemp, { recursive: true });
   const codex = fixtureCommand(temp);
   const env = { AGENTCHEF_TEAM_MODE: "experimental", AGENTCHEF_TEAM_CODEX_COMMAND: codex.command, FAKE_CODEX_SCENARIO: scenario, AGENTCHEF_TEAM_PANE: "off", TEMP: isolatedTemp, TMP: isolatedTemp, TMPDIR: isolatedTemp, AGENTCHEF_TEAM_RESOURCE_FILE: defaultCapacity(temp), ...(maxWorkers ? { AGENTCHEF_TEAM_MAX_WORKERS: String(maxWorkers) } : {}), ...extraEnv };
@@ -131,11 +140,30 @@ async function waitForSupervisorStopped(state, runId) {
   throw new Error("supervisor did not exit before test cleanup");
 }
 
+test("legacy verified run accepts commit-bound lead review and refuses missing integration evidence", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-legacy-review-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-legacy-review";
+  initRepo(repo); writeBoard(state);
+  const { env } = planRun({ temp, state, repo, runId });
+  const file = path.join(temp, 'team-runs', runId + '.json');
+  const commit = git(repo, 'rev-parse', 'HEAD');
+  updateRunRecord(file, run => ({ ...run, status: 'verified', integrationWorktree: repo, integration: { ok: true, commit }, verification: { integrationCommit: commit } }));
+  const reviewFile = path.join(temp, 'review.json');
+  fs.writeFileSync(reviewFile, JSON.stringify({ engine: 'claude', reviewer: 'fixture-lead', verdict: 'pass', integrationCommit: commit, evidence: ['fixture-review.md:1 - reviewed legacy integration'] }));
+  const reviewed = runCli(state, 'lead-review', ['--run', runId, '--review-file', reviewFile], env);
+  assert.equal(reviewed.status, 0, reviewed.stderr || reviewed.stdout);
+  assert.equal(reviewed.json.run.status, 'verified');
+  assert.equal(reviewed.json.run.leadReview.integrationCommit, commit);
+  assert.equal(fs.existsSync(path.join(temp, 'approvals')), false, 'review must not manufacture approval');
+  updateRunRecord(file, run => ({ ...run, integration: { ok: true }, leadReview: undefined }));
+  assert.notEqual(runCli(state, 'lead-review', ['--run', runId, '--review-file', reviewFile], env).status, 0);
+});
+
 test("team run completes plan, collect, integrate, verify, and approved merge", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-full-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-task043-full";
   initRepo(repo); writeBoard(state);
-  const { env } = planRun({ temp, state, repo, runId });
+  const { env } = planRun({ temp, state, repo, runId, routingProfiles: ['release-or-publish'] });
   const denied = runCli(state, "start", ["--run", runId], env); assert.equal(denied.status, 3);
   validApproval(state, runId, "baslat", runCli(state, "status", ["--run", runId]).json.run.plannedAt);
   const started = runCli(state, "start", ["--run", runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
@@ -144,16 +172,23 @@ test("team run completes plan, collect, integrate, verify, and approved merge", 
   git(repo, "config", "core.hooksPath", hookDir);
   let run = await waitForWorker(state, runId);
   const collected = runCli(state, "collect", ["--run", runId], env); assert.equal(collected.status, 0, collected.stderr || collected.stdout);
+  assert.equal(collected.json.run.workers[0].commit, null);
+  assert.ok(collected.json.run.workers[0].patchHash);
+  assert.deepEqual(collected.json.run.setupJournal.map(entry => entry.event), ['proposed', 'approved', 'applied']);
   const integrated = runCli(state, "integrate", ["--run", runId, "--check", "node --version", "--check", "node --version"], env); assert.equal(integrated.status, 0, integrated.stderr || integrated.stdout);
   assert.equal(fs.existsSync(hookMarker), false, "engine integration must not execute repository merge hooks");
   assert.equal(integrated.json.checks.length, 2);
   assert.match(fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.diff"), "utf8"), /worker output/);
   assert.match(fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.stat"), "utf8"), /change\.txt/);
-  const verified = runCli(state, "verify", ["--run", runId], env); assert.equal(verified.status, 0, verified.stderr || verified.stdout);
-  const mergeDenied = runCli(state, "merge", ["--run", runId], env); assert.equal(mergeDenied.status, 3);
+  const noLead = runCli(state, 'verify', ['--run', runId], env);
+  assert.notEqual(noLead.status, 0); assert.match(noLead.stderr + noLead.stdout, /Claude lead review/);
+  assert.equal(git(run.workers[0].worktree, 'rev-parse', 'HEAD'), run.baseCommit, 'collect does not commit in the worker tree');
+  const verified = verifyWithLead(state, "verify", ["--run", runId], env); assert.equal(verified.status, 0, verified.stderr || verified.stdout);
+  assert.deepEqual(Object.keys(verified.json.run.verificationResults), ['test_verifier', 'release_verifier']);
+  const mergeDenied = runCli(state, "merge", ["--cleanup-approved", "--run", runId], env); assert.equal(mergeDenied.status, 3);
   run = runCli(state, "status", ["--run", runId]).json.run;
   validApproval(state, runId, "birlestir", run.plannedAt);
-  const merged = runCli(state, "merge", ["--run", runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
+  const merged = runCli(state, "merge", ["--cleanup-approved", "--run", runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
   assert.equal(git(repo, "branch", "--show-current"), "main");
   assert.match(git(repo, "log", "-1", "--pretty=%P"), /\S+ \S+/);
   assert.ok(git(repo, "branch", "--list", "takim/R-task043-full").length);
@@ -222,11 +257,11 @@ test("base merge conflict preserves verified state and does not consume approval
   assert.equal(runCli(state, "integrate", ["--run", run.runId], env).status, 0);
   await waitForSupervisorStopped(state, run.runId);
   env.FAKE_CODEX_SCENARIO = "verifier-pass";
-  assert.equal(runCli(state, "verify", ["--run", run.runId], env).status, 0);
+  assert.equal(verifyWithLead(state, "verify", ["--run", run.runId], env).status, 0);
   fs.mkdirSync(path.join(repo, "src"), { recursive: true }); fs.writeFileSync(path.join(repo, "src", "change.txt"), "base branch edit\n");
   git(repo, "add", "src/change.txt"); git(repo, "commit", "-m", "base branch conflicting edit");
   validApproval(state, run.runId, "birlestir", run.plannedAt);
-  const result = runCli(state, "merge", ["--run", run.runId], env);
+  const result = runCli(state, "merge", ["--cleanup-approved", "--run", run.runId], env);
   assert.notEqual(result.status, 0);
   assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "verified");
   const approval = JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${run.runId}.birlestir.json`), "utf8"));
@@ -353,7 +388,7 @@ test("read-only workers collect a report without a commit or write scope", async
   assert.equal(recomputed.json.run.history.length, historyBefore + 1); assert.equal(recomputed.json.run.history.at(-1).event, "completion_recomputed");
   const unchanged = runCli(state, "collect", ["--run", run.runId], env); assert.equal(unchanged.status, 0);
   assert.equal(unchanged.json.run.history.length, historyBefore + 1, "an unchanged completion adds no history");
-  const cleaned = runCli(state, "cleanup", ["--run", run.runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
+  const cleaned = runCli(state, "cleanup", ["--approved", "--run", run.runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
 });
 
 test("two read-only workers share no write scopes or leases and run with a concurrency cap", async (t) => {
@@ -476,7 +511,7 @@ test("integrate records real worker merge conflicts and merge refuses a conflict
   const result = runCli(state, "integrate", ["--run", run.runId], env); assert.equal(result.status, 4);
   assert.equal(result.json.run.workers[0].status, "conflict"); assert.deepEqual(result.json.conflicts, ["src/conflict.txt"]);
   validApproval(state, run.runId, "birlestir", run.plannedAt);
-  const rejected = runCli(state, "merge", ["--run", run.runId], env); assert.notEqual(rejected.status, 0);
+  const rejected = runCli(state, "merge", ["--cleanup-approved", "--run", run.runId], env); assert.notEqual(rejected.status, 0);
 });
 
 test("failed independent verifier can be retried and doctor emits JSON checks", (t) => {
@@ -487,19 +522,19 @@ test("failed independent verifier can be retried and doctor emits JSON checks", 
   fs.writeFileSync(path.join(integration, "src.txt"), "integration\n"); git(integration, "add", "src.txt"); git(integration, "commit", "-m", "integrated change");
   const recordPath = path.join(path.dirname(state), "team-runs", `${run.runId}.json`), record = JSON.parse(fs.readFileSync(recordPath, "utf8"));
   fs.mkdirSync(run.worktreeRoot, { recursive: true }); fs.writeFileSync(path.join(run.worktreeRoot, "TASK-043.prompt.md"), brief);
-  record.status = "integrated"; record.workers[0].status = "integrated"; record.integration = { merged: [record.workers[0].taskId], conflicts: [], checks: [], ok: true }; fs.writeFileSync(recordPath, JSON.stringify(record));
-  const verified = runCli(state, "verify", ["--run", run.runId], env); assert.equal(verified.status, 4, verified.stderr || verified.stdout);
+  record.status = "integrated"; record.workers[0].status = "integrated"; record.integration = { commit: git(integration, "rev-parse", "HEAD"), merged: [record.workers[0].taskId], conflicts: [], checks: [], ok: true }; fs.writeFileSync(recordPath, JSON.stringify(record));
+  const verified = verifyWithLead(state, "verify", ["--run", run.runId], env); assert.equal(verified.status, 4, verified.stderr || verified.stdout);
   assert.equal(verified.json.run.status, "integrated");
   assert.equal(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].evidence.some((entry) => /verified-by:/.test(entry.text || entry)), false);
-  const report = fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", `verification-${run.runId}.md`), "utf8");
+  const report = fs.readFileSync(path.join(path.dirname(state), "team-runs", run.runId, "reports", `verification-${run.runId}-test_verifier.md`), "utf8");
   assert.match(report, /Outcome: fixture complete/); assert.match(report, /read-only fixture evidence/); assert.match(report, /fixture risk/);
   env.FAKE_CODEX_SCENARIO = "verifier-pass";
-  const retried = runCli(state, "verify", ["--run", run.runId], env); assert.equal(retried.status, 0, retried.stderr || retried.stdout);
+  const retried = verifyWithLead(state, "verify", ["--run", run.runId], env); assert.equal(retried.status, 0, retried.stderr || retried.stdout);
   assert.equal(retried.json.run.status, "verified");
   assert.ok(JSON.parse(fs.readFileSync(state, "utf8")).tasks[0].evidence.some((entry) => /verified-by: test_verifier - pass/.test(entry.text || entry)));
-  const rejected = runCli(state, "merge", ["--run", run.runId], env); assert.notEqual(rejected.status, 0);
+  const rejected = runCli(state, "merge", ["--cleanup-approved", "--run", run.runId], env); assert.notEqual(rejected.status, 0);
   validApproval(state, run.runId, "birlestir", run.plannedAt);
-  const merged = runCli(state, "merge", ["--run", run.runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
+  const merged = runCli(state, "merge", ["--cleanup-approved", "--run", run.runId], env); assert.equal(merged.status, 0, merged.stderr || merged.stdout);
   const doctor = runCli(state, "doctor", [], { ...env, FAKE_CODEX_LOGIN: "fail" });
   assert.ok(doctor.json && Array.isArray(doctor.json.checks));
   assert.equal(doctor.json.checks.find((entry) => entry.id === "codex.login").status, "fail");
@@ -525,15 +560,15 @@ test("warning verdict remains verifiable and can merge only with the explicit fl
   assert.equal(runCli(state, "integrate", ["--run", run.runId, "--check", "node --version"], env).status, 0);
   await waitForSupervisorStopped(state, run.runId);
   env.FAKE_CODEX_SCENARIO = "verifier-warn";
-  const verified = runCli(state, "verify", ["--run", run.runId], env);
+  const verified = verifyWithLead(state, "verify", ["--run", run.runId], env);
   assert.equal(verified.status, 0, verified.stderr || verified.stdout); assert.equal(verified.json.run.verification.verdict, "warn");
   const runApproval = runCli(state, "status", ["--run", run.runId], env).json.run;
   validApproval(state, run.runId, "birlestir", runApproval.plannedAt);
-  assert.notEqual(runCli(state, "merge", ["--run", run.runId], env).status, 0);
+  assert.notEqual(runCli(state, "merge", ["--cleanup-approved", "--run", run.runId], env).status, 0);
   const failCleanup = path.join(temp, "fail-worktree-remove.cjs");
   fs.writeFileSync(failCleanup, `const cp=require("node:child_process");const original=cp.execFileSync;cp.execFileSync=function(command,args,...rest){if(command==="git"&&args?.[0]==="worktree"&&args?.[1]==="remove")throw new Error("fixture cleanup failure");return original.call(this,command,args,...rest)};`);
   env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--require=${failCleanup}`].filter(Boolean).join(" ");
-  const merged = runCli(state, "merge", ["--run", run.runId, "--accept-warn"], env);
+  const merged = runCli(state, "merge", ["--cleanup-approved", "--run", run.runId, "--accept-warn"], env);
   assert.equal(merged.status, 0, merged.stderr || merged.stdout); assert.equal(merged.json.run.status, "merged");
   assert.match(merged.json.cleanupWarning, /worktree cleanup failed/);
 });
@@ -582,12 +617,12 @@ test("merge --as-patch delivers a snapshot run to the working tree without a com
   assert.equal(runCli(state, "collect", ["--run", runId], env).status, 0);
   const integrated = runCli(state, "integrate", ["--run", runId], env); assert.equal(integrated.status, 0, integrated.stderr || integrated.stdout);
   assert.doesNotMatch(fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.diff"), "utf8"), /user edit|untracked user notes/, "the snapshot itself is not part of the delivered diff");
-  const verified = runCli(state, "verify", ["--run", runId], env); assert.equal(verified.status, 0, verified.stderr || verified.stdout);
+  const verified = verifyWithLead(state, "verify", ["--run", runId], env); assert.equal(verified.status, 0, verified.stderr || verified.stdout);
   const run = runCli(state, "status", ["--run", runId]).json.run;
   validApproval(state, runId, "birlestir", run.plannedAt);
-  const plainMerge = runCli(state, "merge", ["--run", runId], env);
+  const plainMerge = runCli(state, "merge", ["--cleanup-approved", "--run", runId], env);
   assert.notEqual(plainMerge.status, 0); assert.match(plainMerge.stdout + plainMerge.stderr, /--as-patch/);
-  const delivered = runCli(state, "merge", ["--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
+  const delivered = runCli(state, "merge", ["--cleanup-approved", "--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
   assert.equal(git(repo, "rev-parse", "HEAD"), head, "no commit on the base branch");
   assert.equal(git(repo, "diff", "--cached", "--name-only"), cachedBefore, "the index is not touched");
   assert.match(fs.readFileSync(path.join(repo, "src", "change.txt"), "utf8"), /worker output/);
@@ -597,7 +632,7 @@ test("merge --as-patch delivers a snapshot run to the working tree without a com
   assert.equal(delivered.json.run.status, "merged"); assert.equal(delivered.json.run.delivery.mode, "patch");
   assert.ok(JSON.parse(fs.readFileSync(path.join(path.dirname(state), "approvals", `${runId}.birlestir.json`), "utf8")).kullanildi);
   await waitForSupervisorStopped(state, runId);
-  const cleaned = runCli(state, "cleanup", ["--run", runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
+  const cleaned = runCli(state, "cleanup", ["--approved", "--run", runId], env); assert.equal(cleaned.status, 0, cleaned.stderr || cleaned.stdout);
   assert.equal(cleaned.json.removedSnapshotRef, `refs/agentchef/snapshots/${runId}`);
   assert.equal(spawnSync("git", ["rev-parse", "--verify", "--quiet", `refs/agentchef/snapshots/${runId}`], { cwd: repo, windowsHide: true }).status, 1, "cleanup deletes the private snapshot ref");
   assert.equal(git(repo, "rev-parse", "HEAD"), head);
@@ -610,10 +645,10 @@ test("merge --as-patch refuses a working tree that diverged and consumes nothing
   validApproval(state, runId, "baslat", run.plannedAt); assert.equal(runCli(state, "start", ["--run", runId], env).status, 0);
   await waitForWorker(state, runId); assert.equal(runCli(state, "collect", ["--run", runId], env).status, 0);
   assert.equal(runCli(state, "integrate", ["--run", runId], env).status, 0);
-  assert.equal(runCli(state, "verify", ["--run", runId], env).status, 0);
+  assert.equal(verifyWithLead(state, "verify", ["--run", runId], env).status, 0);
   fs.mkdirSync(path.join(repo, "src"), { recursive: true }); fs.writeFileSync(path.join(repo, "src", "change.txt"), "owner wrote this meanwhile\n");
   validApproval(state, runId, "birlestir", run.plannedAt);
-  const refused = runCli(state, "merge", ["--run", runId, "--as-patch"], env);
+  const refused = runCli(state, "merge", ["--cleanup-approved", "--run", runId, "--as-patch"], env);
   assert.notEqual(refused.status, 0); assert.match(refused.stdout + refused.stderr, /does not apply cleanly/);
   assert.equal(fs.readFileSync(path.join(repo, "src", "change.txt"), "utf8"), "owner wrote this meanwhile\n");
   assert.equal(runCli(state, "status", ["--run", runId], env).json.run.status, "verified");
@@ -682,9 +717,9 @@ for (const eol of ["\n", "\r\n"]) {
     const diff = fs.readFileSync(path.join(path.dirname(state), "team-runs", runId, "integration.diff"), "utf8");
     const changed = diff.split(/\r?\n/).filter((line) => /^[+-](?![+-])/.test(line));
     assert.deepEqual(changed, ["-worker original neighbor", "-last line", "+worker updated the fixture neighbor"], "only the lines the worker changed, no whole-file line-ending rewrite");
-    assert.equal(runCli(state, "verify", ["--run", runId], env).status, 0);
+    assert.equal(verifyWithLead(state, "verify", ["--run", runId], env).status, 0);
     validApproval(state, runId, "birlestir", runCli(state, "status", ["--run", runId]).json.run.plannedAt);
-    const delivered = runCli(state, "merge", ["--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
+    const delivered = runCli(state, "merge", ["--cleanup-approved", "--run", runId, "--as-patch"], env); assert.equal(delivered.status, 0, delivered.stderr || delivered.stdout);
     assert.equal(git(repo, "rev-parse", "HEAD"), head);
     assert.equal(fs.readFileSync(fixture, "utf8"), lines("context line", "worker updated the fixture neighbor"), `applied in the owner's ${label} endings`);
     await waitForSupervisorStopped(state, runId);
@@ -729,4 +764,93 @@ test("start re-measures capacity: lowers the cap, refuses at 0 without an overri
   const overrideStart = runCli(state, "start", ["--run", "R-start-override"], override.env); assert.equal(overrideStart.status, 0, overrideStart.stderr || overrideStart.stdout);
   assert.equal(runCli(state, "status", ["--run", "R-start-override"]).json.run.maxWorkers, 1);
   await waitForAllWorkers(state, "R-start-override"); await waitForSupervisorStopped(state, "R-start-override");
+});
+
+test('serialized owners inherit prior patches and integrate without worker commits', async t => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'team-ordered-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, 'repo'), state = path.join(temp, 'board.json'); initRepo(repo); writeBoard(state);
+  const workers = ['TASK-FIRST', 'TASK-SECOND'].map(taskId => ({ taskId, role: 'docs_author', briefFile: 'brief.md', writeScope: ['src/'] }));
+  const { run, env } = planRun({ temp, state, repo, runId: 'R-ordered', workers, planArgs: ['--serialize-overlaps'], extraEnv: { FAKE_CODEX_APPEND_TASK: '1' } });
+  assert.deepEqual(run.workers[1].dependsOn, ['TASK-FIRST']);
+  validApproval(state, run.runId, 'baslat', run.plannedAt);
+  const started = runCli(state, 'start', ['--run', run.runId], env); assert.equal(started.status, 0, started.stderr || started.stdout);
+  const deadline = Date.now() + scaledTimeout(30000); let current;
+  while (Date.now() < deadline) {
+    current = runCli(state, 'status', ['--run', run.runId], env).json.run;
+    if (current.workers.every(w => ['finished', 'collected', 'failed'].includes(w.status))) break;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  assert.equal(current.workers[1].status, 'finished', JSON.stringify(current.workers));
+  const collected = runCli(state, 'collect', ['--run', run.runId], env); assert.equal(collected.status, 0, collected.stderr || collected.stdout);
+  for (const worker of collected.json.run.workers) assert.equal(git(worker.worktree, 'rev-parse', 'HEAD'), run.baseCommit);
+  const integrated = runCli(state, 'integrate', ['--run', run.runId], env); assert.equal(integrated.status, 0, integrated.stderr || integrated.stdout);
+  assert.equal(fs.readFileSync(path.join(run.integrationWorktree, 'src/change.txt'), 'utf8').replace(/\r/g, ''), 'TASK-FIRST\nTASK-SECOND\n');
+  const cleanupDenied = runCli(state, 'cleanup', ['--run', run.runId], env); assert.notEqual(cleanupDenied.status, 0);
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test('failed integration commit reverses its patch and permits a safe retry', async t => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'team-commit-retry-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, 'repo'), state = path.join(temp, 'board.json'); initRepo(repo); writeBoard(state);
+  const { run, env } = planRun({ temp, state, repo, runId: 'R-commit-retry' });
+  validApproval(state, run.runId, 'baslat', run.plannedAt);
+  assert.equal(runCli(state, 'start', ['--run', run.runId], env).status, 0);
+  await waitForWorker(state, run.runId);
+  assert.equal(runCli(state, 'collect', ['--run', run.runId], env).status, 0);
+  git(repo, 'config', 'user.name', '');
+  const failed = runCli(state, 'integrate', ['--run', run.runId], env);
+  assert.notEqual(failed.status, 0); assert.match(failed.stderr + failed.stdout, /patch was reverted/);
+  assert.equal(git(run.integrationWorktree, 'status', '--porcelain'), '');
+  assert.equal(runCli(state, 'status', ['--run', run.runId], env).json.run.status, 'collected');
+  git(repo, 'config', 'user.name', 'AgentChef Test');
+  const retried = runCli(state, 'integrate', ['--run', run.runId], env);
+  assert.equal(retried.status, 0, retried.stderr || retried.stdout);
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test('integration reconciles a committed patch after its run-record write fails', async t => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'team-record-retry-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, 'repo'), state = path.join(temp, 'board.json'); initRepo(repo); writeBoard(state);
+  const { run, env } = planRun({ temp, state, repo, runId: 'R-record-retry' });
+  validApproval(state, run.runId, 'baslat', run.plannedAt);
+  assert.equal(runCli(state, 'start', ['--run', run.runId], env).status, 0);
+  await waitForWorker(state, run.runId);
+  assert.equal(runCli(state, 'collect', ['--run', run.runId], env).status, 0);
+  const hook = path.join(temp, 'fail-record.cjs');
+  fs.writeFileSync(hook, `const fs=require('node:fs'); const original=fs.writeFileSync; fs.writeFileSync=function(file,data,...args){ if(String(file).endsWith('.tmp') && typeof data==='string' && data.includes('worker_integrated')) throw new Error('simulated post-commit state failure'); return original.call(this,file,data,...args); };`);
+  const failed = runCli(state, 'integrate', ['--run', run.runId], { ...env, NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hook}`].filter(Boolean).join(' ') });
+  assert.notEqual(failed.status, 0); assert.match(failed.stderr + failed.stdout, /simulated post-commit state failure/);
+  const interrupted = runCli(state, 'status', ['--run', run.runId], env).json.run;
+  assert.equal(interrupted.status, 'collected'); assert.ok(interrupted.integrationIntent);
+  assert.equal(git(run.integrationWorktree, 'status', '--porcelain'), '');
+  const retried = runCli(state, 'integrate', ['--run', run.runId], env);
+  assert.equal(retried.status, 0, retried.stderr || retried.stdout);
+  assert.equal(git(run.integrationWorktree, 'rev-list', '--count', `${run.baseCommit}..HEAD`), '1');
+  assert.ok(retried.json.run.history.some(entry => entry.event === 'integration_commit_recovered'));
+  await waitForSupervisorStopped(state, run.runId);
+});
+
+test('integration recovers an abrupt process exit immediately after applying its patch', async t => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'team-apply-crash-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, 'repo'), state = path.join(temp, 'board.json'); initRepo(repo); writeBoard(state);
+  const { run, env } = planRun({ temp, state, repo, runId: 'R-apply-crash' });
+  validApproval(state, run.runId, 'baslat', run.plannedAt);
+  assert.equal(runCli(state, 'start', ['--run', run.runId], env).status, 0);
+  await waitForWorker(state, run.runId);
+  assert.equal(runCli(state, 'collect', ['--run', run.runId], env).status, 0);
+  const hook = path.join(temp, 'exit-after-apply.cjs');
+  fs.writeFileSync(hook, `const cp=require('node:child_process'); const original=cp.execFileSync; cp.execFileSync=function(command,args,...rest){ const result=original.call(this,command,args,...rest); if(command==='git' && args[0]==='apply' && args[1]==='--index') process.exit(73); return result; };`);
+  const interrupted = runCli(state, 'integrate', ['--run', run.runId], { ...env, NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hook}`].filter(Boolean).join(' ') });
+  assert.equal(interrupted.status, 73, interrupted.stderr || interrupted.stdout);
+  assert.ok(runCli(state, 'status', ['--run', run.runId], env).json.run.integrationIntent);
+  assert.notEqual(git(run.integrationWorktree, 'status', '--porcelain'), '');
+  const retried = runCli(state, 'integrate', ['--run', run.runId], env);
+  assert.equal(retried.status, 0, retried.stderr || retried.stdout);
+  assert.equal(git(run.integrationWorktree, 'rev-list', '--count', `${run.baseCommit}..HEAD`), '1');
+  assert.equal(git(run.integrationWorktree, 'status', '--porcelain'), '');
+  await waitForSupervisorStopped(state, run.runId);
 });
