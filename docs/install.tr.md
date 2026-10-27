@@ -757,3 +757,18 @@ yüklemeyi bıraksın.
 Restore once mevcut managed target'lar icin rollback backup olusturur.
 Installer ve CLI, preview-first backup delete akisinda acikca `--apply`
 vermedikce backup dosyalarini silmez.
+
+İşçi süreçlerine özel MCP diyeti `templates/codex/profiles/team-worker.config.toml`
+içindedir. Motor bunu repodan okur; kurulum ve Chef'in yönetilen dosya listesi bu
+dosyayı hariç tutar. Team-run bunu yalnız işçi çağrısına uygular; node_repl ayarı
+genel config.toml dosyasına eklenmez.
+
+Orkestrasyon adayının akışı `integrate -> lead-review -> verify -> merge` şeklindedir.
+Verify veya merge öncesinde `lead-review --review-file <json>` ile tam entegrasyon
+commit'ine bağlı, başarılı Claude inceleme kanıtını kaydedin. `verify`, varsayılan
+doğrulayıcıyı ve seçilen routing profillerinin zorunlu doğrulayıcılarını çalıştırır.
+Merge, işçi ve entegrasyon worktree'lerini varsayılan olarak tutar. Yalnız açık
+temizlik onayıyla `merge --cleanup-approved` kullanın veya sonradan
+`cleanup --run <runId> --approved` çalıştırın. Temizlik onayı mevcut
+`baslat` / `birlestir` kapılarından ayrıdır. Ayrıntılar:
+[orkestrasyon adayı](orchestration-candidate.tr.md).

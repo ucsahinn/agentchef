@@ -26,13 +26,14 @@ node scripts/team-run.mjs <command> --state <board.json> --json
 | Supervise | Internal `supervise --run <runId>` | Engine-owned detached supervisor; do not launch or stop manually |
 | Observe | `status --run <runId>` | Each worker's state, latest event, lease/heartbeat health, and scope warning |
 | Gather | `collect --run <runId>` | Each handoff, changed paths, scope result, and board evidence; a run whose workers are all read-only ends here as `completed` |
-| Integrate | `integrate --run <runId>` | Integration checks, merged tasks, conflicts, and diff statistics |
-| Verify | `verify --run <runId>` | Independent read-only `test_verifier` report and verdict |
-| Merge | `merge --run <runId>` | Merge commit result and cleanup result |
+| Integrate | `integrate --run <runId>` | Scanned patches applied with git apply --index, delivery commits, checks, failures, and diff statistics |
+| Lead review | `lead-review --run <runId> --review-file <json>` | Passing Claude evidence bound to the integration commit |
+| Verify | `verify --run <runId>` | Independent read-only default and selected routing-profile verifier reports |
+| Merge | `merge --run <runId>` | Merge commit result; worktrees retained unless cleanup was explicitly approved |
 | Deliver | `merge --run <runId> --as-patch` | Paths applied to the working tree as unstaged changes; the base commit is unchanged |
 | Stop | `abort --run <runId> --reason <reason>` | Aborted workers and board task outcomes |
 | Inspect | `watch --run <runId>` / `doctor` | Read-only event view / prerequisites |
-| Reclaim | `cleanup --run <runId>` | Exact worktrees, branches, or logs selected for cleanup |
+| Reclaim | `cleanup --run <runId> --approved` | Exact worktrees, branches, or logs explicitly selected for cleanup |
 
 Exit codes: `0` success, `1` refusal or operational failure, `2` usage error,
 `3` missing/invalid user gate, and `4` partial completion (worker failure or
@@ -128,3 +129,21 @@ are `AGENTCHEF_TEAM_MAX_WORKERS` (a further cap), `AGENTCHEF_TEAM_RESOURCE_FILE`
 `AGENTCHEF_TEAM_WORKTREE_ROOT`, `AGENTCHEF_TEAM_PANE`, and
 `AGENTCHEF_TEAM_CODEX_COMMAND`. `AGENTCHEF_BOARD_STATE` selects the coordination
 board state file.
+
+## Candidate extension gates
+
+Collect stores a scanned, hash-bound delivery patch and does not commit. Existing
+worker commits are folded into that patch with a warning event
+(`worker_collected_existing_commit`); the worker prompt still forbids commits.
+Integrate applies patches with `git apply --index` and creates delivery commits.
+For overlapping file scopes, select `plan --serialize-overlaps`; dependent tasks
+receive collected predecessor patches before their lease is activated.
+
+The write-run sequence is `integrate -> lead-review -> verify -> merge`. Record
+passing Claude evidence against the exact integration commit before verify.
+Selected routingProfiles add all their mandatory verifier roles from
+routing-profiles.json. Workers use the repository-only team-worker MCP diet,
+per-process capacity overrides, a shared package cache and disjoint port intervals.
+Worktrees remain after merge unless cleanup was separately approved through
+`merge --cleanup-approved` or `cleanup --approved`. Existing baslat/birlestir
+approval files remain the only start/merge approval path.

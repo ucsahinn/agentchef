@@ -707,3 +707,17 @@ The repo can document secure GitHub, Supabase, Vercel, or Sentry setup, but it
 must not perform account-level actions automatically. Enabling repository
 protections, rotating keys, changing billing, deploying, or publishing requires
 separate user approval and account context.
+
+Orchestration candidate: collect records scanned patches without committing.
+Existing worker commits are folded into the scanned patch with a warning; the
+worker prompt still forbids committing. Integrate creates delivery commits using
+`git apply --index`, followed by `lead-review -> verify -> merge`. Verify and
+merge require a passing Claude review bound to the exact integration commit;
+verification runs every required verifier from the selected routing profiles.
+Merge retains worktrees by default. Removing them requires explicit cleanup
+approval through `merge --cleanup-approved` or `cleanup --run <runId> --approved`,
+in addition to the existing start/merge gates. The engine reads its node_repl/MCP
+diet from the repository; it is excluded from installation and managed-file
+accounting. Worker limits are per-process overrides, so role templates and
+interactive global settings retain their capacity. See
+[candidate trust boundaries](orchestration-candidate.md).

@@ -59,3 +59,5 @@ AgentChef keeps complete operator documentation in English and Turkish at full p
 - [ADR-006: continue as an independent, dual-target product](decisions/006-agentchef-independent-dual-target-product.md)
 
 For short, symptom-driven answers, use the [knowledge base](../kb/README.md).
+
+- [Orchestration candidate](orchestration-candidate.md)
