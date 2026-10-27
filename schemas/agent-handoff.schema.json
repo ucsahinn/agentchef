@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "outcome",
+    "evidence",
+    "changedScope",
+    "risk",
+    "openQuestions",
+    "nextVerification"
+  ],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Outcome"
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Evidence"
+    },
+    "changedScope": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Changed scope"
+    },
+    "risk": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Risks"
+    },
+    "openQuestions": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Open questions"
+    },
+    "nextVerification": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Next verification"
+    },
+    "verdict": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Verdict"
+    },
+    "mutationCheck": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mutation check"
+    }
+  }
+}

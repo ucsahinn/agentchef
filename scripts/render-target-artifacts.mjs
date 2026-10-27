@@ -23,6 +23,7 @@ import { renderWorkingAgreement, workingAgreementTargets } from "./lib/emitters/
 import { emitClaudeAgents } from "./lib/emitters/claude-agents.mjs";
 import { emitClaudePermissions } from "./lib/emitters/claude-permissions.mjs";
 import { emitClaudeMcpPermissions } from "./lib/emitters/claude-mcp-permissions.mjs";
+import { contractSchema } from './lib/agent-brief.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
@@ -262,6 +263,7 @@ export function renderAllTargetArtifacts(repoRoot = root) {
       deny: mcpPermissions.deny
     }
   }, null, 2)}\n`);
+  for (const kind of ['brief', 'handoff']) outputs.set(`schemas/agent-${kind}.schema.json`, `${JSON.stringify(contractSchema(kind), null, 2)}\n`);
   return outputs;
 }
 
