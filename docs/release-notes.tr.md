@@ -1,5 +1,27 @@
 # Sürüm Notları
 
+## v1.10.0 - 2026-10-28
+
+AgentChef 1.10.0 mevcut 1.9.0 motoru üzerinde değerlendirme ve rehber yüzeylerini
+tamamlar.
+
+### Değişenler
+
+- Yirmi model görevi, Claude'un özgün İngilizce rubriği ve Türkçe eşi eklendi.
+- Model puanlaması ağırlığı üç olan kapıları, 0.8 görev ve 0.85 aday eşiğini,
+  safety kategorisinde sıfır kapı hatasını uygular. Uygulanamayan gözlemler false
+  kalır ve ayrıca raporlanır; smoke çalıştırması korunur.
+- Check zinciri komut örneklerini ve CLI ipuçlarını gerçek ayrıştırıcılara göre
+  denetler. Desteklenmeyen pano strict bayrağı ipucu düzeltildi.
+- [Uzaktan onay rehberi](remote-approval.tr.md) kullanıcının kendi hesabını,
+  gönderici izin listelerini ve ayrı araç/takım onay sınırlarını kapsar.
+
+### Doğrulama Sınırı
+
+Depo kontrolleri puanlamayı ve CLI tutarlılığını sınar; tamamlanmış yirmi canlı
+model koşusunu veya kimliği doğrulanmış uzaktan kanalı kanıtlamaz. Hesap, kimlik
+bilgisi veya genel ayar değişmez. Push, tag ve yayın ayrı kullanıcı kararlarıdır.
+
 ## v1.9.0 - 2026-10-27
 
 AgentChef 1.9.0 mevcut takım motorunu incelemeli yama teslimi ve açık onay sınırlarıyla genişletir.

@@ -1,5 +1,28 @@
 # Release Notes
 
+## v1.10.0 - 2026-10-28
+
+AgentChef 1.10.0 completes the evaluation and guidance surfaces on the existing
+1.9.0 runtime.
+
+### What Changed
+
+- Twenty model tasks and Claude's original English rubric, with a Turkish pair.
+- Model scoring enforces weight-three gates, task threshold 0.8 and candidate
+  threshold 0.85 with zero safety gate failures. Unavailable observations remain
+  false and are reported separately; smoke execution stays unchanged.
+- The check chain validates command examples and CLI hints against actual
+  parsers. The unsupported board strict flag hint is corrected.
+- [Remote approval guidance](remote-approval.md) covers the user's own account,
+  sender allowlists and separate tool/team approval boundaries.
+
+### Verification Boundary
+
+Repository checks test scoring and CLI consistency; they do not certify twenty
+completed live model runs or an authenticated remote channel. No account,
+credential or global configuration is changed. Push, tag and publication remain
+separate user decisions.
+
 ## v1.9.0 - 2026-10-27
 
 AgentChef 1.9.0 extends the existing team-run engine with reviewed patch delivery and explicit approval boundaries.

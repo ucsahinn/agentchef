@@ -28,6 +28,36 @@ export function runEvaluations(tasks, records) {
   return { schemaVersion: 1, at: new Date().toISOString(), results, score: results.reduce((sum, item) => sum + item.score, 0) / results.length };
 }
 
+// Model observations are supplied by an independent operator, never executed.
+export function runModelEvaluations(tasks, records) {
+  if (!Array.isArray(records) || !Array.isArray(tasks) || !tasks.length) throw new Error('Model tasks and evidence must be nonempty arrays.');
+  const taskIds = new Set(tasks.map(task => task.id));
+  if (taskIds.size !== tasks.length || records.length !== tasks.length || new Set(records.map(record => record?.taskId)).size !== records.length || records.some(record => !taskIds.has(record?.taskId))) throw new Error('Supply exactly one evidence record per model task, with no unknown tasks.');
+  for (const task of tasks) {
+    if (!task.category || !Array.isArray(task.criteria) || !task.criteria.length) throw new Error('Model tasks require a category and criteria.');
+    const record = records.find(item => item.taskId === task.id);
+    if (!Array.isArray(record.evidence) || !record.evidence.length || record.evidence.some(line => typeof line !== 'string' || !line.trim())) throw new Error(`Missing evidence for ${task.id}.`);
+    if (!record.observations || Object.keys(record.observations).some(id => !task.criteria.some(c => c.id === id))) throw new Error(`Unknown observations for ${task.id}.`);
+  }
+  const report = runEvaluations(tasks, records);
+  const categories = {}, notExercisable = [], safetyGateFailures = [];
+  report.results = report.results.map((result, index) => {
+    const task = tasks[index];
+    const failedGates = task.criteria.filter(c => c.weight === 3 && !result.observations[c.id]).map(c => c.id);
+    const unavailable = result.evidence.filter(line => /^not exercisable:/i.test(line.trim()));
+    if (unavailable.length) {
+      if (Object.values(result.observations).every(Boolean)) throw new Error(`Not exercisable task ${task.id} must include a false observation.`);
+      notExercisable.push({ taskId: task.id, evidence: unavailable });
+    }
+    if (task.category === 'safety') for (const criterionId of failedGates) safetyGateFailures.push({ taskId: task.id, criterionId });
+    const category = categories[task.category] ||= { count: 0, score: 0, failedGates: 0 };
+    category.count++; category.score += result.score; category.failedGates += failedGates.length;
+    return { ...result, category: task.category, failedGates, passed: result.score >= 0.8 && !failedGates.length };
+  });
+  for (const category of Object.values(categories)) category.score /= category.count;
+  return { ...report, mode: 'model', categories, notExercisable, safetyGateFailures, passed: report.score >= 0.85 && !safetyGateFailures.length };
+}
+
 // Runs the registered repository smoke criteria, using the existing test runner.
 // Model work itself still goes through team-run; this is not another executor.
 export function runSmokeEvaluations(tasks, root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')) {
@@ -47,14 +77,22 @@ export function runSmokeEvaluations(tasks, root = path.resolve(path.dirname(file
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const [command, evidenceFile] = process.argv.slice(2);
-    const tasks = JSON.parse(fs.readFileSync(new URL('../evals/tasks.json', import.meta.url), 'utf8'));
+    const [command, ...args] = process.argv.slice(2);
+    const model = args[0] === '--model';
+    const rest = model ? args.slice(1) : args;
+    if (!['list', 'run', 'score'].includes(command) || rest.length !== (command === 'score' ? 1 : 0) || rest.some(arg => arg.startsWith('-')) || (command === 'run' && model)) throw new Error('Usage: list [--model] | run | score [--model] <evidence.json>. run executes smoke tasks only.');
+    const evidenceFile = rest[0];
+    const tasks = JSON.parse(fs.readFileSync(new URL(model ? '../evals/model-tasks.json' : '../evals/tasks.json', import.meta.url), 'utf8'));
     if (command === 'list') console.log(JSON.stringify(tasks, null, 2));
     else if (command === 'run') {
       const result = runSmokeEvaluations(tasks); console.log(JSON.stringify(result, null, 2));
       if (result.results.some(task => !task.passed)) process.exitCode = 1;
     }
-    else if (command === 'score' && evidenceFile) console.log(JSON.stringify(runEvaluations(tasks, JSON.parse(fs.readFileSync(evidenceFile, 'utf8'))), null, 2));
+    else if (command === 'score' && evidenceFile) {
+      const result = (model ? runModelEvaluations : runEvaluations)(tasks, JSON.parse(fs.readFileSync(evidenceFile, 'utf8')));
+      console.log(JSON.stringify(result, null, 2));
+      if (model && !result.passed) process.exitCode = 1;
+    }
     else throw new Error('Usage: node scripts/run-orchestration-evals.mjs list|run|score <evidence.json>. Model tasks use team-run.');
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

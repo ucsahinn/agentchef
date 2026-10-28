@@ -4,7 +4,7 @@ Bu ayarlar projenin public ilk izlenimini belirler. Yalnız source tree doğrula
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.9.0** mevcut takım motoruna incelemeli yama teslimi, sıralı sahiplik ve açık temizlik kapıları ekler.
+Geliştirme sürümü **v1.10.0** yirmi görevlik model değerlendirme setini, komut ipucu tutarlılık denetimini ve uzaktan onay rehberini ekler.
 
 2026-07-29 tarihli onaylı hesap yazmalarından sonraki canlı read-back: secret
 scanning, push protection, vulnerability alerts, Dependabot security updates ve

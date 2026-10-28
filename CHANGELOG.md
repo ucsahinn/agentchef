@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.0 - 2026-10-28
+
+- Add Claude's unchanged twenty-task model evaluation set and English rubric,
+  plus a Turkish rubric and gate-aware scoring with category and unavailable
+  observation reports. Smoke execution remains separate from model assessment.
+- Check documented team-run, coordination-board and chef commands against their
+  actual parsers in the standard check chain; correct the unsupported strict
+  handoff CLI hint.
+- Document user-owned remote requests and permission boundaries for Claude Code
+  Channels and Remote Control in English and Turkish. No accounts are connected.
+- Model-run results remain operator evidence, separate from scorer tests.
+
 ## 1.9.0 - 2026-10-27
 
 - Extend the existing team-run engine with ordered file ownership, setup approval

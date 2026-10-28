@@ -61,3 +61,5 @@ AgentChef’in operatör dokümantasyonu İngilizce ve Türkçe olarak tam parit
 Kısa ve belirti odaklı cevaplar için [bilgi bankasına](../kb/README.tr.md) geçebilirsin.
 
 - [Orkestrasyon adayı](orchestration-candidate.tr.md)
+
+- [Uzaktan istek ve onay](remote-approval.tr.md)
