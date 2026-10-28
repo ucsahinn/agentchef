@@ -1,6 +1,6 @@
 # Orchestration candidate
 
-This work extends the 1.8.6 team runtime. Package version 1.9.0 is prepared
+This work extends the 1.9.0 team runtime. Package version 1.10.0 is prepared
 with user approval; remote publication remains a separate step.
 No second executor or brief/handoff contract is introduced.
 
@@ -16,7 +16,7 @@ No second executor or brief/handoff contract is introduced.
 | H5 | collect, integrate | Collect stores a scanned immutable patch without committing; existing worker commits are folded into it with a warning |
 | I3 | workerResources, workerEnv, cleanup | Shared run cache, disjoint port ranges; cleanup requires explicit approval |
 | Y6 | agent-brief field registry, rendered schemas | Existing seven brief and six handoff fields; optional existing fields stay optional |
-| Y7 | evals, run-orchestration-evals | Three seed tasks, evidence records and weighted scoring; twenty-task rubric awaits the lead |
+| Y7 | evals, run-orchestration-evals | Three smoke tasks plus the twenty-task model set, gate-aware scoring and category reports |
 | Y5 | adaptive-agent-routing | One worker for sequential work, independent teams sized to scope and live capacity |
 | AS-E4 | team-worker.config.toml, validators | node_repl and managed MCPs parked only in the worker process; no global config override |
 
@@ -100,7 +100,7 @@ relay user approval artifacts rather than manufacture them. It must supply
 selected routing profile IDs, Claude review evidence and engine-view digests.
 The lead reported real Windows run R20261027-c1ef for integration, lead-review,
 verify and serialized ownership. Merge and merge --as-patch remain test-only
-evidence. The twenty-task evaluation set is still supplied separately.
+evidence. The twenty-task evaluation set and rubric are now included under `evals/`; listing and scoring do not constitute live model-run evidence.
 
 ## Local verification
 
@@ -114,3 +114,17 @@ full `npm run check` and `npm run validate`. See [installation safety](install.m
 These environment values belong to the verification process and its children.
 
 For evaluation smoke evidence, `node scripts/run-orchestration-evals.mjs run` executes registered criteria through the existing Node test runner. It does not call a model; use score for model-task evidence.
+
+## Evaluation and command hints
+
+See the [evaluation guide](../evals/README.md) for smoke and model modes.
+`npm run validate:command-hints` checks Markdown command examples (including
+SKILL references) and CLI string hints against the actual team-run,
+coordination-board and chef parsers without executing the examples. It also
+checks abbreviated commands in documents that describe one CLI. Keep flags
+in complete command examples so their owner is unambiguous. Shell variables
+and generated command strings are not expanded. This validator is included
+in `npm run check`. The strict handoff library option is not a board CLI flag.
+
+For user-owned remote requests and permission boundaries, see the
+[remote approval guide](remote-approval.md).

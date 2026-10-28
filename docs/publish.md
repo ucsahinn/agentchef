@@ -4,7 +4,7 @@ Publishing is the point where local confidence becomes a public claim. Keep it d
 
 Release candidate baseline: **v1.3.5**.
 
-Development version **v1.9.0** adds reviewed patch delivery, ordered ownership and explicit cleanup gates to the existing team-run engine.
+Development version **v1.10.0** adds the twenty-task model evaluation set, command-hint drift checks and remote approval guidance.
 
 ## Before Commit Or Push
 

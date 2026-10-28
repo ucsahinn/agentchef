@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.9.0** mevcut takım motoruna incelemeli yama teslimi, sıralı sahiplik ve açık temizlik kapıları ekler.
+Geliştirme sürümü **v1.10.0** yirmi görevlik model değerlendirme setini, komut ipucu tutarlılık denetimini ve uzaktan onay rehberini ekler.
 
 ## Commit Veya Push Öncesi
 

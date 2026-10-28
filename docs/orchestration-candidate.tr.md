@@ -1,6 +1,6 @@
 # Orkestrasyon adayı
 
-Bu çalışma 1.8.6 takım motorunu genişletir. Paket sürümü 1.9.0 kullanıcı onayıyla
+Bu çalışma 1.9.0 takım motorunu genişletir. Paket sürümü 1.10.0 kullanıcı onayıyla
 hazırlanmıştır; uzaktan yayın ayrı bir adımdır. İkinci çalıştırıcı
 veya brif/handoff sözleşmesi eklenmez.
 
@@ -16,7 +16,7 @@ veya brif/handoff sözleşmesi eklenmez.
 | H5 | collect, integrate | Collect commit oluşturmadan taranmış, özeti alınmış yama saklar; mevcut işçi commit'leri uyarıyla yamaya katlanır |
 | I3 | workerResources, workerEnv, cleanup | Koşu ortak önbelleği, ayrı port aralıkları; temizlik açık onay ister |
 | Y6 | agent-brief alan kaydı, üretilen şemalar | Mevcut yedi brif ve altı handoff alanı; mevcut isteğe bağlı alanlar korunur |
-| Y7 | evals, run-orchestration-evals | Üç örnek görev, kanıt kayıtları ve ağırlıklı puanlama; yirmi görevlik rubrik şeften beklenir |
+| Y7 | evals, run-orchestration-evals | Üç smoke görevi ve yirmi model görevi, kapı ölçütlü puanlama ve kategori raporları |
 | Y5 | adaptive-agent-routing | Sıralı işte tek işçi; bağımsız takım kapsam ve canlı kapasiteye göre boyutlanır |
 | AS-E4 | team-worker.config.toml, validator'lar | node_repl ve yönetilen MCP'ler yalnız işçi sürecinde kapalı; genel config'e girmez |
 
@@ -99,7 +99,7 @@ yedi/altı alanlı şemaları, rol TOML'larını ve işçi süreci profilini kul
 Kullanıcı onaylarını üretmeden aktarmalıdır. Seçilen routing profil kimliklerini,
 Claude inceleme kanıtını ve motor görünüm özetlerini sağlamalıdır. Şefin bildirdiği gerçek Windows koşusu
 R20261027-c1ef entegrasyon, lead-review, verify ve sıralı sahipliği kapsar. Merge
-ve merge --as-patch yalnız test kanıtıdır. Yirmi görevlik eval seti ayrıca sağlanır.
+ve merge --as-patch yalnız test kanıtıdır. Yirmi görevlik eval seti ve rubrik artık `evals/` altındadır; listeleme ve puanlama canlı model koşusu kanıtı değildir.
 
 ## Yerel doğrulama
 
@@ -113,3 +113,17 @@ dizinini scratch köklere yönlendirin ve tam `npm run check` ile `npm run valid
 belgesine bakın. Bu ortam değerleri doğrulama süreci ve çocukları içindir.
 
 Eval duman kanıtı için `node scripts/run-orchestration-evals.mjs run` mevcut Node test koşucusuyla kayıtlı ölçütleri çalıştırır. Model çağırmaz; model görevlerinin kanıtlarını ayrıca `score` ile puanlayın.
+
+## Değerlendirme ve komut ipuçları
+
+Smoke ve model kipleri için [değerlendirme rehberini](../evals/README.md) okuyun.
+`npm run validate:command-hints`, Markdown komut örneklerini (SKILL referansları
+dahil) ve CLI metin ipuçlarını gerçek team-run, coordination-board ve chef
+ayrıştırıcılarına göre örnekleri çalıştırmadan denetler. Tek CLI anlatan
+belgelerde kısaltılmış komutları da kontrol eder. Bayrakları sahibi açık olan
+tam komut örneklerinde tutun. Kabuk değişkenleri ve üretilen komut metinleri
+genişletilmez. Denetçi `npm run check` zincirindedir. Kütüphanenin strict
+handoff seçeneği pano CLI bayrağı değildir.
+
+Kullanıcının kendi hesabından uzaktan istek ve izin sınırları için
+[uzaktan onay rehberini](remote-approval.tr.md) okuyun.
