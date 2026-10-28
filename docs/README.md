@@ -61,3 +61,5 @@ AgentChef keeps complete operator documentation in English and Turkish at full p
 For short, symptom-driven answers, use the [knowledge base](../kb/README.md).
 
 - [Orchestration candidate](orchestration-candidate.md)
+
+- [Remote requests and approval](remote-approval.md)
