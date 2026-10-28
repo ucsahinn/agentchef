@@ -95,7 +95,10 @@ Check it when it comes back:
 npm run coordination:board -- handoff-check --handoff-file handoff.md --json
 ```
 
-Use `--strict` when Verdict and Mutation check are required.
+The board CLI checks the six required handoff fields. When Verdict and
+Mutation check are also required, inspect them explicitly; strict validation
+is available to library consumers as `parseHandoff(text, { strict: true })`,
+not as a board CLI flag.
 
 ## Merge and verify
 
