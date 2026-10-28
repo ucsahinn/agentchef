@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.9.0 - 2026-10-27
+
+- Extend the existing team-run engine with ordered file ownership, setup approval
+  journaling, scanned patch delivery and interruption-safe integration recovery.
+- Keep worker capacity and MCP restrictions in per-process overrides. The
+  repository-only worker profile is excluded from installation and managed-file
+  accounting; interactive role templates retain their normal capacity.
+- Add canonical brief/handoff JSON schemas, an engine capability registry,
+  approved skill-readiness ledgers with engine-view reconciliation, and three
+  evaluation seeds using the existing test runner.
+
+### Breaking changes
+
+- **BREAKING:** Cleanup requires explicit `cleanup --approved` consent.
+- **BREAKING:** Merge retains worktrees by default; remove them only with
+  `merge --cleanup-approved` or a later approved cleanup.
+- **BREAKING:** Write runs require a passing Claude `lead-review` bound to the
+  exact integration commit before verify; merge enforces the same review gate.
+- **BREAKING:** Verify runs the default verifier plus every selected routing
+  profile's required verifier. Callers must handle multiple verifier results.
+- **BREAKING:** Integration applies scanned delivery patches with
+  `git apply --index` instead of merging worker history. Worker commits are
+  folded into the patch with a warning; integration creates delivery commits.
+  The final merge into the user's branch still needs its existing human gate.
+
+### Verification scope
+
+- **Measured in a real Windows run:** The lead reported run `R20261027-c1ef`:
+  integrate using `git apply --index` with `core.autocrlf=true`, LF/CRLF files
+  and `.gitattributes` eol rules; commit-bound `lead-review`; independent
+  `verify`; and `serialize-overlaps` ordering.
+- **Verified by tests only:** `merge` and `merge --as-patch`. They were not
+  exercised in that real Windows run; the runtime evidence above does not claim
+  either final delivery path was measured live.
+
 ## 1.8.6 - 2026-10-20
 
 - Running `collect` on a `completed` read-only run recomputes `completion.partial` and `completion.reason` from the current worker verdicts. It adds no worker events, and writes a `completion_recomputed` history entry only when a value changes. Runs that 1.8.4 completed with `partial: false` can be corrected this way without editing their records.

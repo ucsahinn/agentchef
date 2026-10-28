@@ -221,4 +221,4 @@ bulmasına yardımcı olur. ⭐
 MIT lisanslıdır. Topluluk tarafından geliştirilir. Resmi bir OpenAI veya
 Anthropic ürünü değildir.
 
-Orkestrasyon geliştirme adayı ve arayüzler: [aday notları](docs/orchestration-candidate.tr.md). Paket sürümü kullanıcı onayına kadar 1.8.6 kalır.
+Orkestrasyon geliştirme adayı ve arayüzler: [aday notları](docs/orchestration-candidate.tr.md). Hazırlanan paket sürümü: 1.9.0; uzaktan yayın ayrı bir adımdır.

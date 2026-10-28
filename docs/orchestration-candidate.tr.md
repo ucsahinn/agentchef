@@ -1,7 +1,7 @@
 # Orkestrasyon adayı
 
-Bu çalışma 1.8.6 takım motorunu genişletir. Önerilen 1.9.0 için yayımlanmamış
-bir adaydır; kullanıcı onayına kadar paket sürümü 1.8.6 kalır. İkinci çalıştırıcı
+Bu çalışma 1.8.6 takım motorunu genişletir. Paket sürümü 1.9.0 kullanıcı onayıyla
+hazırlanmıştır; uzaktan yayın ayrı bir adımdır. İkinci çalıştırıcı
 veya brif/handoff sözleşmesi eklenmez.
 
 | Brif maddesi | Uygulama yüzeyi | Kabul |
@@ -90,34 +90,16 @@ yayımlamaz. Kaynak değişirse yeni taslak ve onay gerekir. Defterleri commit e
 
 ## Sürüm kararı ve Beyin arayüzü
 
-### 1.9.0 CHANGELOG taslağı: breaking değişiklikler
-
-Bu taslak, ayrıca onaylanacak son sürüm commit'i içindir. Bu karar verilmeden
-CHANGELOG.md dosyasına taşınmaz, yayına tarih verilmez ve sürüm numarası değişmez.
-
-- **BREAKING:** `cleanup`, açık `--approved` temizlik onayı ister.
-- **BREAKING:** Merge worktree'leri varsayılan olarak tutar; kaldırmak için
-  `merge --cleanup-approved` veya sonradan onaylı cleanup gerekir.
-- **BREAKING:** Yazma koşularında integrate ile verify arasında tam commit'e bağlı,
-  başarılı Claude `lead-review` gerekir; merge de aynı kapıyı denetler.
-- **BREAKING:** Verify, varsayılan doğrulayıcıya ek olarak seçilen tüm routing
-  profillerinin zorunlu doğrulayıcılarını çalıştırır. Çağıran birden çok sonucu işlemelidir.
-- **BREAKING:** Entegrasyon, işçi geçmişini merge etmek yerine taranmış teslim
-  yamaları ve `git apply --index` kullanır. Mevcut işçi commit'leri uyarıyla yamaya
-  katlanır; entegrasyon kendi teslim commit'ini oluşturur. Kullanıcının dalına
-  yapılan son merge mevcut insan onayı kapısını korur.
-
-Önerilen sürüm 1.9.0'dır. Onaydan sonra package.json, tarihli CHANGELOG başlığı,
-EN/TR sürüm notları ve github-settings ile publish belgelerindeki Development
-version satırları birlikte, ayrı son commit'te değiştirilir. Sonrasında
-extract-release-notes --check ve tam yayın kapıları yeniden çalıştırılır.
+Onaylanan 1.9.0 breaking değişiklikleri ve doğrulama kapsamı
+[sürüm notlarında](release-notes.tr.md) kayıtlıdır. Sürüm paritesi son sürüm
+commit'inde hazırlanır; push, tag ve yayın ayrı işlemlerdir.
 
 Beyin'in paralel kanalı mevcut team-run komutlarını, kapasite dosyası v1'i,
 yedi/altı alanlı şemaları, rol TOML'larını ve işçi süreci profilini kullanmalıdır.
 Kullanıcı onaylarını üretmeden aktarmalıdır. Seçilen routing profil kimliklerini,
-Claude inceleme kanıtını ve motor görünüm özetlerini sağlamalıdır. Canlı Beyin
-entegrasyonu ile yirmi görevlik eval seti şef kanıtı ister; yerel fixture testleri
-bu dış entegrasyonu kanıtlamaz.
+Claude inceleme kanıtını ve motor görünüm özetlerini sağlamalıdır. Şefin bildirdiği gerçek Windows koşusu
+R20261027-c1ef entegrasyon, lead-review, verify ve sıralı sahipliği kapsar. Merge
+ve merge --as-patch yalnız test kanıtıdır. Yirmi görevlik eval seti ayrıca sağlanır.
 
 ## Yerel doğrulama
 

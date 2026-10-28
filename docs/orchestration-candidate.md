@@ -1,7 +1,7 @@
 # Orchestration candidate
 
-This work extends the 1.8.6 team runtime. It is an unpublished candidate for a
-proposed 1.9.0 release; the package version remains 1.8.6 until user approval.
+This work extends the 1.8.6 team runtime. Package version 1.9.0 is prepared
+with user approval; remote publication remains a separate step.
 No second executor or brief/handoff contract is introduced.
 
 | Brief item | Implementation surface | Acceptance |
@@ -90,34 +90,17 @@ Source changes require a new draft and approval. Keep ledgers out of source cont
 
 ## Release decision and Beyin integration
 
-### Draft CHANGELOG for 1.9.0: breaking changes
-
-This is a draft for the final, separately approved version commit. Do not move it
-to CHANGELOG.md, date a release, or change version numbers before that decision.
-
-- **BREAKING:** `cleanup` requires explicit `--approved` cleanup consent.
-- **BREAKING:** Merge retains worktrees by default; removal requires
-  `merge --cleanup-approved` or a later approved cleanup.
-- **BREAKING:** Write runs require a passing, exact-commit Claude `lead-review`
-  between integrate and verify; merge also enforces that gate.
-- **BREAKING:** Verify runs the default verifier plus every selected routing
-  profile's required verifier. Callers must handle multiple verifier results.
-- **BREAKING:** Integration uses scanned delivery patches and `git apply --index`
-  instead of merging worker history. Existing worker commits are folded into the
-  patch with a warning; integration creates its own delivery commit. The final
-  merge into the user's branch keeps the existing human approval gate.
-
-The proposed version is 1.9.0. On approval, change package.json, the dated
-CHANGELOG heading, EN/TR release notes and the Development version lines in
-github-settings and publish docs together as the final separate commit. Run
-extract-release-notes --check and the full release gates after that decision.
+The approved 1.9.0 breaking changes and verification scope are recorded in
+[the release notes](release-notes.md). Version parity is prepared in the final
+release commit; push, tag and publication remain separate operations.
 
 Beyin's parallel channel should consume the existing team-run commands, capacity
 file v1, seven/six field schemas, role TOMLs and worker process profile. It must
 relay user approval artifacts rather than manufacture them. It must supply
 selected routing profile IDs, Claude review evidence and engine-view digests.
-Real Beyin integration and the twenty-task evaluation set require lead evidence;
-local fixture tests do not prove that external integration.
+The lead reported real Windows run R20261027-c1ef for integration, lead-review,
+verify and serialized ownership. Merge and merge --as-patch remain test-only
+evidence. The twenty-task evaluation set is still supplied separately.
 
 ## Local verification
 
