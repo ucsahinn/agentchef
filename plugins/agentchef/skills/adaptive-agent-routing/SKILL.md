@@ -18,6 +18,16 @@ Select routes by expected value, not by catalog match alone.
 7. Emit one `Routing plan:` update and one `Routing result:` summary instead of per-surface narration.
 8. Keep destructive, credentialed, account, database, publish, deploy, and external-write actions approval-gated.
 
+## Effort scaling
+
+Use one worker for a single file or strictly sequential work. Use a team only
+for independent file groups. For an explicitly requested substantial team run,
+plan 3-5 workers with 5-6 bounded tasks per worker when the scope warrants it;
+the worker count never exceeds live capacity. These are sizing guidelines,
+not a minimum or a reason to invent tasks. The automatic spawn cap still applies.
+Keep one active owner per file. `team-run plan --serialize-overlaps` records
+ordered dependencies for overlapping groups; otherwise planning refuses them.
+
 ## Output Contract
 
 Return selected and skipped surfaces, summarized evidence, commands run, and blockers. Do not paste raw agent transcripts or large logs.

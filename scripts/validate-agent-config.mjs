@@ -305,6 +305,7 @@ if (!fs.existsSync(catalogPath)) {
 
       const template = readAgentTemplate(agent.configFile);
       if (template) {
+        if (/^\s*\[agents\]/m.test(template)) fail(`Agent ${agent.name} must preserve interactive capacity; team worker limits belong in spawn overrides.`);
         if (readTomlString(template, "approval_policy") !== "on-request") {
           fail(`Agent template approval_policy must stay on-request for ${agent.name}.`);
         }

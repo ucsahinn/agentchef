@@ -1,0 +1,48 @@
+# Applied as per-process overrides by team-run, never merged into global config.
+# Role MCP diet: workers use shell/read tools; all managed MCPs stay parked.
+[mcp_servers.node_repl]
+enabled = false
+# Disabled transport stub keeps strict Codex config valid when no server exists.
+command = "node"
+
+[mcp_servers.openaiDeveloperDocs]
+enabled = false
+
+[mcp_servers.context7]
+enabled = false
+
+[mcp_servers.sequential-thinking]
+enabled = false
+
+[mcp_servers.playwright]
+enabled = false
+
+[mcp_servers.chrome-devtools]
+enabled = false
+
+[mcp_servers.serena]
+enabled = false
+
+[mcp_servers.codebase-memory]
+enabled = false
+
+[mcp_servers.github]
+enabled = false
+
+[mcp_servers.figma]
+enabled = false
+
+[mcp_servers.linear]
+enabled = false
+
+[mcp_servers.notion]
+enabled = false
+
+[mcp_servers.sentry]
+enabled = false
+
+[mcp_servers.vercel]
+enabled = false
+
+[mcp_servers.supabase]
+enabled = false

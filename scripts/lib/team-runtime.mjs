@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const CONTRACT = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/subscription-team-mode.json"),"utf8"));
 const AGENTS = JSON.parse(fs.readFileSync(path.join(ROOT,"catalog/agents.json"),"utf8"));
 const RUN_MOVES = { planned:["running","aborted","failed"], running:["paused","collected","aborted","failed"], paused:["running","collected","aborted","failed"], collected:["integrated","completed","aborted","failed"], integrated:["verified","aborted","failed"], verified:["merged","aborted","failed"], merged:[], completed:[], aborted:[], failed:[] };
-const WORKER_MOVES = { planned:["queued","aborted"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted","queued"], running:["finished","failed","paused_limit","timed_out","aborted","queued"], finished:["collected","scope_violation","failed","rejected_content"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[], rejected_content:[] };
+const WORKER_MOVES = { planned:["queued","aborted","failed"], queued:["spawning","aborted","failed"], spawning:["running","failed","aborted","queued"], running:["finished","failed","paused_limit","timed_out","aborted","queued"], finished:["collected","scope_violation","failed","rejected_content"], collected:["integrated","conflict"], paused_limit:["queued","aborted"], timed_out:[], failed:[], aborted:[], scope_violation:[], integrated:[], conflict:[], rejected_content:[] };
 const fail = (message) => { throw new Error(message); };
 const clone = (value) => structuredClone(value);
 export function loadTeamContract(file = path.join(ROOT,"catalog/subscription-team-mode.json")) { return JSON.parse(fs.readFileSync(file,"utf8")); }
@@ -196,3 +196,50 @@ export function collectUsage(workers=[]) { return workers.reduce((sum,w)=>{for(c
 export { RUN_MOVES, WORKER_MOVES };
 export function transitionRun(run,status) { if(!RUN_MOVES[run.status]?.includes(status)) fail(`Invalid run transition: ${run.status} -> ${status}.`); return {...run,status}; }
 export function transitionWorker(worker,status) { if(!WORKER_MOVES[worker.status]?.includes(status)) fail(`Invalid worker transition: ${worker.status} -> ${status}.`); return {...worker,status}; }
+
+export function buildOwnership(workers) {
+  const dependencies = {}, ownership = {};
+  const overlap = (a, b) => { a = a.replace(/\/$/, ''); b = b.replace(/\/$/, ''); return a === "." || b === "." || a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`); };
+  for (const [index, worker] of workers.entries()) {
+    dependencies[worker.taskId] = [];
+    for (const scope of worker.writeScope) {
+      if (!scope || scope.includes("\\") || scope.startsWith("/") || /^[A-Za-z]:/.test(scope) || scope.split("/").includes("..")) fail("Ownership requires normalized repository-relative paths.");
+      (ownership[scope] ||= []).push(worker.taskId);
+    }
+    for (const previous of workers.slice(0, index)) if (worker.writeScope.some(a => previous.writeScope.some(b => overlap(a.toLowerCase(), b.toLowerCase())))) dependencies[worker.taskId].push(previous.taskId);
+  }
+  return { ownership, dependencies };
+}
+
+export function requiredVerifiers(profileIds = []) {
+  const profiles = JSON.parse(fs.readFileSync(path.join(ROOT, "catalog/routing-profiles.json"), "utf8")).profiles;
+  const roles = [CONTRACT.verification.roleId];
+  for (const id of profileIds) {
+    const profile = profiles.find(p => p.id === id);
+    if (!profile) fail(`Unknown routing profile: ${id}`);
+    if (profile.autoVerify) roles.push(profile.verifier);
+  }
+  return [...new Set(roles)];
+}
+
+export function validateLeadReview(run, review = run.leadReview) {
+  if (!review || review.engine !== "claude" || !review.reviewer || review.verdict !== "pass") fail("A passing Claude lead review is required.");
+  if (!run.integration?.commit || review.integrationCommit !== run.integration.commit) fail("Claude review must match the integration commit.");
+  if (!Array.isArray(review.evidence) || !review.evidence.length || review.evidence.some(x => typeof x !== "string" || !x.trim())) fail("Claude review requires evidence.");
+  assertTeamTextSafe(JSON.stringify(review));
+  return review;
+}
+
+export function workerResources(root, index) {
+  if (!Number.isInteger(index) || index < 0 || index >= CONTRACT.workers.maxWorkers) fail("Invalid worker resource index.");
+  return { cache: path.join(root, "package-cache"), portStart: 20000 + index * 100, portEnd: 20099 + index * 100 };
+}
+
+export function releaseReviewedLease(statePath, taskId) {
+  return mutate(statePath, state => {
+    const task = state.tasks.find(task => task.id === taskId);
+    if (!task || task.status !== 'review' || !task.evidence?.length || !task.reports?.length) fail('Only an evidenced, collected review may release its sequential write lease.');
+    task.leaseUntil = null;
+    task.history.push({ at: new Date().toISOString(), action: 'release-sequential-lease', reason: 'collected delivery handed to the next file owner' });
+  });
+}

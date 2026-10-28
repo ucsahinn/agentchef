@@ -1,5 +1,39 @@
 # Release Notes
 
+## v1.9.0 - 2026-10-27
+
+AgentChef 1.9.0 extends the existing team-run engine with reviewed patch delivery and explicit approval boundaries.
+
+### What Changed
+
+- Ordered file ownership and setup journaling extend the existing team-run record.
+- Worker-only capacity and MCP overrides preserve interactive sessions; the worker policy stays in the repository.
+- Canonical JSON schemas, engine capabilities, approved skill-readiness ledgers and three eval seeds support the same workflow.
+
+### Breaking Changes
+
+- **BREAKING:** Cleanup requires explicit `cleanup --approved` consent.
+- **BREAKING:** Merge retains worktrees by default; remove them only with
+  `merge --cleanup-approved` or a later approved cleanup.
+- **BREAKING:** Write runs require a passing Claude `lead-review` bound to the
+  exact integration commit before verify; merge enforces the same review gate.
+- **BREAKING:** Verify runs the default verifier plus every selected routing
+  profile's required verifier. Callers must handle multiple verifier results.
+- **BREAKING:** Integration applies scanned delivery patches with
+  `git apply --index` instead of merging worker history. Worker commits are
+  folded into the patch with a warning; integration creates delivery commits.
+  The final merge into the user's branch still needs its existing human gate.
+
+### Verification Scope
+
+- **Measured in a real Windows run:** The lead reported run `R20261027-c1ef`:
+  integrate using `git apply --index` with `core.autocrlf=true`, LF/CRLF files
+  and `.gitattributes` eol rules; commit-bound `lead-review`; independent
+  `verify`; and `serialize-overlaps` ordering.
+- **Verified by tests only:** `merge` and `merge --as-patch`. They were not
+  exercised in that real Windows run; the runtime evidence above does not claim
+  either final delivery path was measured live.
+
 ## v1.8.6 - 2026-10-20
 
 AgentChef 1.8.6 lets older completed runs be corrected without editing their records.

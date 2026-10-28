@@ -21,18 +21,20 @@ import { memoryAllowance } from "./lib/memory-guard.mjs";
 import { nextResumeAt } from "./lib/usage-limit-reset.mjs";
 import { capacityRecommendation, resolveStartCap, resolveWorkerCap } from "./lib/team-capacity.mjs";
 import { handoffWarnings, quotedNativeCalls } from "./lib/team-warnings.mjs";
+import { buildOwnership, requiredVerifiers, validateLeadReview, workerResources, releaseReviewedLease } from "./lib/team-runtime.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTRACT = loadTeamContract();
 const ROLE_IDS = CONTRACT.workers.allowedRoleIds;
 const COMMANDS = {
-  plan: ["repo", "plan-file", "state", "run", "profile", "max-minutes", "snapshot", "max-workers"],
+  plan: ["repo", "plan-file", "state", "run", "profile", "max-minutes", "snapshot", "max-workers", "serialize-overlaps"],
   start: ["run", "state"], status: ["run", "state", "watch-seconds"],
   supervise: ["run", "state"], watch: ["run", "task", "state"],
   abort: ["run", "state", "reason"], collect: ["run", "task", "state"],
   integrate: ["run", "state", "check", "recheck", "covers"], verify: ["run", "state", "max-minutes", "detach"],
-  merge: ["run", "state", "accept-warn", "keep-worktrees", "as-patch"], pause: ["run", "state"], resume: ["run", "state", "wait"],
-  cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs"],
+  merge: ["run", "state", "accept-warn", "keep-worktrees", "as-patch", "cleanup-approved"], pause: ["run", "state"], resume: ["run", "state", "wait"],
+  cleanup: ["run", "state", "delete-branches", "delete-integration", "purge-logs", "approved"],
+  "lead-review": ["run", "state", "review-file"],
   doctor: ["state"]
 };
 const USAGE = `Usage: node scripts/team-run.mjs <${Object.keys(COMMANDS).join("|")}> --state <board.json> [--json]`;
@@ -55,7 +57,7 @@ function parse(argv) {
     if (!token.startsWith("--")) throw new CliUsageError(`Unexpected argument: ${token}`);
     const key = token.slice(2);
     if (!accepted.has(key)) throw new CliUsageError(`${command} does not accept --${key}.`);
-    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait", "recheck", "snapshot", "as-patch"].includes(key)) { options[key] = true; continue; }
+    if (["delete-branches", "delete-integration", "purge-logs", "accept-warn", "keep-worktrees", "detach", "wait", "recheck", "snapshot", "as-patch", "serialize-overlaps", "approved", "cleanup-approved"].includes(key)) { options[key] = true; continue; }
     const value = rest[i + 1];
     if (!value || value === "--json" || (value.startsWith("--") && accepted.has(value.slice(2)))) throw new CliUsageError(`--${key} requires a value.`);
     if (key === "check") (options.check ||= []).push(value); else options[key] = value;
@@ -97,7 +99,7 @@ function readRun(state, runId) {
   if (typeof runId !== "string" || !safeRunId(runId)) throw new CliUsageError("Invalid run identifier.");
   return readRunRecord(runFile(state, runId));
 }
-function git(args, cwd) { return execFileSync("git", args, { cwd, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).trim(); }
+function git(args, cwd) { return execFileSync("git", args, { cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' }, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 function resolveRepo(value) { const repo = path.resolve(value); if (!fs.statSync(repo).isDirectory()) throw new Error("--repo must be a directory."); git(["rev-parse", "--show-toplevel"], repo); return git(["rev-parse", "--show-toplevel"], repo); }
 function readPlan(file) {
   const stat = fs.statSync(file); if (stat.size > 128 * 1024) throw new Error("Plan file exceeds 128 KiB.");
@@ -166,7 +168,9 @@ function planCommand(options) {
     return { taskId: item.taskId, role: item.role, coordinator: item.coordinator || null, checks: item.checks || [], briefFile, briefText, brief: brief.fields, writeScope: sandbox === "read-only" ? [] : normalizeScope(item.writeScope || brief.fields.scope, repo), sandbox, model: role.model, roleInstructions: role.developerInstructions };
   });
   if (new Set(workers.map((w) => w.taskId)).size !== workers.length) throw new Error("Worker taskId values must be unique.");
-  for (let i = 0; i < workers.length; i += 1) for (let j = i + 1; j < workers.length; j += 1) if (scopesOverlap(workers[i].writeScope, workers[j].writeScope)) throw new Error(`Write scopes overlap: ${workers[i].taskId} and ${workers[j].taskId}.`);
+  for (let i = 0; i < workers.length; i += 1) for (let j = i + 1; j < workers.length; j += 1) if (scopesOverlap(workers[i].writeScope, workers[j].writeScope) && !options['serialize-overlaps']) throw new Error(`Write scopes overlap: ${workers[i].taskId} and ${workers[j].taskId}. Use --serialize-overlaps to order these tasks.`);
+  const ownership = buildOwnership(workers);
+  const verifierRoles = requiredVerifiers(plan.routingProfiles || []);
   const baseBranch = git(["branch", "--show-current"], repo); if (!baseBranch) throw new Error("Repository must be on a named branch.");
   const plannedAt = now(); const root = path.resolve(path.dirname(repo), ".agentchef-worktrees", id);
   const canonicalRepo = fs.realpathSync(repo), canonicalRootParent = fs.realpathSync(path.dirname(path.dirname(root)));
@@ -177,6 +181,11 @@ function planCommand(options) {
   // Snapshot last, after every refusal above, so a refused plan leaves no ref behind.
   const snapshot = dirty ? createSnapshot(repo, id) : null;
   const run = { schemaVersion: 1, revision: 0, runId: id, status: "planned", planHash: hashPlan(workers), repo, repoName: path.basename(repo), baseBranch, baseCommit: snapshot ? snapshot.commit : headCommit(repo), baseHead: headCommit(repo), snapshot, integrationBranch: `${CONTRACT.branches.integrationPrefix}${id}`, integrationWorktree: path.join(root, "_integration"), worktreeRoot: root, planFile: path.resolve(options["plan-file"]), profile, model: "gpt-6-luna", maxWorkers: workerCap, capacity: { recommended: capacity.recommended, ceiling: capacity.ceiling, source: capacity.source, reason: capacity.reason, measuredAt: capacity.measuredAt, requested: options["max-workers"] == null ? null : Number(options["max-workers"]), ownerOverride: options["max-workers"] != null && Number(options["max-workers"]) > capacity.recommended }, maxMinutes, checks: [...new Set(workers.flatMap((w) => w.checks))], plannedAt, startedAt: null, approvals: { start: null, merge: null }, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: workers.map((w) => ({ taskId: w.taskId, role: w.role, coordinator: w.coordinator, sandbox: w.sandbox, writeScope: w.writeScope, worktree: null, branch: null, promptHash: null, status: "planned", pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), usage: {}, history: [{ at: plannedAt, event: "planned" }] };
+  run.ownership = ownership.ownership;
+  run.verifierRoles = verifierRoles;
+  run.routingProfiles = plan.routingProfiles || [];
+  run.setupJournal = [{ event: 'proposed', at: plannedAt, planHash: run.planHash }];
+  run.workers = run.workers.map((worker, index) => ({ ...worker, dependsOn: ownership.dependencies[worker.taskId], resources: workerResources(root, index) }));
   const directory = path.dirname(runFile(options.state, id)); fs.mkdirSync(directory, { recursive: true });
   if (fs.existsSync(runFile(options.state, id))) throw new Error(`Run already exists: ${id}.`);
   writeRunRecord(runFile(options.state, id), run);
@@ -317,7 +326,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
   const addWorktree = (args) => { git(["-c", `core.hooksPath=${emptyHooks}`, ...args], run.repo); };
   try {
     fs.mkdirSync(run.worktreeRoot, { recursive: true }); fs.mkdirSync(emptyHooks, { recursive: true });
-    addWorktree(["worktree", "add", "-b", run.integrationBranch, run.integrationWorktree]);
+    addWorktree(["worktree", "add", "-b", run.integrationBranch, run.integrationWorktree, run.baseCommit]);
     createdBranches.push(run.integrationBranch); createdWorktrees.push(run.integrationWorktree);
     const plan = readPlanForRun(options.state, run);
     for (const worker of run.workers) {
@@ -329,8 +338,10 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
       const schema = path.join(run.worktreeRoot, `${worker.taskId}.handoff.schema.json`), promptPath = path.join(run.worktreeRoot, `${worker.taskId}.prompt.md`);
       fs.writeFileSync(promptPath, prompt, "utf8"); fs.writeFileSync(schema, JSON.stringify(HANDOFF_SCHEMA, null, 2), "utf8"); generatedFiles.push(promptPath, schema);
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, worktree: wt, branch, promptHash: crypto.createHash("sha256").update(prompt).digest("hex") } : w) }));
-      if (worker.sandbox !== "read-only") renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
-      transitionTask(options.state, { taskId: worker.taskId, status: "in_progress" }); activatedTasks.push(worker.taskId);
+      if (!(worker.dependsOn || []).length) {
+        if (worker.sandbox !== "read-only") renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
+        transitionTask(options.state, { taskId: worker.taskId, status: "in_progress" }); activatedTasks.push(worker.taskId);
+      }
     }
     supervisor = spawn(process.execPath, [fileURLToPath(import.meta.url), "supervise", "--run", run.runId, "--state", path.resolve(options.state), "--json"], { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true });
     supervisor.unref();
@@ -339,7 +350,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
     let heartbeatSeen = false;
     while (Date.now() < deadline) { if (wasInterrupted()) throw new Error("Start interrupted; rollback was requested."); const current = readRun(options.state, run.runId); if (current.supervisor.heartbeatAt) { heartbeatSeen = true; break; } Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); }
     if (!heartbeatSeen) throw new Error("Supervisor did not publish its startup heartbeat within 10 seconds.");
-    consumeApprovalWith(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`, (consumedStart) => updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } } })));
+    consumeApprovalWith(approvalPath(options.state, run.runId), `team-run start pid=${process.pid}`, (consumedStart) => updateRunRecord(file, (current) => ({ ...current, approvals: { ...current.approvals, start: { consumedAt: consumedStart.kullanildi } }, setupJournal: [...(current.setupJournal || []), { event: 'approved', at: consumedStart.approvedAt, nonce: consumedStart.nonce }, { event: 'applied', at: now(), planHash: current.planHash }] })));
     output({ ok: true, run: readRun(options.state, run.runId) }, options.json); return 0;
   } catch (error) {
     if (supervisor?.pid) {
@@ -355,7 +366,7 @@ function startCommandLocked(options, wasInterrupted = () => false, lockedAt = no
     try { fs.rmdirSync(run.worktreeRoot); } catch { /* retain any unrelated or non-empty directory */ }
     for (const name of ["abort.json", "pause.json"]) try { fs.rmSync(path.join(controlDir, name)); } catch { /* best effort after rollback */ }
     for (const taskId of activatedTasks) try { transitionTask(options.state, { taskId, status: "todo", reason: "Team run start rolled back." }); } catch {}
-    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, idleWarningAt: null, status: "planned", startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
+    try { updateRunRecord(file, (current) => ({ ...current, status: "planned", startedAt: null, supervisor: { pid: null, createdAt: null, heartbeatAt: null }, workers: current.workers.map((worker) => ({ ...worker, worktree: null, branch: null, pid: null, cmdShim: null, processCreatedAt: null, codexThreadId: null, pane: null, idleWarningAt: null, status: "planned", startedAt: null, finishedAt: null, lastEventAt: null, exitCode: null, failure: null, usage: null, verdict: null, changedPaths: [], outsideScope: [], leaseRenewedAt: null })), setupJournal: [...(current.setupJournal || []), { event: 'rolled_back', at: now() }], history: [...current.history, { at: now(), event: "start_rolled_back" }] })); } catch {}
     throw error;
   }
 }
@@ -466,7 +477,15 @@ function superviseCommand(options) {
     }
     run = readRun(options.state, options.run);
     const available = Math.max(0, run.maxWorkers - active.size);
-    const pending = run.workers.filter((w) => w.status === "planned" || w.status === "queued");
+    for (const waiting of run.workers.filter(w => ['planned', 'queued'].includes(w.status) && w.dependsOn?.length)) {
+      for (const dependency of waiting.dependsOn) {
+        const previous = run.workers.find(w => w.taskId === dependency);
+        if (previous?.status === 'finished') collectCommand({ state: options.state, run: run.runId, task: dependency, json: true });
+      }
+    }
+    run = readRun(options.state, options.run);
+    const pending = run.workers.filter(w => ['planned', 'queued'].includes(w.status) && (w.dependsOn || []).every(id => { const previous = run.workers.find(p => p.taskId === id); return previous?.status === 'collected' && !INCOMPLETE_VERDICTS.has(previous.verdict); }));
+    for (const waiting of run.workers.filter(w => ['planned', 'queued'].includes(w.status) && w.dependsOn?.some(id => { const previous = run.workers.find(p => p.taskId === id); return ['failed', 'scope_violation', 'rejected_content', 'timed_out', 'aborted'].includes(previous?.status) || (previous?.status === 'collected' && INCOMPLETE_VERDICTS.has(previous.verdict)); }))) settleWorker(file, waiting.taskId, 'failed', 1, 'dependency failed');
     let launchable = Math.min(available, pending.length);
     // Memory guard: hold queued workers while free RAM is short. One worker may always start when none is active,
     // so a low-memory machine slows the run down instead of deadlocking it. AGENTCHEF_TEAM_MEMORY_GUARD=off disables it.
@@ -515,8 +534,29 @@ function superviseCommand(options) {
       const queued = w.status === "planned" ? transitionWorker(w, "queued") : w;
       return { ...transitionWorker(queued, "spawning"), startedAt: now(), lastEventAt: now() };
     }) }));
+    if (worker.dependsOn?.length) {
+      try {
+        if (!worker.deliveryBase) {
+        if (git(['status', '--porcelain'], worker.worktree)) throw new Error('Dependency worktree changed before inheritance.');
+        const inherited = new Set();
+        const include = id => { if (inherited.has(id)) return; const previous = run.workers.find(w => w.taskId === id); for (const dependency of previous.dependsOn || []) include(dependency); inherited.add(id); };
+        worker.dependsOn.forEach(include);
+        const predecessors = run.workers.filter(w => inherited.has(w.taskId));
+        for (const previous of predecessors) {
+          if (!previous.patchFile || crypto.createHash('sha256').update(fs.readFileSync(previous.patchFile)).digest('hex') !== previous.patchHash) throw new Error('Dependency patch changed or missing.');
+          git(['apply', '--index', previous.patchFile], worker.worktree);
+          releaseReviewedLease(options.state, previous.taskId);
+        }
+        const deliveryBase = git(['write-tree'], worker.worktree);
+        updateRunRecord(file, current => ({ ...current, workers: current.workers.map(w => w.taskId === worker.taskId ? { ...w, deliveryBase } : w) }));
+        }
+        if (worker.sandbox !== 'read-only') renewLease(options.state, { taskId: worker.taskId, minutes: CONTRACT.limits.leaseMinutes });
+        const task = JSON.parse(fs.readFileSync(options.state, 'utf8')).tasks.find(task => task.id === worker.taskId);
+        if (task?.status !== 'in_progress') transitionTask(options.state, { taskId: worker.taskId, status: 'in_progress' });
+      } catch (error) { settleWorker(file, worker.taskId, 'failed', 1, error.message); return; }
+    }
     let execution;
-    try { execution = spawnCodexExec({ resumeThreadId: worker.resumeThreadId || undefined, prompt, worktree: worker.worktree, runDir: path.join(path.dirname(file), run.runId, worker.taskId), schema, output: resultPath, runId: run.runId, taskId: worker.taskId, role: worker.role, boardState: path.resolve(options.state), sandbox: worker.sandbox, model: run.model, profile: run.profile, onActivity: () => updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, lastEventAt: now(), idleWarningAt: null } : w) })) }); }
+    try { execution = spawnCodexExec({ resumeThreadId: worker.resumeThreadId || undefined, prompt, worktree: worker.worktree, runDir: path.join(path.dirname(file), run.runId, worker.taskId), schema, output: resultPath, runId: run.runId, taskId: worker.taskId, role: worker.role, boardState: path.resolve(options.state), sandbox: worker.sandbox, model: run.model, profile: run.profile, maxWorkers: run.maxWorkers, resources: worker.resources, onActivity: () => updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...w, lastEventAt: now(), idleWarningAt: null } : w) })) }); }
     catch (error) { settleWorker(file, worker.taskId, "failed", 1, error.message); return; }
     const child = execution.child; const createdAt = processCreatedAt(child?.pid) || null; activeMap.set(worker.taskId, { child, createdAt });
     try { updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((w) => w.taskId === worker.taskId ? { ...transitionWorker(w, "running"), pid: child?.pid || null, cmdShim: child?.agentChefCmdShim === true, processCreatedAt: createdAt, startedAt: now() } : w) })); }
@@ -616,6 +656,23 @@ function boardEvidence(text) {
 function committedPaths(cwd, base) {
   return [...new Set(gitBytes(["-c", "core.quotePath=false", "diff", "--name-only", "-z", base, "HEAD"], cwd).toString("utf8").split("\0").filter(Boolean).map((item) => item.replace(/\\/g, "/")))];
 }
+function deliveryPatch(worker, base, directory) {
+  fs.mkdirSync(directory, { recursive: true });
+  const index = path.join(directory, `${worker.taskId}.${crypto.randomUUID()}.index`);
+  const command = args => execFileSync('git', args, { cwd: worker.worktree, env: { ...process.env, GIT_INDEX_FILE: index }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    command(['read-tree', base]); command(['add', '-A']);
+    return { patch: command(['diff', '--cached', '--binary', '--full-index', '--no-ext-diff', '--no-textconv', base]), paths: command(['diff', '--cached', '--name-only', '-z', base]).toString('utf8').split('\0').filter(Boolean) };
+  } finally { try { fs.rmSync(index, { force: true }); } catch {} }
+}
+function integrationPatchTree(cwd, before, patchFile, directory) {
+  const index = path.join(directory, `integration-${crypto.randomUUID()}.index`);
+  const command = args => execFileSync('git', args, { cwd, env: { ...process.env, GIT_INDEX_FILE: index, GIT_OPTIONAL_LOCKS: '0' }, encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  try {
+    command(['read-tree', before]); command(['apply', '--cached', patchFile]);
+    return command(['write-tree']);
+  } finally { try { fs.rmSync(index, { force: true }); } catch {} }
+}
 const SUPERVISOR_TICK_FAILURE_LIMIT = 5;
 function teamExecutionEnabled(env = process.env) {
   const value = String(env[CONTRACT.execution.optInEnv] ?? "").trim().toLowerCase();
@@ -655,6 +712,10 @@ function releaseRunFailedLeases(state, run) {
   for (const worker of run.workers) if (["failed", "timed_out", "scope_violation", "rejected_content", "aborted"].includes(worker.status)) releaseFailedWorkerLease(state, worker.taskId);
 }
 function collectCommand(options) {
+  const lock = acquireTeamOperationLock(path.join(path.dirname(runFile(options.state, options.run)), options.run, 'collect.lock'));
+  try { return collectCommandLocked(options); } finally { lock.release(); }
+}
+function collectCommandLocked(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   // Collecting a completed read-only run again recomputes its completion from the current worker verdicts, so a run an
   // older engine completed with a wrong partial flag is corrected without editing the record. It adds no worker events
@@ -678,8 +739,8 @@ function collectCommand(options) {
     try { handoff = parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; }
     catch (error) { partial = true; settleWorker(file, worker.taskId, "failed", 1, `invalid final handoff: ${error.message}`); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
     const warnings = collectWarnings(file, run, worker, handoff);
-    const deliverySubject = `feat(team-mode): ${worker.taskId} worker delivery`;
-    let changed = [...new Set([...committedPaths(worker.worktree, run.baseCommit), ...porcelainPaths(worker.worktree)])], priorCommit = null;
+    const delivery = worker.sandbox === 'read-only' ? null : deliveryPatch(worker, worker.deliveryBase || run.baseCommit, path.join(path.dirname(file), run.runId, 'reports'));
+    let changed = delivery ? delivery.paths : [...new Set([...committedPaths(worker.worktree, run.baseCommit), ...porcelainPaths(worker.worktree)])], priorCommit = null;
     if (worker.sandbox !== "read-only") {
       const head = git(["rev-parse", "HEAD"], worker.worktree);
       if (head !== run.baseCommit) priorCommit = head;
@@ -712,15 +773,15 @@ function collectCommand(options) {
       continue;
     }
     if (!changed.length) { partial = true; settleWorker(file, worker.taskId, "failed", 1, "worker produced no Git changes"); releaseFailedWorkerLease(options.state, worker.taskId); continue; }
-    const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
-    const dirtyPaths = porcelainPaths(worker.worktree);
-    if (dirtyPaths.length) git(["add", "-A"], worker.worktree);
+    const commitWarning = priorCommit ? 'Worker commits were folded into the delivery patch; workers must not commit.' : null;
+    if (commitWarning) warnings.push(commitWarning);
+    const reportDir = path.join(path.dirname(file), run.runId, 'reports');
+    const patch = delivery.patch;
     const report = renderHandoffMarkdown(handoff) + warningSection(warnings);
     const evidenceText = boardEvidence(`Verdict: ${handoff.verdict}. Mutation check: ${changed.join(", ")}. Evidence: ${handoff.evidence.join("; ") || "none"}.`);
     try {
-      // Index vs base covers the worker's own commits and the files it left dirty (both are staged above).
-      assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0", run.baseCommit], worker.worktree));
-      if (priorCommit && dirtyPaths.length) assertAddedDiffTextSafe(git(["-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-textconv", "--unified=0", "--cached"], worker.worktree));
+      // The temporary delivery index includes worker commits and dirty files without changing its real index.
+      assertAddedDiffTextSafe(patch.toString("utf8"));
       assertTeamTextSafe(report); assertTeamTextSafe(evidenceText);
     } catch (error) {
       if (!/contains a .+ and was rejected\.$/.test(error.message)) throw error;
@@ -729,10 +790,12 @@ function collectCommand(options) {
       releaseFailedWorkerLease(options.state, worker.taskId);
       continue;
     }
-    if (!priorCommit || dirtyPaths.length) git(["-c", `core.hooksPath=${emptyHooks}`, "commit", "--no-verify", "-m", deliverySubject], worker.worktree);
-    const commit = dirtyPaths.length || !priorCommit ? git(["rev-parse", "HEAD"], worker.worktree) : priorCommit;
+    const commit = null;
+    const patchFile = path.join(reportDir, worker.taskId + '.patch');
+    fs.writeFileSync(patchFile, patch);
+    const patchHash = crypto.createHash('sha256').update(patch).digest('hex');
     const reportId = `${worker.taskId}-${worker.role}.md`;
-    const reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
+    fs.mkdirSync(reportDir, { recursive: true });
     fs.writeFileSync(path.join(reportDir, reportId), `${report}\n\n## Actual Git mutations\n${changed.map((item) => `- ${item}`).join("\n")}\n`, "utf8");
     try {
       const board = JSON.parse(fs.readFileSync(options.state, "utf8"));
@@ -746,7 +809,7 @@ function collectCommand(options) {
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "failed"), failure: `coordination board rejected collection: ${error.message}` } : item) }));
       continue;
     }
-    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, warnings, changedPaths: changed, outsideScope: [], reportId, commit } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId }] }));
+    updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "collected"), verdict: handoff.verdict, warnings, changedPaths: changed, outsideScope: [], reportId, commit, patchFile, patchHash } : item), history: [...current.history, { at: now(), event: priorCommit ? "worker_collected_existing_commit" : "worker_collected", taskId: worker.taskId, ...(commitWarning ? { warning: commitWarning } : {}) }] }));
     if (handoff.verdict !== "pass") partial = true;
   }
   const current = readRun(options.state, options.run);
@@ -782,26 +845,71 @@ function runCheck(command, cwd, timeoutMs) {
   return { command, status: result.status ?? 1, signal: result.signal || null, stdout: safeOutput(result.stdout), stderr: safeOutput(result.stderr), error: result.error?.message ? safeOutput(result.error.message) : null };
 }
 function integrateCommand(options) {
-  const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
+  const lock = acquireTeamOperationLock(path.join(path.dirname(runFile(options.state, options.run)), options.run, 'integrate.lock'));
+  try { return integrateCommandLocked(options); } finally { lock.release(); }
+}
+function integrateCommandLocked(options) {
+  const file = runFile(options.state, options.run);
+  let run = readRun(options.state, options.run);
   if (options.recheck) return recheckIntegration(options, file, run);
   if (run.status !== "collected") throw new Error(`Cannot integrate a run in ${run.status} state.${run.status === "integrated" && run.integration && !run.integration.ok ? " After repairing the integration branch, rerun its checks with --recheck." : ""}`);
   const cwd = run.integrationWorktree || path.join(run.worktreeRoot, "_integration");
   if (!fs.existsSync(path.join(cwd, ".git"))) throw new Error("Integration worktree is missing.");
-  const merged = [], conflicts = [];
+  if (run.integrationIntent) {
+    const intent = run.integrationIntent, head = git(['rev-parse', 'HEAD'], cwd);
+    if (git(['status', '--porcelain'], cwd)) {
+      const worker = run.workers.find(worker => worker.taskId === intent.taskId);
+      const patch = worker?.patchFile && fs.existsSync(worker.patchFile) ? fs.readFileSync(worker.patchFile) : null;
+      const exactPendingPatch = head === intent.before && patch && crypto.createHash('sha256').update(patch).digest('hex') === intent.patchHash && worker.patchHash === intent.patchHash && git(['write-tree'], cwd) === intent.tree && !git(['diff', '--name-only'], cwd) && !git(['ls-files', '--others', '--exclude-standard'], cwd);
+      if (!exactPendingPatch) throw new Error('Interrupted integration has unrelated uncommitted changes; inspect the preserved worktree.');
+      git(['apply', '-R', '--index', worker.patchFile], cwd);
+      if (git(['status', '--porcelain'], cwd)) throw new Error('Interrupted integration could not restore its exact base; inspect the preserved worktree.');
+    }
+    const committed = head !== intent.before && git(['rev-parse', 'HEAD^'], cwd) === intent.before && git(['rev-parse', 'HEAD^{tree}'], cwd) === intent.tree && git(['log', '-1', '--format=%s'], cwd) === intent.subject;
+    if (head !== intent.before && !committed) throw new Error('Integration HEAD diverged from its pending intent; inspect before retrying.');
+    updateRunRecord(file, current => ({ ...current, integrationIntent: null, workers: current.workers.map(worker => committed && worker.taskId === intent.taskId && worker.status === 'collected' ? transitionWorker(worker, 'integrated') : worker), history: [...current.history, { at: now(), event: committed ? 'integration_commit_recovered' : 'integration_intent_cleared', taskId: intent.taskId, commit: head }] }));
+    run = readRun(options.state, options.run);
+  }
+  if (git(['status', '--porcelain'], cwd)) throw new Error('Integration requires a clean worktree and index.');
+  const merged = run.workers.filter(worker => worker.status === 'integrated').map(worker => worker.taskId), conflicts = [];
   for (const worker of run.workers.filter((entry) => entry.status === "collected")) {
     if (worker.sandbox === "read-only") {
       merged.push(worker.taskId);
       continue;
     }
+    let appliedPatch = null, integrated = false;
     try {
       const emptyHooks = path.join(path.dirname(file), run.runId, "empty-hooks"); fs.mkdirSync(emptyHooks, { recursive: true });
-      git(["-c", `core.hooksPath=${emptyHooks}`, "merge", "--no-ff", "--no-edit", worker.branch], cwd);
-      merged.push(worker.taskId);
+      if (worker.patchFile) {
+        const patch = fs.readFileSync(worker.patchFile);
+        if (crypto.createHash('sha256').update(patch).digest('hex') !== worker.patchHash) throw new Error('Collected delivery patch changed.');
+        assertAddedDiffTextSafe(patch.toString('utf8'));
+        git(['apply', '--check', '--index', worker.patchFile], cwd);
+        const before = git(['rev-parse', 'HEAD'], cwd);
+        const intent = { taskId: worker.taskId, before, tree: integrationPatchTree(cwd, before, worker.patchFile, path.dirname(file)), subject: 'feat(team-mode): ' + worker.taskId + ' integration', patchHash: worker.patchHash };
+        updateRunRecord(file, current => ({ ...current, integrationIntent: intent }));
+        git(['apply', '--index', worker.patchFile], cwd);
+        appliedPatch = worker.patchFile;
+        git(['-c', 'core.hooksPath=' + emptyHooks, 'commit', '--no-verify', '-m', intent.subject], cwd);
+        appliedPatch = null;
+      } else git(["-c", 'core.hooksPath=' + emptyHooks, "merge", "--no-ff", "--no-edit", worker.branch], cwd);
+      integrated = true;
     } catch {
-      const paths = conflictPaths(cwd);
+      if (appliedPatch) {
+        try { git(['apply', '-R', '--index', appliedPatch], cwd); } catch { throw new Error('Integration commit failed and its patch could not be reverted; inspect the preserved worktree before retrying.'); }
+        updateRunRecord(file, current => ({ ...current, integrationIntent: null }));
+        throw new Error('Integration commit failed; its patch was reverted. Repair Git identity or signing configuration and retry integrate.');
+      }
+      const paths = [...new Set([...conflictPaths(cwd), ...(worker.changedPaths || [])])];
       try { git(["merge", "--abort"], cwd); } catch { /* preserve the recorded conflict as the primary result */ }
       conflicts.push(...paths);
       updateRunRecord(file, (current) => ({ ...current, workers: current.workers.map((item) => item.taskId === worker.taskId ? { ...transitionWorker(item, "conflict"), outsideScope: [...new Set([...item.outsideScope, ...paths])] } : item) }));
+    }
+    if (integrated) {
+      // Keep this state write outside the Git failure handler: a durable intent
+      // reconciles a successful commit if storage fails here.
+      updateRunRecord(file, current => ({ ...current, integrationIntent: null, workers: current.workers.map(item => item.taskId === worker.taskId ? transitionWorker(item, 'integrated') : item), history: [...current.history, { at: now(), event: 'worker_integrated', taskId: worker.taskId }] }));
+      merged.push(worker.taskId);
     }
   }
   const checks = [], checkList = options.check ? (Array.isArray(options.check) ? options.check : [options.check]) : run.checks;
@@ -870,11 +978,18 @@ function recheckIntegration(options, file, run) {
 async function verifyCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   if (run.status !== "integrated" || !run.integration?.ok) throw new Error("Verification requires a successful integration.");
+  if (run.workers.some(worker => worker.sandbox !== "read-only")) validateLeadReview(run);
   if (options.detach) {
     const args = [fileURLToPath(import.meta.url), "verify", "--run", run.runId, "--state", path.resolve(options.state), "--json", "--max-minutes", String(options["max-minutes"] || 30)];
     const child = spawn(process.execPath, args, { cwd: run.repo, detached: true, stdio: "ignore", windowsHide: true }); child.unref();
     output({ ok: true, detached: true, pid: child.pid }, options.json); return 0;
   }
+  if (!options._role && (run.verifierRoles || []).length > 1) {
+    let code = 0;
+    for (const [index, role] of run.verifierRoles.entries()) { const result = await verifyCommand({ ...options, _role: role, _quiet: true, _last: index === run.verifierRoles.length - 1 }); if (result) code = result; }
+    output({ ok: code === 0, run: readRun(options.state, options.run) }, options.json); return code;
+  }
+  const verifierRole = options._role || run.verifierRoles?.[0] || CONTRACT.verification.roleId;
   const minutes = Number(options["max-minutes"] || 30);
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 30) throw new CliUsageError("--max-minutes must be an integer from 1 to 30.");
   const task = run.workers[0];
@@ -883,13 +998,14 @@ async function verifyCommand(options) {
   // Hand the verifier the host's integration results: its read-only sandbox cannot create temp directories, so it
   // must not depend on re-running suites that write (2026-10-14: every Codex verification came back partial).
   const hostResults = (run.integration?.checks || []).map((check) => ({ command: check.command, status: check.status, tail: Number(check.status) === 0 ? "" : `${check.stdout || ""}${check.stderr || ""}` }));
-  const prompt = composeVerifierPrompt({ runId: run.runId, brief, checks: run.checks, hostResults });
+  const allBriefs = readPlanForRun(options.state, run).workers.map(worker => `## ${worker.taskId}\n${worker.briefText}`).join('\n\n');
+  const prompt = readRoleToml(verifierRole).developerInstructions + "\n" + composeVerifierPrompt({ runId: run.runId, brief, checks: run.checks, hostResults }) + '\n\n# All worker briefs\n' + allBriefs;
   const integrationCommit = git(["rev-parse", "HEAD"], run.integrationWorktree);
   if (run.integration.commit && integrationCommit !== run.integration.commit) throw new Error("Integration worktree changed after integration checks.");
-  const schema = path.join(run.worktreeRoot, "verifier.schema.json"), final = path.join(run.worktreeRoot, "verification.final.json");
+  const schema = path.join(run.worktreeRoot, "verifier.schema.json"), final = path.join(run.worktreeRoot, `verification.${verifierRole}.final.json`);
   fs.writeFileSync(schema, JSON.stringify(HANDOFF_SCHEMA, null, 2));
   let exec;
-  try { exec = spawnCodexExec({ prompt, worktree: run.integrationWorktree, runDir: path.join(path.dirname(file), run.runId, "verification"), schema, output: final, runId: run.runId, taskId: "TASK-VERIFIER", role: "test_verifier", boardState: path.resolve(options.state), sandbox: "read-only", model: run.model, profile: run.profile }); }
+  try { exec = spawnCodexExec({ prompt, worktree: run.integrationWorktree, runDir: path.join(path.dirname(file), run.runId, "verification"), schema, output: final, runId: run.runId, taskId: "TASK-VERIFIER", role: verifierRole, boardState: path.resolve(options.state), sandbox: "read-only", model: run.model, profile: run.profile, maxWorkers: run.maxWorkers }); }
   catch (error) { exec = Promise.resolve({ exitCode: 1, threadId: null, failure: { message: error.message } }); exec.child = null; }
   const verifierCreatedAt = processCreatedAt(exec.child?.pid) || null;
   const timer = setTimeout(() => stopChild(exec.child, { createdAt: verifierCreatedAt }), minutes * 60_000);
@@ -901,11 +1017,15 @@ async function verifyCommand(options) {
   }
   const handoff = result.exitCode === 0 && fs.existsSync(final) ? (() => { try { return parseWorkerHandoff(fs.readFileSync(final, "utf8")).data; } catch { return null; } })() : null;
   try { fs.rmSync(final, { force: true }); } catch {}
-  const reportId = `verification-${run.runId}.md`, reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
+  const reportId = `verification-${run.runId}-${verifierRole}.md`, reportDir = path.join(path.dirname(file), run.runId, "reports"); fs.mkdirSync(reportDir, { recursive: true });
   fs.writeFileSync(path.join(reportDir, reportId), `# Independent verification\n\nVerdict: ${verdict}\n\nOutcome: ${handoff?.outcome || "Verifier did not provide a valid handoff."}\n\nEvidence:\n${(handoff?.evidence || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nRisks:\n${(handoff?.risks || []).map((item) => `- ${item}`).join("\n") || "- None"}\n\nChecks: ${run.checks.join(", ") || "No commands specified; integration diff compared with briefs."}\n\n${failure || "No execution failure."}\n`, "utf8");
-  if (verdict === "pass" || verdict === "warn") for (const worker of run.workers) addEvidence(options.state, { taskId: worker.taskId, evidence: `verified-by: test_verifier - ${verdict}` });
-  updateRunRecord(file, (current) => ({ ...(verdict === "pass" || verdict === "warn" ? transitionRun(current, "verified") : current), verification: { verdict, reportId, threadId: result.threadId || null, at: now(), failure, integrationCommit }, history: [...current.history, { at: now(), event: "verification_complete", verdict }] }));
-  output({ ok: verdict === "pass" || verdict === "warn", run: readRun(options.state, options.run) }, options.json);
+  if (verdict === "pass" || verdict === "warn") for (const worker of run.workers) addEvidence(options.state, { taskId: worker.taskId, evidence: `verified-by: ${verifierRole} - ${verdict}` });
+  updateRunRecord(file, current => {
+    const verificationResults = { ...(current.verificationResults || {}), [verifierRole]: { verdict, reportId, threadId: result.threadId || null, at: now(), failure, integrationCommit } };
+    const all = (current.verifierRoles || [CONTRACT.verification.roleId]).every(role => ['pass', 'warn'].includes(verificationResults[role]?.verdict) && verificationResults[role].integrationCommit === integrationCommit);
+    return { ...(all && (!options._quiet || options._last) ? transitionRun(current, 'verified') : current), verificationResults, verification: { verdict: all ? (Object.values(verificationResults).some(r => r.verdict === 'warn') ? 'warn' : 'pass') : 'fail', reportId, at: now(), failure, integrationCommit }, history: [...current.history, { at: now(), event: 'verification_complete', role: verifierRole, verdict }] };
+  });
+  if (!options._quiet) output({ ok: verdict === "pass" || verdict === "warn", run: readRun(options.state, options.run) }, options.json);
   return verdict === "pass" || verdict === "warn" ? 0 : 4;
 }
 function removeWorktrees(run) {
@@ -929,6 +1049,7 @@ function mergeCommandLocked(options) {
   if (!run.verification?.at || !approvalIsValid(approval, { runId: run.runId, tur: "birlestir", plannedAt: run.verification.at, now: now() })) { const error = new Error("A valid merge approval is required."); error.code = "approval-required"; error.exitCode = 3; throw error; }
   if (run.workers.some((worker) => worker.status === "conflict")) throw new Error("A run with conflicted workers cannot be merged.");
   if (run.status !== "verified" || !["pass", "warn"].includes(run.verification?.verdict) || (run.verification.verdict === "warn" && !options["accept-warn"])) throw new Error("Merge requires a passing verification or --accept-warn for a warning verdict.");
+  if (run.workers.some(worker => worker.sandbox !== "read-only")) validateLeadReview(run);
   if (run.snapshot && !options["as-patch"]) throw new Error("This run is based on a working-tree snapshot; deliver it with merge --as-patch (a merge would commit the snapshot onto the base branch).");
   if (!options["as-patch"] && (git(["status", "--porcelain=v1"], run.repo) || git(["branch", "--show-current"], run.repo) !== run.baseBranch)) throw new Error("Merge requires a clean repository on the recorded base branch.");
   const worktreeCommit = git(["rev-parse", "HEAD"], run.integrationWorktree), branchCommit = git(["rev-parse", run.integrationBranch], run.repo);
@@ -943,7 +1064,7 @@ function mergeCommandLocked(options) {
     try { git(["merge", "--abort"], run.repo); } catch { /* preserve the state update failure as the primary result */ }
     throw error;
   }
-  if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run merged; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
+  if (options["cleanup-approved"] && !options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run merged; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
   output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
 // Non-committing delivery: apply the verified integration diff (baseCommit..integration) to the user's working tree as
@@ -982,12 +1103,13 @@ function deliverAsPatch(options, file, run) {
     reverseApplied();
     throw error;
   }
-  if (!options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run delivered; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
+  if (options["cleanup-approved"] && !options["keep-worktrees"]) try { removeWorktrees(run); } catch (error) { output({ ok: true, run: readRun(options.state, options.run), cleanupWarning: `Run delivered; worktree cleanup failed: ${error.message}` }, options.json); return 0; }
   output({ ok: true, delivered: "working-tree", paths, run: readRun(options.state, options.run) }, options.json); return 0;
 }
 function cleanupCommand(options) {
   const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
   if (!["merged", "completed", "aborted", "failed"].includes(run.status)) throw new Error("Cleanup is allowed only for merged, completed, aborted, or failed runs.");
+  if (!options.approved) throw new Error("Cleanup requires explicit --approved after reviewing the recorded worktree paths.");
   const removed = removeWorktrees(run);
   // The private snapshot ref only anchored the run's base; once the run is merged, aborted or failed it has no use.
   let snapshotRef = null;
@@ -996,6 +1118,17 @@ function cleanupCommand(options) {
   if (options["delete-branches"]) for (const worker of run.workers) { try { git(["branch", "-D", worker.branch], run.repo); } catch {} }
   if (options["purge-logs"]) fs.rmSync(path.join(path.dirname(file), run.runId), { recursive: true, force: true });
   output({ ok: true, removedWorktrees: removed, removedSnapshotRef: snapshotRef, purgedLogs: Boolean(options["purge-logs"]) }, options.json); return 0;
+}
+function leadReviewCommand(options) {
+  const file = runFile(options.state, options.run), run = readRun(options.state, options.run);
+  if (!['integrated', 'verified'].includes(run.status) || !run.integration?.ok) throw new Error('Lead review requires successful integration.');
+  if (!options['review-file']) throw new Error('--review-file is required.');
+  const review = JSON.parse(fs.readFileSync(options['review-file'], 'utf8'));
+  validateLeadReview(run, review);
+  if (git(['rev-parse', 'HEAD'], run.integrationWorktree) !== review.integrationCommit) throw new Error('Integration commit changed.');
+  for (const worker of run.workers) addEvidence(options.state, { taskId: worker.taskId, evidence: boardEvidence('Claude lead review: ' + review.evidence.join('; ')) });
+  updateRunRecord(file, current => ({ ...current, leadReview: { ...review, at: now() }, history: [...current.history, { event: 'lead_review', at: now(), commit: review.integrationCommit }] }));
+  output({ ok: true, run: readRun(options.state, options.run) }, options.json); return 0;
 }
 function doctorCommand(options) {
   const checks = [], check = (id, ok, details = "") => checks.push({ id, status: ok ? "pass" : "fail", details });
@@ -1052,6 +1185,7 @@ function doctorCommand(options) {
   return checks.some((entry) => entry.id === "codex.version" || entry.id === "codex.login" ? entry.status !== "pass" : false) ? 1 : 0;
 }
 function dispatch(parsed) {
+  if (parsed.command === "lead-review") return leadReviewCommand(parsed.options);
   const { command, options } = parsed;
   if (command === "plan") return planCommand(options);
   if (command === "start") return startCommand(options);

@@ -700,3 +700,17 @@ Repo GitHub, Supabase, Vercel veya Sentry için güvenli setup dokümante edebil
 ama account-level aksiyonları otomatik yapmamalıdır. Repository protection açmak,
 key rotate etmek, billing değiştirmek, deploy etmek veya publish yapmak ayrı
 kullanıcı onayı ve account context'i gerektirir.
+
+Orkestrasyon adayı: collect commit oluşturmadan taranmış yamaları kaydeder.
+Mevcut işçi commit'leri uyarıyla taranmış yamaya katlanır; işçi prompt'u commit
+yapmayı hâlâ yasaklar. Integrate, `git apply --index` ile teslim commit'leri
+oluşturur; ardından `lead-review -> verify -> merge` gelir. Verify ve merge tam
+entegrasyon commit'ine bağlı, başarılı Claude incelemesi ister; doğrulama seçilen
+routing profillerinin tüm zorunlu doğrulayıcılarını çalıştırır. Merge worktree'leri
+varsayılan olarak tutar. Bunların kaldırılması mevcut başlatma/birleştirme
+kapılarına ek olarak `merge --cleanup-approved` veya
+`cleanup --run <runId> --approved` ile açık temizlik onayı gerektirir. Motor,
+node_repl/MCP diyetini repodan okur; dosya kuruluma ve yönetilen dosya sayımına
+katılmaz. İşçi sınırları sürece özel override olduğundan rol şablonları ve
+etkileşimli genel ayarlar kapasitelerini korur. Bkz.
+[aday güven sınırları](orchestration-candidate.tr.md).

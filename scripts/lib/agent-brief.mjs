@@ -118,9 +118,33 @@ function parseFields(text, fields, { strict = false } = {}) {
 }
 
 export function parseBrief(text) {
+  const json = parseJsonFields(text, BRIEF_FIELDS);
+  if (json) return json;
   return parseFields(text, BRIEF_FIELDS);
 }
 
 export function parseHandoff(text, { strict = false } = {}) {
+  const json = parseJsonFields(text, HANDOFF_FIELDS, { strict });
+  if (json) return json;
   return parseFields(text, HANDOFF_FIELDS, { strict });
+}
+
+function parseJsonFields(text, fields, { strict = false } = {}) {
+  if (typeof text !== 'string' || !text.trimStart().startsWith('{')) return null;
+  let data;
+  try { data = JSON.parse(text); } catch { return { ok: false, fields: {}, missing: ['Valid JSON'], warnings: [] }; }
+  const allowed = new Set(fields.map(field => field.key));
+  const invalid = Object.keys(data).filter(key => !allowed.has(key) || typeof data[key] !== 'string' || !data[key].trim());
+  const missing = fields.filter(field => (!field.optional || strict) && !data[field.key]?.trim?.()).map(field => field.labels[0]);
+  return { ok: !invalid.length && !missing.length, fields: data, missing: [...missing, ...invalid.map(key => `Invalid JSON field: ${key}`)], warnings: [] };
+}
+
+// Export schemas from the same field registry as brief-check/handoff-check.
+// Optional Markdown fields remain optional; strict CLI consumers may require them.
+export function contractSchema(kind) {
+  const fields = kind === "brief" ? BRIEF_FIELDS : kind === "handoff" ? HANDOFF_FIELDS : null;
+  if (!fields) throw new Error(`Unknown contract kind: ${kind}`);
+  return { type: "object", additionalProperties: false,
+    required: fields.filter(field => !field.optional).map(field => field.key),
+    properties: Object.fromEntries(fields.map(field => [field.key, { type: "string", minLength: 1, description: field.labels[0] }])) };
 }

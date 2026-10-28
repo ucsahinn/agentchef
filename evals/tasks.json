@@ -1,0 +1,56 @@
+[
+  {
+    "id": "scope-isolation",
+    "prompt": "Change a parser inside its assigned scope and report evidence.",
+    "criteria": [
+      {
+        "id": "scope",
+        "weight": 2,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "overlapping files are ordered"
+      },
+      {
+        "id": "regression",
+        "weight": 1,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "overlapping files are ordered"
+      }
+    ]
+  },
+  {
+    "id": "review-gate",
+    "prompt": "Review an integration diff and identify an intentional defect before merge.",
+    "criteria": [
+      {
+        "id": "defect",
+        "weight": 2,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "lead review must pass"
+      },
+      {
+        "id": "commitBinding",
+        "weight": 1,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "lead review must pass"
+      }
+    ]
+  },
+  {
+    "id": "capacity-hold",
+    "prompt": "Plan independent workers under a lower measured capacity; report the refused excess.",
+    "criteria": [
+      {
+        "id": "capacity",
+        "weight": 2,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "capacity refuses excess"
+      },
+      {
+        "id": "reason",
+        "weight": 1,
+        "testFile": "scripts/tests/orchestration-extensions.test.mjs",
+        "testName": "capacity refuses excess"
+      }
+    ]
+  }
+]

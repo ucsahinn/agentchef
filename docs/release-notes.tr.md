@@ -1,5 +1,39 @@
 # Sürüm Notları
 
+## v1.9.0 - 2026-10-27
+
+AgentChef 1.9.0 mevcut takım motorunu incelemeli yama teslimi ve açık onay sınırlarıyla genişletir.
+
+### Neler Değişti
+
+- Sıralı dosya sahipliği ve kurulum günlüğü mevcut team-run kaydını genişletir.
+- Yalnız işçiye uygulanan kapasite ve MCP override’ları etkileşimli oturumları korur; işçi politikası repoda kalır.
+- Kanonik JSON şemaları, motor yetenek kaydı, onaylı skill hazırlık defteri ve üç eval örneği aynı akışı destekler.
+
+### Breaking Değişiklikler
+
+- **BREAKING:** Temizlik açık `cleanup --approved` onayı ister.
+- **BREAKING:** Merge worktree'leri varsayılan olarak tutar; kaldırmak için
+  `merge --cleanup-approved` veya sonradan onaylı cleanup gerekir.
+- **BREAKING:** Yazma koşularında verify öncesinde tam entegrasyon commit'ine
+  bağlı, başarılı Claude `lead-review` gerekir; merge de aynı kapıyı denetler.
+- **BREAKING:** Verify, varsayılan doğrulayıcıya ek olarak seçilen tüm routing
+  profillerinin zorunlu doğrulayıcılarını çalıştırır. Çağıran birden çok sonucu işlemelidir.
+- **BREAKING:** Entegrasyon, işçi geçmişini merge etmek yerine taranmış teslim
+  yamaları ve `git apply --index` kullanır. İşçi commit'leri uyarıyla yamaya
+  katlanır; entegrasyon teslim commit'lerini oluşturur. Kullanıcının dalına
+  yapılan son merge mevcut insan onayı kapısını korur.
+
+### Doğrulama Kapsamı
+
+- **Gerçek Windows koşusunda ölçülenler:** Şefin bildirdiği `R20261027-c1ef`
+  koşusunda `core.autocrlf=true` altında LF/CRLF dosyaları ve `.gitattributes`
+  eol kurallarıyla `git apply --index` kullanan integrate; commit'e bağlı
+  `lead-review`; bağımsız `verify`; ve `serialize-overlaps` sıralaması ölçüldü.
+- **Yalnız testle doğrulananlar:** `merge` ve `merge --as-patch`. Bu iki son
+  teslim yolu söz konusu gerçek Windows koşusunda çalıştırılmadı; yukarıdaki
+  çalışma zamanı kanıtı bunların canlı ölçüldüğü iddiasını taşımaz.
+
 ## v1.8.6 - 2026-10-20
 
 AgentChef 1.8.6 eski tamamlanmış koşuların kayıtları elle düzenlenmeden düzeltilmesini sağlar.

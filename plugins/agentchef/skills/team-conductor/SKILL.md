@@ -62,7 +62,11 @@ Workflow tool), and say which reason applies in one line before starting.
    blocked; running `collect` again on a completed run recomputes it): show the
    reports and stop; there is nothing to integrate, verify or merge. Run
    `integrate`; on exit 4, show conflicts and checks and ask how to proceed.
-6. Run `verify` on the integration branch. Show integration statistics,
+6. Have the Claude lead inspect the full integration diff against every brief,
+   then record its passing evidence with `lead-review --review-file <json>`.
+   The review must name the exact integration commit. Run `verify` on the
+   integration branch; selected routing profiles add their required verifiers
+   to the default test_verifier. Show integration statistics,
    verification report, and verdict. Ask the user to send the exact chat
    sentence `birlestir <runId>` before running `merge`.
 7. `merge` creates a merge commit on the user's branch and needs a clean tree.
@@ -70,6 +74,8 @@ Workflow tool), and say which reason applies in one line before starting.
    working tree as unstaged changes, after `git apply --check`, and only when
    the branch is still at the planned commit. A `--snapshot` run must use
    `--as-patch`, and so must any run where the user did not ask for a commit.
+   Worktrees stay by default. Use `cleanup --approved` or
+   `merge --cleanup-approved` only after the user requests that exact cleanup.
    Push/PR and
    `onayla TASK-x` are separate actions and need their own request. If usage
    limits pause a worker, report it and stop; when the user says the limit has

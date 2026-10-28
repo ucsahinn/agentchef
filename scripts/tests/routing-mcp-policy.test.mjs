@@ -122,11 +122,15 @@ const mcpFiles = [
   ".gitignore",
   "catalog/mcp-servers.json",
   "scripts/validate-mcp-config.mjs",
+  "scripts/lib/codex-exec.mjs",
+  "scripts/lib/platform-command.mjs",
+  "scripts/lib/secret-classifier.mjs",
   "templates/codex/config.windows.toml",
   "templates/codex/config.unix.toml",
   "templates/codex/profiles/full.config.toml",
   "templates/codex/profiles/multi-session.config.toml",
   "templates/codex/profiles/offline.config.toml",
+  "templates/codex/profiles/team-worker.config.toml",
   "templates/codex/serena-pool.mjs"
 ];
 
@@ -150,3 +154,22 @@ for (const [key, unsafeValue, expected] of [
     assertPolicyFailure(mcpFixture(t, key, unsafeValue), expected);
   });
 }
+
+test('MCP validation accepts node_repl disabled only in the worker profile', t => {
+  const targetRoot = tempSurface(t, mcpFiles);
+  const result = runValidator(targetRoot, 'scripts/validate-mcp-config.mjs');
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+});
+
+test('MCP validation rejects enabling the worker node_repl transport', t => {
+  const targetRoot = tempSurface(t, mcpFiles);
+  const file = path.join(targetRoot, 'templates/codex/profiles/team-worker.config.toml');
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('enabled = false', 'enabled = true'));
+  assertPolicyFailure(runValidator(targetRoot, 'scripts/validate-mcp-config.mjs'), /Worker profile must park node_repl/);
+});
+
+test('MCP validation rejects a node_repl table in the global config', t => {
+  const targetRoot = tempSurface(t, mcpFiles);
+  fs.appendFileSync(path.join(targetRoot, 'templates/codex/config.windows.toml'), '\n[mcp_servers.node_repl]\nenabled = false\ncommand = "node"\n');
+  assertPolicyFailure(runValidator(targetRoot, 'scripts/validate-mcp-config.mjs'), /must not enter global config/);
+});

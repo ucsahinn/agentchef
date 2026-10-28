@@ -151,6 +151,7 @@
       "summary": "Install named Codex profile files.",
       "sourceGlob": "templates/codex/profiles/*.toml",
       "excludeBasenames": [
+        "team-worker.config.toml",
         "full.config.toml",
         "multi-session.config.toml",
         "offline.config.toml"

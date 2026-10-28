@@ -103,6 +103,8 @@ test("runtime fixture builder produces a self-contained installed baseline", () 
 
     const result = verifyOffline(codexHome, agentsHome);
     assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(JSON.parse(result.stdout).managedFiles.expected, 283, 'repo-only worker policy must not add an installed managed file');
+    assert.equal(fs.existsSync(path.join(codexHome, 'team-worker.config.toml')), false);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

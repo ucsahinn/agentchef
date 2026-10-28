@@ -59,3 +59,5 @@ AgentChef’in operatör dokümantasyonu İngilizce ve Türkçe olarak tam parit
 - [ADR-006: bağımsız, çift hedefli ürün olarak devam](decisions/006-agentchef-independent-dual-target-product.md)
 
 Kısa ve belirti odaklı cevaplar için [bilgi bankasına](../kb/README.tr.md) geçebilirsin.
+
+- [Orkestrasyon adayı](orchestration-candidate.tr.md)

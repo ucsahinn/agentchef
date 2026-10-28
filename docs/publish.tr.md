@@ -4,7 +4,7 @@ Yayın, lokal güvenin public bir iddiaya dönüştüğü noktadır. Sıralamay�
 
 Yayın adayı temel sürümü: **v1.3.5**.
 
-Geliştirme sürümü **v1.8.6** `collect` komutunun tamamlanmış salt-okur koşunun tamamlanma bilgisini güncel işçi kararlarından yeniden hesaplamasını sağlar.
+Geliştirme sürümü **v1.9.0** mevcut takım motoruna incelemeli yama teslimi, sıralı sahiplik ve açık temizlik kapıları ekler.
 
 ## Commit Veya Push Öncesi
 

@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "goal",
+    "evidence",
+    "scope",
+    "boundaries",
+    "doneWhen",
+    "returnFormat",
+    "userWords"
+  ],
+  "properties": {
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Goal"
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Evidence"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Write scope"
+    },
+    "boundaries": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Boundaries"
+    },
+    "doneWhen": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Done when"
+    },
+    "returnFormat": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Return format"
+    },
+    "userWords": {
+      "type": "string",
+      "minLength": 1,
+      "description": "User's words"
+    },
+    "environmentTraps": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Environment traps"
+    },
+    "isolation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Isolation"
+    }
+  }
+}

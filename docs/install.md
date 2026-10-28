@@ -758,3 +758,17 @@ AgentChef.
 Restore creates a rollback backup of the current managed targets first. The
 installer and CLI do not delete backups unless you explicitly run the
 preview-first backup delete flow with `--apply`.
+
+The worker process MCP diet lives in `templates/codex/profiles/team-worker.config.toml`.
+The engine reads it from the repository; installers and Chef's managed-file list
+exclude it. Team-run applies it only to worker invocations; node_repl is never
+added to general config.toml.
+
+For the orchestration candidate, use `integrate -> lead-review -> verify -> merge`.
+Record passing Claude evidence with `lead-review --review-file <json>` against
+the exact integration commit before verification or merge. `verify` runs the
+default verifier and every selected routing profile's required verifier.
+Merge retains worker and integration worktrees by default. Use
+`merge --cleanup-approved` only with explicit cleanup approval, or later run
+`cleanup --run <runId> --approved`. Cleanup approval is separate from the existing
+`baslat` / `birlestir` gates. See [the orchestration candidate](orchestration-candidate.md).

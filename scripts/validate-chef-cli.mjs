@@ -1016,6 +1016,7 @@ function runBackupsFixtureSmokes() {
   fs.mkdirSync(path.join(unsupportedRoot, "codex"), { recursive: true });
   fs.writeFileSync(path.join(unsupportedRoot, "codex", "auth.json"), "{\"token\":\"fixture\"}\n", "utf8");
   fs.writeFileSync(path.join(unsupportedRoot, "codex", "hooks.json"), "{\"hooks\":[]}\n", "utf8");
+  fs.writeFileSync(path.join(unsupportedRoot, "codex", "team-worker.config.toml"), "# repository-only worker policy\n", "utf8");
   spawnSync(process.execPath, [
     path.join(root, "scripts", "write-backup-manifest.mjs"),
     "--backup-root",
@@ -1023,6 +1024,17 @@ function runBackupsFixtureSmokes() {
     "--operation",
     "unsupported-fixture"
   ], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  const workerPolicyPreview = runCliSmokeRaw(
+    "backups-worker-policy-unsupported",
+    ["--backups", "--backup", unsupportedId, "--restore", "--json", "--no-log"],
+    { env, expectedStatus: 1 }
+  );
+  try {
+    const preview = JSON.parse(workerPolicyPreview.stdout);
+    if (!workerPolicyPreview.ok || !preview.unsupported?.includes('codex/team-worker.config.toml')) {
+      fail('chef-cli must exclude the repository-only worker policy from managed restore files.');
+    }
+  } catch (error) { fail(`chef-cli worker policy preview failed: ${error.message}`); }
   const unsupportedRestore = runCliSmokeRaw(
     "backups-restore-unsupported-fixture",
     ["--backups", "--backup", unsupportedId, "--restore", "--apply", "--plain", "--no-log"],

@@ -215,3 +215,5 @@ hesitate, please open an issue and tell me where.
 If the project saves you time, a GitHub star helps more people find it. ⭐
 
 MIT licensed. Community maintained. Not an OpenAI or Anthropic product.
+
+Orchestration development candidate and interfaces: [candidate notes](docs/orchestration-candidate.md). Prepared package version: 1.9.0; remote publication is a separate step.

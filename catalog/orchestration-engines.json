@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "dateChecked": "2026-10-27",
+  "runtime": "scripts/team-run.mjs",
+  "contract": "catalog/subscription-team-mode.json",
+  "engines": [
+    {
+      "id": "codex",
+      "leaderSuitable": true,
+      "workerSuitable": true,
+      "teamRunWorkerImplemented": true,
+      "continuation": { "interactive": "codex resume <thread-id>", "headless": "codex exec resume <thread-id>" },
+      "mcpDelivery": { "method": "config.toml plus per-process -c overrides", "workerDiet": "templates/codex/profiles/team-worker.config.toml" },
+      "structuredOutput": "--output-schema <schema-file>",
+      "sources": ["https://developers.openai.com/codex/cli/reference/", "https://developers.openai.com/codex/mcp/"]
+    },
+    {
+      "id": "claude",
+      "leaderSuitable": true,
+      "workerSuitable": true,
+      "teamRunWorkerImplemented": false,
+      "continuation": { "interactive": "claude --resume <session-id>", "headless": "claude -p --resume <session-id>" },
+      "mcpDelivery": { "method": "--mcp-config <file> with --strict-mcp-config", "workerDiet": "explicit per-invocation allowlist" },
+      "structuredOutput": "--output-format json --json-schema <schema-json>",
+      "sources": ["https://code.claude.com/docs/en/cli-reference", "https://code.claude.com/docs/en/mcp"]
+    }
+  ]
+}
