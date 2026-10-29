@@ -171,3 +171,21 @@ test("stdin EPIPE is handled and streamed JSONL is visible before child close", 
   assert.equal(result.exitCode, 0);
   assert.equal(result.threadId, "thr-stream");
 });
+
+test("workerModelCheck fails a client whose model list lacks the catalog worker model", () => {
+  const list = (...slugs) => () => JSON.stringify({ models: slugs.map((slug) => ({ slug })) });
+  assert.equal(codexRuntime.workerModelCheck({ command: "codex", version: "codex-cli 0.162.1", model: "gpt-6-luna", probe: list("gpt-6.1-sol", "gpt-6-luna") }).ok, true);
+  const stale = codexRuntime.workerModelCheck({ command: "old/codex.exe", version: "codex-cli 0.147.0", model: "gpt-6-luna", probe: list("gpt-5.6-sol", "gpt-5.6-luna") });
+  assert.equal(stale.ok, false);
+  assert.match(stale.details, /gpt-6-luna is not in the model list of old\/codex\.exe \(codex-cli 0\.147\.0\).*model_not_found/);
+  const broken = codexRuntime.workerModelCheck({ command: "codex", model: "gpt-6-luna", probe: () => { throw new Error("exit=2"); } });
+  assert.equal(broken.ok, false); assert.match(broken.details, /could not list its models \(exit=2\)/);
+  assert.equal(codexRuntime.workerModelCheck({ command: "codex", model: "gpt-6-luna", probe: () => "{}" }).ok, false);
+});
+
+test("codexBinariesOnPath lists every codex copy in PATH order", () => {
+  const npm = path.win32.join("C:", "npm"), local = path.win32.join("C:", "local", "bin");
+  const files = new Set([path.win32.join(npm, "codex.cmd"), path.win32.join(local, "codex.exe")]);
+  const fileSystem = { statSync: (file) => { if (!files.has(file)) throw new Error("missing"); return { isFile: () => true }; } };
+  assert.deepEqual(codexRuntime.codexBinariesOnPath({ Path: [npm, path.win32.join("C:", "empty"), local, npm].join(";") }, "win32", fileSystem), [...files]);
+});

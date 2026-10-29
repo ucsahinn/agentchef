@@ -16,6 +16,41 @@ export function resolveCodexCommand(env = process.env, platform = process.platfo
   return "codex";
 }
 
+// Every codex.exe / codex.cmd on PATH, in shell order. A stale copy later on PATH still runs when a
+// tool picks a binary itself: a Beyin channel whose version probe of the current codex.cmd timed out
+// under load fell back to ~/.local/bin/codex.exe 0.147.0 (2026-10-28).
+export function codexBinariesOnPath(env = process.env, platform = process.platform, fileSystem = fs) {
+  const key = Object.keys(env).find((candidate) => candidate.toLowerCase() === "path");
+  const pathApi = platform === "win32" ? path.win32 : path;
+  const found = [];
+  for (const directory of String((key && env[key]) || "").split(platform === "win32" ? ";" : path.delimiter).filter(Boolean)) {
+    for (const name of platform === "win32" ? ["codex.exe", "codex.cmd"] : ["codex"]) {
+      const candidate = pathApi.join(directory, name);
+      try { if (fileSystem.statSync(candidate).isFile() && !found.some((entry) => entry.toLowerCase() === candidate.toLowerCase())) found.push(candidate); } catch { /* not here */ }
+    }
+  }
+  return found;
+}
+
+// A ChatGPT account refuses a model the client's own catalog lacks: codex 0.147.0 listed only
+// gpt-5.6-* and its gpt-6-luna role died with model_not_found, while 0.162.1 on the same account
+// listed and ran it (measured 2026-10-29). `codex debug models` reads that catalog without a turn.
+export function codexModelSlugs(stdout) {
+  const models = JSON.parse(String(stdout || "")).models;
+  if (!Array.isArray(models)) throw new Error("model list has no models array");
+  return models.map((model) => model?.slug).filter((slug) => typeof slug === "string");
+}
+
+export function workerModelCheck({ command, version = "", model, probe }) {
+  const label = `${command}${version ? ` (${version})` : ""}`;
+  let slugs;
+  try { slugs = codexModelSlugs(probe(command)); }
+  catch (error) { return { ok: false, details: `${label} could not list its models (${safeFailureMessage(error.message)}); update this Codex CLI` }; }
+  return slugs.includes(model)
+    ? { ok: true, details: `${model} is in the model list of ${label}` }
+    : { ok: false, details: `${model} is not in the model list of ${label}; a ChatGPT account refuses it with model_not_found, so every role and team worker on it fails. Update this Codex CLI or launch a current one` };
+}
+
 export function classifyFailure(message = "") {
   return /usage\s*limit|rate\s*limit|quota|too many requests|\b429\b|weekly limit/i.test(String(message)) ? "usage_limit" : "exec_failed";
 }

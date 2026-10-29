@@ -4,6 +4,7 @@ const { execFileSync } = require("node:child_process");
 
 const args = process.argv.slice(2);
 if (args[0] === "login" && args[1] === "status") process.exit(process.env.FAKE_CODEX_LOGIN === "fail" ? 1 : 0);
+if (args[0] === "debug" && args[1] === "models") { console.log(JSON.stringify({ models: (process.env.FAKE_CODEX_MODELS || "gpt-6-luna").split(",").map((slug) => ({ slug })) })); process.exit(0); }
 if (args[0] === "exec" && args[1] === "--help") { console.log("--json --output-schema -o resume"); process.exit(0); }
 const resumed = args[1] === "resume";
 // `exec resume <thread>` takes no -C/-s: the worktree is the spawn cwd and the sandbox a config override.
