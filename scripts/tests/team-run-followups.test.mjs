@@ -125,6 +125,15 @@ test("plan rejects brief files that resolve outside its directory",async(t)=>{
   fs.writeFileSync(plan,JSON.stringify({workers:[{taskId:"TASK-PATH",role:"docs_author",briefFile:"../outside.md",writeScope:["src/"]}]}));
   const result=node(cli,["plan","--state",state,"--json","--repo",path.join(temp,"repo"),"--plan-file",plan,"--run","R-brief-path-2"],{env}); assert.notEqual(result.status,0); assert.match(result.stderr||result.stdout,/must stay inside the plan directory/);
 });
+test("doctor fails when the Codex client cannot list the catalog worker model", async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-doctor-model-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const { state, env } = makeRun(temp, "R-doctor-model", ["TASK-DOC"], "ok");
+  const model = JSON.parse(fs.readFileSync(path.join(root, "catalog/agents.json"), "utf8")).workerModels.codex;
+  const check = (extra) => JSON.parse(node(cli, ["doctor", "--state", state, "--json"], { env: { ...env, ...extra } }).stdout).checks.find((entry) => entry.id === "codex.worker-model");
+  assert.equal(check({ FAKE_CODEX_MODELS: `gpt-5.6-sol,${model}` }).status, "pass");
+  const stale = check({ FAKE_CODEX_MODELS: "gpt-5.6-sol,gpt-5.6-luna" });
+  assert.equal(stale.status, "fail"); assert.ok(stale.details.startsWith(`${model} is not in the model list`), stale.details); assert.match(stale.details, /model_not_found/);
+});
 test("doctor treats a missing prior run as informational and reports the board and the approval writer", async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-doctor-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const { state, env } = makeRun(temp, "R-doctor", ["TASK-DOC"], "ok");

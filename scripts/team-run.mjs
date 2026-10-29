@@ -7,7 +7,7 @@ import { spawn, spawnSync, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseBrief } from "./lib/agent-brief.mjs";
 import { CliUsageError, emitCliError, redactCliPaths } from "./lib/cli-error-contract.mjs";
-import { isProcessAlive, openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild } from "./lib/codex-exec.mjs";
+import { codexBinariesOnPath, isProcessAlive, openViewerPane, processCreatedAt, resolveCodexCommand, spawnCodexExec, stopChild, workerModelCheck } from "./lib/codex-exec.mjs";
 import { cmdShimInvocation, resolveWindowsCli } from "./lib/platform-command.mjs";
 import {
   acquireTeamOperationLock, assignTask, assertTeamTextSafe, approvalIsValid, consumeApprovalWith, createTask,
@@ -1156,6 +1156,19 @@ function doctorCommand(options) {
     const resumeOk = resumeHelp.status === 0 && ["--json", "-c", "-m", "--output-schema", "-o", "--ignore-rules"].every((item) => resumeFlags.includes(item));
     check("codex.exec-flags", execOk, "first execution requires --json, --output-schema, and -o");
     check("codex.resume-flags", resumeOk, "resume supports --json, -c, -m, --output-schema, -o, and --ignore-rules; cwd comes from the process working directory; -s, -p, and -C are unavailable");
+    // Roles and team workers run on the catalog worker model; a client whose catalog lacks it fails every one of them.
+    const runCodex = (command, args, timeout = 10_000) => { const invocation = process.platform === "win32" && command.toLowerCase().endsWith(".cmd") ? cmdShimInvocation(command, args) : { command, args }; return spawnSync(invocation.command, invocation.args, { encoding: "utf8", timeout, windowsHide: true, windowsVerbatimArguments: invocation.options?.windowsVerbatimArguments }); };
+    const probe = (command) => { const result = runCodex(command, ["debug", "models"], 30_000); if (result.status !== 0) throw new Error(result.error?.message || `exit=${result.status}`); return result.stdout; };
+    const versionOf = (command) => (runCodex(command, ["--version"]).stdout || "").trim();
+    const model = JSON.parse(fs.readFileSync(path.join(ROOT, "catalog", "agents.json"), "utf8")).workerModels.codex;
+    const resolved = workerModelCheck({ command: codex, version: versionOf(codex), model, probe });
+    check("codex.worker-model", resolved.ok, resolved.details);
+    // An explicit AGENTCHEF_TEAM_CODEX_COMMAND is the only client team runs use; otherwise also catch a stale copy
+    // later on PATH, because a tool that launches it by full path hits the same refusal.
+    if (!process.env.AGENTCHEF_TEAM_CODEX_COMMAND) {
+      const stale = codexBinariesOnPath().filter((command) => command.toLowerCase() !== codex.toLowerCase()).map((command) => workerModelCheck({ command, version: versionOf(command), model, probe })).filter((result) => !result.ok);
+      check("codex.path-copies", stale.length === 0, stale.length ? stale.map((result) => result.details).join(" | ") : `every Codex CLI on PATH lists ${model}`);
+    }
   }
   // Never launch wt.exe to probe it: Windows Terminal 1.24 answers an unknown flag such as --version with a modal Help dialog
   // instead of an exit code, so a doctor run left dialogs on the user's screen (observed 2026-10-14). Presence on PATH is enough.
