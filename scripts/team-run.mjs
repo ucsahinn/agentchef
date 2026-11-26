@@ -413,6 +413,8 @@ async function statusCommand(options) {
   return 0;
 }
 function isPidAlive(pid) { return isProcessAlive(pid); }
+// A recycled PID is not the supervisor: when a creation time was recorded it must still match.
+function supervisorProcessAlive(supervisor) { return isPidAlive(supervisor?.pid) && (!supervisor.createdAt || processCreatedAt(supervisor.pid) === supervisor.createdAt); }
 function acquireSupervisorLock(file) {
   const lockFile = path.join(path.dirname(file), path.basename(file, ".json"), "supervisor.lock");
   fs.mkdirSync(path.dirname(lockFile), { recursive: true });
@@ -610,7 +612,7 @@ function abortCommand(options) {
     fs.writeFileSync(path.join(controlDir, "abort.json"), JSON.stringify({ runId: run.runId, reason, requestedAt: now() }, null, 2));
     output({ ok: true, requested: "abort", runId: run.runId, deferred: true }, options.json); return 0;
   }
-  if (run.status === "planned" || !isPidAlive(run.supervisor?.pid)) { abortWorkers(options.state, file, run, reason); output({ ok: true, requested: "abort", runId: run.runId }, options.json); return 0; }
+  if (run.status === "planned" || !supervisorProcessAlive(run.supervisor)) { abortWorkers(options.state, file, run, reason); output({ ok: true, requested: "abort", runId: run.runId }, options.json); return 0; }
   const controlDir = path.join(path.dirname(file), run.runId, "control"); fs.mkdirSync(controlDir, { recursive: true });
   fs.writeFileSync(path.join(controlDir, "abort.json"), JSON.stringify({ runId: run.runId, reason, requestedAt: now() }, null, 2));
   output({ ok: true, requested: "abort", runId: run.runId }, options.json); return 0;

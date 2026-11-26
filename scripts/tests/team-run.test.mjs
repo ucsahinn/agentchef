@@ -279,6 +279,21 @@ test("status tolerates an unstarted worker and abort finalizes a planned run", (
   assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "aborted");
 });
 
+test("abort finalizes a run whose recorded supervisor PID was reused by another process", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-pid-reuse-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"); initRepo(repo); writeBoard(state);
+  const { env, run } = planRun({ temp, state, repo, runId: "R-pid-reuse" });
+  const file = path.join(path.dirname(state), "team-runs", `${run.runId}.json`);
+  const record = JSON.parse(fs.readFileSync(file, "utf8"));
+  // This test process is alive, but it was not created at the recorded time, so it is not the run's supervisor.
+  record.status = "running"; record.supervisor = { pid: process.pid, createdAt: "2000-01-01T00:00:00.000Z", heartbeatAt: null };
+  fs.writeFileSync(file, JSON.stringify(record, null, 2));
+  const aborted = runCli(state, "abort", ["--run", run.runId, "--reason", "stale supervisor pid"], env);
+  assert.equal(aborted.status, 0, aborted.stderr || aborted.stdout);
+  assert.equal(runCli(state, "status", ["--run", run.runId], env).json.run.status, "aborted");
+  assert.equal(fs.existsSync(path.join(path.dirname(state), "team-runs", run.runId, "control", "abort.json")), false);
+});
+
 test("start rollback preserves pre-existing branches, restores task state, and skips checkout hooks", (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "team-run-start-rollback-")); t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const repo = path.join(temp, "repo"), state = path.join(temp, "board.json"), runId = "R-start-rollback"; initRepo(repo); writeBoard(state);
